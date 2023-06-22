@@ -24,6 +24,7 @@ import (
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
 
 // NewConfig creates a Config from the provided flags or environment variables.
@@ -62,6 +63,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
 	}
+	syncConfig := NewSyncConfig(ctx)
 
 	cfg := &node.Config{
 		L1:     l1Endpoint,
@@ -93,6 +95,8 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		},
+		ConfigPersistence: configPersistence,
+		Sync:              *syncConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -212,4 +216,10 @@ func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig
 		GraphProvider:            graphProvider,
 		DataStorePollingDuration: dataStorePollingDuration,
 	}, nil
+}
+
+func NewSyncConfig(ctx *cli.Context) *sync.Config {
+	return &sync.Config{
+		EngineP2PEnabled: ctx.Bool(flags.L2EngineP2PEnabled.Name),
+	}
 }

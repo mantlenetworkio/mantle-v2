@@ -12,6 +12,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+<<<<<<< HEAD
+=======
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum/go-ethereum/log"
+>>>>>>> 0b3052c7e (op-node: Implement engine P2P sync mode)
 )
 
 var (
@@ -39,8 +44,13 @@ type Driver struct {
 	targetBlockNum uint64
 }
 
+<<<<<<< HEAD
 func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, daSyncer DaSource, targetBlockNum uint64) *Driver {
 	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, l2Source, daSyncer, metrics.NoopMetrics)
+=======
+func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, targetBlockNum uint64) *Driver {
+	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, l2Source, metrics.NoopMetrics, &sync.Config{})
+>>>>>>> 0b3052c7e (op-node: Implement engine P2P sync mode)
 	pipeline.Reset()
 	return &Driver{
 		logger:         logger,
