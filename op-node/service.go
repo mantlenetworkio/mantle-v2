@@ -220,7 +220,7 @@ func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig
 
 func NewSyncConfig(ctx *cli.Context) *sync.Config {
 	return &sync.Config{
-		EngineP2PEnabled: ctx.Bool(flags.L2EngineP2PEnabled.Name),
-		SkipSanityCheck:  ctx.Bool(flags.SkipSanityCheck.Name),
+		EngineSync:         ctx.Bool(flags.L2EngineSyncEnabled.Name),
+		SkipSyncStartCheck: ctx.Bool(flags.SkipSyncStartCheck.Name),
 	}
 }
