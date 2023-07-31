@@ -63,6 +63,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
 	}
+
 	syncConfig := NewSyncConfig(ctx)
 
 	cfg := &node.Config{
