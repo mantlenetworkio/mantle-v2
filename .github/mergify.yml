@@ -1,0 +1,137 @@
+queue_rules:
+  - name: default
+    conditions: []
+
+pull_request_rules:
+  - name: Automatic merge on approval
+    conditions:
+      - and:
+        - "#review-threads-unresolved=0"
+        - "#approved-reviews-by>=1"
+        - "#changes-requested-reviews-by=0"
+        - "label!=do-not-merge"
+        - "label!=multiple-reviewers"
+        - "label!=mergify-ignore"
+        - "base=develop"
+        - or:
+          - and:
+            - "label!=SR-Risk"
+            - "label!=C-Protocol-Critical"
+          - and:
+            - "label=SR-Risk"
+            - "approved-reviews-by=maurelian"
+          - and:
+            - "label=C-Protocol-Critical"
+            - or:
+              - "approved-reviews-by=tynes"
+              - "approved-reviews-by=smartcontracts"
+    actions:
+      queue:
+        name: default
+        method: merge
+        merge_bot_account: OptimismBot
+  - name: Add merge train label
+    conditions:
+      - "queue-position >= 0"
+    actions:
+      comment:
+          message: |
+            This PR has been added to the merge queue, and will be merged soon.
+      label:
+        add:
+          - on-merge-train
+  - name: Remove merge train label
+    conditions:
+      - "queue-position = -1"
+    actions:
+      label:
+        remove:
+          - on-merge-train
+  - name: Handle security critical PRs
+    conditions:
+      - "label=SR-Risk"
+    actions:
+      request_reviews:
+        users:
+          - "maurelian"
+      comment:
+        message: |
+          Hey there @{{author}}! You flagged this PR as security critical. To make review easier, please add a comment describing
+
+          1. The risks present in this PR.
+          2. The mitigations you have added to try and reduce those risks.
+  - name: Request protocol critical reviewers
+    conditions:
+      - label=C-Protocol-Critical
+    actions:
+      request_reviews:
+        users:
+          - tynes
+          - smartcontracts
+        random_count: 1
+  - name: Ask to resolve conflict
+    conditions:
+      - conflict
+    actions:
+      comment:
+        message: Hey @{{author}}! This PR has merge conflicts. Please fix them before continuing review.
+      label:
+        add:
+          - conflict
+  - name: Remove conflicts label when conflicts gone
+    conditions:
+      - -conflict
+    actions:
+      label:
+        remove:
+          - conflict
+  - name: Notify author when added to merge queue
+    conditions:
+      - "check-pending=Queue: Embarked in merge train"
+    actions:
+      comment:
+        message: |
+          This PR is next in line to be merged, and will be merged as soon as checks pass.
+  - name: Notify author on queue failure
+    conditions:
+      - 'check-failure=Queue: Embarked in merge train'
+    actions:
+      comment:
+        message: >
+          Hey @{{ author }}, this pull request failed to merge and has been
+          dequeued from the merge train.  If you believe your PR failed in
+          the merge train because of a flaky test, requeue it by commenting
+          with `@mergifyio requeue`.
+
+          More details can be found on the `Queue: Embarked in merge train`
+          check-run.
+  - name: Add indexer tag and ecopod reviewers
+    conditions:
+      - 'files~=^indexer/'
+    actions:
+      label:
+        add:
+          - indexer
+      request_reviews:
+        users:
+          - roninjin10
+  - name: Add sdk tag and ecopod reviewers
+    conditions:
+      - 'files~=^packages/sdk/'
+    actions:
+      label:
+        add:
+          - sdk
+      request_reviews:
+        users:
+          - roninjin10
+  - name: Add common-ts tag and ecopod reviewers
+    conditions:
+      - 'files~=^packages/common-ts/'
+    actions:
+      label:
+        add:
+          - common-ts
+      request_reviews:
+        users:
+          - roninjin10
