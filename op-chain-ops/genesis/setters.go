@@ -27,6 +27,10 @@ var (
 		predeploys.BVM_ETHAddr:         true,
 	}
 
+	IgnoredPredeploys = map[common.Address]bool{
+		predeploys.GovernanceTokenAddr: true,
+	}
+
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
 	// that should not be touched by the migration process.
 	UntouchableCodeHashes = map[common.Address]ChainHashMap{
@@ -35,8 +39,8 @@ var (
 			5: common.HexToHash("0xc4a213cf5f06418533e5168d8d82f7ccbcc97f27ab90197c2c051af6a4941cf9"),
 		},
 		predeploys.WETH9Addr: {
-			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
-			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			5: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
 		},
 		// TODO the hash need to be set correctly.
 		predeploys.BVM_ETHAddr: {
