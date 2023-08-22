@@ -3,6 +3,7 @@ package predeploys
 import "github.com/ethereum/go-ethereum/common"
 
 const (
+	BVM_ETH                       = "0x4200000000000000000000000000000000000022"
 	L2ToL1MessagePasser           = "0x4200000000000000000000000000000000000016"
 	DeployerWhitelist             = "0x4200000000000000000000000000000000000002"
 	LegacyERC20ETH                = "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
@@ -24,6 +25,7 @@ const (
 )
 
 var (
+	BVM_ETHAddr                       = common.HexToAddress(BVM_ETH)
 	L2ToL1MessagePasserAddr           = common.HexToAddress(L2ToL1MessagePasser)
 	DeployerWhitelistAddr             = common.HexToAddress(DeployerWhitelist)
 	LegacyERC20ETHAddr                = common.HexToAddress(LegacyERC20ETH)
@@ -47,6 +49,7 @@ var (
 )
 
 func init() {
+	Predeploys["BVM_ETH"] = &BVM_ETHAddr
 	Predeploys["L2ToL1MessagePasser"] = &L2ToL1MessagePasserAddr
 	Predeploys["DeployerWhitelist"] = &DeployerWhitelistAddr
 	Predeploys["LegacyERC20ETH"] = &LegacyERC20ETHAddr

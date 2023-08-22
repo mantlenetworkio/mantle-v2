@@ -470,6 +470,14 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	storage["ProxyAdmin"] = state.StorageValues{
 		"_owner": config.ProxyAdminOwner,
 	}
+	storage["L1MantleToken"] = state.StorageValues{
+		"name":   "Mantle Token",
+		"symbol": "MNT",
+	}
+	storage["BVM_ETH"] = state.StorageValues{
+		"_name":   "Ether",
+		"_symbol": "ETH",
+	}
 	return storage, nil
 }
 

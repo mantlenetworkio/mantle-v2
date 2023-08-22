@@ -237,6 +237,14 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 			memDB.SetState(*proxyAddr, common.Hash{31: 0x01}, symbol)
 			memDB.SetState(*proxyAddr, common.Hash{31: 0x02}, decimals)
 		}
+		if name == "L1MantleToken" {
+			name, _ := state.EncodeStringValue("Mantle Token", 0)
+			symbol, _ := state.EncodeStringValue("MNT", 0)
+			decimals, _ := state.EncodeUintValue(18, 0)
+			memDB.SetState(*proxyAddr, common.Hash{}, name)
+			memDB.SetState(*proxyAddr, common.Hash{31: 0x01}, symbol)
+			memDB.SetState(*proxyAddr, common.Hash{31: 0x02}, decimals)
+		}
 	}
 
 	stateDB, err := backend.Blockchain().State()
@@ -257,6 +265,9 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		depAddr := dep.Address
 		if strings.HasSuffix(dep.Name, "Proxy") {
 			depAddr = *predeploys.DevPredeploys[strings.TrimSuffix(dep.Name, "Proxy")]
+		}
+		if dep.Name == "L1MantleToken" {
+			depAddr = *predeploys.DevPredeploys["L1MantleToken"]
 		}
 
 		memDB.CreateAccount(depAddr)
@@ -357,6 +368,9 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 		{
 			Name: "WETH9",
 		},
+		{
+			Name: "L1MantleToken",
+		},
 	}...)
 	return deployer.Deploy(backend, constructors, l1Deployer)
 }
@@ -439,6 +453,11 @@ func l1Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			backend,
 			predeploys.DevL1CrossDomainMessengerAddr,
 			predeploys.L2ERC721BridgeAddr,
+		)
+	case "L1MantleToken":
+		_, tx, _, err = bindings.DeployL1MantleToken(
+			opts,
+			backend,
 		)
 	default:
 		if strings.HasSuffix(deployment.Name, "Proxy") {

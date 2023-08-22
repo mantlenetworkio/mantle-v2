@@ -19,6 +19,38 @@ import { Semver } from "../universal/Semver.sol";
  */
 contract L1StandardBridge is StandardBridge, Semver {
     /**
+ * @custom:legacy
+     * @notice Emitted whenever a deposit of MNT from L1 into L2 is initiated.
+     *
+     * @param from      Address of the depositor.
+     * @param to        Address of the recipient on L2.
+     * @param amount    Amount of MNT deposited.
+     * @param extraData Extra data attached to the deposit.
+     */
+    event MNTDepositInitiated(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    /**
+     * @custom:legacy
+     * @notice Emitted whenever a withdrawal of MNT from L2 to L1 is finalized.
+     *
+     * @param from      Address of the withdrawer.
+     * @param to        Address of the recipient on L1.
+     * @param amount    Amount of MNT withdrawn.
+     * @param extraData Extra data attached to the withdrawal.
+     */
+    event MNTWithdrawalFinalized(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    /**
      * @custom:legacy
      * @notice Emitted whenever a deposit of ETH from L1 into L2 is initiated.
      *
@@ -143,6 +175,41 @@ contract L1StandardBridge is StandardBridge, Semver {
     }
 
     /**
+    * @custom:legacy
+     * @notice Deposits some amount of MNT into the sender's account on L2.
+     *
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
+     */
+    function depositMNT(uint32 _minGasLimit, bytes calldata _extraData) external payable onlyEOA {
+        _initiateMNTDeposit(msg.sender, msg.sender, _minGasLimit, _extraData);
+    }
+
+    /**
+     * @custom:legacy
+     * @notice Deposits some amount of MNT into a target account on L2.
+     *         Note that if MNT is sent to a contract on L2 and the call fails, then that ETH will
+     *         be locked in the L2StandardBridge. ETH may be recoverable if the call can be
+     *         successfully replayed by increasing the amount of gas supplied to the call. If the
+     *         call will fail for any amount of gas, then the ETH will be locked permanently.
+     *
+     * @param _to          Address of the recipient on L2.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
+     */
+    function depositMNTTo(
+        address _to,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
+    ) external payable {
+        _initiateMNTDeposit(msg.sender, _to, _minGasLimit, _extraData);
+    }
+
+    /**
      * @custom:legacy
      * @notice Deposits some amount of ERC20 tokens into the sender's account on L2.
      *
@@ -202,6 +269,24 @@ contract L1StandardBridge is StandardBridge, Semver {
             _minGasLimit,
             _extraData
         );
+    }
+
+    /**
+ * @custom:legacy
+     * @notice Finalizes a withdrawal of MNT from L2.
+     *
+     * @param _from      Address of the withdrawer on L2.
+     * @param _to        Address of the recipient on L1.
+     * @param _amount    Amount of MNT to withdraw.
+     * @param _extraData Optional data forwarded from L2.
+     */
+    function finalizeMNTWithdrawal(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _extraData
+    ) external payable {
+        finalizeBridgeMNT(_from, _to, _amount, _extraData);
     }
 
     /**

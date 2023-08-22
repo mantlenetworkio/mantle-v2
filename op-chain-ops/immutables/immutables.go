@@ -138,6 +138,9 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 		{
 			Name: "LegacyERC20ETH",
 		},
+		{
+			Name: "BVM_ETH",
+		},
 	}
 	return BuildL2(deployments)
 }
@@ -230,6 +233,8 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 		_, tx, _, err = bindings.DeployOptimismMintableERC721Factory(opts, backend, bridge, remoteChainId)
 	case "LegacyERC20ETH":
 		_, tx, _, err = bindings.DeployLegacyERC20ETH(opts, backend)
+	case "BVM_ETH":
+		_, tx, _, err = bindings.DeployBVMETH(opts, backend)
 	default:
 		return tx, fmt.Errorf("unknown contract: %s", deployment.Name)
 	}

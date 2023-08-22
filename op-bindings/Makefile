@@ -30,8 +30,9 @@ bindings: l1block-bindings \
 	optimism-mintable-erc721-factory-bindings \
 	l1-fee-vault-bindings \
 	basefee-vault-bindings \
-	legacy-erc20-eth-bindings
-
+	legacy-erc20-eth-bindings \
+	l1mnt-bindings \
+	l2eth-bindings
 version:
 	forge --version
 	abigen --version
@@ -122,11 +123,20 @@ deployer-whitelist-bindings: compile
 l1-blocknumber-bindings: compile
 	./gen_bindings.sh contracts/legacy/L1BlockNumber.sol:L1BlockNumber $(pkg)
 
+l1mnt-bindings:compile
+	./gen_bindings.sh contracts/L1/TestMantleToken.sol:L1MantleToken $(pkg)
+
+
+
+l2eth-bindings:compile
+	./gen_bindings.sh contracts/L2/BVM_ETH.sol:BVM_ETH $(pkg)
+
+
 more:
 	go run ./gen/main.go \
 		-artifacts ../packages/contracts-bedrock/artifacts \
 		-out ./bindings \
-		-contracts SystemConfig,OptimismMintableERC20Factory,L2StandardBridge,L1BlockNumber,LegacyMessagePasser,DeployerWhitelist,Proxy,OptimismPortal,L2ToL1MessagePasser,L2CrossDomainMessenger,SequencerFeeVault,L1Block,LegacyERC20ETH,WETH9,GovernanceToken,L1CrossDomainMessenger,L2ERC721Bridge,OptimismMintableERC721Factory,ProxyAdmin \
+		-contracts SystemConfig,OptimismMintableERC20Factory,L2StandardBridge,L1BlockNumber,LegacyMessagePasser,DeployerWhitelist,Proxy,OptimismPortal,L2ToL1MessagePasser,L2CrossDomainMessenger,SequencerFeeVault,L1Block,LegacyERC20ETH,WETH9,GovernanceToken,L1CrossDomainMessenger,L2ERC721Bridge,OptimismMintableERC721Factory,ProxyAdmin,L1MantleToken,BVM_ETH  \
 		-package bindings
 
 mkdir:
