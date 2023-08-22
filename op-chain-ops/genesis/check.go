@@ -50,7 +50,9 @@ var (
 
 	LegacyETHCheckSlots = map[common.Hash]common.Hash{
 		// Bridge
-		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000004200000000000000000000000000000000000010"),
+		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
+		// l1Token
+		common.Hash{31: 0x05}: common.HexToHash("0x0000000000000000000000003c3a81e81dc49a522a592e7622a7e711c06bf354"),
 		// Symbol
 		common.Hash{31: 0x04}: common.HexToHash("0x4554480000000000000000000000000000000000000000000000000000000006"),
 		// Name
@@ -181,6 +183,9 @@ func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot c
 	}
 
 	for addr := range UntouchablePredeploys {
+		if addr == predeploys.GovernanceTokenAddr {
+			continue
+		}
 		// Check that the code is the same.
 		code := currDB.GetCode(addr)
 		hash := crypto.Keccak256Hash(code)
@@ -248,7 +253,7 @@ func PostCheckPredeploys(prevDB, currDB *state.StateDB) error {
 		// Get the code for the predeploy
 		code := currDB.GetCode(addr)
 		// There must be code for the predeploy
-		if len(code) == 0 {
+		if !IgnoredPredeploys[addr] && len(code) == 0 {
 			return fmt.Errorf("no code found at predeploy %s", addr)
 		}
 
