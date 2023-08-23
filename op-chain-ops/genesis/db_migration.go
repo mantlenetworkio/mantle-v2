@@ -226,7 +226,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 		Extra:       BedrockTransitionBlockExtraData,
 		MixDigest:   common.Hash{},
 		Nonce:       types.BlockNonce{},
-		BaseFee:     big.NewInt(params.InitialBaseFee),
+		BaseFee:     config.L2GenesisBlockBaseFeePerGas.ToInt(),
 	}
 
 	// Create the Bedrock transition block from the header. Note that there are no transactions,

@@ -368,6 +368,12 @@ func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.
 	if config.L1ERC721BridgeProxy == (common.Address{}) {
 		return immutable, fmt.Errorf("L1ERC721BridgeProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
 	}
+	if config.SystemConfigProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("SystemConfigProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
+	if config.OptimismPortalProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("OptimismPortalProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
 	if config.SequencerFeeVaultRecipient == (common.Address{}) {
 		return immutable, fmt.Errorf("SequencerFeeVaultRecipient cannot be address(0): %w", ErrInvalidImmutablesConfig)
 	}
