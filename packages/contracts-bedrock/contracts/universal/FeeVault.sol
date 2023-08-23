@@ -57,20 +57,22 @@ abstract contract FeeVault {
      * @notice Triggers a withdrawal of funds to the L1 fee wallet.
      */
     function withdraw() external {
-        require(
-            address(this).balance >= MIN_WITHDRAWAL_AMOUNT,
-            "FeeVault: withdrawal amount must be greater than minimum withdrawal amount"
-        );
-
-        uint256 value = address(this).balance;
-        totalProcessed += value;
-
-        emit Withdrawal(value, RECIPIENT, msg.sender);
-
-        L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeETHTo{ value: value }(
-            RECIPIENT,
-            WITHDRAWAL_MIN_GAS,
-            bytes("")
-        );
+        require(false,"this function need to discuss.");
+//        require(
+//            address(this).balance >= MIN_WITHDRAWAL_AMOUNT,
+//            "FeeVault: withdrawal amount must be greater than minimum withdrawal amount"
+//        );
+//
+//        uint256 value = address(this).balance;
+//        totalProcessed += value;
+//
+//        emit Withdrawal(value, RECIPIENT, msg.sender);
+//
+//        L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeL2MNTTo{ value: value }(
+//            RECIPIENT,
+//            value,
+//            WITHDRAWAL_MIN_GAS,
+//            bytes("")
+//        );
     }
 }

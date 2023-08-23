@@ -10,6 +10,7 @@ import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /* Target contract dependencies */
 import { L2OutputOracle } from "../L1/L2OutputOracle.sol";
@@ -17,6 +18,7 @@ import { OptimismPortal } from "../L1/OptimismPortal.sol";
 
 /* Target contract */
 import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
+
 
 contract L1CrossDomainMessenger_Test is Messenger_Initializer {
     // Receiver address for testing
@@ -83,14 +85,14 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         emit SentMessageExtension1(alice, 0);
 
         vm.prank(alice);
-        L1Messenger.sendMessage(recipient, hex"ff", uint32(100));
+        L1Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"ff", uint32(100));
     }
 
     // sendMessage: should be able to send the same message twice
     function test_sendMessage_twice_succeeds() external {
         uint256 nonce = L1Messenger.messageNonce();
-        L1Messenger.sendMessage(recipient, hex"aa", uint32(500_000));
-        L1Messenger.sendMessage(recipient, hex"aa", uint32(500_000));
+        L1Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"aa", uint32(500_000));
+        L1Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"aa", uint32(500_000));
         // the nonce increments for each message sent
         assertEq(nonce + 2, L1Messenger.messageNonce());
     }

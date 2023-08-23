@@ -6,6 +6,7 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @custom:legacy
@@ -257,10 +258,32 @@ abstract contract CrossDomainMessenger is
      * @param _minGasLimit Minimum gas limit that the message can be executed with.
      */
     function sendMessage(
+        uint32 _type,
+        uint256 _amount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable {
+        // In the deposit process , _nativeTokenValue means MNT amount.
+        // But in the withdrawal process , _nativeTokenValue means the ETH amount.
+        uint256 _nativeTokenValue = 0;
+
+        if ( _type == BridgeConstants.MNT_DEPOSIT_TX ){
+            _nativeTokenValue =  _amount;
+        } else if (_type == BridgeConstants.ETH_DEPOSIT_TX ){
+            _nativeTokenValue =  0;
+        }
+
+        if ( _type == BridgeConstants.ETH_WITHDRAWAL_TX ){
+            _nativeTokenValue =  _amount;
+        } else if (_type == BridgeConstants.MNT_WITHDRAWAL_TX ){
+            _nativeTokenValue =  0;
+        }
+
+        if (_type == BridgeConstants.ERC20_TX || _type == BridgeConstants.ERC721_TX){
+            _nativeTokenValue =  0;
+        }
+
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
@@ -268,20 +291,20 @@ abstract contract CrossDomainMessenger is
         _sendMessage(
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            msg.value,
+            _nativeTokenValue,
             abi.encodeWithSelector(
                 this.relayMessage.selector,
                 messageNonce(),
                 msg.sender,
                 _target,
-                msg.value,
+                _nativeTokenValue,
                 _minGasLimit,
                 _message
             )
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, msg.value);
+        emit SentMessageExtension1(msg.sender, _nativeTokenValue);
 
         unchecked {
             ++msgNonce;

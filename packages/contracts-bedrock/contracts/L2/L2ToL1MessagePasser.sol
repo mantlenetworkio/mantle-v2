@@ -70,10 +70,10 @@ contract L2ToL1MessagePasser is Semver {
     constructor() Semver(1, 0, 0) {}
 
     /**
-     * @notice Allows users to withdraw ETH by sending directly to this contract.
+     * @notice Allows users to withdraw MNT by sending directly to this contract.
      */
     receive() external payable {
-        initiateWithdrawal(msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
+        initiateWithdrawal(msg.value,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
     /**
@@ -96,6 +96,7 @@ contract L2ToL1MessagePasser is Semver {
      * @param _data     Data to forward to L1 target.
      */
     function initiateWithdrawal(
+        uint256 _value,
         address _target,
         uint256 _gasLimit,
         bytes memory _data
@@ -105,7 +106,7 @@ contract L2ToL1MessagePasser is Semver {
                 nonce: messageNonce(),
                 sender: msg.sender,
                 target: _target,
-                value: msg.value,
+                value: _value,
                 gasLimit: _gasLimit,
                 data: _data
             })
@@ -117,7 +118,7 @@ contract L2ToL1MessagePasser is Semver {
             messageNonce(),
             msg.sender,
             _target,
-            msg.value,
+            _value,
             _gasLimit,
             _data,
             withdrawalHash

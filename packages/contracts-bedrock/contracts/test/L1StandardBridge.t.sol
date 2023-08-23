@@ -96,7 +96,7 @@ contract PreBridgeETH is Bridge_Initializer {
             vm.expectCall(
                 address(L1Bridge),
                 500,
-                abi.encodeWithSelector(L1Bridge.bridgeETH.selector, 50000, hex"dead")
+                abi.encodeWithSelector(L1Bridge.bridgeL1ETH.selector, 50000, hex"dead")
             );
         }
         vm.expectCall(
@@ -187,7 +187,7 @@ contract L1StandardBridge_BridgeETH_Test is PreBridgeETH {
     // - ETH ends up in the optimismPortal
     function test_bridgeETH_succeeds() external {
         _preBridgeETH({ isLegacy: false });
-        L1Bridge.bridgeETH{ value: 500 }(50000, hex"dead");
+        L1Bridge.bridgeL1ETH{ value: 500 }(50000, hex"dead");
         assertEq(address(op).balance, 500);
     }
 }
@@ -220,7 +220,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
             vm.expectCall(
                 address(L1Bridge),
                 600,
-                abi.encodeWithSelector(L1Bridge.bridgeETHTo.selector, bob, 60000, hex"dead")
+                abi.encodeWithSelector(L1Bridge.bridgeL1ETHTo.selector, bob, 60000, hex"dead")
             );
         }
 
@@ -320,7 +320,7 @@ contract L1StandardBridge_BridgeETHTo_Test is PreBridgeETHTo {
     // - ETH ends up in the optimismPortal
     function test_bridgeETHTo_succeeds() external {
         _preBridgeETHTo({ isLegacy: false });
-        L1Bridge.bridgeETHTo{ value: 600 }(bob, 60000, hex"dead");
+        L1Bridge.bridgeL1ETHTo{ value: 600 }(bob, 60000, hex"dead");
         assertEq(address(op).balance, 600);
     }
 }
@@ -676,7 +676,7 @@ contract L1StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L1Bridge));
         emit ETHBridgeFinalized(alice, alice, 100, hex"");
 
-        L1Bridge.finalizeBridgeETH{ value: 100 }(alice, alice, 100, hex"");
+        L1Bridge.finalizeBridgeETH{ value: 100 }(address(0),Predeploys.BVM_ETH,alice, alice, 100, hex"");
     }
 }
 
@@ -691,7 +691,7 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         vm.deal(messenger, 100);
         vm.prank(messenger);
         vm.expectRevert("StandardBridge: amount sent does not match amount required");
-        L1Bridge.finalizeBridgeETH{ value: 50 }(alice, alice, 100, hex"");
+        L1Bridge.finalizeBridgeETH{ value: 50 }(address(0),Predeploys.BVM_ETH,alice, alice, 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToSelf_reverts() external {
@@ -704,7 +704,7 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         vm.deal(messenger, 100);
         vm.prank(messenger);
         vm.expectRevert("StandardBridge: cannot send to self");
-        L1Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L1Bridge), 100, hex"");
+        L1Bridge.finalizeBridgeETH{ value: 100 }(address(0),Predeploys.BVM_ETH,alice, address(L1Bridge), 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToMessenger_reverts() external {
@@ -717,6 +717,6 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         vm.deal(messenger, 100);
         vm.prank(messenger);
         vm.expectRevert("StandardBridge: cannot send to messenger");
-        L1Bridge.finalizeBridgeETH{ value: 100 }(alice, messenger, 100, hex"");
+        L1Bridge.finalizeBridgeETH{ value: 100 }(address(0),Predeploys.BVM_ETH,alice, messenger, 100, hex"");
     }
 }

@@ -6,6 +6,8 @@ import { Messenger_Initializer } from "./CommonTest.t.sol";
 import { L1ERC721Bridge } from "../L1/L1ERC721Bridge.sol";
 import { L2ERC721Bridge } from "../L2/L2ERC721Bridge.sol";
 import { OptimismMintableERC721 } from "../universal/OptimismMintableERC721.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
+import { Predeploys } from "../libraries/Predeploys.sol";
 
 contract TestERC721 is ERC721 {
     constructor() ERC721("Test", "TST") {}
@@ -83,6 +85,8 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
             abi.encodeCall(
                 L2Messenger.sendMessage,
                 (
+                    BridgeConstants.ERC721_TX,
+                    1,
                     address(otherBridge),
                     abi.encodeCall(
                         L2ERC721Bridge.finalizeBridgeERC721,
@@ -168,6 +172,8 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
             abi.encodeCall(
                 L2Messenger.sendMessage,
                 (
+                    BridgeConstants.ERC721_TX,
+                    1,
                     address(otherBridge),
                     abi.encodeCall(
                         L1ERC721Bridge.finalizeBridgeERC721,

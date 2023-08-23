@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { StandardBridge } from "../universal/StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @custom:proxied
@@ -183,8 +184,12 @@ contract L1StandardBridge is StandardBridge, Semver {
      *                     execute any code on L2 and is only emitted as extra data for the
      *                     convenience of off-chain tooling.
      */
-    function depositMNT(uint32 _minGasLimit, bytes calldata _extraData) external payable onlyEOA {
-        _initiateMNTDeposit(msg.sender, msg.sender, _minGasLimit, _extraData);
+    function depositMNT(
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
+    ) external payable onlyEOA {
+        _initiateMNTDeposit(BridgeConstants.L1_MNT,address(0),msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -203,10 +208,11 @@ contract L1StandardBridge is StandardBridge, Semver {
      */
     function depositMNTTo(
         address _to,
+        uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external payable {
-        _initiateMNTDeposit(msg.sender, _to, _minGasLimit, _extraData);
+        _initiateMNTDeposit(BridgeConstants.L1_MNT,address(0),msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -286,7 +292,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) external payable {
-        finalizeBridgeMNT(_from, _to, _amount, _extraData);
+        finalizeBridgeMNT(address(0),BridgeConstants.L1_MNT,_from, _to, _amount, _extraData);
     }
 
     /**
@@ -304,7 +310,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) external payable {
-        finalizeBridgeETH(_from, _to, _amount, _extraData);
+        finalizeBridgeETH(Predeploys.BVM_ETH,address(0),_from, _to, _amount, _extraData);
     }
 
     /**
@@ -353,7 +359,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal {
-        _initiateBridgeETH(_from, _to, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeETH(address(0),Predeploys.BVM_ETH,_from, _to, msg.value, _minGasLimit, _extraData);
     }
 
     /**
@@ -377,6 +383,29 @@ contract L1StandardBridge is StandardBridge, Semver {
         bytes memory _extraData
     ) internal {
         _initiateBridgeERC20(_l1Token, _l2Token, _from, _to, _amount, _minGasLimit, _extraData);
+    }
+
+    /**
+ * @notice Internal function for initiating an MNT deposit.
+     *
+     * @param _l1Token     Address of the L1 token being deposited.
+     * @param _l2Token     Address of the corresponding token on L2.
+     * @param _from        Address of the sender on L1.
+     * @param _to          Address of the recipient on L2.
+     * @param _amount      Amount of the ERC20 to deposit.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2.
+     */
+    function _initiateMNTDeposit(
+        address _l1Token,
+        address _l2Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal {
+        _initiateBridgeMNT(_l1Token, _l2Token, _from, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**

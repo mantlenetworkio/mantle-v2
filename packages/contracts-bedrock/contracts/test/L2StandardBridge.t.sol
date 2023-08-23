@@ -13,6 +13,8 @@ import { Hashing } from "../libraries/Hashing.sol";
 import { Types } from "../libraries/Types.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
+
 
 contract L2StandardBridge_Test is Bridge_Initializer {
     using stdStorage for StdStorage;
@@ -25,12 +27,15 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
     // receive
     // - can accept ETH
+    // TODO change this function to receive MNT
     function test_receive_succeeds() external {
         assertEq(address(messagePasser).balance, 0);
         uint256 nonce = L2Messenger.messageNonce();
 
         bytes memory message = abi.encodeWithSelector(
             StandardBridge.finalizeBridgeETH.selector,
+            Predeploys.BVM_ETH,
+            address(0),
             alice,
             alice,
             100,
@@ -87,6 +92,8 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             address(L2Messenger),
             abi.encodeWithSelector(
                 CrossDomainMessenger.sendMessage.selector,
+                BridgeConstants.ETH_WITHDRAWAL_TX,
+                100,
                 address(L1Bridge),
                 message,
                 200_000 // StandardBridge's RECEIVE_DEFAULT_GAS_LIMIT
@@ -97,6 +104,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             Predeploys.L2_TO_L1_MESSAGE_PASSER,
             abi.encodeWithSelector(
                 L2ToL1MessagePasser.initiateWithdrawal.selector,
+                100,
                 address(L1Messenger),
                 baseGas,
                 withdrawalData
@@ -514,7 +522,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: amount sent does not match amount required");
-        L2Bridge.finalizeBridgeETH{ value: 50 }(alice, alice, 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 50 }(Predeploys.BVM_ETH,address(0),alice, alice, 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToSelf_reverts() external {
@@ -526,7 +534,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: cannot send to self");
-        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L2Bridge), 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, address(L2Bridge), 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToMessenger_reverts() external {
@@ -538,7 +546,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: cannot send to messenger");
-        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L2Messenger), 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, address(L2Messenger), 100, hex"");
     }
 }
 
@@ -559,6 +567,6 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeFinalized(alice, alice, 100, hex"");
 
-        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, alice, 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, alice, 100, hex"");
     }
 }

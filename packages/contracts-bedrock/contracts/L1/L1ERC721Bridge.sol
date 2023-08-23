@@ -5,6 +5,7 @@ import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { L2ERC721Bridge } from "../L2/L2ERC721Bridge.sol";
 import { Semver } from "../universal/Semver.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @title L1ERC721Bridge
@@ -101,7 +102,7 @@ contract L1ERC721Bridge is ERC721Bridge, Semver {
         IERC721(_localToken).transferFrom(_from, address(this), _tokenId);
 
         // Send calldata into L2
-        MESSENGER.sendMessage(OTHER_BRIDGE, message, _minGasLimit);
+        MESSENGER.sendMessage(BridgeConstants.ERC721_TX,1,OTHER_BRIDGE, message, _minGasLimit);
         emit ERC721BridgeInitiated(_localToken, _remoteToken, _from, _to, _tokenId, _extraData);
     }
 }

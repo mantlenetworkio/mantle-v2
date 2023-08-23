@@ -7,7 +7,7 @@ import { Vm } from "forge-std/Vm.sol";
 import "./CommonTest.t.sol";
 import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
-
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 // Free function for setting the prevBaseFee param in the OptimismPortal.
 function setPrevBaseFee(
     Vm _vm,
@@ -127,7 +127,7 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage(bob, data, uint32(100));
+        L1Messenger.sendMessage(BridgeConstants.ERC20_TX,0,bob, data, uint32(100));
     }
 
     function test_sendMessage_benchmark_1() external {
@@ -137,7 +137,7 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage(bob, data, uint32(100));
+        L1Messenger.sendMessage(BridgeConstants.ERC20_TX, 0, bob, data, uint32(100));
     }
 }
 

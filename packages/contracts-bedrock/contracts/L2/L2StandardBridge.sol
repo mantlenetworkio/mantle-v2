@@ -5,6 +5,7 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { StandardBridge } from "../universal/StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @custom:proxied
@@ -73,7 +74,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      */
     receive() external payable override onlyEOA {
         _initiateWithdrawal(
-            Predeploys.LEGACY_ERC20_ETH,
+            Predeploys.LEGACY_ERC20_MNT,
             msg.sender,
             msg.sender,
             msg.value,
@@ -148,9 +149,11 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) external payable virtual {
-        if (_l1Token == address(0) && _l2Token == Predeploys.LEGACY_ERC20_ETH) {
-            finalizeBridgeETH(_from, _to, _amount, _extraData);
-        } else {
+        if (_l1Token == BridgeConstants.L1_MNT && _l2Token == Predeploys.LEGACY_ERC20_MNT) {
+            finalizeBridgeMNT(_l2Token,_l1Token,_from, _to, _amount, _extraData);
+        } else if (_l1Token == address(0) && _l2Token == Predeploys.BVM_ETH){
+            finalizeBridgeETH(_l2Token,_l1Token,_from, _to, _amount, _extraData);
+        } else{
             finalizeBridgeERC20(_l2Token, _l1Token, _from, _to, _amount, _extraData);
         }
     }
@@ -184,8 +187,10 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal {
-        if (_l2Token == Predeploys.LEGACY_ERC20_ETH) {
-            _initiateBridgeETH(_from, _to, _amount, _minGasLimit, _extraData);
+        if (_l2Token == Predeploys.BVM_ETH ) {
+            _initiateBridgeETH(_l2Token,address(0), _from, _to, _amount, _minGasLimit, _extraData);
+        } else if (_l2Token == address(0) ){
+            _initiateBridgeMNT(address(0), BridgeConstants.L1_MNT,_from, _to, _amount, _minGasLimit, _extraData);
         } else {
             address l1Token = OptimismMintableERC20(_l2Token).l1Token();
             _initiateBridgeERC20(_l2Token, l1Token, _from, _to, _amount, _minGasLimit, _extraData);
@@ -272,5 +277,41 @@ contract L2StandardBridge is StandardBridge, Semver {
     ) internal override {
         emit DepositFinalized(_remoteToken, _localToken, _from, _to, _amount, _extraData);
         super._emitERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+    }
+
+    /**
+* @notice Emits the legacy WithdrawalInitiated event followed by the MNTBridgeInitiated
+     *         event. This is necessary for backwards compatibility with the legacy bridge.
+     *
+     * @inheritdoc StandardBridge
+     */
+    function _emitMNTBridgeInitiated(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _extraData
+    ) internal override {
+        emit WithdrawalInitiated(_remoteToken, _localToken, _from, _to, _amount, _extraData);
+        super._emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+    }
+
+    /**
+ * @notice Emits the legacy DepositFinalized event followed by the ERC20BridgeFinalized event.
+     *         This is necessary for backwards compatibility with the legacy bridge.
+     *
+     * @inheritdoc StandardBridge
+     */
+    function _emitMNTBridgeFinalized(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _extraData
+    ) internal override {
+        emit DepositFinalized(_remoteToken, _localToken, _from, _to, _amount, _extraData);
+        super._emitMNTBridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
     }
 }

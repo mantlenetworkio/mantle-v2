@@ -6,6 +6,7 @@ import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC16
 import { L1ERC721Bridge } from "../L1/L1ERC721Bridge.sol";
 import { IOptimismMintableERC721 } from "../universal/IOptimismMintableERC721.sol";
 import { Semver } from "../universal/Semver.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @title L2ERC721Bridge
@@ -118,7 +119,7 @@ contract L2ERC721Bridge is ERC721Bridge, Semver {
 
         // Send message to L1 bridge
         // slither-disable-next-line reentrancy-events
-        MESSENGER.sendMessage(OTHER_BRIDGE, message, _minGasLimit);
+        MESSENGER.sendMessage(BridgeConstants.ERC721_TX,1,OTHER_BRIDGE, message, _minGasLimit);
 
         // slither-disable-next-line reentrancy-events
         emit ERC721BridgeInitiated(_localToken, remoteToken, _from, _to, _tokenId, _extraData);

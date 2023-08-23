@@ -2,6 +2,8 @@
 pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
+
 import { OptimismPortal } from "./OptimismPortal.sol";
 import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
 import { Semver } from "../universal/Semver.sol";
@@ -48,7 +50,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _value,
         bytes memory _data
     ) internal override {
-        PORTAL.depositTransaction{ value: _value }(_to, _value, _gasLimit, false, _data);
+        PORTAL.depositTransaction{ value: msg.value }(_to, _value, _gasLimit, false, _data);
     }
 
     /**

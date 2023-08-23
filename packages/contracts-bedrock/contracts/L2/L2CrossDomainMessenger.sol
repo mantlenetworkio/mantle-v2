@@ -55,8 +55,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         bytes memory _data
     ) internal override {
         L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER)).initiateWithdrawal{
-            value: _value
-        }(_to, _gasLimit, _data);
+            value: msg.value
+        }(_value,_to, _gasLimit, _data);
     }
 
     /**
