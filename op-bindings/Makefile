@@ -32,7 +32,9 @@ bindings: l1block-bindings \
 	basefee-vault-bindings \
 	legacy-erc20-eth-bindings \
 	l1mnt-bindings \
-	l2eth-bindings
+	l2eth-bindings \
+	l1-test-token \
+	l2-test-token
 version:
 	forge --version
 	abigen --version
@@ -126,10 +128,14 @@ l1-blocknumber-bindings: compile
 l1mnt-bindings:compile
 	./gen_bindings.sh contracts/L1/TestMantleToken.sol:L1MantleToken $(pkg)
 
-
-
 l2eth-bindings:compile
 	./gen_bindings.sh contracts/L2/BVM_ETH.sol:BVM_ETH $(pkg)
+
+l1-test-token:compile
+	./gen_bindings.sh contracts/local/L1TestToken.sol:L1TestToken $(pkg)
+
+l2-test-token:compile
+	./gen_bindings.sh contracts/local/L2TestToken.sol:L2TestToken $(pkg)
 
 
 more:
