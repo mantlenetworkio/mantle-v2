@@ -486,7 +486,7 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 			// Initiate Withdrawal
 			withdrawAmount := big.NewInt(500_000_000_000)
 			transactor.Account.L2Opts.Value = withdrawAmount
-			tx, err := l2l1MessagePasser.InitiateWithdrawal(transactor.Account.L2Opts, fromAddr, big.NewInt(21000), nil)
+			tx, err := l2l1MessagePasser.InitiateWithdrawal(transactor.Account.L2Opts, withdrawAmount, fromAddr, big.NewInt(21000), nil)
 			require.Nil(t, err, "sending initiate withdraw tx")
 
 			// Wait for the transaction to appear in L2 verifier
