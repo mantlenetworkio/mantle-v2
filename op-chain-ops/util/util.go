@@ -105,7 +105,6 @@ var ClientsFlags = []cli.Flag{
 // be easily populated via a [cli.Context].
 type Addresses struct {
 	AddressManager            common.Address
-	OptimismPortal            common.Address
 	L1StandardBridge          common.Address
 	L1CrossDomainMessenger    common.Address
 	CanonicalTransactionChain common.Address
@@ -118,11 +117,6 @@ var AddressesFlags = []cli.Flag{
 		Name:    "address-manager-address",
 		Usage:   "AddressManager address",
 		EnvVars: []string{"ADDRESS_MANAGER_ADDRESS"},
-	},
-	&cli.StringFlag{
-		Name:    "optimism-portal-address",
-		Usage:   "OptimismPortal address",
-		EnvVars: []string{"OPTIMISM_PORTAL_ADDRESS"},
 	},
 	&cli.StringFlag{
 		Name:    "l1-standard-bridge-address",
@@ -153,10 +147,6 @@ func NewAddresses(ctx *cli.Context) (*Addresses, error) {
 	var err error
 
 	addresses.AddressManager, err = parseAddress(ctx, "address-manager-address")
-	if err != nil {
-		return nil, err
-	}
-	addresses.OptimismPortal, err = parseAddress(ctx, "optimism-portal-address")
 	if err != nil {
 		return nil, err
 	}
