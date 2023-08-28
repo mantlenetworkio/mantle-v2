@@ -191,7 +191,7 @@ const deployFn: DeployFunction = async (hre) => {
       assert(
         (await ProxyAdmin.implementationName(
           getDeploymentAddress(hre, 'Proxy__OVM_L1CrossDomainMessenger')
-        )) === 'OVM_L1CrossDomainMessenger'
+        )) === 'BVM_L1CrossDomainMessenger'
       )
       assert(
         (await ProxyAdmin.proxyType(
@@ -244,7 +244,7 @@ const deployFn: DeployFunction = async (hre) => {
 
       // Step 2 checks
       const messenger = await AddressManager.getAddress(
-        'OVM_L1CrossDomainMessenger'
+        'BVM_L1CrossDomainMessenger'
       )
       assert(messenger === ethers.constants.AddressZero)
     },
