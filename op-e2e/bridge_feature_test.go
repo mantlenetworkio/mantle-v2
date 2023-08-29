@@ -237,7 +237,8 @@ func TestETHDepositAndWithdrawal(t *testing.T) {
 	tx, err := l1Bridge.DepositETH(auth, 2_000_000, []byte("0x"))
 	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
 	require.NoError(t, err)
-	require.NoError(t, err)
+	time.Sleep(10 * time.Second)
+
 	t.Log("deposit eth tx hash is: ", tx.Hash())
 	t.Log("ETH after deposit...\\")
 	afterBalanceL1 := getETHBalanceFromL1(t, userAddress)
@@ -267,6 +268,8 @@ func TestETHDepositAndWithdrawal(t *testing.T) {
 	tx, err = l2Bridge.Withdraw(auth, common.HexToAddress(l2EthAddress), big.NewInt(DECIMAL0_1), 300_000, []byte("0x"))
 	require.NoError(t, err)
 	t.Log("withdraw eth tx hash is: ", tx.Hash())
+	SingleWithdrawalTx(t, tx.Hash().Hex())
+
 	t.Log("ETH after withdraw.....\\")
 	time.Sleep(10 * time.Second)
 
@@ -318,6 +321,7 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 	t.Log("MNT after deposit...\\")
 	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
 	require.NoError(t, err)
+	time.Sleep(10 * time.Second)
 
 	afterBalanceL1 := getMNTBalanceFromL1(t, userAddress)
 	afterBalanceL2 := getMNTBalanceFromL2(t, userAddress)
@@ -345,6 +349,8 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 	tx, err = l2Bridge.Withdraw(auth, common.HexToAddress("0x0"), big.NewInt(DECIMAL0_1), 300_000, []byte("0x"))
 	require.NoError(t, err)
 	t.Log("withdraw mnt tx hash is: ", tx.Hash())
+	SingleWithdrawalTx(t, tx.Hash().Hex())
+
 	t.Log("MNT after withdraw.....\\")
 	time.Sleep(10 * time.Second)
 
@@ -433,7 +439,6 @@ func TestERC20DepositAndWithdrawal(t *testing.T) {
 
 	SingleWithdrawalTx(t, tx.Hash().Hex())
 
-	t.Log("withdraw erc20 tx hash is: ", tx.Hash())
 	t.Log("erc20 after withdraw.....\\")
 
 	afterBalanceL1 = getTestTokenBalanceFromL1(t, userAddress)
@@ -843,7 +848,7 @@ func SingleWithdrawalTx(t *testing.T, withdrawalTx string) {
 }
 
 func TestWithdrawal(t *testing.T) {
-	withdrawalTx := "0x973e39efdea9f88f67916da09f51e07d77a33e43627478d12d411e023c6aa13e"
+	withdrawalTx := "0x7478d698457886534aabd199fbedf2d6f1ca4a85b8a5a550aa551ca2d510c1f8"
 	l1Client, err := ethclient.Dial(l1url)
 	require.NoError(t, err)
 	l2Client, err := ethclient.Dial(l2url)
