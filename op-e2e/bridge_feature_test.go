@@ -18,6 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var l1Erc20 = ""
+var l2Erc20 = ""
+
 const (
 	l1url = "http://localhost:8545"
 	l2url = "http://localhost:9545"
@@ -35,8 +38,6 @@ const (
 	l1MntAddress    = "0x6900000000000000000000000000000000000020"
 	l2MntAddress    = "0x0000000000000000000000000000000000000000"
 
-	l1Erc20        = "0xDf1c9f382CdE0055f1818D407840e49F14e49b43"
-	l2Erc20        = "0xDf1c9f382CdE0055f1818D407840e49F14e49b43"
 	userPrivateKey = "ddf04c9058d6fac4fea241820f2fbc3b36868d33b80894ba5ff9a9baf8793e10"
 	userAddress    = "0xeE3e7d56188ae7af8d5bab980908E3e91c0d7384"
 
@@ -66,7 +67,6 @@ func TestEnv(t *testing.T) {
 	checkBalance(t)
 	t.Log("show balance.....")
 
-	TestDeployERC20TestToken(t)
 }
 
 func TestMainProcess(t *testing.T) {
@@ -74,10 +74,6 @@ func TestMainProcess(t *testing.T) {
 	TestERC20DepositAndWithdrawal(t)
 	TestMNTDepositAndWithdrawal(t)
 	TestETHDepositAndWithdrawal(t)
-}
-
-func waitForTx() {
-	time.Sleep(time.Second * time.Duration(4))
 }
 
 func checkBalance(t *testing.T) *big.Int {
@@ -99,7 +95,6 @@ func checkBalance(t *testing.T) *big.Int {
 	if l1Eth.Cmp(decimal1) < 0 {
 		delta := big.NewInt(0)
 		transferL1ETH(t, l1Client, common.HexToAddress(userAddress), delta.Sub(decimal1, l1Eth).Int64())
-		waitForTx()
 		l1Eth = getETHBalanceFromL1(t, userAddress)
 
 	}
@@ -117,10 +112,8 @@ func checkBalance(t *testing.T) *big.Int {
 	if l2Mnt.Cmp(decimal1) < 0 {
 		delta := big.NewInt(0)
 		transferL2MNT(t, l2Client, common.HexToAddress(userAddress), delta.Sub(decimal1, l2Mnt).Int64())
-		waitForTx()
 		l2Mnt = getMNTBalanceFromL2(t, userAddress)
 	}
-	waitForTx()
 
 	l1Eth = getETHBalanceFromL1(t, userAddress)
 	l1Mnt = getMNTBalanceFromL1(t, userAddress)
@@ -159,12 +152,6 @@ func TestDeployERC20TestToken(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, l2Client)
 
-	chainID, err := l1Client.NetworkID(context.Background())
-	t.Log(chainID)
-
-	chainID, err = l2Client.NetworkID(context.Background())
-	t.Log(chainID)
-
 	// query eth erc20 token
 	privateKey, err := crypto.HexToECDSA(userPrivateKey)
 	if err != nil {
@@ -186,6 +173,8 @@ func TestDeployERC20TestToken(t *testing.T) {
 	address, tx, instance, err := bindings.DeployL1TestToken(auth, l1Client, "L1Token", "L1T")
 	require.NoError(t, err)
 	t.Log("tx.Hash : ", tx.Hash().Hex())
+	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
+	require.NoError(t, err)
 	_ = instance
 	t.Log("L1 Token address = ", address.Hex())
 
@@ -206,9 +195,14 @@ func TestDeployERC20TestToken(t *testing.T) {
 	l2Address, tx, instance2, err := bindings.DeployL2TestToken(auth2, l2Client, address)
 	require.NoError(t, err)
 	t.Log("tx.Hash:", tx.Hash().Hex())
+	_, err = waitForTransaction(tx.Hash(), l2Client, 100*time.Second)
+
+	require.NoError(t, err)
 	_ = instance2
 	t.Log("L2 Token address = ", l2Address.Hex())
 
+	l1Erc20 = address.Hex()
+	l2Erc20 = l2Address.Hex()
 }
 
 func TestETHDepositAndWithdrawal(t *testing.T) {
@@ -241,8 +235,8 @@ func TestETHDepositAndWithdrawal(t *testing.T) {
 	// do deposit
 	auth := buildL1Auth(t, l1Client, userPrivateKey, big.NewInt(DECIMAL0_1))
 	tx, err := l1Bridge.DepositETH(auth, 2_000_000, []byte("0x"))
-	waitForTx()
-	waitForTx()
+	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
+	require.NoError(t, err)
 	require.NoError(t, err)
 	t.Log("deposit eth tx hash is: ", tx.Hash())
 	t.Log("ETH after deposit...\\")
@@ -315,9 +309,6 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 	t.Log("l2 mnt balance: ", beforeBalanceL2)
 
 	setL1MntApprove(t)
-	waitForTx()
-	waitForTx()
-	waitForTx()
 
 	// do deposit
 	auth := buildL1Auth(t, l1Client, userPrivateKey, big.NewInt(0))
@@ -325,9 +316,8 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("deposit mnt tx hash is: ", tx.Hash())
 	t.Log("MNT after deposit...\\")
-	waitForTx()
-	waitForTx()
-	waitForTx()
+	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
+	require.NoError(t, err)
 
 	afterBalanceL1 := getMNTBalanceFromL1(t, userAddress)
 	afterBalanceL2 := getMNTBalanceFromL2(t, userAddress)
@@ -370,6 +360,9 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 }
 
 func TestERC20DepositAndWithdrawal(t *testing.T) {
+	TestDeployERC20TestToken(t)
+
+	t.Logf("l1 erc20 address : %v ,l2 erc20 address : %v", l1Erc20, l2Erc20)
 
 	l1Client, err := ethclient.Dial(l1url)
 	require.NoError(t, err)
@@ -406,11 +399,11 @@ func TestERC20DepositAndWithdrawal(t *testing.T) {
 
 	tx, err := l1Bridge.DepositERC20(auth, l1Erc20Addr, l2Erc20Addr, big.NewInt(DECIMAL0_1), 2_000_000, []byte("0x"))
 	require.NoError(t, err)
+	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
+	require.NoError(t, err)
 	t.Log("deposit erc20 tx hash is: ", tx.Hash())
 	t.Log("erc20 after deposit...\\")
-	waitForTx()
-	waitForTx()
-	waitForTx()
+	time.Sleep(10 * time.Second)
 
 	afterBalanceL1 := getTestTokenBalanceFromL1(t, userAddress)
 	afterBalanceL2 := getTestTokenBalanceFromL2(t, userAddress)
@@ -437,8 +430,12 @@ func TestERC20DepositAndWithdrawal(t *testing.T) {
 	tx, err = l2Bridge.Withdraw(auth, common.HexToAddress(l2Erc20), big.NewInt(DECIMAL0_1), 300_000, []byte("0x"))
 	require.NoError(t, err)
 	t.Log("withdraw erc20 tx hash is: ", tx.Hash())
+
+	SingleWithdrawalTx(t, tx.Hash().Hex())
+
+	t.Log("withdraw erc20 tx hash is: ", tx.Hash())
 	t.Log("erc20 after withdraw.....\\")
-	time.Sleep(10 * time.Second)
+
 	afterBalanceL1 = getTestTokenBalanceFromL1(t, userAddress)
 	afterBalanceL2 = getTestTokenBalanceFromL2(t, userAddress)
 
@@ -447,101 +444,6 @@ func TestERC20DepositAndWithdrawal(t *testing.T) {
 	t.Log("erc20 withdraw amount: ", DECIMAL0_1)
 	require.Equal(t, afterBalanceL2.Uint64()+afterBalanceL1.Uint64(), beforeBalanceL2.Uint64()+beforeBalanceL1.Uint64())
 
-}
-
-func TestDepositAndWithdrawal(t *testing.T) {
-	t.Log("check balance.....")
-
-	l1Client, err := ethclient.Dial(l1url)
-	require.NoError(t, err)
-	require.NotNil(t, l1Client)
-	l2Client, err := ethclient.Dial(l2url)
-	require.NoError(t, err)
-	require.NotNil(t, l2Client)
-
-	// query eth erc20 token
-	l1Bridge, err := bindings.NewL1StandardBridge(common.HexToAddress(l1BridgeAddress), l1Client)
-	require.NoError(t, err)
-	l2Bridge, err := bindings.NewL2StandardBridge(common.HexToAddress(l2BridgeAddress), l2Client)
-	require.NoError(t, err)
-
-	// TEST deposit ETH
-	t.Log("----------------")
-	t.Log("ETH DEPOSIT TEST")
-	t.Log("----------------")
-	t.Log("ETH before deposit...\\")
-	t.Log("l1 eth balance: ", getETHBalanceFromL1(t, userAddress))
-	t.Log("l2 eth balance: ", getETHBalanceFromL2(t, userAddress))
-	// do deposit
-	auth := buildL1Auth(t, l1Client, userPrivateKey, big.NewInt(DECIMAL0_1))
-	tx, err := l1Bridge.DepositETH(auth, 2_000_000, []byte("0x"))
-	require.NoError(t, err)
-	t.Log("deposit eth tx hash is: ", tx.Hash())
-	t.Log("ETH after deposit...\\")
-	t.Log("l1 eth balance: ", getETHBalanceFromL1(t, userAddress))
-	//require.Equal(t, getETHBalanceFromL1(t, userAddress), 0)
-	// wait for l2 confirmation
-	time.Sleep(10 * time.Second)
-	t.Log("l2 eth balance: ", getETHBalanceFromL2(t, userAddress))
-	//require.Equal(t, getETHBalanceFromL2(t, userAddress), 0)
-	t.Log("eth deposit amount: ", DECIMAL0_1)
-
-	// TEST deposit MNT
-	t.Log("----------------")
-	t.Log("MNT DEPOSIT TEST")
-	t.Log("----------------")
-	t.Log("MNT before deposit.....\\")
-	setL1MntApprove(t)
-	t.Log("l1 mnt balance: ", getMNTBalanceFromL1(t, userAddress))
-	t.Log("l2 mnt balance: ", getMNTBalanceFromL2(t, userAddress))
-
-	setL1MntApprove(t)
-
-	auth = buildL1Auth(t, l1Client, userPrivateKey, big.NewInt(0))
-	tx, err = l1Bridge.DepositMNT(auth, big.NewInt(DECIMAL0_1), 2_000_000, []byte("0x"))
-	require.NoError(t, err)
-	t.Log("deposit mnt tx hash is: ", tx.Hash())
-	t.Log("MNT after deposit.....\\")
-	t.Log("l1 mnt balance: ", getMNTBalanceFromL1(t, userAddress))
-	t.Log("l2 mnt balance: ", getMNTBalanceFromL2(t, userAddress))
-	t.Log("mnt deposit amount: ", DECIMAL0_1)
-
-	// TEST withdraw ETH
-	t.Log("-----------------")
-	t.Log("ETH WITHDRAW TEST")
-	t.Log("-----------------")
-	t.Log("ETH before withdraw.....\\")
-	setL2EthApprove(t)
-	t.Log("l1 eth balance: ", getETHBalanceFromL1(t, userAddress))
-	t.Log("l2 eth balance: ", getETHBalanceFromL2(t, userAddress))
-	auth = buildL2Auth(t, l2Client, userPrivateKey, big.NewInt(0))
-	tx, err = l2Bridge.Withdraw(auth, common.HexToAddress(l2EthAddress), big.NewInt(DECIMAL0_1), 300_000, []byte("0x"))
-	require.NoError(t, err)
-	t.Log("withdraw eth tx hash is: ", tx.Hash())
-	t.Log("ETH after withdraw.....\\")
-	time.Sleep(10 * time.Second)
-	t.Log("l1 eth balance: ", getETHBalanceFromL1(t, userAddress))
-	t.Log("l2 eth balance: ", getETHBalanceFromL2(t, userAddress))
-	t.Log("eth withdraw amount: ", DECIMAL0_1)
-
-	// TEST withdraw MNT
-	// TEST withdraw MNT
-	t.Log("-----------------")
-	t.Log("MNT WITHDRAW TEST")
-	t.Log("-----------------")
-	t.Log("MNT before withdraw.....\\")
-	t.Log("l1 mnt balance: ", getMNTBalanceFromL1(t, userAddress))
-	t.Log("l2 mnt balance: ", getMNTBalanceFromL2(t, userAddress))
-	auth = buildL2Auth(t, l2Client, userPrivateKey, big.NewInt(0))
-	tx, err = l2Bridge.Withdraw(auth, common.HexToAddress("0x0"), big.NewInt(DECIMAL0_1), 300_000, []byte("0x"))
-	require.NoError(t, err)
-	t.Log("withdraw mnt tx hash is: ", tx.Hash())
-	t.Log("MNT after withdraw.....\\")
-	time.Sleep(10 * time.Second)
-	t.Log("l1 mnt balance: ", getMNTBalanceFromL1(t, userAddress))
-	t.Log("l2 mnt balance: ", getMNTBalanceFromL2(t, userAddress))
-
-	t.Log("mnt withdraw amount: ", DECIMAL0_1)
 }
 
 func TestCheckAccountBalance(t *testing.T) {
@@ -630,10 +532,10 @@ func setL1MntApprove(t *testing.T) {
 	auth := buildL1Auth(t, client, userPrivateKey, big.NewInt(0))
 	tx, err := l1MntInstance.Approve(auth, common.HexToAddress(l1BridgeAddress), big.NewInt(DECIMAL5))
 	require.NoError(t, err)
-	t.Log("l1 mnt approve tx = ", tx.Hash().String())
-	waitForTx()
 	require.NotNil(t, tx)
-	time.Sleep(5 * time.Second)
+	t.Log("l1 mnt approve tx = ", tx.Hash().String())
+	_, err = waitForTransaction(tx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 
 	l1MntAllowance, err := l1MntInstance.Allowance(&bind.CallOpts{}, common.HexToAddress(userAddress), common.HexToAddress(l1BridgeAddress))
 	require.NoError(t, err)
@@ -654,10 +556,8 @@ func setL2EthApprove(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	t.Log("approve tx = ", tx.Hash().String())
-	waitForTx()
-	waitForTx()
-
-	waitForTx()
+	_, err = waitForTransaction(tx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 
 	l1MntAllowance, err := l2EthInstance.Allowance(&bind.CallOpts{}, common.HexToAddress(userAddress), common.HexToAddress(l2BridgeAddress))
 	require.NoError(t, err)
@@ -678,8 +578,9 @@ func setL1Erc20Approve(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("l1 erc20 approve tx = ", tx.Hash().String())
 	require.NotNil(t, tx)
-	waitForTx()
-	waitForTx()
+
+	_, err = waitForTransaction(tx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 
 	l1MntAllowance, err := l1MntInstance.Allowance(&bind.CallOpts{}, common.HexToAddress(userAddress), common.HexToAddress(l1BridgeAddress))
 	require.NoError(t, err)
@@ -700,10 +601,8 @@ func setL2Erc20Approve(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	t.Log("l2 erc20 approve tx = ", tx.Hash().String())
-	waitForTx()
-	waitForTx()
-
-	waitForTx()
+	_, err = waitForTransaction(tx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 
 	l1MntAllowance, err := l2EthInstance.Allowance(&bind.CallOpts{}, common.HexToAddress(userAddress), common.HexToAddress(l2BridgeAddress))
 	require.NoError(t, err)
@@ -851,6 +750,8 @@ func transferL1ETH(t *testing.T, client *ethclient.Client, address common.Addres
 
 	err = client.SendTransaction(context.Background(), signedTx)
 	require.NoError(t, err)
+	_, err = waitForTransaction(signedTx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 }
 
 func transferL2MNT(t *testing.T, client *ethclient.Client, address common.Address, amount int64) {
@@ -882,6 +783,8 @@ func transferL2MNT(t *testing.T, client *ethclient.Client, address common.Addres
 
 	err = client.SendTransaction(context.Background(), signedTx)
 	require.NoError(t, err)
+	_, err = waitForTransaction(signedTx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 }
 
 func transferL1MNTFromDeployer(t *testing.T, client *ethclient.Client, amount int64) {
@@ -894,6 +797,8 @@ func transferL1MNTFromDeployer(t *testing.T, client *ethclient.Client, amount in
 	tx, err := l1mntToken.Transfer(auth, public_key, big.NewInt(amount))
 	require.NoError(t, err)
 	require.NotNil(t, tx)
+	_, err = waitForTransaction(tx.Hash(), client, 100*time.Second)
+	require.NoError(t, err)
 	t.Log("mnt transfer tx : ", tx.Hash().String())
 }
 
@@ -915,4 +820,45 @@ func TestDecimal(t *testing.T) {
 
 	t.Log(decimal)
 	t.Log(symble)
+}
+
+func SingleWithdrawalTx(t *testing.T, withdrawalTx string) {
+	l1Client, err := ethclient.Dial(l1url)
+	require.NoError(t, err)
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+
+	withdrawalHash := common.HexToHash(withdrawalTx)
+
+	receipt, err := waitForTransaction(withdrawalHash, l2Client, 10*time.Duration(10)*time.Second)
+	require.Nil(t, err, "withdrawal initiated on L2 sequencer")
+
+	// Transactor Account
+	ethPrivKey, err := crypto.HexToECDSA(deployerPrivateKey)
+	require.NoError(t, err)
+
+	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
+	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt, finalizeReceipt)
+
+}
+
+func TestWithdrawal(t *testing.T) {
+	withdrawalTx := "0x973e39efdea9f88f67916da09f51e07d77a33e43627478d12d411e023c6aa13e"
+	l1Client, err := ethclient.Dial(l1url)
+	require.NoError(t, err)
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+
+	withdrawalHash := common.HexToHash(withdrawalTx)
+
+	receipt, err := waitForTransaction(withdrawalHash, l2Client, 10*time.Duration(10)*time.Second)
+	require.Nil(t, err, "withdrawal initiated on L2 sequencer")
+
+	// Transactor Account
+	ethPrivKey, err := crypto.HexToECDSA(deployerPrivateKey)
+	require.NoError(t, err)
+
+	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
+	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt, finalizeReceipt)
+
 }
