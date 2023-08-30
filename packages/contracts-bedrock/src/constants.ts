@@ -7,7 +7,7 @@
  * in the future. See https://github.com/ethereum-optimism/optimism/pull/549 for more info.
  */
 export const predeploys = {
-  BVM_ETH : '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD1111',
+  BVM_ETH : '0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111',
   L2ToL1MessagePasser: '0x4200000000000000000000000000000000000016',
   DeployerWhitelist: '0x4200000000000000000000000000000000000002',
   L2CrossDomainMessenger: '0x4200000000000000000000000000000000000007',

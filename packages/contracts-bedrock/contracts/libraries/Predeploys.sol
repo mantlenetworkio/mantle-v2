@@ -11,7 +11,7 @@ library Predeploys {
     /**
     * @notice Address of the BVM_ETH predeploy.
      */
-    address internal constant BVM_ETH = 0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD1111;
+    address internal constant BVM_ETH = 0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111;
 
     /**
      * @notice Address of the L2ToL1MessagePasser predeploy.
@@ -81,7 +81,7 @@ library Predeploys {
      *         state trie as of the Bedrock upgrade. Contract has been locked and write functions
      *         can no longer be accessed.
      */
-    address internal constant LEGACY_ERC20_MNT = 0xdEAddEaDdeadDEadDEADDEAddEADDEAddead0000;
+    address internal constant LEGACY_ERC20_MNT = 0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000;
 
     /**
      * @custom:legacy
