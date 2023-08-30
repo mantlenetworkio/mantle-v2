@@ -19,6 +19,8 @@ import { BridgeConstants } from "../libraries/BridgeConstants.sol";
  *         not limited to: tokens with transfer fees, rebasing tokens, and tokens with blocklists.
  */
 contract L2StandardBridge is StandardBridge, Semver {
+
+    address L1_MNT_ADDRESS;
     /**
      * @custom:legacy
      * @notice Emitted whenever a withdrawal from L2 to L1 is initiated.
@@ -67,7 +69,9 @@ contract L2StandardBridge is StandardBridge, Semver {
     constructor(address payable _otherBridge)
         Semver(1, 1, 0)
         StandardBridge(payable(Predeploys.L2_CROSS_DOMAIN_MESSENGER), _otherBridge)
-    {}
+    {
+        L1_MNT_ADDRESS = BridgeConstants.L1_MNT;
+    }
 
     /**
      * @notice Allows EOAs to bridge ETH by sending directly to the bridge.
