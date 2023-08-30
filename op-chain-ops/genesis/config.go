@@ -453,9 +453,9 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"l1FeeOverhead":  config.GasPriceOracleOverhead,
 		"l1FeeScalar":    config.GasPriceOracleScalar,
 	}
-	storage["LegacyERC20ETH"] = state.StorageValues{
-		"_name":   "Ether",
-		"_symbol": "ETH",
+	storage["LegacyERC20MNT"] = state.StorageValues{
+		"_name":   "Mantle Token",
+		"_symbol": "MNT",
 	}
 	storage["WETH9"] = state.StorageValues{
 		"name":     "Wrapped Ether",
@@ -469,10 +469,6 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	}
 	storage["ProxyAdmin"] = state.StorageValues{
 		"_owner": config.ProxyAdminOwner,
-	}
-	storage["L1MantleToken"] = state.StorageValues{
-		"name":   "Mantle Token",
-		"symbol": "MNT",
 	}
 	storage["BVM_ETH"] = state.StorageValues{
 		"_name":   "Ether",

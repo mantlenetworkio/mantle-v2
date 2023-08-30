@@ -136,7 +136,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			},
 		},
 		{
-			Name: "LegacyERC20ETH",
+			Name: "LegacyERC20MNT",
 		},
 		{
 			Name: "BVM_ETH",
@@ -231,8 +231,8 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			return nil, fmt.Errorf("invalid type for remoteChainId")
 		}
 		_, tx, _, err = bindings.DeployOptimismMintableERC721Factory(opts, backend, bridge, remoteChainId)
-	case "LegacyERC20ETH":
-		_, tx, _, err = bindings.DeployLegacyERC20ETH(opts, backend)
+	case "LegacyERC20MNT":
+		_, tx, _, err = bindings.DeployLegacyERC20MNT(opts, backend)
 	case "BVM_ETH":
 		_, tx, _, err = bindings.DeployBVMETH(opts, backend)
 	default:

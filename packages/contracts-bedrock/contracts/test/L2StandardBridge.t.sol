@@ -63,7 +63,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit WithdrawalInitiated(address(0), Predeploys.LEGACY_ERC20_ETH, alice, alice, 100, hex"");
+        emit WithdrawalInitiated(address(0), Predeploys.BVM_ETH, alice, alice, 100, hex"");
 
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeInitiated(alice, alice, 100, hex"");
@@ -124,7 +124,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.expectRevert("StandardBridge: bridging ETH must include sufficient ETH value");
         vm.prank(alice, alice);
-        L2Bridge.withdraw(address(Predeploys.LEGACY_ERC20_ETH), 100, 1000, hex"");
+        L2Bridge.withdraw(address(Predeploys.BVM_ETH), 100, 1000, hex"");
     }
 
     /**
@@ -138,7 +138,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit WithdrawalInitiated({
             l1Token: address(0),
-            l2Token: Predeploys.LEGACY_ERC20_ETH,
+            l2Token: Predeploys.BVM_ETH,
             from: alice,
             to: alice,
             amount: 100,
@@ -150,7 +150,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.prank(alice, alice);
         L2Bridge.withdraw{ value: 100 }({
-            _l2Token: Predeploys.LEGACY_ERC20_ETH,
+            _l2Token: Predeploys.BVM_ETH,
             _amount: 100,
             _minGasLimit: 1000,
             _extraData: hex""
@@ -562,7 +562,7 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         vm.prank(messenger);
 
         vm.expectEmit(true, true, true, true);
-        emit DepositFinalized(address(0), Predeploys.LEGACY_ERC20_ETH, alice, alice, 100, hex"");
+        emit DepositFinalized(address(0), Predeploys.BVM_ETH, alice, alice, 100, hex"");
 
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeFinalized(alice, alice, 100, hex"");

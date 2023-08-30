@@ -16,7 +16,7 @@ import { OptimismPortal } from "../L1/OptimismPortal.sol";
 import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
 import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
-import { LegacyERC20ETH } from "../legacy/LegacyERC20ETH.sol";
+import { LegacyERC20MNT } from "../legacy/LegacyERC20MNT.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { Types } from "../libraries/Types.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -275,7 +275,9 @@ contract Messenger_Initializer is Portal_Initializer {
         vm.label(address(addressManager), "AddressManager");
         vm.label(address(L1MessengerImpl), "L1CrossDomainMessenger_Impl");
         vm.label(address(L1Messenger), "L1CrossDomainMessenger_Proxy");
-        vm.label(Predeploys.LEGACY_ERC20_ETH, "LegacyERC20ETH");
+        vm.label(Predeploys.LEGACY_ERC20_MNT, "LegacyERC20MNT");
+        vm.label(Predeploys.BVM_ETH, "LegacyERC20ETH");
+
         vm.label(Predeploys.L2_CROSS_DOMAIN_MESSENGER, "L2CrossDomainMessenger");
 
         vm.label(
@@ -412,7 +414,7 @@ contract Bridge_Initializer is Messenger_Initializer {
         vm.etch(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY, address(factory).code);
         L2TokenFactory = OptimismMintableERC20Factory(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
 
-        vm.etch(Predeploys.LEGACY_ERC20_ETH, address(new LegacyERC20ETH()).code);
+        vm.etch(Predeploys.LEGACY_ERC20_MNT, address(new LegacyERC20MNT()).code);
 
         L1Token = new ERC20("Native L1 Token", "L1T");
 

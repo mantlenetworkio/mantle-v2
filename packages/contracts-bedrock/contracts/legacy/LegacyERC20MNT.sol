@@ -3,23 +3,23 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
-
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 /**
  * @custom:legacy
  * @custom:proxied
  * @custom:predeploy 0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000
- * @title LegacyERC20ETH
- * @notice LegacyERC20ETH is a legacy contract that held ETH balances before the Bedrock upgrade.
- *         All ETH balances held within this contract were migrated to the state trie as part of
+ * @title LegacyERC20MNT
+ * @notice LegacyERC20MNT is a legacy contract that held MNT balances before the Bedrock upgrade.
+ *         All MNT balances held within this contract were migrated to the state trie as part of
  *         the Bedrock upgrade. Functions within this contract that mutate state were already
  *         disabled as part of the EVM equivalence upgrade.
  */
-contract LegacyERC20ETH is OptimismMintableERC20 {
+contract LegacyERC20MNT is OptimismMintableERC20 {
     /**
      * @notice Initializes the contract as an Optimism Mintable ERC20.
      */
     constructor()
-        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, address(0), "Ether", "ETH")
+        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, BridgeConstants.L1_MNT, "Mantle Token", "MNT")
     {}
 
     /**
@@ -40,7 +40,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Mints some amount of ETH.
      */
     function mint(address, uint256) public virtual override {
-        revert("LegacyERC20ETH: mint is disabled");
+        revert("LegacyERC20MNT: mint is disabled");
     }
 
     /**
@@ -48,7 +48,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Burns some amount of ETH.
      */
     function burn(address, uint256) public virtual override {
-        revert("LegacyERC20ETH: burn is disabled");
+        revert("LegacyERC20MNT: burn is disabled");
     }
 
     /**
@@ -56,7 +56,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Transfers some amount of ETH.
      */
     function transfer(address, uint256) public virtual override returns (bool) {
-        revert("LegacyERC20ETH: transfer is disabled");
+        revert("LegacyERC20MNT: transfer is disabled");
     }
 
     /**
@@ -64,7 +64,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Approves a spender to spend some amount of ETH.
      */
     function approve(address, uint256) public virtual override returns (bool) {
-        revert("LegacyERC20ETH: approve is disabled");
+        revert("LegacyERC20MNT: approve is disabled");
     }
 
     /**
@@ -76,7 +76,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
         address,
         uint256
     ) public virtual override returns (bool) {
-        revert("LegacyERC20ETH: transferFrom is disabled");
+        revert("LegacyERC20MNT: transferFrom is disabled");
     }
 
     /**
@@ -84,7 +84,7 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Increases the allowance of a spender.
      */
     function increaseAllowance(address, uint256) public virtual override returns (bool) {
-        revert("LegacyERC20ETH: increaseAllowance is disabled");
+        revert("LegacyERC20MNT: increaseAllowance is disabled");
     }
 
     /**
@@ -92,6 +92,6 @@ contract LegacyERC20ETH is OptimismMintableERC20 {
      * @notice Decreases the allowance of a spender.
      */
     function decreaseAllowance(address, uint256) public virtual override returns (bool) {
-        revert("LegacyERC20ETH: decreaseAllowance is disabled");
+        revert("LegacyERC20MNT: decreaseAllowance is disabled");
     }
 }

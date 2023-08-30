@@ -211,7 +211,7 @@ contract L2StandardBridge is StandardBridge, Semver {
     ) internal override {
         emit WithdrawalInitiated(
             address(0),
-            Predeploys.LEGACY_ERC20_ETH,
+            Predeploys.BVM_ETH,
             _from,
             _to,
             _amount,
@@ -234,7 +234,7 @@ contract L2StandardBridge is StandardBridge, Semver {
     ) internal override {
         emit DepositFinalized(
             address(0),
-            Predeploys.LEGACY_ERC20_ETH,
+            Predeploys.BVM_ETH,
             _from,
             _to,
             _amount,

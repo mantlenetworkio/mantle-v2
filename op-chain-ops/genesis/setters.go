@@ -49,7 +49,7 @@ var (
 		predeploys.GovernanceTokenAddr:     true,
 		predeploys.WETH9Addr:               true,
 		predeploys.LegacyMessagePasserAddr: true,
-		predeploys.LegacyERC20ETHAddr:      true,
+		predeploys.LegacyERC20MNTAddr:      true,
 		predeploys.DeployerWhitelistAddr:   true,
 		predeploys.BVM_ETHAddr:             true,
 	}
@@ -143,13 +143,13 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 	return nil
 }
 
-func SetLegacyETH(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
+func SetLegacyMNT(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
 	deployResults, err := immutables.BuildOptimism(immutable)
 	if err != nil {
 		return err
 	}
 
-	return setupPredeploy(db, deployResults, storage, "LegacyERC20ETH", predeploys.LegacyERC20ETHAddr, predeploys.LegacyERC20ETHAddr)
+	return setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
 }
 
 // SetImplementations will set the implementations of the contracts in the state
@@ -166,7 +166,7 @@ func SetImplementations(db vm.StateDB, storage state.StorageConfig, immutable im
 			continue
 		}
 
-		if *address == predeploys.LegacyERC20ETHAddr || *address == predeploys.BVM_ETHAddr {
+		if *address == predeploys.LegacyERC20MNTAddr || *address == predeploys.BVM_ETHAddr {
 			continue
 		}
 
@@ -216,9 +216,9 @@ func SetDevOnlyL2Implementations(db vm.StateDB, storage state.StorageConfig, imm
 		}
 	}
 
-	db.CreateAccount(predeploys.LegacyERC20ETHAddr)
+	db.CreateAccount(predeploys.LegacyERC20MNTAddr)
 	db.CreateAccount(predeploys.BVM_ETHAddr)
-	if err := setupPredeploy(db, deployResults, storage, "LegacyERC20ETH", predeploys.LegacyERC20ETHAddr, predeploys.LegacyERC20ETHAddr); err != nil {
+	if err := setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr); err != nil {
 		return fmt.Errorf("error setting up legacy eth: %w", err)
 	}
 	if err := setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.BVM_ETHAddr, predeploys.BVM_ETHAddr); err != nil {
