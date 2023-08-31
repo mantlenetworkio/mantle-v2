@@ -3,6 +3,7 @@ module github.com/ethereum-optimism/optimism
 go 1.19
 
 require (
+	github.com/Layr-Labs/datalayr/common v0.0.0
 	github.com/btcsuite/btcd v0.23.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
@@ -41,6 +42,7 @@ require (
 )
 
 require (
+	github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
@@ -191,3 +193,5 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum v1.11.6 => github.com/ethereum-optimism/op-geth v1.101105.2-0.20230502202351-9cc072e922f6
+replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
+replace	github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 => ./datalayr/lib/merkzg
