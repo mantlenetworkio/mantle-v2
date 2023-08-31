@@ -194,6 +194,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         if (_l2Token == Predeploys.BVM_ETH ) {
             _initiateBridgeETH(_l2Token,address(0), _from, _to, _amount, _minGasLimit, _extraData);
         } else if (_l2Token == address(0) ){
+            require(msg.value==_amount,"L2StandardBridge :_amount must equal the MNT value.");
             _initiateBridgeMNT(address(0), BridgeConstants.L1_MNT,_from, _to, _amount, _minGasLimit, _extraData);
         } else {
             address l1Token = OptimismMintableERC20(_l2Token).l1Token();

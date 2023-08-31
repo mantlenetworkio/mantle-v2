@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCall } from "../libraries/SafeCall.sol";
-import { IOptimismMintableERC20, ILegacyMintableERC20 } from "./IOptimismMintableERC20.sol";
-import { CrossDomainMessenger } from "./CrossDomainMessenger.sol";
-import { OptimismMintableERC20 } from "./OptimismMintableERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
-import { Predeploys } from "../libraries/Predeploys.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCall} from "../libraries/SafeCall.sol";
+import {IOptimismMintableERC20, ILegacyMintableERC20} from "./IOptimismMintableERC20.sol";
+import {CrossDomainMessenger} from "./CrossDomainMessenger.sol";
+import {OptimismMintableERC20} from "./OptimismMintableERC20.sol";
+import {BridgeConstants} from "../libraries/BridgeConstants.sol";
+import {Predeploys} from "../libraries/Predeploys.sol";
 
 /**
  * @custom:upgradeable
@@ -188,7 +188,7 @@ abstract contract StandardBridge {
     modifier onlyOtherBridge() {
         require(
             msg.sender == address(MESSENGER) &&
-                MESSENGER.xDomainMessageSender() == address(OTHER_BRIDGE),
+            MESSENGER.xDomainMessageSender() == address(OTHER_BRIDGE),
             "StandardBridge: function can only be called from the other bridge"
         );
         _;
@@ -239,8 +239,8 @@ abstract contract StandardBridge {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeL2ETH(uint256 _amount,uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
-        _initiateBridgeETH(Predeploys.BVM_ETH,address(0),msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+    function bridgeL2ETH(uint256 _amount, uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
+        _initiateBridgeETH(Predeploys.BVM_ETH, address(0), msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
@@ -262,7 +262,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable {
-        _initiateBridgeETH(address(0), Predeploys.BVM_ETH,msg.sender, _to, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeETH(address(0), Predeploys.BVM_ETH, msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
 
     function bridgeL2ETHTo(
@@ -271,7 +271,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable {
-        _initiateBridgeETH(Predeploys.BVM_ETH,address(0),msg.sender, _to, _amount, _minGasLimit, _extraData);
+        _initiateBridgeETH(Predeploys.BVM_ETH, address(0), msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
@@ -358,7 +358,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable onlyOtherBridge {
-        require(msg.value == _amount || _localToken == Predeploys.BVM_ETH , "StandardBridge: amount sent does not match amount required");
+        require(msg.value == _amount || _localToken == Predeploys.BVM_ETH, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
@@ -373,7 +373,7 @@ abstract contract StandardBridge {
             );
 
             OptimismMintableERC20(_localToken).mint(_to, _amount);
-        }else {
+        } else {
             bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
             require(success, "StandardBridge: ETH transfer failed");
         }
@@ -478,11 +478,8 @@ abstract contract StandardBridge {
         bytes memory _extraData
     ) internal {
         uint32 _type = BridgeConstants.ETH_DEPOSIT_TX;
-        require(
-            msg.value == _amount || _localToken == Predeploys.BVM_ETH ,
-            "StandardBridge: bridging ETH must include sufficient ETH value"
-        );
         if (_isOptimismMintableERC20(_localToken)) {
+            require(_localToken == Predeploys.BVM_ETH, "StandardBridge: _initiateBridgeETH only support for ETH bridging.");
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
                 "StandardBridge: wrong remote token for ETH withdrawal process"
@@ -490,13 +487,18 @@ abstract contract StandardBridge {
 
             OptimismMintableERC20(_localToken).burn(_from, _amount);
             _type = BridgeConstants.ETH_WITHDRAWAL_TX;
+        } else {
+            require(
+                msg.value == _amount ,
+                "StandardBridge: bridging ETH must include sufficient ETH value"
+            );
         }
 
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage{ value: msg.value }(
+        MESSENGER.sendMessage{value: msg.value}(
             _type,
             _amount,
             address(OTHER_BRIDGE),
@@ -570,7 +572,6 @@ abstract contract StandardBridge {
         );
     }
 
-
     /**
      * @notice Sends MNT tokens to a receiver's address on the other chain.
      *
@@ -592,7 +593,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal {
-        uint32 _type =0;
+        uint32 _type = BridgeConstants.MNT_DEPOSIT_TX;
         if (_localToken == address(0) && _remoteToken == BridgeConstants.L1_MNT) {
             require(
                 msg.value == _amount,
@@ -607,14 +608,14 @@ abstract contract StandardBridge {
             deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
             _type = BridgeConstants.MNT_DEPOSIT_TX;
 
-        }else{
-            require(false,"StandardBridge: localToken and remoteToken are not belong to MNT.");
+        } else {
+            revert( "StandardBridge: localToken and remoteToken are not belong to MNT.");
         }
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-        MESSENGER.sendMessage{ value: msg.value }(
+        MESSENGER.sendMessage{value: msg.value}(
             _type,
             _amount,
             address(OTHER_BRIDGE),
@@ -633,7 +634,6 @@ abstract contract StandardBridge {
             _minGasLimit
         );
     }
-
 
     /**
      * @notice Checks if a given address is an OptimismMintableERC20. Not perfect, but good enough.
@@ -660,9 +660,9 @@ abstract contract StandardBridge {
      * @return True if the other token is the correct pair token for the OptimismMintableERC20.
      */
     function _isCorrectTokenPair(address _mintableToken, address _otherToken)
-        internal
-        view
-        returns (bool)
+    internal
+    view
+    returns (bool)
     {
         if (
             ERC165Checker.supportsInterface(_mintableToken, type(ILegacyMintableERC20).interfaceId)
@@ -751,7 +751,6 @@ abstract contract StandardBridge {
     ) internal virtual {
         emit ERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
     }
-
 
     /**
      * @notice Emits the MNTBridgeInitiated event and if necessary the appropriate legacy

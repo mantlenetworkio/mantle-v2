@@ -13,4 +13,5 @@ library BridgeConstants {
     uint32 constant ERC20_TX = 5;
 
     uint32 constant ERC721_TX = 6;
+    uint256 constant ERC721_AMOUNT = 1;
 }

@@ -271,17 +271,15 @@ abstract contract CrossDomainMessenger is
         if ( _type == BridgeConstants.MNT_DEPOSIT_TX ){
             _nativeTokenValue =  _amount;
         } else if (_type == BridgeConstants.ETH_DEPOSIT_TX ){
+            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal ETH value");
             _nativeTokenValue =  0;
-        }
-
-        if ( _type == BridgeConstants.ETH_WITHDRAWAL_TX ){
+        } else if ( _type == BridgeConstants.ETH_WITHDRAWAL_TX ){
             _nativeTokenValue =  _amount;
         } else if (_type == BridgeConstants.MNT_WITHDRAWAL_TX ){
+            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal MNT value");
             _nativeTokenValue =  0;
-        }
-
-        if (_type == BridgeConstants.ERC20_TX || _type == BridgeConstants.ERC721_TX){
-            _nativeTokenValue =  0;
+        }else if (_type==BridgeConstants.ERC721_TX){
+            _amount = BridgeConstants.ERC721_AMOUNT;
         }
 
         // Triggers a message to the other messenger. Note that the amount of gas provided to the

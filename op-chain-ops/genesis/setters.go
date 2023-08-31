@@ -24,6 +24,7 @@ var (
 	UntouchablePredeploys = map[common.Address]bool{
 		predeploys.GovernanceTokenAddr: true,
 		predeploys.WETH9Addr:           true,
+		predeploys.BVM_ETHAddr:         true,
 	}
 
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
@@ -34,6 +35,11 @@ var (
 			5: common.HexToHash("0xc4a213cf5f06418533e5168d8d82f7ccbcc97f27ab90197c2c051af6a4941cf9"),
 		},
 		predeploys.WETH9Addr: {
+			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+		},
+		// TODO the hash need to be set correctly.
+		predeploys.BVM_ETHAddr: {
 			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
 			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
 		},
@@ -112,10 +118,8 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 	}
 
 	for i := uint64(0); i <= count; i++ {
-		// ignore BVM_ETH, L1MantleToken address。
-		if i >= uint64(33) && i <= uint64(34) && namespace == bigL2PredeployNamespace {
-			continue
-		} else if i == uint64(32) && namespace == bigL1PredeployNamespace {
+		// ignore dev L1's L1_MANTLE_TOEKN address for 0x6900000000000000000000000000000000000020 and the 20 for hexadecimal means 32 in 10 hex.
+		if i == uint64(32) && namespace == bigL1PredeployNamespace {
 			bigAddr := new(big.Int).Or(namespace, new(big.Int).SetUint64(i))
 			addr := common.BigToAddress(bigAddr)
 			if !db.Exist(addr) {
