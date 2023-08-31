@@ -31,6 +31,12 @@ type Config struct {
 	PollInterval           time.Duration
 	MaxPendingTransactions uint64
 
+	// Rollup MantleDA
+	DisperserSocket      string
+	DisperserTimeout     uint64
+	DataStoreDuration    uint64
+	GraphPollingDuration uint64
+
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
 
@@ -58,6 +64,18 @@ type CLIConfig struct {
 
 	// RollupRpc is the HTTP provider URL for the L2 rollup node.
 	RollupRpc string
+
+	// DisperserSocket is the websocket for the MantleDA disperser.
+	DisperserSocket string
+
+	// DisperserTimeout timeout for context
+	DisperserTimeout uint64
+
+	// DataStoreDuration data store time on MantleDA
+	DataStoreDuration uint64
+
+	//GraphPollingDuration listen to graph node polling time
+	GraphPollingDuration uint64
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -128,6 +146,10 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MaxPendingTransactions: ctx.GlobalUint64(flags.MaxPendingTransactionsFlag.Name),
 		MaxChannelDuration:     ctx.GlobalUint64(flags.MaxChannelDurationFlag.Name),
 		MaxL1TxSize:            ctx.GlobalUint64(flags.MaxL1TxSizeBytesFlag.Name),
+		DisperserSocket:        ctx.GlobalString(flags.DisperserSocketFlag.Name),
+		DisperserTimeout:       ctx.GlobalUint64(flags.DisperserTimeoutFlag.Name),
+		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
+		GraphPollingDuration:   ctx.GlobalUint64(flags.GraphPollingDurationFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),

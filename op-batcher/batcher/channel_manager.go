@@ -42,6 +42,8 @@ type channelManager struct {
 	// Set of confirmed txID -> inclusion block. For determining if the channel is timed out
 	confirmedTransactions map[txID]eth.BlockID
 
+	// params of initStoreData on MantleDA
+	params StoreParams
 	// if set to true, prevents production of any new channel frames
 	closed bool
 }

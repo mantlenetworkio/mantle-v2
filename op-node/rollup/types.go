@@ -75,6 +75,11 @@ type Config struct {
 	// Active if RegolithTime != nil && L2 block timestamp >= *RegolithTime, inactive otherwise.
 	RegolithTime *uint64 `json:"regolith_time,omitempty"`
 
+	// RollupType sets whether rollup data is stored in L1 or MantleDA. 0 -> L1; 1 -> MantleDA
+	RollupType uint `json:"rollup_type"`
+	// BatchSize sets the number of the frames in one batch rollup to MantleDA
+	BatchSize uint `json:"batch_size"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -84,6 +89,10 @@ type Config struct {
 	DepositContractAddress common.Address `json:"deposit_contract_address"`
 	// L1 System Config Address
 	L1SystemConfigAddress common.Address `json:"l1_system_config_address"`
+	// L1 EigenDataLayerChain Contract Address
+	EigenDataLayerChainAddress common.Address `json:"eigen_data_layer_chain_address"`
+	// L1 EigenDataLayerFee Contract Address
+	EigenDataLayerFeeAddress common.Address `json:"eigen_data_layer_fee_address"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.

@@ -20,6 +20,11 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+const (
+	EOA = iota
+	MantleDA
+)
+
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
 // batches to L1 for availability.
 type BatchSubmitter struct {
@@ -83,6 +88,10 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		MaxPendingTransactions: cfg.MaxPendingTransactions,
 		NetworkTimeout:         cfg.TxMgrConfig.NetworkTimeout,
 		TxManager:              txManager,
+		DisperserSocket:        cfg.DisperserSocket,
+		DisperserTimeout:       cfg.DisperserTimeout,
+		DataStoreDuration:      cfg.DataStoreDuration,
+		GraphPollingDuration:   cfg.GraphPollingDuration,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -140,7 +149,12 @@ func (l *BatchSubmitter) Start() error {
 	l.lastStoredBlock = eth.BlockID{}
 
 	l.wg.Add(1)
-	go l.loop()
+
+	if l.Rollup.RollupType == EOA {
+		go l.loop()
+	} else if l.Rollup.RollupType == MantleDA {
+		go l.mantleDALoop()
+	}
 
 	l.log.Info("Batch Submitter started")
 

@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 )
@@ -55,4 +56,27 @@ func (id txID) String() string {
 // output during logging.
 func (id txID) TerminalString() string {
 	return fmt.Sprintf("%s:%d", id.chID.TerminalString(), id.frameNumber)
+}
+
+type StoreParams struct {
+	ReferenceBlockNumber uint32
+	TotalOperatorsIndex  uint32
+	OrigDataSize         uint32 // unique nonce for each data store
+	NumTotal             uint32 // total number data node active on chain
+	Quorum               uint32 // minimal amount of signatures from data node
+	NumSys               uint32 // number of data node which contains the systematic chunk
+	NumPar               uint32 // number of data node which contains the parity chunk
+	Duration             uint32 // duration which data is stored
+
+	// Data and Encoding
+	KzgCommit      []byte // elliptic curve kzg commitmetn
+	LowDegreeProof []byte
+	Degree         uint32   // degree of the polynomial
+	TotalSize      uint64   // total size of the data
+	Order          []uint32 // mapping for deciding the storer of each coded data chunk
+
+	// Chain
+	Fee        *big.Int
+	HeaderHash []byte
+	Disperser  []byte
 }

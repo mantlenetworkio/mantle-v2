@@ -9,6 +9,7 @@ require (
 	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
+	github.com/ethereum-optimism/optimism/l2geth v0.0.0-20230612200230-50b04ade19e3
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
@@ -38,13 +39,13 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/term v0.6.0
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
+	google.golang.org/grpc v1.38.0
 )
 
 require (
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
-	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
@@ -65,7 +66,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/edsrzf/mmap-go v1.0.0 // indirect
+	github.com/edsrzf/mmap-go v1.1.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fjl/memsize v0.0.1 // indirect
@@ -180,6 +181,7 @@ require (
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
+	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
