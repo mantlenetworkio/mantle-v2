@@ -6,8 +6,10 @@ replace github.com/ethereum/go-ethereum v1.11.6 => github.com/ethereum-optimism/
 
 replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
 
+replace github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 => ./datalayr/lib/merkzg
+
 require (
-	// github.com/Layr-Labs/datalayr/common v0.0.0
+	github.com/Layr-Labs/datalayr/common v0.0.0
 	github.com/btcsuite/btcd v0.23.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
@@ -44,9 +46,11 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/term v0.11.0
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
+	google.golang.org/grpc v1.53.0
 )
 
 require (
+	github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
@@ -191,7 +195,6 @@ require (
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
-	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
