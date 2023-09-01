@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum/go-ethereum/common"
 	"io"
 	"math/big"
 	_ "net/http/pprof"
@@ -107,7 +111,30 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 	if err := batcherCfg.Check(); err != nil {
 		return nil, err
 	}
+	if rcfg.RollupType == MantleDA {
+		if rcfg.DataLayerChainAddress == (common.Address{}) {
+			return nil, fmt.Errorf("rollup type %d , datalayrcontract address is 0", rcfg.RollupType)
+		}
+		dataLayrContract, err := bindings.NewContractDataLayrServiceManagerStorageCaller(rcfg.DataLayerChainAddress, l1Client)
+		if err != nil {
+			return nil, err
+		}
+		parsed, err := bindings.ContractDataLayrServiceManagerStorageMetaData.GetAbi()
+		if err != nil {
+			return nil, err
+		}
+		eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
+		if err != nil {
+			return nil, err
+		}
 
+		graphClient := graphView.NewGraphClient(rcfg.GraphProvider, eigenLogger)
+
+		batcherCfg.DatalayrContract = dataLayrContract
+		batcherCfg.DatalayrABI = parsed
+		batcherCfg.GraphClient = graphClient
+
+	}
 	return NewBatchSubmitter(ctx, batcherCfg, l, m)
 }
 

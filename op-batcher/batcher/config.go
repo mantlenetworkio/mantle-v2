@@ -1,6 +1,10 @@
 package batcher
 
 import (
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -35,7 +39,10 @@ type Config struct {
 	DisperserSocket      string
 	DisperserTimeout     uint64
 	DataStoreDuration    uint64
-	GraphPollingDuration uint64
+	GraphPollingDuration time.Duration
+	DatalayrContract     *bindings.ContractDataLayrServiceManagerStorageCaller
+	DatalayrABI          *abi.ABI
+	GraphClient          *graphView.GraphClient
 
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
@@ -75,7 +82,7 @@ type CLIConfig struct {
 	DataStoreDuration uint64
 
 	//GraphPollingDuration listen to graph node polling time
-	GraphPollingDuration uint64
+	GraphPollingDuration time.Duration
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -111,6 +118,8 @@ type CLIConfig struct {
 	MetricsConfig    opmetrics.CLIConfig
 	PprofConfig      oppprof.CLIConfig
 	CompressorConfig compressor.CLIConfig
+
+	EigenLogConfig logging.Config
 }
 
 func (c CLIConfig) Check() error {
@@ -149,7 +158,7 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		DisperserSocket:        ctx.GlobalString(flags.DisperserSocketFlag.Name),
 		DisperserTimeout:       ctx.GlobalUint64(flags.DisperserTimeoutFlag.Name),
 		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
-		GraphPollingDuration:   ctx.GlobalUint64(flags.GraphPollingDurationFlag.Name),
+		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),
@@ -157,5 +166,6 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MetricsConfig:          opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:            oppprof.ReadCLIConfig(ctx),
 		CompressorConfig:       compressor.ReadCLIConfig(ctx),
+		EigenLogConfig:         logging.ReadCLIConfig(ctx),
 	}
 }
