@@ -2,10 +2,12 @@ package da
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
-	"strconv"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
@@ -14,10 +16,9 @@ import (
 )
 
 type MantleDataStoreConfig struct {
-	RetrieverSocket               string
-	RetrieverTimeout              string
-	DatalayrServiceMangerContract string
-	GraphProvider                 string
+	RetrieverSocket  string
+	RetrieverTimeout time.Duration
+	GraphProvider    string
 }
 
 type MantleDataStore struct {
@@ -25,7 +26,18 @@ type MantleDataStore struct {
 	Cfg           *MantleDataStoreConfig
 	GraphClient   *graphView.GraphClient
 	GraphqlClient *graphql.Client
-	cancel        func()
+}
+
+func NewMantleDataStore(ctx context.Context, cfg *MantleDataStoreConfig) (*MantleDataStore, error) {
+	graphClient := graphView.NewGraphClient(cfg.GraphProvider, nil)
+	graphqlClient := graphql.NewClient(graphClient.GetEndpoint(), nil)
+	mDatastore := &MantleDataStore{
+		Ctx:           ctx,
+		Cfg:           cfg,
+		GraphClient:   graphClient,
+		GraphqlClient: graphqlClient,
+	}
+	return mDatastore, nil
 }
 
 func (mda *MantleDataStore) getDataStoreById(dataStoreId uint32) (*graphView.DataStore, error) {

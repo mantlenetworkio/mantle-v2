@@ -58,6 +58,36 @@ var (
 		Usage:  "Enable the admin API (experimental)",
 		EnvVar: prefixEnvVar("RPC_ENABLE_ADMIN"),
 	}
+	RetrieverSocketFlag = cli.StringFlag{
+		Name:     "da.retriever-socket",
+		Usage:    "Socket address of the da retriever",
+		Required: true,
+		EnvVar:   prefixEnvVar("RETRIEVER_SOCKET"),
+	}
+	RetrieverTimeoutFlag = cli.DurationFlag{
+		Name:   "da.retriever-timeout",
+		Usage:  "retriever timeout",
+		Value:  50 * time.Millisecond,
+		EnvVar: prefixEnvVar("RETRIEVER_TIMEOUT"),
+	}
+	DlsmContractAddressFlag = cli.StringFlag{
+		Name:     "da.dlsm-address",
+		Usage:    "Address of the dlsm contract",
+		Required: true,
+		EnvVar:   prefixEnvVar("DLSM_ADDRESS"),
+	}
+	GraphProviderFlag = cli.StringFlag{
+		Name:     "da.graph-provider",
+		Usage:    "Graphql endpoint for graph node",
+		Required: true,
+		EnvVar:   prefixEnvVar("GRAPH_PROVIDER"),
+	}
+	MantleDaSwitchFlag = cli.BoolFlag{
+		Name:     "da.mantle-switch",
+		Usage:    "Enable the mantle da rollup",
+		Required: true,
+		EnvVar:   prefixEnvVar("MANTLE_DA_SWITCH"),
+	}
 
 	/* Optional Flags */
 	L1TrustRPC = cli.BoolFlag{
@@ -231,7 +261,11 @@ var optionalFlags = []cli.Flag{
 	SequencerMaxSafeLagFlag,
 	SequencerL1Confs,
 	L1EpochPollIntervalFlag,
-	RPCEnableAdmin,
+	RetrieverSocketFlag,
+	RetrieverTimeoutFlag,
+	GraphProviderFlag,
+	DlsmContractAddressFlag,
+	MantleDaSwitchFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
 	MetricsPortFlag,

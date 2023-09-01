@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
+	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 
@@ -57,6 +58,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
+	datastoreConfig, err := NewMantleDataStoreConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
+	}
+
 	cfg := &node.Config{
 		L1:     l1Endpoint,
 		L2:     l2Endpoint,
@@ -78,9 +84,12 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
 			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
 		},
+		DatastoreConfig:     datastoreConfig,
 		P2P:                 p2pConfig,
 		P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
+		DlsmContractAddress: ctx.GlobalString(flags.DlsmContractAddressFlag.Name),
+		MantleDaSwitch:      ctx.GlobalBool(flags.MantleDaSwitchFlag.Name),
 		Heartbeat: node.HeartbeatConfig{
 			Enabled: ctx.GlobalBool(flags.HeartbeatEnabledFlag.Name),
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
@@ -192,4 +201,15 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	logger := log.New()
 	logger.SetHandler(handler)
 	return logger, nil
+}
+
+func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig, error) {
+	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
+	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
+	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
+	return datastore.MantleDataStoreConfig{
+		RetrieverSocket:  retrieverSocket,
+		RetrieverTimeout: retrieverTimeout,
+		GraphProvider:    graphProvider,
+	}, nil
 }
