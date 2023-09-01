@@ -31,7 +31,7 @@ const (
 	l1ChainId = 900
 	L2ChainId = 901
 
-	l2EthAddress    = "0x4200000000000000000000000000000000000022"
+	l2EthAddress    = "0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111"
 	l1BridgeAddress = "0x6900000000000000000000000000000000000003"
 	l2BridgeAddress = "0x4200000000000000000000000000000000000010"
 	l1weth          = "0x6900000000000000000000000000000000000007"
@@ -848,7 +848,7 @@ func SingleWithdrawalTx(t *testing.T, withdrawalTx string) {
 }
 
 func TestWithdrawal(t *testing.T) {
-	withdrawalTx := "0x7478d698457886534aabd199fbedf2d6f1ca4a85b8a5a550aa551ca2d510c1f8"
+	withdrawalTx := "0x6f443e34040fd7dcf9d93b88fdea4e3e57acf8b5f7c2d74bc8f02b0ec1a765e6"
 	l1Client, err := ethclient.Dial(l1url)
 	require.NoError(t, err)
 	l2Client, err := ethclient.Dial(l2url)
