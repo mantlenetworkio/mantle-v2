@@ -4,12 +4,6 @@ ARG VERSION=v0.0.0
 
 RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash
 
-ENV GO111MODULE=on \
-    GOPROXY=https://goproxy.cn,direct \
-    CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
-
 # build op-proposer with the shared go.mod & go.sum files
 COPY ./op-proposer /app/op-proposer
 COPY ./op-bindings /app/op-bindings
