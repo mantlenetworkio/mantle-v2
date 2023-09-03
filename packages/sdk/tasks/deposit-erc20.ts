@@ -4,7 +4,7 @@ import { task, types } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import '@nomiclabs/hardhat-ethers'
 import 'hardhat-deploy'
-import { Event, Contract, Wallet, providers, utils } from 'ethers'
+import {Event, Contract, Wallet, providers, utils, ethers} from 'ethers'
 import {
   predeploys,
   getContractDefinition,
@@ -137,6 +137,11 @@ task('deposit-erc20', 'Deposits WETH9 onto L2.')
     }
 
     const l2Provider = new providers.StaticJsonRpcProvider(args.l2ProviderUrl)
+    // const baseFee = await l2Provider.send('eth_baseFee', []);
+    // console.log('Base Fee:', baseFee);
+    // const gasPrice = await l2Provider.send('eth_gasPrice', []);
+    // const gasPriceDecimal = parseInt(gasPrice, 16);
+    // console.log('Priority Fee:', gasPriceDecimal.toString());
 
     const l2Signer = new hre.ethers.Wallet(
       hre.network.config.accounts[0],
@@ -277,6 +282,28 @@ task('deposit-erc20', 'Deposits WETH9 onto L2.')
       throw new Error('bad deposit')
     }
     console.log(`Deposit success`)
+
+    const privateKey = ethers.utils.randomBytes(32);
+    const wallet = new ethers.Wallet(privateKey);
+    const address2 = wallet.address;
+    const contractABI = ['function transfer(address to, uint256 amount)'];
+    const contract = new Contract(WETH9.address, contractABI, l2Signer);
+    const tx = await contract.transfer(address2, ethers.utils.parseUnits('200000000', 18));
+
+    console.log(`send erc20 to : ${address2}`)
+    console.log('Transaction hash:', tx.hash);
+
+    const gasPrice = ethers.utils.parseUnits('100', 'gwei');
+
+    const stx = {
+      to: address2, // 收款地址
+      value: ethers.utils.parseEther('1'), // 转账金额（以 ether 为单位）
+      gasPrice, // 指定所需的 gasPrice
+    };
+
+    const txResponse = await signer.sendTransaction(stx);
+    console.log(`gas price : ${txResponse.gasPrice.toNumber()}`)
+    console.log(`gas limit : ${txResponse.gasLimit.toNumber()}`)
 
     console.log('Starting withdrawal')
     const preBalance = await WETH9.balanceOf(signer.address)

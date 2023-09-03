@@ -1,3 +1,5 @@
 import './deposit-eth'
 import './deposit-erc20'
 import './finalize-withdrawal'
+import './transfer-erc721'
+import './fee-test'

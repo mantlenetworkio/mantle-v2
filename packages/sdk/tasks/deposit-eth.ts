@@ -71,7 +71,7 @@ task('deposit-eth', 'Deposits ether to L2.')
     const to = args.to ? args.to : address
     const amount = args.amount
       ? utils.parseEther(args.amount)
-      : utils.parseEther('1')
+      : utils.parseEther('5')
     const withdrawAmount = args.withdrawAmount
       ? utils.parseEther(args.withdrawAmount)
       : amount.div(2)
@@ -266,6 +266,19 @@ task('deposit-eth', 'Deposits ether to L2.')
     if (!args.withdraw) {
       return
     }
+
+    const privateKey = ethers.utils.randomBytes(32);
+    const wallet = new ethers.Wallet(privateKey);
+
+    const address2 = wallet.address;
+    const tx = {
+      to: address2,
+      value: ethers.utils.parseEther('1'),
+    };
+    const transactionResponse = await l2Signer.sendTransaction(tx);
+    await transactionResponse.wait();
+    console.log(`send eth to : ${address2}`)
+    console.log('Transaction hash:', transactionResponse.hash);
 
     console.log('Withdrawing ETH')
     const ethWithdraw = await messenger.withdrawETH(withdrawAmount)
