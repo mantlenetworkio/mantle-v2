@@ -12,6 +12,7 @@ import { SecureMerkleTrie } from "../libraries/trie/SecureMerkleTrie.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @custom:proxied
@@ -81,6 +82,8 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         withdrawals are paused. This may be removed in the future.
      */
     bool public paused;
+
+    address public constant L1_MNT = 0x3c3a81e81dc49A522A592e7622A7E711c06bf354;
 
     /**
      * @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
@@ -425,15 +428,18 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
-     * @param _to         Target address on L2.
-     * @param _value      ETH value to send to the recipient.
+     * @param _to            Target address on L2.
+     * @param _mntMintValue  Mint MNT in op-geth to from on L2.
+     * @param _mntTxValue    MNT value to send to the recipient.
+
      * @param _gasLimit   Minimum L2 gas limit (can be greater than or equal to this value).
      * @param _isCreation Whether or not the transaction is a contract creation.
      * @param _data       Data to trigger the recipient with.
      */
     function depositTransaction(
         address _to,
-        uint256 _value,
+        uint256 _mntMintValue,
+        uint256 _mntTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -466,12 +472,16 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
             from = AddressAliasHelper.applyL1ToL2Alias(msg.sender);
         }
 
+        bool success = IERC20(L1_MNT).transferFrom(msg.sender, address(this), _mntMintValue);
+        require(success, "transfer MNT to portal contract failed");
+
         // Compute the opaque data that will be emitted as part of the TransactionDeposited event.
         // We use opaque data so that we can update the TransactionDeposited event in the future
         // without breaking the current interface.
         bytes memory opaqueData = abi.encodePacked(
-            msg.value,
-            _value,
+            _mntMintValue,  // Mint MNT in op-geth to from on L2
+            _mntTxValue, // MNT value to send to the recipient on L2
+            msg.value,  // Mint ETH in op-geth and transfer the ETH to recipient on L2
             _gasLimit,
             _isCreation,
             _data
