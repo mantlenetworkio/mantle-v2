@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
-import { StandardBridge } from "../universal/StandardBridge.sol";
+import { StandardBridge } from "./StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
 
 /**

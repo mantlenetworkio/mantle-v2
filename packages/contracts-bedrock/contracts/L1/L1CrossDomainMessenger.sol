@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismPortal } from "./OptimismPortal.sol";
-import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
+import { CrossDomainMessenger } from "./CrossDomainMessenger.sol";
 import { Semver } from "../universal/Semver.sol";
 
 /**
