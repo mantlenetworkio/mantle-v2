@@ -28,7 +28,7 @@ type implConfig struct {
 }
 
 var defaultBridgeCfgs = []*implConfig{
-	{"Standard", "StandardBridge", predeploys.L2StandardBridgeAddr},
+	{"Standard", "IL2StandardBridge.sol", predeploys.L2StandardBridgeAddr},
 }
 
 var customBridgeCfgs = map[uint64][]*implConfig{
@@ -64,7 +64,7 @@ func BridgesByChainID(chainID *big.Int, client *ethclient.Client, isBedrock bool
 	bridges := make(map[string]Bridge)
 	for _, bridge := range allCfgs {
 		switch bridge.impl {
-		case "StandardBridge":
+		case "IL2StandardBridge.sol":
 			l2SB, err := bindings.NewL2StandardBridge(bridge.addr, client)
 			if err != nil {
 				return nil, err

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
+import { BaseL1ERC721Bridge } from "./BaseL1ERC721Bridge.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { L2ERC721Bridge } from "../L2/L2ERC721Bridge.sol";
 import { Semver } from "../universal/Semver.sol";
@@ -12,7 +12,7 @@ import { Semver } from "../universal/Semver.sol";
  *         make it possible to transfer ERC721 tokens from Ethereum to Optimism. This contract
  *         acts as an escrow for ERC721 tokens deposited into L2.
  */
-contract L1ERC721Bridge is ERC721Bridge, Semver {
+contract L1ERC721Bridge is BaseL1ERC721Bridge, Semver {
     /**
      * @notice Mapping of L1 token to L2 token to ID to boolean, indicating if the given L1 token
      *         by ID was deposited for a given L2 token.
@@ -27,7 +27,7 @@ contract L1ERC721Bridge is ERC721Bridge, Semver {
      */
     constructor(address _messenger, address _otherBridge)
         Semver(1, 1, 1)
-        ERC721Bridge(_messenger, _otherBridge)
+        BaseL1ERC721Bridge(_messenger, _otherBridge)
     {}
 
     /**
@@ -72,7 +72,7 @@ contract L1ERC721Bridge is ERC721Bridge, Semver {
     }
 
     /**
-     * @inheritdoc ERC721Bridge
+     * @inheritdoc BaseL1ERC721Bridge
      */
     function _initiateBridgeERC721(
         address _localToken,

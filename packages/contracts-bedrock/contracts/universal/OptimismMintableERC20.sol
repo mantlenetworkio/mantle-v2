@@ -9,7 +9,7 @@ import { Semver } from "../universal/Semver.sol";
 /**
  * @title OptimismMintableERC20
  * @notice OptimismMintableERC20 is a standard extension of the base ERC20 token contract designed
- *         to allow the StandardBridge contracts to mint and burn tokens. This makes it possible to
+ *         to allow the IL2StandardBridge.sol contracts to mint and burn tokens. This makes it possible to
  *         use an OptimismMintablERC20 as the L2 representation of an L1 token, or vice-versa.
  *         Designed to be backwards compatible with the older StandardL2ERC20 token which was only
  *         meant for use on L2.
@@ -21,7 +21,7 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
     address public immutable REMOTE_TOKEN;
 
     /**
-     * @notice Address of the StandardBridge on this network.
+     * @notice Address of the IL2StandardBridge.sol on this network.
      */
     address public immutable BRIDGE;
 
@@ -68,7 +68,7 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
     }
 
     /**
-     * @notice Allows the StandardBridge on this network to mint tokens.
+     * @notice Allows the IL2StandardBridge.sol on this network to mint tokens.
      *
      * @param _to     Address to mint tokens to.
      * @param _amount Amount of tokens to mint.
@@ -84,7 +84,7 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
     }
 
     /**
-     * @notice Allows the StandardBridge on this network to burn tokens.
+     * @notice Allows the IL2StandardBridge.sol on this network to burn tokens.
      *
      * @param _from   Address to burn tokens from.
      * @param _amount Amount of tokens to burn.

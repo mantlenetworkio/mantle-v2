@@ -6,18 +6,19 @@ import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC16
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCall } from "../libraries/SafeCall.sol";
-import { IOptimismMintableERC20, ILegacyMintableERC20 } from "./IOptimismMintableERC20.sol";
-import { CrossDomainMessenger } from "./CrossDomainMessenger.sol";
-import { OptimismMintableERC20 } from "./OptimismMintableERC20.sol";
+import { IOptimismMintableERC20, ILegacyMintableERC20 } from "../universal/IOptimismMintableERC20.sol";
+import { BaseL1CrossDomainMessenger } from "./BaseL1CrossDomainMessenger.sol";
+import { OptimismMintableERC20 } from "../universal//OptimismMintableERC20.sol";
+import { BaseL2StandardBridge } from "../l2/BaseL2StandardBridge.sol";
 
 /**
  * @custom:upgradeable
- * @title StandardBridge
- * @notice StandardBridge is a base contract for the L1 and L2 standard ERC20 bridges. It handles
+ * @title IL2StandardBridge.sol
+ * @notice IL2StandardBridge.sol is a base contract for the L1 and L2 standard ERC20 bridges. It handles
  *         the core bridging logic, including escrowing tokens that are native to the local chain
  *         and minting/burning tokens that are native to the remote chain.
  */
-abstract contract StandardBridge {
+abstract contract BaseL1StandardBridge {
     using SafeERC20 for IERC20;
 
     /**
@@ -28,12 +29,12 @@ abstract contract StandardBridge {
     /**
      * @notice Messenger contract on this domain.
      */
-    CrossDomainMessenger public immutable MESSENGER;
+    BaseL1CrossDomainMessenger public immutable MESSENGER;
 
     /**
      * @notice Corresponding bridge on the other domain.
      */
-    StandardBridge public immutable OTHER_BRIDGE;
+    BaseL2StandardBridge public immutable OTHER_BRIDGE;
 
     /**
      * @custom:legacy
@@ -156,11 +157,11 @@ abstract contract StandardBridge {
 
     /**
      * @param _messenger   Address of CrossDomainMessenger on this network.
-     * @param _otherBridge Address of the other StandardBridge contract.
+     * @param _otherBridge Address of the other IL2StandardBridge.sol contract.
      */
     constructor(address payable _messenger, address payable _otherBridge) {
-        MESSENGER = CrossDomainMessenger(_messenger);
-        OTHER_BRIDGE = StandardBridge(_otherBridge);
+        MESSENGER = BaseL1CrossDomainMessenger(_messenger);
+        OTHER_BRIDGE = BaseL2StandardBridge(_otherBridge);
     }
 
     /**
@@ -175,7 +176,7 @@ abstract contract StandardBridge {
      *
      * @return Messenger contract on this domain.
      */
-    function messenger() external view returns (CrossDomainMessenger) {
+    function messenger() external view returns (BaseL1CrossDomainMessenger) {
         return MESSENGER;
     }
 
@@ -194,9 +195,9 @@ abstract contract StandardBridge {
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
      *         smart contract and the call fails, the ETH will be temporarily locked in the
-     *         StandardBridge on the other chain until the call is replayed. If the call cannot be
+     *         IL2StandardBridge.sol on the other chain until the call is replayed. If the call cannot be
      *         replayed with any amount of gas (call always reverts), then the ETH will be
-     *         permanently locked in the StandardBridge on the other chain. ETH will also
+     *         permanently locked in the IL2StandardBridge.sol on the other chain. ETH will also
      *         be locked if the receiver is the other bridge, because finalizeBridgeETH will revert
      *         in that case.
      *
@@ -282,7 +283,7 @@ abstract contract StandardBridge {
 
     /**
      * @notice Finalizes an ETH bridge on this chain. Can only be triggered by the other
-     *         StandardBridge contract on the remote chain.
+     *         IL2StandardBridge.sol contract on the remote chain.
      *
      * @param _from      Address of the sender.
      * @param _to        Address of the receiver.
@@ -311,7 +312,7 @@ abstract contract StandardBridge {
 
     /**
      * @notice Finalizes an ERC20 bridge on this chain. Can only be triggered by the other
-     *         StandardBridge contract on the remote chain.
+     *         IL2StandardBridge.sol contract on the remote chain.
      *
      * @param _localToken  Address of the ERC20 on this chain.
      * @param _remoteToken Address of the corresponding token on the remote chain.
@@ -377,7 +378,7 @@ abstract contract StandardBridge {
         MESSENGER.sendMessage{ value: _amount }(
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
-                this.finalizeBridgeETH.selector,
+                BaseL2StandardBridge.finalizeBridgeETH.selector,
                 _from,
                 _to,
                 _amount,
@@ -427,7 +428,7 @@ abstract contract StandardBridge {
         MESSENGER.sendMessage(
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
-                this.finalizeBridgeERC20.selector,
+                BaseL2StandardBridge.finalizeBridgeERC20.selector,
                 // Because this call will be executed on the remote chain, we reverse the order of
                 // the remote and local token addresses relative to their order in the
                 // finalizeBridgeERC20 function.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
+import { BaseL2ERC721Bridge } from "./BaseL2ERC721Bridge.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import { L1ERC721Bridge } from "../L1/L1ERC721Bridge.sol";
 import { IOptimismMintableERC721 } from "../universal/IOptimismMintableERC721.sol";
@@ -18,7 +18,7 @@ import { Semver } from "../universal/Semver.sol";
  *         wait for the one-week challenge period to elapse before their Optimism-native NFT
  *         can be refunded on L2.
  */
-contract L2ERC721Bridge is ERC721Bridge, Semver {
+contract L2ERC721Bridge is BaseL2ERC721Bridge, Semver {
     /**
      * @custom:semver 1.1.0
      *
@@ -27,7 +27,7 @@ contract L2ERC721Bridge is ERC721Bridge, Semver {
      */
     constructor(address _messenger, address _otherBridge)
         Semver(1, 1, 0)
-        ERC721Bridge(_messenger, _otherBridge)
+        BaseL2ERC721Bridge(_messenger, _otherBridge)
     {}
 
     /**
@@ -74,7 +74,7 @@ contract L2ERC721Bridge is ERC721Bridge, Semver {
     }
 
     /**
-     * @inheritdoc ERC721Bridge
+     * @inheritdoc BaseL2ERC721Bridge
      */
     function _initiateBridgeERC721(
         address _localToken,

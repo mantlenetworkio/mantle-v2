@@ -44,23 +44,23 @@ type implConfig struct {
 var customBridgeCfgs = map[uint64][]*implConfig{
 	// Mainnet
 	1: {
-		{"BitBTC", "StandardBridge", common.HexToAddress("0xaBA2c5F108F7E820C049D5Af70B16ac266c8f128")},
-		{"DAI", "StandardBridge", common.HexToAddress("0x10E6593CDda8c58a1d0f14C5164B376352a55f2F")},
-		{"wstETH", "StandardBridge", common.HexToAddress("0x76943C0D61395d8F2edF9060e1533529cAe05dE6")},
+		{"BitBTC", "IL2StandardBridge.sol", common.HexToAddress("0xaBA2c5F108F7E820C049D5Af70B16ac266c8f128")},
+		{"DAI", "IL2StandardBridge.sol", common.HexToAddress("0x10E6593CDda8c58a1d0f14C5164B376352a55f2F")},
+		{"wstETH", "IL2StandardBridge.sol", common.HexToAddress("0x76943C0D61395d8F2edF9060e1533529cAe05dE6")},
 	},
 	// Kovan
 	42: {
-		{"BitBTC", "StandardBridge", common.HexToAddress("0x0b651A42F32069d62d5ECf4f2a7e5Bd3E9438746")},
-		{"USX", "StandardBridge", common.HexToAddress("0x40E862341b2416345F02c41Ac70df08525150dC7")},
-		{"DAI", "StandardBridge", common.HexToAddress("0xb415e822C4983ecD6B1c1596e8a5f976cf6CD9e3")},
-		{"wstETH", "StandardBridge", common.HexToAddress("0x65321bf24210b81500230dCEce14Faa70a9f50a7")},
+		{"BitBTC", "IL2StandardBridge.sol", common.HexToAddress("0x0b651A42F32069d62d5ECf4f2a7e5Bd3E9438746")},
+		{"USX", "IL2StandardBridge.sol", common.HexToAddress("0x40E862341b2416345F02c41Ac70df08525150dC7")},
+		{"DAI", "IL2StandardBridge.sol", common.HexToAddress("0xb415e822C4983ecD6B1c1596e8a5f976cf6CD9e3")},
+		{"wstETH", "IL2StandardBridge.sol", common.HexToAddress("0x65321bf24210b81500230dCEce14Faa70a9f50a7")},
 	},
 }
 
 func BridgesByChainID(chainID *big.Int, client bind.ContractBackend, addrs services.AddressManager) (map[string]Bridge, error) {
 	l1SBAddr, _ := addrs.L1StandardBridge()
 	allCfgs := []*implConfig{
-		{"Standard", "StandardBridge", l1SBAddr},
+		{"Standard", "IL2StandardBridge.sol", l1SBAddr},
 		{"ETH", "ETHBridge", l1SBAddr},
 	}
 	allCfgs = append(allCfgs, customBridgeCfgs[chainID.Uint64()]...)
@@ -68,7 +68,7 @@ func BridgesByChainID(chainID *big.Int, client bind.ContractBackend, addrs servi
 	bridges := make(map[string]Bridge)
 	for _, bridge := range allCfgs {
 		switch bridge.impl {
-		case "StandardBridge":
+		case "IL2StandardBridge.sol":
 			l1SB, err := bindings.NewL1StandardBridge(bridge.addr, client)
 			if err != nil {
 				return nil, err

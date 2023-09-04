@@ -112,7 +112,7 @@ contract CrossDomainMessengerLegacySpacer1 {
  *
  *         Any changes to this contract MUST result in a semver bump for contracts that inherit it.
  */
-abstract contract CrossDomainMessenger is
+abstract contract BaseL2CrossDomainMessenger is
     CrossDomainMessengerLegacySpacer0,
     Initializable,
     CrossDomainMessengerLegacySpacer1

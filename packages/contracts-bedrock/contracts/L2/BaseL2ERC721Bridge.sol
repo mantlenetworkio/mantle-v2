@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { CrossDomainMessenger } from "./CrossDomainMessenger.sol";
+import { BaseL2CrossDomainMessenger } from "./BaseL2CrossDomainMessenger.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title ERC721Bridge
  * @notice ERC721Bridge is a base contract for the L1 and L2 ERC721 bridges.
  */
-abstract contract ERC721Bridge {
+abstract contract BaseL2ERC721Bridge {
     /**
      * @notice Messenger contract on this domain.
      */
-    CrossDomainMessenger public immutable MESSENGER;
+    BaseL2CrossDomainMessenger public immutable MESSENGER;
 
     /**
      * @notice Address of the bridge on the other network.
@@ -81,7 +81,7 @@ abstract contract ERC721Bridge {
         require(_messenger != address(0), "ERC721Bridge: messenger cannot be address(0)");
         require(_otherBridge != address(0), "ERC721Bridge: other bridge cannot be address(0)");
 
-        MESSENGER = CrossDomainMessenger(_messenger);
+        MESSENGER = BaseL2CrossDomainMessenger(_messenger);
         OTHER_BRIDGE = _otherBridge;
     }
 
@@ -91,7 +91,7 @@ abstract contract ERC721Bridge {
      *
      * @return Messenger contract on this domain.
      */
-    function messenger() external view returns (CrossDomainMessenger) {
+    function messenger() external view returns (BaseL2CrossDomainMessenger) {
         return MESSENGER;
     }
 

@@ -99,7 +99,7 @@ const createOptimismMintableERC20 = async (
 // TODO(tynes): this task could be modularized in the future
 // so that it can deposit an arbitrary token. Right now it
 // deploys a WETH9 contract, mints some WETH9 and then
-// deposits that into L2 through the StandardBridge.
+// deposits that into L2 through the IL2StandardBridge.sol.
 task('deposit-erc20', 'Deposits WETH9 onto L2.')
   .addParam(
     'l2ProviderUrl',

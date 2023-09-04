@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismPortal } from "./OptimismPortal.sol";
-import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
+import {BaseL1CrossDomainMessenger} from "./BaseL1CrossDomainMessenger.sol";
 import { Semver } from "../universal/Semver.sol";
 
 /**
@@ -13,7 +13,7 @@ import { Semver } from "../universal/Semver.sol";
  *         for sending and receiving data on the L1 side. Users are encouraged to use this
  *         interface instead of interacting with lower-level contracts directly.
  */
-contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
+contract L1CrossDomainMessenger is BaseL1CrossDomainMessenger, Semver {
     /**
      * @notice Address of the OptimismPortal.
      */
@@ -26,7 +26,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      */
     constructor(OptimismPortal _portal)
         Semver(1, 4, 0)
-        CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER)
+        BaseL1CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER)
     {
         PORTAL = _portal;
         initialize();
@@ -40,7 +40,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL1CrossDomainMessenger
      */
     function _sendMessage(
         address _to,
@@ -52,14 +52,14 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL1CrossDomainMessenger
      */
     function _isOtherMessenger() internal view override returns (bool) {
         return msg.sender == address(PORTAL) && PORTAL.l2Sender() == OTHER_MESSENGER;
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL1CrossDomainMessenger
      */
     function _isUnsafeTarget(address _target) internal view override returns (bool) {
         return _target == address(this) || _target == address(PORTAL);

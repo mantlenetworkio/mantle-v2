@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
-import { StandardBridge } from "../universal/StandardBridge.sol";
+import {BaseL1StandardBridge} from "./BaseL1StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
 
 /**
@@ -17,7 +17,7 @@ import { Semver } from "../universal/Semver.sol";
  *         of some token types that may not be properly supported by this contract include, but are
  *         not limited to: tokens with transfer fees, rebasing tokens, and tokens with blocklists.
  */
-contract L1StandardBridge is StandardBridge, Semver {
+contract L1StandardBridge is BaseL1StandardBridge, Semver {
     /**
      * @custom:legacy
      * @notice Emitted whenever a deposit of ETH from L1 into L2 is initiated.
@@ -97,7 +97,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      */
     constructor(address payable _messenger)
         Semver(1, 1, 0)
-        StandardBridge(_messenger, payable(Predeploys.L2_STANDARD_BRIDGE))
+        BaseL1StandardBridge(_messenger, payable(Predeploys.L2_STANDARD_BRIDGE))
     {}
 
     /**
@@ -298,7 +298,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      * @notice Emits the legacy ETHDepositInitiated event followed by the ETHBridgeInitiated event.
      *         This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc StandardBridge
+     * @inheritdoc BaseL1StandardBridge
      */
     function _emitETHBridgeInitiated(
         address _from,
@@ -314,7 +314,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      * @notice Emits the legacy ETHWithdrawalFinalized event followed by the ETHBridgeFinalized
      *         event. This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc StandardBridge
+     * @inheritdoc BaseL1StandardBridge
      */
     function _emitETHBridgeFinalized(
         address _from,
@@ -330,7 +330,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      * @notice Emits the legacy ERC20DepositInitiated event followed by the ERC20BridgeInitiated
      *         event. This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc StandardBridge
+     * @inheritdoc BaseL1StandardBridge
      */
     function _emitERC20BridgeInitiated(
         address _localToken,
@@ -348,7 +348,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      * @notice Emits the legacy ERC20WithdrawalFinalized event followed by the ERC20BridgeFinalized
      *         event. This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc StandardBridge
+     * @inheritdoc BaseL1StandardBridge
      */
     function _emitERC20BridgeFinalized(
         address _localToken,

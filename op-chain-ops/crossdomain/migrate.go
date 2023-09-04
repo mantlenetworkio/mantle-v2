@@ -130,7 +130,7 @@ func MigrateWithdrawalGasLimit(data []byte, chainID *big.Int) uint64 {
 	if chainID.Cmp(big.NewInt(420)) == 0 {
 		overhead = uint64(200_000)
 	} else {
-		// Mimic `baseGas` from `CrossDomainMessenger.sol`
+		// Mimic `baseGas` from `IL2CrossDomainMessenger.sol`
 		overhead = uint64(
 			// Constant overhead
 			RelayConstantOverhead +

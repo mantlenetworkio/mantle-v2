@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { StandardBridge } from "../universal/StandardBridge.sol";
+import { BaseL1StandardBridge } from "../L1/BaseL1StandardBridge.sol";
 import { CommonTest } from "./CommonTest.t.sol";
 import {
     OptimismMintableERC20,
@@ -11,12 +11,12 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title StandardBridgeTester
- * @notice Simple wrapper around the StandardBridge contract that exposes
+ * @notice Simple wrapper around the IL2StandardBridge.sol contract that exposes
  *         internal functions so they can be more easily tested directly.
  */
-contract StandardBridgeTester is StandardBridge {
+contract StandardBridgeTester is BaseL1StandardBridge {
     constructor(address payable _messenger, address payable _otherBridge)
-        StandardBridge(_messenger, _otherBridge)
+        BaseL1StandardBridge(_messenger, _otherBridge)
     {}
 
     function isOptimismMintableERC20(address _token) external view returns (bool) {

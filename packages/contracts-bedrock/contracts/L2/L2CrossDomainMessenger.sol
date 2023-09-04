@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
-import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
+import { BaseL2CrossDomainMessenger } from "./BaseL2CrossDomainMessenger.sol";
 import { Semver } from "../universal/Semver.sol";
 import { L2ToL1MessagePasser } from "./L2ToL1MessagePasser.sol";
 
@@ -15,7 +15,7 @@ import { L2ToL1MessagePasser } from "./L2ToL1MessagePasser.sol";
  *         L2 on the L2 side. Users are generally encouraged to use this contract instead of lower
  *         level message passing contracts.
  */
-contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
+contract L2CrossDomainMessenger is BaseL2CrossDomainMessenger, Semver {
     /**
      * @custom:semver 1.4.0
      *
@@ -23,7 +23,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
      */
     constructor(address _l1CrossDomainMessenger)
         Semver(1, 4, 0)
-        CrossDomainMessenger(_l1CrossDomainMessenger)
+        BaseL2CrossDomainMessenger(_l1CrossDomainMessenger)
     {
         initialize();
     }
@@ -46,7 +46,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL2CrossDomainMessenger
      */
     function _sendMessage(
         address _to,
@@ -60,14 +60,14 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL2CrossDomainMessenger
      */
     function _isOtherMessenger() internal view override returns (bool) {
         return AddressAliasHelper.undoL1ToL2Alias(msg.sender) == OTHER_MESSENGER;
     }
 
     /**
-     * @inheritdoc CrossDomainMessenger
+     * @inheritdoc BaseL2CrossDomainMessenger
      */
     function _isUnsafeTarget(address _target) internal view override returns (bool) {
         return _target == address(this) || _target == address(Predeploys.L2_TO_L1_MESSAGE_PASSER);

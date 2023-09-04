@@ -217,7 +217,7 @@ task('deposit-eth', 'Deposits ether to L2.')
     )
 
     // Deposit ETH
-    console.log('Depositing ETH through StandardBridge')
+    console.log('Depositing ETH through IL2StandardBridge.sol')
     console.log(`Sending ${formatEther(amount)} ether`)
     const ethDeposit = await messenger.depositETH(amount, { recipient: to })
     console.log(`Transaction hash: ${ethDeposit.hash}`)

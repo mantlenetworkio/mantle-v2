@@ -16,7 +16,7 @@ import { Semver } from "./Semver.sol";
  */
 contract OptimismMintableERC20Factory is Semver {
     /**
-     * @notice Address of the StandardBridge on this chain.
+     * @notice Address of the IL2StandardBridge.sol on this chain.
      */
     address public immutable BRIDGE;
 
@@ -50,7 +50,7 @@ contract OptimismMintableERC20Factory is Semver {
      *         the OptimismMintableERC20 token contract since this contract
      *         is responsible for deploying OptimismMintableERC20 contracts.
      *
-     * @param _bridge Address of the StandardBridge on this chain.
+     * @param _bridge Address of the IL2StandardBridge.sol on this chain.
      */
     constructor(address _bridge) Semver(1, 1, 0) {
         BRIDGE = _bridge;
@@ -102,7 +102,7 @@ contract OptimismMintableERC20Factory is Semver {
         emit StandardL2TokenCreated(_remoteToken, localToken);
 
         // Emit the updated event. The arguments here differ from the legacy event, but
-        // are consistent with the ordering used in StandardBridge events.
+        // are consistent with the ordering used in IL2StandardBridge.sol events.
         emit OptimismMintableERC20Created(localToken, _remoteToken, msg.sender);
 
         return localToken;

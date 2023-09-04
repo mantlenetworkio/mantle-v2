@@ -7,5 +7,5 @@ const (
 
 	L2StandardBridgeAddr = "0x4200000000000000000000000000000000000010"
 
-	StandardBridgeImpl = "StandardBridge"
+	StandardBridgeImpl = "IL2StandardBridge.sol"
 )

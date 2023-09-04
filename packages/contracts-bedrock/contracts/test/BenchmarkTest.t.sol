@@ -5,7 +5,7 @@ pragma solidity 0.8.15;
 import { Test } from "forge-std/Test.sol";
 import { Vm } from "forge-std/Vm.sol";
 import "./CommonTest.t.sol";
-import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
+import {BaseL1CrossDomainMessenger} from "../l1/BaseL1CrossDomainMessenger.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
 
 // Free function for setting the prevBaseFee param in the OptimismPortal.
@@ -196,7 +196,7 @@ contract GasBenchMark_L1StandardBridge_Finalize is Bridge_Initializer {
         deal(address(L1Token), address(L1Bridge), 100, true);
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeWithSelector(BaseL1CrossDomainMessenger.xDomainMessageSender.selector),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.startPrank(address(L1Bridge.messenger()));
