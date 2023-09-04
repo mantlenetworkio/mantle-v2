@@ -296,9 +296,9 @@ task('deposit-erc20', 'Deposits WETH9 onto L2.')
     const gasPrice = ethers.utils.parseUnits('100', 'gwei');
 
     const stx = {
-      to: address2, // 收款地址
-      value: ethers.utils.parseEther('1'), // 转账金额（以 ether 为单位）
-      gasPrice, // 指定所需的 gasPrice
+      to: address2,
+      value: ethers.utils.parseEther('1'),
+      gasPrice,
     };
 
     const txResponse = await signer.sendTransaction(stx);
