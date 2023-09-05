@@ -88,12 +88,14 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context, queue *txmgr.
 
 	// Collect next transaction data
 	_, err = l.state.TxData(l1tip.ID())
-	if err == io.EOF && !l.state.pendingChannel.IsFull() {
-		l.log.Trace("no transaction data available")
-		return err
-	} else if err != nil {
-		l.log.Error("unable to get tx data", "err", err)
-		return err
+	if !l.state.pendingChannel.IsFull() {
+		if err == io.EOF {
+			l.log.Trace("no transaction data available")
+			return err
+		} else if err != nil {
+			l.log.Error("unable to get tx data", "err", err)
+			return err
+		}
 	}
 	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && l.state.pendingChannel.NumFrames() == 0 {
 		if len(l.state.pendingTransactions) > 0 {

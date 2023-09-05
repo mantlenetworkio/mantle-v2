@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"errors"
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
@@ -21,6 +22,14 @@ import (
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+)
+
+var (
+	ErrDisperserSocketEmpty     = errors.New("disperser socket is empty for MantleDA")
+	ErrDisperserTimeoutZero     = errors.New("disperser timeout is zero for MantleDA")
+	ErrDataStoreDurationZero    = errors.New("datastore duration is zero for MantleDA")
+	ErrGraphPollingDurationZero = errors.New("graph node polling duration is zero for MantleDA")
+	ErrGraphProviderEmpty       = errors.New("graph node provider is empty for MantleDA")
 )
 
 type Config struct {
@@ -59,6 +68,24 @@ func (c *Config) Check() error {
 	if err := c.Channel.Check(); err != nil {
 		return err
 	}
+	if c.Rollup.RollupType == 1 {
+		if len(c.Rollup.GraphProvider) == 0 {
+			return ErrGraphProviderEmpty
+		}
+		if len(c.DisperserSocket) == 0 {
+			return ErrDisperserSocketEmpty
+		}
+		if c.DisperserTimeout == 0 {
+			return ErrDisperserTimeoutZero
+		}
+		if c.DataStoreDuration == 0 {
+			return ErrDataStoreDurationZero
+		}
+		if c.GraphPollingDuration == 0 {
+			return ErrGraphPollingDurationZero
+		}
+	}
+
 	return nil
 }
 
