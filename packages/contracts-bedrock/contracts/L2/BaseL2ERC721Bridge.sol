@@ -3,12 +3,13 @@ pragma solidity 0.8.15;
 
 import { BaseL2CrossDomainMessenger } from "./BaseL2CrossDomainMessenger.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import {ERC721Bridge} from  "../universal/ERC721Bridge.sol";
 
 /**
  * @title ERC721Bridge
  * @notice ERC721Bridge is a base contract for the L1 and L2 ERC721 bridges.
  */
-abstract contract BaseL2ERC721Bridge {
+abstract contract BaseL2ERC721Bridge is ERC721Bridge{
     /**
      * @notice Messenger contract on this domain.
      */
@@ -19,48 +20,7 @@ abstract contract BaseL2ERC721Bridge {
      */
     address public immutable OTHER_BRIDGE;
 
-    /**
-     * @notice Reserve extra slots (to a total of 50) in the storage layout for future upgrades.
-     */
-    uint256[49] private __gap;
 
-    /**
-     * @notice Emitted when an ERC721 bridge to the other network is initiated.
-     *
-     * @param localToken  Address of the token on this domain.
-     * @param remoteToken Address of the token on the remote domain.
-     * @param from        Address that initiated bridging action.
-     * @param to          Address to receive the token.
-     * @param tokenId     ID of the specific token deposited.
-     * @param extraData   Extra data for use on the client-side.
-     */
-    event ERC721BridgeInitiated(
-        address indexed localToken,
-        address indexed remoteToken,
-        address indexed from,
-        address to,
-        uint256 tokenId,
-        bytes extraData
-    );
-
-    /**
-     * @notice Emitted when an ERC721 bridge from the other network is finalized.
-     *
-     * @param localToken  Address of the token on this domain.
-     * @param remoteToken Address of the token on the remote domain.
-     * @param from        Address that initiated bridging action.
-     * @param to          Address to receive the token.
-     * @param tokenId     ID of the specific token deposited.
-     * @param extraData   Extra data for use on the client-side.
-     */
-    event ERC721BridgeFinalized(
-        address indexed localToken,
-        address indexed remoteToken,
-        address indexed from,
-        address to,
-        uint256 tokenId,
-        bytes extraData
-    );
 
     /**
      * @notice Ensures that the caller is a cross-chain message from the other bridge.
@@ -130,7 +90,7 @@ abstract contract BaseL2ERC721Bridge {
         uint256 _tokenId,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) external {
+    ) external override {
         // Modifier requiring sender to be EOA. This prevents against a user error that would occur
         // if the sender is a smart contract wallet that has a different address on the remote chain
         // (or doesn't have an address on the remote chain at all). The user would fail to receive
@@ -175,7 +135,7 @@ abstract contract BaseL2ERC721Bridge {
         uint256 _tokenId,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) external {
+    ) external override {
         require(_to != address(0), "ERC721Bridge: nft recipient cannot be address(0)");
 
         _initiateBridgeERC721(
@@ -189,26 +149,5 @@ abstract contract BaseL2ERC721Bridge {
         );
     }
 
-    /**
-     * @notice Internal function for initiating a token bridge to the other domain.
-     *
-     * @param _localToken  Address of the ERC721 on this domain.
-     * @param _remoteToken Address of the ERC721 on the remote domain.
-     * @param _from        Address of the sender on this domain.
-     * @param _to          Address to receive the token on the other domain.
-     * @param _tokenId     Token ID to bridge.
-     * @param _minGasLimit Minimum gas limit for the bridge message on the other domain.
-     * @param _extraData   Optional data to forward to the other domain. Data supplied here will
-     *                     not be used to execute any code on the other domain and is only emitted
-     *                     as extra data for the convenience of off-chain tooling.
-     */
-    function _initiateBridgeERC721(
-        address _localToken,
-        address _remoteToken,
-        address _from,
-        address _to,
-        uint256 _tokenId,
-        uint32 _minGasLimit,
-        bytes calldata _extraData
-    ) internal virtual;
+
 }

@@ -5,6 +5,7 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismPortal } from "./OptimismPortal.sol";
 import {BaseL1CrossDomainMessenger} from "./BaseL1CrossDomainMessenger.sol";
 import { Semver } from "../universal/Semver.sol";
+import {CrossDomainMessenger} from "../universal/CrossDomainMessenger.sol";
 
 /**
  * @custom:proxied
@@ -40,7 +41,7 @@ contract L1CrossDomainMessenger is BaseL1CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc BaseL1CrossDomainMessenger
+     * @inheritdoc CrossDomainMessenger
      */
     function _sendMessage(
         address _to,
@@ -52,14 +53,14 @@ contract L1CrossDomainMessenger is BaseL1CrossDomainMessenger, Semver {
     }
 
     /**
-     * @inheritdoc BaseL1CrossDomainMessenger
+     * @inheritdoc CrossDomainMessenger
      */
     function _isOtherMessenger() internal view override returns (bool) {
         return msg.sender == address(PORTAL) && PORTAL.l2Sender() == OTHER_MESSENGER;
     }
 
     /**
-     * @inheritdoc BaseL1CrossDomainMessenger
+     * @inheritdoc CrossDomainMessenger
      */
     function _isUnsafeTarget(address _target) internal view override returns (bool) {
         return _target == address(this) || _target == address(PORTAL);

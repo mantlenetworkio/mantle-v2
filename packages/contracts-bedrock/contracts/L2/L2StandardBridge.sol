@@ -5,6 +5,7 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { BaseL2StandardBridge } from "./BaseL2StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+import { StandardBridge } from "../universal/StandardBridge.sol";
 
 /**
  * @custom:proxied
@@ -196,7 +197,7 @@ contract L2StandardBridge is BaseL2StandardBridge, Semver {
      * @notice Emits the legacy WithdrawalInitiated event followed by the ETHBridgeInitiated event.
      *         This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc BaseL2StandardBridge
+     * @inheritdoc StandardBridge
      */
     function _emitETHBridgeInitiated(
         address _from,
@@ -219,7 +220,7 @@ contract L2StandardBridge is BaseL2StandardBridge, Semver {
      * @notice Emits the legacy DepositFinalized event followed by the ETHBridgeFinalized event.
      *         This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc BaseL2StandardBridge
+     * @inheritdoc StandardBridge
      */
     function _emitETHBridgeFinalized(
         address _from,
@@ -242,7 +243,7 @@ contract L2StandardBridge is BaseL2StandardBridge, Semver {
      * @notice Emits the legacy WithdrawalInitiated event followed by the ERC20BridgeInitiated
      *         event. This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc BaseL2StandardBridge
+     * @inheritdoc StandardBridge
      */
     function _emitERC20BridgeInitiated(
         address _localToken,
@@ -260,7 +261,7 @@ contract L2StandardBridge is BaseL2StandardBridge, Semver {
      * @notice Emits the legacy DepositFinalized event followed by the ERC20BridgeFinalized event.
      *         This is necessary for backwards compatibility with the legacy bridge.
      *
-     * @inheritdoc BaseL2StandardBridge
+     * @inheritdoc StandardBridge
      */
     function _emitERC20BridgeFinalized(
         address _localToken,

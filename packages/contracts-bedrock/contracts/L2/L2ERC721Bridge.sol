@@ -6,7 +6,7 @@ import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC16
 import { L1ERC721Bridge } from "../L1/L1ERC721Bridge.sol";
 import { IOptimismMintableERC721 } from "../universal/IOptimismMintableERC721.sol";
 import { Semver } from "../universal/Semver.sol";
-
+import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
 /**
  * @title L2ERC721Bridge
  * @notice The L2 ERC721 bridge is a contract which works together with the L1 ERC721 bridge to
@@ -74,7 +74,7 @@ contract L2ERC721Bridge is BaseL2ERC721Bridge, Semver {
     }
 
     /**
-     * @inheritdoc BaseL2ERC721Bridge
+     * @inheritdoc ERC721Bridge
      */
     function _initiateBridgeERC721(
         address _localToken,
