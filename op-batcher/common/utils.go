@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func CreateUploadHeader(params StoreParams) ([]byte, error) {
+func CreateUploadHeader(params *StoreParams) ([]byte, error) {
 	var kzgCommitArray [64]byte
 	copy(kzgCommitArray[:], params.KzgCommit)
 	var lowDegreeProof [64]byte
@@ -61,7 +61,7 @@ func packTo(x []byte, n int) []byte {
 }
 
 func MakeCalldata(
-	params StoreParams,
+	params *StoreParams,
 	meta DisperseMeta,
 	storeNumber uint32,
 	msgHash [32]byte,

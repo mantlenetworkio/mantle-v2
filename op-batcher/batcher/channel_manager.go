@@ -3,6 +3,7 @@ package batcher
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"io"
 	"math"
 
@@ -45,7 +46,9 @@ type channelManager struct {
 	confirmedTransactions map[txID]eth.BlockID
 
 	// params of initStoreData on MantleDA
-	params bcommon.StoreParams
+	params *bcommon.StoreParams
+	//receipt of initStoreData transaction on L1
+	initStoreDataReceipt *txmgr.TxReceipt[string]
 	// if set to true, prevents production of any new channel frames
 	closed bool
 }
@@ -131,6 +134,11 @@ func (s *channelManager) clearPendingChannel() {
 	s.pendingChannel = nil
 	s.pendingTransactions = make(map[txID]txData)
 	s.confirmedTransactions = make(map[txID]eth.BlockID)
+}
+
+func (s *channelManager) clearMantleDAStatus() {
+	s.params = nil
+	s.initStoreDataReceipt = nil
 }
 
 // pendingChannelIsTimedOut returns true if submitted channel has timed out.

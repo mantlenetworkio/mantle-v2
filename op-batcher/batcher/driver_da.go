@@ -112,26 +112,35 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context, queue *txmgr.
 }
 
 func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte, queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) error {
-	txnBufBytes, err := rlp.EncodeToBytes(txsdata)
-	if err != nil {
-		l.log.Error("rlp unable to encode txn", "err", err)
-		return err
-	}
 
-	params, err := l.callEncode(txnBufBytes)
+	//if txsdata has been successfully upload to MantleDA, we don't need to re-upload.
+	if l.state.params == nil {
+		txnBufBytes, err := rlp.EncodeToBytes(txsdata)
+		if err != nil {
+			l.log.Error("rlp unable to encode txn", "err", err)
+			return err
+		}
+
+		params, err := l.callEncode(txnBufBytes)
+		if err != nil {
+			return err
+		}
+		l.log.Info("Operator Info", "NumSys", params.NumSys, "NumPar", params.NumPar, "TotalOperatorsIndex", params.TotalOperatorsIndex, "NumTotal", params.NumTotal)
+		//cache params
+		l.state.params = &params
+	}
+	uploadHeader, err := common.CreateUploadHeader(l.state.params)
 	if err != nil {
 		return err
 	}
-	uploadHeader, err := common.CreateUploadHeader(params)
-	if err != nil {
-		return err
+	//if initStoreData transaction has been successfully executed.We don't need to re-execute .
+	if l.state.initStoreDataReceipt != nil {
+		receiptCh <- *l.state.initStoreDataReceipt
+		return ErrInitDataStoreDone
 	}
-	l.log.Info("Operator Info", "NumSys", params.NumSys, "NumPar", params.NumPar, "TotalOperatorsIndex", params.TotalOperatorsIndex, "NumTotal", params.NumTotal)
-	//cache params
-	l.state.params = params
 
 	txdata, err := l.DataStoreTxData(
-		uploadHeader, uint8(params.Duration), params.ReferenceBlockNumber, params.TotalOperatorsIndex,
+		uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
 	)
 	if err != nil {
 		return err
@@ -317,6 +326,7 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(r txmgr.TxReceipt[string], q
 		l.recordFailedEigenDATx(r.Err)
 	} else {
 		l.log.Info("initDataStore tx successfully published", "tx_hash", r.Receipt.TxHash)
+		l.state.initStoreDataReceipt = &r
 		//start to confirmData
 		err := l.ConfirmStoredData(r.Receipt.TxHash.Bytes(), queue, receiptCh)
 		if err != nil {
@@ -347,4 +357,5 @@ func (l *BatchSubmitter) recordConfirmedEigenDATx(receipt *types.Receipt) {
 	for k, _ := range l.state.pendingTransactions {
 		l.state.TxConfirmed(k, l1block)
 	}
+	l.state.clearMantleDAStatus()
 }
