@@ -12,8 +12,6 @@ package sources
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"time"
 
@@ -318,22 +316,6 @@ func (s *EthClient) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth
 	return s.blockCall(ctx, "eth_getBlockByHash", hashID(hash))
 }
 
-func (s *EthClient) FetchDataStoreID(ctx context.Context, query ethereum.FilterQuery) (uint32, error) {
-	var out = make(map[string]interface{})
-	logs, err := filterLogs(ctx, s, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(logs) > 1 {
-		return 0, fmt.Errorf("get more than one DataStoreID in a block")
-	}
-	err = parseConfirmDataStore(out, logs[0])
-	if err != nil {
-		return 0, err
-	}
-	return out["dataStoreId"].(uint32), nil
-}
-
 func (s *EthClient) InfoAndTxsByNumber(ctx context.Context, number uint64) (eth.BlockInfo, types.Transactions, error) {
 	// can't hit the cache when querying by number due to reorgs.
 	return s.blockCall(ctx, "eth_getBlockByNumber", numberID(number))
@@ -443,77 +425,4 @@ func (s *EthClient) ReadStorageAt(ctx context.Context, address common.Address, s
 
 func (s *EthClient) Close() {
 	s.client.Close()
-}
-
-func filterLogs(ctx context.Context, ec *EthClient, q ethereum.FilterQuery) ([]types.Log, error) {
-	var result []types.Log
-	arg, err := toFilterArg(q)
-	if err != nil {
-		return nil, err
-	}
-	err = ec.client.CallContext(ctx, &result, "eth_getLogs", arg)
-	return result, err
-}
-
-func parseConfirmDataStore(out map[string]interface{}, log types.Log) error {
-	abiUint32, _ := abi.NewType("uint32", "uint32", nil)
-	abiBytes32, _ := abi.NewType("bytes32", "bytes32", nil)
-	// init argument
-	confirmDataStoreArgs := abi.Arguments{
-		{
-			Type: abiUint32,
-		}, {
-			Type: abiBytes32,
-		},
-	}
-	if len(log.Data) > 0 {
-		err := confirmDataStoreArgs.UnpackIntoMap(out, log.Data)
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("parse empty ConfirmDataStore logs")
-	}
-	// no index field for ConfirmDataStore
-	return nil
-}
-
-func toFilterArg(q ethereum.FilterQuery) (interface{}, error) {
-	arg := map[string]interface{}{
-		"address": q.Addresses,
-		"topics":  q.Topics,
-	}
-	if q.BlockHash != nil {
-		arg["blockHash"] = *q.BlockHash
-		if q.FromBlock != nil || q.ToBlock != nil {
-			return nil, fmt.Errorf("cannot specify both BlockHash and FromBlock/ToBlock")
-		}
-	} else {
-		if q.FromBlock == nil {
-			arg["fromBlock"] = "0x0"
-		} else {
-			arg["fromBlock"] = toBlockNumArg(q.FromBlock)
-		}
-		arg["toBlock"] = toBlockNumArg(q.ToBlock)
-	}
-	return arg, nil
-}
-
-func toBlockNumArg(number *big.Int) string {
-	if number == nil {
-		return "latest"
-	}
-	pending := big.NewInt(-1)
-	if number.Cmp(pending) == 0 {
-		return "pending"
-	}
-	finalized := big.NewInt(int64(rpc.FinalizedBlockNumber))
-	if number.Cmp(finalized) == 0 {
-		return "finalized"
-	}
-	safe := big.NewInt(int64(rpc.SafeBlockNumber))
-	if number.Cmp(safe) == 0 {
-		return "safe"
-	}
-	return hexutil.EncodeBig(number)
 }

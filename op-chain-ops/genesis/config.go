@@ -111,11 +111,6 @@ type DeployConfig struct {
 	EIP1559Denominator uint64 `json:"eip1559Denominator"`
 
 	FundDevAccounts bool `json:"fundDevAccounts"`
-
-	// MANTLE DA MODIFY //
-	UseDaAsDataSource bool
-
-	DataLayrServiceManager string
 }
 
 // Check will ensure that the config is sane and return an error when it is not
@@ -350,8 +345,6 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 		DepositContractAddress: d.OptimismPortalProxy,
 		L1SystemConfigAddress:  d.SystemConfigProxy,
 		RegolithTime:           d.RegolithTime(l1StartBlock.Time()),
-		UseDaAsDataSource:      d.UseDaAsDataSource,
-		DataLayrServiceManager: d.DataLayrServiceManager,
 	}, nil
 }
 

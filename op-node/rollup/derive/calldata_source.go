@@ -4,18 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"io"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+)
+
+var (
+	ConfirmDataStoreEventABI     = "ConfirmDataStore(uint32,bytes32)"
+	ConfirmDataStoreEventABIHash = crypto.Keccak256Hash([]byte(ConfirmDataStoreEventABI))
 )
 
 type DataIter interface {
@@ -24,8 +29,11 @@ type DataIter interface {
 
 type L1TransactionFetcher interface {
 	InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error)
+	FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error)
+}
 
-	FetchDataStoreID(ctx context.Context, query ethereum.FilterQuery) (uint32, error)
+type MantleDaSyncer interface {
+	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
 }
 
 // DataSourceFactory readers raw transactions from a given block & then filters for
@@ -35,15 +43,16 @@ type DataSourceFactory struct {
 	log     log.Logger
 	cfg     *rollup.Config
 	fetcher L1TransactionFetcher
+	syncer  MantleDaSyncer
 }
 
-func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher) *DataSourceFactory {
-	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher}
+func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer) *DataSourceFactory {
+	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher, syncer: syncer}
 }
 
 // OpenData returns a DataIter. This struct implements the `Next` function.
 func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.BlockID, batcherAddr common.Address) DataIter {
-	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, id, batcherAddr)
+	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, ds.syncer, id, batcherAddr)
 }
 
 // DataSource is a fault tolerant approach to fetching data.
@@ -57,6 +66,7 @@ type DataSource struct {
 	id      eth.BlockID
 	cfg     *rollup.Config // TODO: `DataFromEVMTransactions` should probably not take the full config
 	fetcher L1TransactionFetcher
+	syncer  MantleDaSyncer
 	log     log.Logger
 
 	batcherAddr common.Address
@@ -64,28 +74,26 @@ type DataSource struct {
 
 // NewDataSource creates a new calldata source. It suppresses errors in fetching the L1 block if they occur.
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
-func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, block eth.BlockID, batcherAddr common.Address) DataIter {
-	if cfg.UseDaAsDataSource {
-		// get current dataStoreId
-		dataStoreIdQuery := ethereum.FilterQuery{
-			Addresses: []common.Address{common.HexToAddress(cfg.DataLayrServiceManager)},
-			FromBlock: new(big.Int).SetUint64(block.Number),
-			ToBlock:   new(big.Int).SetUint64(block.Number),
-		}
-		dataStoreId, err := fetcher.FetchDataStoreID(ctx, dataStoreIdQuery)
+func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, block eth.BlockID, batcherAddr common.Address) DataIter {
+	if cfg.MantleDaSwitch {
+		_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
 		if err != nil {
-			log.Error("fetch data storeID in error", "err", err)
-			ctx = context.WithValue(ctx, "dataStoreId", 0)
+			return &DataSource{
+				open:        false,
+				id:          block,
+				cfg:         cfg,
+				fetcher:     fetcher,
+				syncer:      syncer,
+				log:         log,
+				batcherAddr: batcherAddr,
+			}
 		} else {
-			// reset context after handle it
-			ctx = context.WithValue(ctx, "dataStoreId", dataStoreId)
-		}
-		return &DataSource{
-			open: true,
-			data: DataFromDaStoreData(cfg, dataStoreId, log.New("origin", block)),
+			return &DataSource{
+				open: true,
+				data: DataFromMantleDa(cfg, receipts, syncer, log.New("origin", block)),
+			}
 		}
 	}
-
 	_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 	if err != nil {
 		return &DataSource{
@@ -93,6 +101,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 			id:          block,
 			cfg:         cfg,
 			fetcher:     fetcher,
+			syncer:      syncer,
 			log:         log,
 			batcherAddr: batcherAddr,
 		}
@@ -109,18 +118,11 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 // otherwise it returns a temporary error if fetching the block returns an error.
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
-		if ds.cfg.UseDaAsDataSource {
-			ds.open = true
-			dataStoreId, ok := ctx.Value("dataStoreId").(uint32)
-			if !ok || dataStoreId <= 0 {
-				return nil, NewTemporaryError(fmt.Errorf("failed to get dataStoreId from context"))
+		if ds.cfg.MantleDaSwitch {
+			if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
+				ds.open = true
+				ds.data = DataFromMantleDa(ds.cfg, receipts, ds.syncer, log.New("origin", ds.id))
 			}
-			ds.data = DataFromDaStoreData(ds.cfg, dataStoreId, log.New("da data store", ds.id))
-			if ds.data == nil {
-				return nil, NewResetError(fmt.Errorf("failed to retrie frames from da source with storeId: %d", dataStoreId))
-			}
-			// reset context after handle it
-			ctx = context.WithValue(ctx, "dataStoreId", 0)
 		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
 			ds.open = true
 			ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
@@ -163,22 +165,56 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 	return out
 }
 
-// DataFromDaStoreData filters all of the transactions and returns the calldata from da
-// This will return an empty array if no valid transactions are found.
-func DataFromDaStoreData(config *rollup.Config, dataStoreId uint32, log log.Logger) []eth.Data {
+func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
 	var out []eth.Data
-	var dataStore da.MantleDataStore
-	// TODO FIXME
-	bz, err := dataStore.RetrievalFramesFromDa(dataStoreId)
+	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
-		log.Error("retrieval frames from da in error", "dataStoreId", dataStoreId, "err", err)
+		log.Error("Abi new uint32 type error", "err", err)
 		return nil
+	}
+	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
+	if err != nil {
+		log.Error("Abi new bytes32 type error", "err", err)
+		return nil
+	}
+	confirmDataStoreArgs := abi.Arguments{
+		{
+			Name:    "dataStoreId",
+			Type:    abiUint32,
+			Indexed: false,
+		}, {
+			Name:    "headerHash",
+			Type:    abiBytes32,
+			Indexed: false,
+		},
+	}
+	var dlsmData = make(map[string]interface{})
+	for _, receipt := range receipts {
+		if receipt.ContractAddress.String() != config.DlsmContractAddress {
+			continue
+		}
+		for _, rlog := range receipt.Logs {
+			if rlog.Topics[0] == ConfirmDataStoreEventABIHash {
+				if len(rlog.Data) > 0 {
+					err := confirmDataStoreArgs.UnpackIntoMap(dlsmData, rlog.Data)
+					if err != nil {
+						log.Error("unpack data into map fail", "err", err)
+						continue
+					}
+				}
+			}
+		}
+	}
+	dataStoreId := dlsmData["dataStoreId"].(uint32)
+	// fetch frame by dataStoreId
+	bz, err := syncer.RetrievalFramesFromDa(dataStoreId)
+	if err != nil {
+		log.Error("retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
 	}
 	err = rlp.DecodeBytes(bz, &out)
 	if err != nil {
-		log.Error("decode retrieval frames in error", "dataStoreId", dataStoreId, "err", err)
+		log.Error("decode retrieval frames in error", "err", err)
 		return nil
 	}
-
 	return out
 }
