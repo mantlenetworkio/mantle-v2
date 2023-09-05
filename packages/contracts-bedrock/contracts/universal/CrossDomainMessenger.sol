@@ -260,7 +260,7 @@ abstract contract CrossDomainMessenger is
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
-    ) external payable {
+    ) external payable virtual {
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
@@ -307,7 +307,7 @@ abstract contract CrossDomainMessenger is
         uint256 _value,
         uint256 _minGasLimit,
         bytes calldata _message
-    ) external payable {
+    ) external payable virtual {
         (, uint16 version) = Encoding.decodeVersionedNonce(_nonce);
         require(
             version < 2,
