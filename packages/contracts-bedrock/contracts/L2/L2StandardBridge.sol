@@ -4,6 +4,9 @@ pragma solidity 0.8.15;
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { StandardBridge } from "../universal/StandardBridge.sol";
 import { Semver } from "../universal/Semver.sol";
+import { SafeCall } from "../libraries/SafeCall.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
 
 /**
@@ -18,6 +21,7 @@ import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
  *         not limited to: tokens with transfer fees, rebasing tokens, and tokens with blocklists.
  */
 contract L2StandardBridge is StandardBridge, Semver {
+    using SafeERC20 for IERC20;
     /**
      * @custom:legacy
      * @notice Emitted whenever a withdrawal from L2 to L1 is initiated.
@@ -282,7 +286,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
+    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable override onlyEOA {
         _initiateBridgeETH(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
@@ -305,7 +309,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable {
+    ) public payable override {
         _initiateBridgeETH(msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
 
@@ -329,7 +333,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public onlyEOA {
+    ) public onlyEOA override {
         _initiateBridgeERC20(
             _localToken,
             _remoteToken,
@@ -363,7 +367,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public {
+    ) public override {
         _initiateBridgeERC20(
             _localToken,
             _remoteToken,
@@ -391,7 +395,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable onlyOtherBridge {
+    ) public payable onlyOtherBridge override {
         require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
@@ -424,7 +428,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public onlyOtherBridge {
+    ) public onlyOtherBridge override {
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
