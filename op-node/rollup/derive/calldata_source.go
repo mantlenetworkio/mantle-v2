@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"io"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
@@ -21,6 +24,8 @@ type DataIter interface {
 
 type L1TransactionFetcher interface {
 	InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error)
+
+	FetchDataStoreID(ctx context.Context, query ethereum.FilterQuery) (uint32, error)
 }
 
 // DataSourceFactory readers raw transactions from a given block & then filters for
@@ -60,6 +65,27 @@ type DataSource struct {
 // NewDataSource creates a new calldata source. It suppresses errors in fetching the L1 block if they occur.
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
 func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, block eth.BlockID, batcherAddr common.Address) DataIter {
+	if cfg.UseDaAsDataSource {
+		// get current dataStoreId
+		dataStoreIdQuery := ethereum.FilterQuery{
+			Addresses: []common.Address{common.HexToAddress(cfg.DataLayrServiceManager)},
+			FromBlock: new(big.Int).SetUint64(block.Number),
+			ToBlock:   new(big.Int).SetUint64(block.Number),
+		}
+		dataStoreId, err := fetcher.FetchDataStoreID(ctx, dataStoreIdQuery)
+		if err != nil {
+			log.Error("fetch data storeID in error", "err", err)
+			ctx = context.WithValue(ctx, "dataStoreId", 0)
+		} else {
+			// reset context after handle it
+			ctx = context.WithValue(ctx, "dataStoreId", dataStoreId)
+		}
+		return &DataSource{
+			open: true,
+			data: DataFromDaStoreData(cfg, dataStoreId, log.New("origin", block)),
+		}
+	}
+
 	_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 	if err != nil {
 		return &DataSource{
@@ -83,7 +109,19 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 // otherwise it returns a temporary error if fetching the block returns an error.
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
-		if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
+		if ds.cfg.UseDaAsDataSource {
+			ds.open = true
+			dataStoreId, ok := ctx.Value("dataStoreId").(uint32)
+			if !ok || dataStoreId <= 0 {
+				return nil, NewTemporaryError(fmt.Errorf("failed to get dataStoreId from context"))
+			}
+			ds.data = DataFromDaStoreData(ds.cfg, dataStoreId, log.New("da data store", ds.id))
+			if ds.data == nil {
+				return nil, NewResetError(fmt.Errorf("failed to retrie frames from da source with storeId: %d", dataStoreId))
+			}
+			// reset context after handle it
+			ctx = context.WithValue(ctx, "dataStoreId", 0)
+		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
 			ds.open = true
 			ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
 		} else if errors.Is(err, ethereum.NotFound) {
@@ -122,5 +160,25 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 			out = append(out, tx.Data())
 		}
 	}
+	return out
+}
+
+// DataFromDaStoreData filters all of the transactions and returns the calldata from da
+// This will return an empty array if no valid transactions are found.
+func DataFromDaStoreData(config *rollup.Config, dataStoreId uint32, log log.Logger) []eth.Data {
+	var out []eth.Data
+	var dataStore da.MantleDataStore
+	// TODO FIXME
+	bz, err := dataStore.RetrievalFramesFromDa(dataStoreId)
+	if err != nil {
+		log.Error("retrieval frames from da in error", "dataStoreId", dataStoreId, "err", err)
+		return nil
+	}
+	err = rlp.DecodeBytes(bz, &out)
+	if err != nil {
+		log.Error("decode retrieval frames in error", "dataStoreId", dataStoreId, "err", err)
+		return nil
+	}
+
 	return out
 }

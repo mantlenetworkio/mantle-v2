@@ -84,6 +84,13 @@ type Config struct {
 	DepositContractAddress common.Address `json:"deposit_contract_address"`
 	// L1 System Config Address
 	L1SystemConfigAddress common.Address `json:"l1_system_config_address"`
+
+	// MANTLE DA MODIFY //
+	// Use Da Data Source
+	UseDaAsDataSource bool
+
+	// data store contract address
+	DataLayrServiceManager string
 }
 
 // ValidateL1Config checks L1 config variables for errors.

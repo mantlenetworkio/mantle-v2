@@ -9,10 +9,10 @@ import (
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
 
+	"github.com/ethereum/go-ethereum/log"
+
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
-
-	"github.com/ethereum/go-ethereum/log"
 )
 
 type MantleDataStoreConfig struct {
