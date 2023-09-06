@@ -263,7 +263,7 @@ abstract contract CrossDomainMessenger is
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
-    ) external payable {
+    ) external payable virtual{
         // In the deposit process , _nativeTokenValue means MNT amount.
         // But in the withdrawal process , _nativeTokenValue means the ETH amount.
         uint256 _nativeTokenValue = 0;
@@ -328,7 +328,7 @@ abstract contract CrossDomainMessenger is
         uint256 _value,
         uint256 _minGasLimit,
         bytes calldata _message
-    ) external payable {
+    ) external payable virtual {
         (, uint16 version) = Encoding.decodeVersionedNonce(_nonce);
         require(
             version < 2,

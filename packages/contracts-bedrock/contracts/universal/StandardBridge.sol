@@ -188,7 +188,7 @@ abstract contract StandardBridge {
     modifier onlyOtherBridge() {
         require(
             msg.sender == address(MESSENGER) &&
-            MESSENGER.xDomainMessageSender() == address(OTHER_BRIDGE),
+                MESSENGER.xDomainMessageSender() == address(OTHER_BRIDGE),
             "StandardBridge: function can only be called from the other bridge"
         );
         _;
@@ -227,20 +227,8 @@ abstract contract StandardBridge {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeL1ETH(uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
-        _initiateBridgeETH(address(0), Predeploys.BVM_ETH, msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
-    }
-
-    /**
- * @notice Sends ETH to the sender's address on the other chain.
-     *
-     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
-     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
-     *                     not be triggered with this data, but it will be emitted and can be used
-     *                     to identify the transaction.
-     */
-    function bridgeL2ETH(uint256 _amount, uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
-        _initiateBridgeETH(Predeploys.BVM_ETH, address(0), msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable virtual onlyEOA {
+        _initiateBridgeETH(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
@@ -257,21 +245,12 @@ abstract contract StandardBridge {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeL1ETHTo(
+    function bridgeETHTo(
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable {
-        _initiateBridgeETH(address(0), Predeploys.BVM_ETH, msg.sender, _to, msg.value, _minGasLimit, _extraData);
-    }
-
-    function bridgeL2ETHTo(
-        address _to,
-        uint256 _amount,
-        uint32 _minGasLimit,
-        bytes calldata _extraData
-    ) public payable {
-        _initiateBridgeETH(Predeploys.BVM_ETH, address(0), msg.sender, _to, _amount, _minGasLimit, _extraData);
+    ) public payable virtual{
+        _initiateBridgeETH(msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
@@ -357,7 +336,7 @@ abstract contract StandardBridge {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable onlyOtherBridge {
+    ) public payable virtual onlyOtherBridge {
         require(msg.value == _amount || _localToken == Predeploys.BVM_ETH, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
@@ -399,7 +378,7 @@ abstract contract StandardBridge {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public onlyOtherBridge {
+    ) public virtual onlyOtherBridge {
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
@@ -476,7 +455,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
-    ) internal {
+    ) internal virtual {
         uint32 _type = BridgeConstants.ETH_DEPOSIT_TX;
         if (_isOptimismMintableERC20(_localToken)) {
             require(_localToken == Predeploys.BVM_ETH, "StandardBridge: _initiateBridgeETH only support for ETH bridging.");
@@ -535,7 +514,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
-    ) internal {
+    ) internal virtual {
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
@@ -660,9 +639,9 @@ abstract contract StandardBridge {
      * @return True if the other token is the correct pair token for the OptimismMintableERC20.
      */
     function _isCorrectTokenPair(address _mintableToken, address _otherToken)
-    internal
-    view
-    returns (bool)
+        internal
+        view
+        returns (bool)
     {
         if (
             ERC165Checker.supportsInterface(_mintableToken, type(ILegacyMintableERC20).interfaceId)
