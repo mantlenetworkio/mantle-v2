@@ -3,7 +3,6 @@ package batcher
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"io"
 	"math"
 
@@ -48,7 +47,7 @@ type channelManager struct {
 	// params of initStoreData on MantleDA
 	params *bcommon.StoreParams
 	//receipt of initStoreData transaction on L1
-	initStoreDataReceipt *txmgr.TxReceipt[string]
+	initStoreDataReceipt *types.Receipt
 	// if set to true, prevents production of any new channel frames
 	closed bool
 }

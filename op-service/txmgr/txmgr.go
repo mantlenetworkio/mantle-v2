@@ -44,6 +44,8 @@ type TxManager interface {
 	// From returns the sending address associated with the instance of the transaction manager.
 	// It is static for a single instance of a TxManager.
 	From() common.Address
+
+	SendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error)
 }
 
 // ETHBackend is the set of methods that the transaction manager uses to resubmit gas & determine
@@ -155,7 +157,7 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the tx: %w", err)
 	}
-	return m.sendTx(ctx, tx)
+	return m.SendTx(ctx, tx)
 }
 
 // craftTx creates the signed transaction
@@ -164,12 +166,12 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 // NOTE: If the [TxCandidate.GasLimit] is non-zero, it will be used as the transaction's gas.
 // NOTE: Otherwise, the [SimpleTxManager] will query the specified backend for an estimate.
 func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.Transaction, error) {
-	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
-	if err != nil {
-		m.metr.RPCError()
-		return nil, fmt.Errorf("failed to get gas price info: %w", err)
-	}
-	gasFeeCap := calcGasFeeCap(basefee, gasTipCap)
+	//gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
+	//if err != nil {
+	//	m.metr.RPCError()
+	//	return nil, fmt.Errorf("failed to get gas price info: %w", err)
+	//}
+	//gasFeeCap := calcGasFeeCap(basefee, gasTipCap)
 
 	nonce, err := m.nextNonce(ctx)
 	if err != nil {
@@ -180,9 +182,9 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		ChainID:   m.chainID,
 		Nonce:     nonce,
 		To:        candidate.To,
-		GasTipCap: gasTipCap,
-		GasFeeCap: gasFeeCap,
-		Data:      candidate.TxData,
+		GasTipCap: big.NewInt(1500000000),
+		//GasFeeCap: gasFeeCap,
+		Data: candidate.TxData,
 	}
 
 	m.l.Info("creating tx", "to", rawTx.To, "from", m.cfg.From)
@@ -195,9 +197,9 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		gas, err := m.backend.EstimateGas(ctx, ethereum.CallMsg{
 			From:      m.cfg.From,
 			To:        candidate.To,
-			GasFeeCap: gasFeeCap,
-			GasTipCap: gasTipCap,
-			Data:      rawTx.Data,
+			GasFeeCap: big.NewInt(1500000000),
+			//GasTipCap: gasTipCap,
+			Data: rawTx.Data,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas: %w", err)
@@ -246,7 +248,7 @@ func (m *SimpleTxManager) resetNonce() {
 
 // send submits the same transaction several times with increasing gas prices as necessary.
 // It waits for the transaction to be confirmed on chain.
-func (m *SimpleTxManager) sendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
+func (m *SimpleTxManager) SendTx(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	ctx, cancel := context.WithCancel(ctx)

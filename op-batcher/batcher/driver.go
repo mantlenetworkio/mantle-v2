@@ -8,9 +8,11 @@ import (
 	"github.com/Layr-Labs/datalayr/common/logging"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"io"
 	"math/big"
 	_ "net/http/pprof"
+	"strings"
 	"sync"
 	"time"
 
@@ -79,7 +81,12 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, fmt.Errorf("querying rollup config: %w", err)
 	}
 
+	cfg.TxMgrConfig.PrivateKey = "..."
 	txManager, err := txmgr.NewSimpleTxManager("batcher", l, m, cfg.TxMgrConfig)
+	if err != nil {
+		return nil, err
+	}
+	privKey, err := crypto.HexToECDSA(strings.TrimPrefix("...", "0x"))
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +112,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
+		privateKey: privKey,
 	}
 
 	// Validate the batcher config
@@ -115,11 +123,11 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		if rcfg.DataLayerChainAddress == (common.Address{}) {
 			return nil, fmt.Errorf("rollup type %d , datalayrcontract address is 0", rcfg.RollupType)
 		}
-		dataLayrContract, err := bindings.NewContractDataLayrServiceManagerStorageCaller(rcfg.DataLayerChainAddress, l1Client)
+		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(rcfg.DataLayerChainAddress, l1Client)
 		if err != nil {
 			return nil, err
 		}
-		parsed, err := bindings.ContractDataLayrServiceManagerStorageMetaData.GetAbi()
+		parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
 		if err != nil {
 			return nil, err
 		}

@@ -8,10 +8,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ecommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -21,18 +22,13 @@ import (
 
 const ROLLUP_MAX_SIZE_ = 1024 * 1024 * 300
 
-var ErrInitDataStoreDone = errors.New("init data store transaction done")
-var ErrConfirmDataStoreDone = errors.New("confirm data store transaction done")
+var ErrUploadDataFinished = errors.New("data has been upload to MantleDA nodes")
+var ErrInitDataStore = errors.New("init data store transaction failed")
 
 func (l *BatchSubmitter) mantleDALoop() {
 	defer l.wg.Done()
 	ticker := time.NewTicker(l.PollInterval)
 	defer ticker.Stop()
-
-	dataStoreReceiptCh := make(chan txmgr.TxReceipt[string])
-	dataStoreQueue := txmgr.NewQueue[string](l.killCtx, l.txMgr, 1)
-	confirmDataReceiptCh := make(chan txmgr.TxReceipt[string])
-	confirmDataQueue := txmgr.NewQueue[string](l.killCtx, l.txMgr, 1)
 
 	for {
 		select {
@@ -45,11 +41,26 @@ func (l *BatchSubmitter) mantleDALoop() {
 				l.state.Clear()
 				continue
 			}
-			l.publishStateToMantleDA(dataStoreQueue, dataStoreReceiptCh)
-		case r := <-dataStoreReceiptCh:
-			l.handleInitDataStoreReceipt(r, confirmDataQueue, confirmDataReceiptCh)
-		case r := <-confirmDataReceiptCh:
-			l.handleConfirmDataStoreReceipt(r)
+			l.publishStateToMantleDA()
+
+			if l.state.params != nil {
+				//start to publish transaction
+				cCtx, cancel := context.WithTimeout(l.killCtx, 2*time.Minute)
+				r, err := l.sendInitDataStoreTransaction(cCtx)
+				if err != nil {
+					l.log.Error("Failed to send init datastore transaction", "err", err)
+					cancel()
+					continue
+				}
+				receipt, err := l.handleInitDataStoreReceipt(r, cCtx)
+				if err != nil {
+					cancel()
+					continue
+				}
+				l.handleConfirmDataStoreReceipt(receipt)
+				cancel()
+			}
+
 		case <-l.shutdownCtx.Done():
 			err := l.state.Close()
 			if err != nil {
@@ -63,12 +74,15 @@ func (l *BatchSubmitter) mantleDALoop() {
 // publishStateToMantleDA loops through the block data loaded into `state` and
 // submits the associated data to the MantleDA in the form of channel frames.
 // batch frames in one rollup transaction to MantleDA
-func (l *BatchSubmitter) publishStateToMantleDA(queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) {
+func (l *BatchSubmitter) publishStateToMantleDA() {
 
 	for {
-		err := l.publishTxsToMantleDA(l.killCtx, queue, receiptCh)
+		err := l.publishTxsToMantleDA(l.killCtx)
 		if err != nil {
-			if err != io.EOF || !errors.Is(err, ErrInitDataStoreDone) {
+			if errors.Is(err, ErrUploadDataFinished) {
+				l.log.Info("init data store transaction has been published")
+
+			} else if err != io.EOF {
 				l.log.Error("error sending tx while draining state", "err", err)
 			}
 			return
@@ -77,7 +91,7 @@ func (l *BatchSubmitter) publishStateToMantleDA(queue *txmgr.Queue[string], rece
 
 }
 
-func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context, queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) error {
+func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 	// send all available transactions
 	l1tip, err := l.l1Tip(ctx)
 	if err != nil {
@@ -103,7 +117,7 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context, queue *txmgr.
 			for _, v := range l.state.pendingTransactions {
 				txsdata = append(txsdata, v.Bytes())
 			}
-			err := l.DisperseStoreData(txsdata, queue, receiptCh)
+			err := l.DisperseStoreData(txsdata)
 			return err
 		} else {
 			l.log.Error("there is no frame in the current channel")
@@ -113,7 +127,7 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context, queue *txmgr.
 	return nil
 }
 
-func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte, queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) error {
+func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte) error {
 
 	//if txsdata has been successfully upload to MantleDA, we don't need to re-upload.
 	if l.state.params == nil {
@@ -122,6 +136,7 @@ func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte, queue *txmgr.Queue[
 			l.log.Error("rlp unable to encode txn", "err", err)
 			return err
 		}
+		l.log.Info("start to upload data to MantleDA node, ", "len", len(txnBufBytes))
 
 		params, err := l.callEncode(txnBufBytes)
 		if err != nil {
@@ -131,33 +146,74 @@ func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte, queue *txmgr.Queue[
 		//cache params
 		l.state.params = &params
 	}
-	uploadHeader, err := common.CreateUploadHeader(l.state.params)
-	if err != nil {
-		return err
-	}
+
+	return ErrUploadDataFinished
+}
+
+func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*types.Receipt, error) {
 	//if initStoreData transaction has been successfully executed.We don't need to re-execute .
 	if l.state.initStoreDataReceipt != nil {
-		receiptCh <- *l.state.initStoreDataReceipt
-		return ErrInitDataStoreDone
+		l.log.Info("init store data transaction has been published successfully, skip to send transaction again")
+		return l.state.initStoreDataReceipt, nil
+	}
+	uploadHeader, err := common.CreateUploadHeader(l.state.params)
+	if err != nil {
+		return nil, err
 	}
 
-	txdata, err := l.DataStoreTxData(
-		uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
+	//TODO
+	walletA := crypto.PubkeyToAddress(l.privateKey.PublicKey)
+	nonce64, err := l.L1Client.NonceAt(
+		ctx, walletA, nil,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
+	nonce := new(big.Int).SetUint64(nonce64)
+	var opts *bind.TransactOpts
+	chainId, err := l.L1Client.ChainID(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	candiddate := txmgr.TxCandidate{
-		To:       &l.Rollup.DataLayerChainAddress,
-		TxData:   txdata,
-		GasLimit: intrinsicGas,
+	opts, err = bind.NewKeyedTransactorWithChainID(
+		l.privateKey, chainId,
+	)
+
+	if err != nil {
+		return nil, err
 	}
-	queue.Send("initDataStore", candiddate, receiptCh)
-	return ErrInitDataStoreDone
+	opts.Context = ctx
+	opts.Nonce = nonce
+	opts.NoSend = true
+	opts.GasTipCap = big.NewInt(1500000000)
+	tx, err := l.DatalayrContract.InitDataStore(opts, walletA, walletA, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex, uploadHeader)
+	if err != nil {
+		return nil, err
+	}
+	return l.txMgr.SendTx(ctx, tx)
+	//txdata, err := l.DataStoreTxData(
+	//	l.DatalayrABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
+	//)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//candiddate := txmgr.TxCandidate{
+	//	To:       &l.Rollup.DataLayerChainAddress,
+	//	TxData:   txdata,
+	//	GasLimit: intrinsicGas,
+	//}
+	//receipt, err := l.txMgr.Send(ctx, candiddate)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//return receipt, nil
 }
 
 func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
@@ -205,21 +261,17 @@ func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
 	return params, nil
 }
 
-func (l *BatchSubmitter) DataStoreTxData(uploadHeader []byte, duration uint8, blockNumber uint32, totalOperatorsIndex uint32) ([]byte, error) {
-	initDataStoreTxData, err := l.DatalayrABI.Pack(
+func (l *BatchSubmitter) DataStoreTxData(abi *abi.ABI, uploadHeader []byte, duration uint8, blockNumber uint32, totalOperatorsIndex uint32) ([]byte, error) {
+	l.log.Info("encode initDataStore", "feePayer", l.txMgr.From(), "confirmer", l.txMgr.From(), "duration", duration, "referenceBlockNumber", blockNumber, "totalOperatorsIndex", totalOperatorsIndex)
+
+	return abi.Pack(
 		"initDataStore",
 		l.txMgr.From(),
 		l.txMgr.From(),
 		duration,
 		blockNumber,
 		totalOperatorsIndex,
-		uploadHeader,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return initDataStoreTxData, nil
-
+		uploadHeader)
 }
 
 func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (common.DisperseMeta, error) {
@@ -255,15 +307,15 @@ func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (co
 	return meta, nil
 }
 
-func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) error {
+func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (*types.Receipt, error) {
 	event, ok := l.GraphClient.PollingInitDataStore(
-		l.killCtx,
+		ctx,
 		txHash[:],
 		l.GraphPollingDuration,
 	)
 	if !ok {
 		l.log.Error("op-batcher could not get initDataStore", "ok", ok)
-		return errors.New("op-batcher could not get initDataStore")
+		return nil, errors.New("op-batcher could not get initDataStore")
 	}
 	l.log.Info("PollingInitDataStore", "MsgHash", event.MsgHash, "StoreNumber", event.StoreNumber)
 	meta, err := l.callDisperse(
@@ -272,7 +324,7 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, queue *txmgr.Queue[str
 	)
 	if err != nil {
 		l.log.Error("op-batcher call Disperse fail", "err", err)
-		return err
+		return nil, err
 	}
 	callData := common.MakeCalldata(l.state.params, meta, event.StoreNumber, event.MsgHash)
 	searchData := bindings.IDataLayrServiceManagerDataStoreSearchData{
@@ -291,63 +343,88 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, queue *txmgr.Queue[str
 		},
 	}
 
-	txdata, err := l.ConfirmDataTxData(callData, searchData)
-	if err != nil {
-		return err
-	}
-	intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
-	if err != nil {
-		return err
-	}
-	candiddate := txmgr.TxCandidate{
-		To:       &l.Rollup.DataLayerChainAddress,
-		TxData:   txdata,
-		GasLimit: intrinsicGas,
-	}
-	queue.Send("initDataStore", candiddate, receiptCh)
-	return ErrConfirmDataStoreDone
-
-}
-
-func (l *BatchSubmitter) ConfirmDataTxData(callData []byte, searchData bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
-	confirmDataTxData, err := l.DatalayrABI.Pack(
-		"confirmDataStore",
-		callData,
-		searchData,
+	//TODO
+	walletA := crypto.PubkeyToAddress(l.privateKey.PublicKey)
+	nonce64, err := l.L1Client.NonceAt(
+		ctx, walletA, nil,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return confirmDataTxData, nil
+	nonce := new(big.Int).SetUint64(nonce64)
+	var opts *bind.TransactOpts
+	chainId, err := l.L1Client.ChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	opts, err = bind.NewKeyedTransactorWithChainID(
+		l.privateKey, chainId,
+	)
 
+	if err != nil {
+		return nil, err
+	}
+	opts.Context = ctx
+	opts.Nonce = nonce
+	opts.NoSend = true
+	opts.GasTipCap = big.NewInt(1500000000)
+	tx, err := l.DatalayrContract.ConfirmDataStore(opts, callData, searchData)
+	if err != nil {
+		return nil, err
+	}
+	return l.txMgr.SendTx(ctx, tx)
+
+	//txdata, err := l.ConfirmDataTxData(l.DatalayrABI, callData, searchData)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//candiddate := txmgr.TxCandidate{
+	//	To:       &l.Rollup.DataLayerChainAddress,
+	//	TxData:   txdata,
+	//	GasLimit: intrinsicGas,
+	//}
+	//return l.txMgr.Send(ctx, candiddate)
 }
 
-func (l *BatchSubmitter) handleInitDataStoreReceipt(r txmgr.TxReceipt[string], queue *txmgr.Queue[string], receiptCh chan txmgr.TxReceipt[string]) {
-	if r.Err != nil {
-		l.log.Warn("unable to publish init data store tx", "err", r.Err)
-		l.recordFailedEigenDATx(r.Err)
+func (l *BatchSubmitter) ConfirmDataTxData(abi *abi.ABI, callData []byte, searchData bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
+	return abi.Pack(
+		"confirmDataStore",
+		callData,
+		searchData)
+}
+
+func (l *BatchSubmitter) handleInitDataStoreReceipt(r *types.Receipt, ctx context.Context) (*types.Receipt, error) {
+	if r.Status == types.ReceiptStatusFailed {
+		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", r.TxHash)
+		l.recordFailedEigenDATx()
+		return nil, ErrInitDataStore
 	} else {
-		l.log.Info("initDataStore tx successfully published", "tx_hash", r.Receipt.TxHash)
-		l.state.initStoreDataReceipt = &r
+		l.log.Info("initDataStore tx successfully published", "tx_hash", r.TxHash)
+		l.state.initStoreDataReceipt = r
 		//start to confirmData
-		err := l.ConfirmStoredData(r.Receipt.TxHash.Bytes(), queue, receiptCh)
+		r, err := l.ConfirmStoredData(r.TxHash.Bytes(), ctx)
 		if err != nil {
 			l.log.Error("failed to confirm data", "err", err)
+			return nil, err
 		}
+		return r, nil
 	}
 }
 
-func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r txmgr.TxReceipt[string]) {
-	if r.Err != nil {
-		l.log.Warn("unable to publish confirm data store tx", "err", r.Err)
-		l.recordFailedEigenDATx(r.Err)
+func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r *types.Receipt) {
+	if r.Status == types.ReceiptStatusFailed {
+		l.log.Error("unable to publish confirm data store tx", "tx_hash", r.TxHash)
+		l.recordFailedEigenDATx()
 	} else {
-		l.log.Info("Transaction confirmed", "tx_hash", r.Receipt.TxHash, "status", r.Receipt.Status, "block_hash", r.Receipt.BlockHash, "block_number", r.Receipt.BlockNumber)
-		l.recordConfirmedEigenDATx(r.Receipt)
+		l.log.Info("Transaction confirmed", "tx_hash", r.TxHash, "status", r.Status, "block_hash", r.BlockHash, "block_number", r.BlockNumber)
+		l.recordConfirmedEigenDATx(r)
 	}
 }
-func (l *BatchSubmitter) recordFailedEigenDATx(err error) {
-	l.log.Warn("Failed to send transaction", "err", err)
+func (l *BatchSubmitter) recordFailedEigenDATx() {
 	for k, _ := range l.state.pendingTransactions {
 		l.state.TxFailed(k)
 	}

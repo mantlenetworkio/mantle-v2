@@ -1,6 +1,7 @@
 package batcher
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
@@ -49,7 +50,7 @@ type Config struct {
 	DisperserTimeout     uint64
 	DataStoreDuration    uint64
 	GraphPollingDuration time.Duration
-	DatalayrContract     *bindings.ContractDataLayrServiceManagerStorageCaller
+	DatalayrContract     *bindings.ContractDataLayrServiceManager
 	DatalayrABI          *abi.ABI
 	GraphClient          *graphView.GraphClient
 
@@ -58,6 +59,8 @@ type Config struct {
 
 	// Channel builder parameters
 	Channel ChannelConfig
+
+	privateKey *ecdsa.PrivateKey
 }
 
 // Check ensures that the [Config] is valid.
