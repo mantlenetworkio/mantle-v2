@@ -88,8 +88,6 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		P2P:                 p2pConfig,
 		P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
-		DlsmContractAddress: ctx.GlobalString(flags.DlsmContractAddressFlag.Name),
-		MantleDaSwitch:      ctx.GlobalBool(flags.MantleDaSwitchFlag.Name),
 		Heartbeat: node.HeartbeatConfig{
 			Enabled: ctx.GlobalBool(flags.HeartbeatEnabledFlag.Name),
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),

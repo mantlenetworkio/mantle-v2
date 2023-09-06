@@ -26,6 +26,10 @@ type L1Fetcher interface {
 	L1TransactionFetcher
 }
 
+type DaSyncer interface {
+	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+}
+
 // ResettableEngineControl wraps EngineControl with reset-functionality,
 // which handles reorgs like the derivation pipeline:
 // by determining the last valid block references to continue from.
@@ -75,11 +79,10 @@ type DerivationPipeline struct {
 }
 
 // NewDerivationPipeline creates a derivation pipeline, which should be reset before use.
-func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine, metrics Metrics) *DerivationPipeline {
-
+func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine, daSyncer DaSyncer, metrics Metrics) *DerivationPipeline {
 	// Pull stages
 	l1Traversal := NewL1Traversal(log, cfg, l1Fetcher)
-	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, nil) // auxiliary stage for L1Retrieval
+	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, daSyncer) // auxiliary stage for L1Retrieval
 	l1Src := NewL1Retrieval(log, dataSrc, l1Traversal)
 	frameQueue := NewFrameQueue(log, l1Src)
 	bank := NewChannelBank(log, cfg, frameQueue, l1Fetcher)

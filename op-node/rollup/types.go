@@ -91,15 +91,6 @@ type Config struct {
 
 	// MantleDA(EigenDA) Dlsm contract address
 	DlsmContractAddress string
-
-	// socket url for da retriever
-	RetrieverSocket string
-
-	// fetch data from mantleDa da-retriever timeout
-	RetrieverTimeout time.Duration
-
-	// graphql api base url for mantle subgraph
-	GraphProvider string
 }
 
 // ValidateL1Config checks L1 config variables for errors.

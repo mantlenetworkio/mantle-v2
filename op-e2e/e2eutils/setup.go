@@ -215,8 +215,8 @@ func Setup(t require.TestingT, deployParams *DeployParams, alloc *AllocParams) *
 		DepositContractAddress: predeploys.DevOptimismPortalAddr,
 		L1SystemConfigAddress:  predeploys.DevSystemConfigAddr,
 		RegolithTime:           deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
-		UseDaAsDataSource:      deployConf.UseDaAsDataSource,
-		DataLayrServiceManager: deployConf.DataLayrServiceManager,
+		MantleDaSwitch:         deployConf.MantleDaSwitch,
+		DlsmContractAddress:    deployConf.DlsmContractAddress,
 	}
 
 	deploymentsL1 := DeploymentsL1{
