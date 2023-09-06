@@ -24,6 +24,7 @@ import { BridgeConstants } from "../libraries/BridgeConstants.sol";
  */
 contract L1StandardBridge is StandardBridge, Semver {
     using SafeERC20 for IERC20;
+
     /**
  * @custom:legacy
      * @notice Emitted whenever a deposit of MNT from L1 into L2 is initiated.

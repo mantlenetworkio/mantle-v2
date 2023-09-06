@@ -22,8 +22,8 @@ import { BridgeConstants } from "../libraries/BridgeConstants.sol";
  *         not limited to: tokens with transfer fees, rebasing tokens, and tokens with blocklists.
  */
 contract L2StandardBridge is StandardBridge, Semver {
-
     address L1_MNT_ADDRESS;
+
     using SafeERC20 for IERC20;
     /**
      * @custom:legacy
@@ -156,7 +156,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) external payable virtual {
+    ) external payable {
         if (_l1Token == BridgeConstants.L1_MNT && _l2Token == Predeploys.LEGACY_ERC20_MNT) {
             finalizeBridgeMNT(_l2Token,_l1Token,_from, _to, _amount, _extraData);
         } else if (_l1Token == address(0) && _l2Token == Predeploys.BVM_ETH){
@@ -289,7 +289,7 @@ contract L2StandardBridge is StandardBridge, Semver {
     }
 
     /**
-* @notice Emits the legacy WithdrawalInitiated event followed by the MNTBridgeInitiated
+     * @notice Emits the legacy WithdrawalInitiated event followed by the MNTBridgeInitiated
      *         event. This is necessary for backwards compatibility with the legacy bridge.
      *
      * @inheritdoc StandardBridge
