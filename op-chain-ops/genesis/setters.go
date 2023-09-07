@@ -27,25 +27,21 @@ var (
 		predeploys.BVM_ETHAddr:         true,
 	}
 
-	IgnoredPredeploys = map[common.Address]bool{
-		predeploys.GovernanceTokenAddr: true,
-	}
-
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
 	// that should not be touched by the migration process.
 	UntouchableCodeHashes = map[common.Address]ChainHashMap{
 		predeploys.GovernanceTokenAddr: {
-			1: common.HexToHash("0x8551d935f4e67ad3c98609f0d9f0f234740c4c4599f82674633b55204393e07f"),
-			5: common.HexToHash("0xc4a213cf5f06418533e5168d8d82f7ccbcc97f27ab90197c2c051af6a4941cf9"),
+			1:     common.HexToHash("0x8551d935f4e67ad3c98609f0d9f0f234740c4c4599f82674633b55204393e07f"),
+			31337: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
 		},
 		predeploys.WETH9Addr: {
-			1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
-			5: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			1:     common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			31337: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
 		},
 		// TODO the hash need to be set correctly.
 		predeploys.BVM_ETHAddr: {
-			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
-			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			1:     common.HexToHash("0x7cc935d7f4ab7df5d5920d1f44616fa76c483bd1c2980f9867caedb26128e848"),
+			31337: common.HexToHash("0x7cc935d7f4ab7df5d5920d1f44616fa76c483bd1c2980f9867caedb26128e848"),
 		},
 	}
 

@@ -21,7 +21,7 @@ var ParamsByChainID = map[int]*Params{
 		// total supply by accidental invocations of the Saurik bug (https://www.saurik.com/optimism.html).
 		new(big.Int).SetUint64(1627270011999999992),
 	},
-	5: {
-		new(big.Int),
+	31337: {
+		new(big.Int).Mul(new(big.Int).SetInt64(1e18), new(big.Int).SetInt64(-600000)),
 	},
 }
