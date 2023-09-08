@@ -1,10 +1,12 @@
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 
 import { deploy, getDeploymentAddress } from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   const addressManager = await getDeploymentAddress(hre, 'Lib_AddressManager')
 
+  await sleep(5000)
   await deploy({
     hre,
     name: 'Proxy__OVM_L1CrossDomainMessenger',

@@ -6,6 +6,7 @@ import {
   deploy,
   getContractFromArtifact,
 } from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   const { deployer } = await hre.getNamedAccounts()
@@ -38,6 +39,7 @@ const deployFn: DeployFunction = async (hre) => {
   // ensure that users do not interact with it and instead
   // interact with the proxied contract.
   // The `portalGuardian` is set at the GUARDIAN.
+  await sleep(10000)
   await deploy({
     hre,
     name: 'OptimismPortal',
