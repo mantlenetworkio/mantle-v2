@@ -2,7 +2,7 @@ import assert from 'assert'
 
 import { ethers, BigNumber } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@eth-optimism/core-utils'
+import {awaitCondition, sleep} from '@eth-optimism/core-utils'
 import '@eth-optimism/hardhat-deploy-config'
 import 'hardhat-deploy'
 
@@ -123,6 +123,7 @@ const deployFn: DeployFunction = async (hre) => {
   ) {
     console.log('Upgrading the SystemDictator proxy...')
 
+    await sleep(5000)
     // Upgrade and initialize the proxy.
     await SystemDictatorProxyWithSigner.upgradeToAndCall(
       SystemDictatorImpl.address,

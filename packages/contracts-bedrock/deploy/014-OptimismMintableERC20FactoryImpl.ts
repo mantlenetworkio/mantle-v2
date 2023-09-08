@@ -5,6 +5,7 @@ import {
   deploy,
   getContractFromArtifact,
 } from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   const L1StandardBridgeProxy = await getContractFromArtifact(
@@ -12,6 +13,7 @@ const deployFn: DeployFunction = async (hre) => {
     'Proxy__OVM_L1StandardBridge'
   )
 
+  await sleep(5000)
   await deploy({
     hre,
     name: 'OptimismMintableERC20Factory',

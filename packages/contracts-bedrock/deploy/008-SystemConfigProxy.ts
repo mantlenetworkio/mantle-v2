@@ -5,10 +5,12 @@ import {
   deploy,
   getDeploymentAddress,
 } from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   const proxyAdmin = await getDeploymentAddress(hre, 'ProxyAdmin')
 
+  await sleep(5000)
   await deploy({
     hre,
     name: 'SystemConfigProxy',
