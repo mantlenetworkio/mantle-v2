@@ -4,9 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"io"
 	"math/big"
 	_ "net/http/pprof"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+)
+
+const (
+	EOA = iota
+	MantleDA
 )
 
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
@@ -70,7 +81,12 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, fmt.Errorf("querying rollup config: %w", err)
 	}
 
+	cfg.TxMgrConfig.PrivateKey = "..."
 	txManager, err := txmgr.NewSimpleTxManager("batcher", l, m, cfg.TxMgrConfig)
+	if err != nil {
+		return nil, err
+	}
+	privKey, err := crypto.HexToECDSA(strings.TrimPrefix("...", "0x"))
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +99,10 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		MaxPendingTransactions: cfg.MaxPendingTransactions,
 		NetworkTimeout:         cfg.TxMgrConfig.NetworkTimeout,
 		TxManager:              txManager,
+		DisperserSocket:        cfg.DisperserSocket,
+		DisperserTimeout:       cfg.DisperserTimeout,
+		DataStoreDuration:      cfg.DataStoreDuration,
+		GraphPollingDuration:   cfg.GraphPollingDuration,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -92,13 +112,37 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
+		privateKey: privKey,
 	}
 
 	// Validate the batcher config
 	if err := batcherCfg.Check(); err != nil {
 		return nil, err
 	}
+	if rcfg.RollupType == MantleDA {
+		if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
+			return nil, fmt.Errorf("rollup type %d , datalayrcontract address is 0", rcfg.RollupType)
+		}
+		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(common.HexToAddress(rcfg.DataLayrServiceManagerAddr), l1Client)
+		if err != nil {
+			return nil, err
+		}
+		parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
+		if err != nil {
+			return nil, err
+		}
+		eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
+		if err != nil {
+			return nil, err
+		}
 
+		graphClient := graphView.NewGraphClient(rcfg.GraphProvider, eigenLogger)
+
+		batcherCfg.DatalayrContract = dataLayrContract
+		batcherCfg.DatalayrABI = parsed
+		batcherCfg.GraphClient = graphClient
+
+	}
 	return NewBatchSubmitter(ctx, batcherCfg, l, m)
 }
 
@@ -140,7 +184,12 @@ func (l *BatchSubmitter) Start() error {
 	l.lastStoredBlock = eth.BlockID{}
 
 	l.wg.Add(1)
-	go l.loop()
+
+	if l.Rollup.RollupType == EOA {
+		go l.loop()
+	} else if l.Rollup.RollupType == MantleDA {
+		go l.mantleDALoop()
+	}
 
 	l.log.Info("Batch Submitter started")
 

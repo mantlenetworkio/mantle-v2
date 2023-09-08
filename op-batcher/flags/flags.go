@@ -36,6 +36,27 @@ var (
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_RPC"),
 	}
 	// Optional flags
+	DisperserSocketFlag = cli.StringFlag{
+		Name:   "disperser-socket",
+		Usage:  "Websocket for MantleDA disperser",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_SOCKET"),
+	}
+	DataStoreDurationFlag = cli.Uint64Flag{
+		Name:   "duration",
+		Usage:  "Duration to store blob",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DATA_STORE_DURATION"),
+	}
+	DisperserTimeoutFlag = cli.Uint64Flag{
+		Name:   "timeout",
+		Usage:  "disperser timeout",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_TIMEOUT"),
+	}
+	GraphPollingDurationFlag = cli.DurationFlag{
+		Name:   "graph-polling-duration",
+		Usage:  "polling duration for fetch data from da graph node",
+		Value:  1200 * time.Millisecond,
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_POLLING_DURATION"),
+	}
 	SubSafetyMarginFlag = cli.Uint64Flag{
 		Name: "sub-safety-margin",
 		Usage: "The batcher tx submission safety margin (in #L1-blocks) to subtract " +
@@ -91,6 +112,10 @@ var optionalFlags = []cli.Flag{
 	MaxL1TxSizeBytesFlag,
 	StoppedFlag,
 	SequencerHDPathFlag,
+	DisperserTimeoutFlag,
+	DisperserSocketFlag,
+	DataStoreDurationFlag,
+	GraphPollingDurationFlag,
 }
 
 func init() {

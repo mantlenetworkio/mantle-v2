@@ -190,7 +190,7 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	}
 	var dlsmData = make(map[string]interface{})
 	for _, receipt := range receipts {
-		if receipt.ContractAddress.String() != config.DlsmContractAddress {
+		if receipt.ContractAddress.String() != config.DataLayrServiceManagerAddr {
 			continue
 		}
 		for _, rlog := range receipt.Logs {

@@ -1,6 +1,12 @@
 package batcher
 
 import (
+	"crypto/ecdsa"
+	"errors"
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -19,6 +25,14 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
+var (
+	ErrDisperserSocketEmpty     = errors.New("disperser socket is empty for MantleDA")
+	ErrDisperserTimeoutZero     = errors.New("disperser timeout is zero for MantleDA")
+	ErrDataStoreDurationZero    = errors.New("datastore duration is zero for MantleDA")
+	ErrGraphPollingDurationZero = errors.New("graph node polling duration is zero for MantleDA")
+	ErrGraphProviderEmpty       = errors.New("graph node provider is empty for MantleDA")
+)
+
 type Config struct {
 	log        log.Logger
 	metr       metrics.Metricer
@@ -31,11 +45,22 @@ type Config struct {
 	PollInterval           time.Duration
 	MaxPendingTransactions uint64
 
+	// Rollup MantleDA
+	DisperserSocket      string
+	DisperserTimeout     uint64
+	DataStoreDuration    uint64
+	GraphPollingDuration time.Duration
+	DatalayrContract     *bindings.ContractDataLayrServiceManager
+	DatalayrABI          *abi.ABI
+	GraphClient          *graphView.GraphClient
+
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
 
 	// Channel builder parameters
 	Channel ChannelConfig
+
+	privateKey *ecdsa.PrivateKey
 }
 
 // Check ensures that the [Config] is valid.
@@ -46,6 +71,24 @@ func (c *Config) Check() error {
 	if err := c.Channel.Check(); err != nil {
 		return err
 	}
+	if c.Rollup.RollupType == 1 {
+		if len(c.Rollup.GraphProvider) == 0 {
+			return ErrGraphProviderEmpty
+		}
+		if len(c.DisperserSocket) == 0 {
+			return ErrDisperserSocketEmpty
+		}
+		if c.DisperserTimeout == 0 {
+			return ErrDisperserTimeoutZero
+		}
+		if c.DataStoreDuration == 0 {
+			return ErrDataStoreDurationZero
+		}
+		if c.GraphPollingDuration == 0 {
+			return ErrGraphPollingDurationZero
+		}
+	}
+
 	return nil
 }
 
@@ -58,6 +101,18 @@ type CLIConfig struct {
 
 	// RollupRpc is the HTTP provider URL for the L2 rollup node.
 	RollupRpc string
+
+	// DisperserSocket is the websocket for the MantleDA disperser.
+	DisperserSocket string
+
+	// DisperserTimeout timeout for context
+	DisperserTimeout uint64
+
+	// DataStoreDuration data store time on MantleDA
+	DataStoreDuration uint64
+
+	//GraphPollingDuration listen to graph node polling time
+	GraphPollingDuration time.Duration
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -93,6 +148,8 @@ type CLIConfig struct {
 	MetricsConfig    opmetrics.CLIConfig
 	PprofConfig      oppprof.CLIConfig
 	CompressorConfig compressor.CLIConfig
+
+	EigenLogConfig logging.Config
 }
 
 func (c CLIConfig) Check() error {
@@ -128,6 +185,10 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MaxPendingTransactions: ctx.GlobalUint64(flags.MaxPendingTransactionsFlag.Name),
 		MaxChannelDuration:     ctx.GlobalUint64(flags.MaxChannelDurationFlag.Name),
 		MaxL1TxSize:            ctx.GlobalUint64(flags.MaxL1TxSizeBytesFlag.Name),
+		DisperserSocket:        ctx.GlobalString(flags.DisperserSocketFlag.Name),
+		DisperserTimeout:       ctx.GlobalUint64(flags.DisperserTimeoutFlag.Name),
+		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
+		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),
@@ -135,5 +196,6 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MetricsConfig:          opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:            oppprof.ReadCLIConfig(ctx),
 		CompressorConfig:       compressor.ReadCLIConfig(ctx),
+		EigenLogConfig:         logging.ReadCLIConfig(ctx),
 	}
 }

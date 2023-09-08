@@ -75,6 +75,11 @@ type Config struct {
 	// Active if RegolithTime != nil && L2 block timestamp >= *RegolithTime, inactive otherwise.
 	RegolithTime *uint64 `json:"regolith_time,omitempty"`
 
+	// RollupType sets whether rollup data is stored in L1 or MantleDA. 0 -> L1; 1 -> MantleDA
+	RollupType uint `json:"rollup_type"`
+	// GraphProvider sets the url of graph node in MantleDA
+	GraphProvider string `json:"graph_provider"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -84,13 +89,11 @@ type Config struct {
 	DepositContractAddress common.Address `json:"deposit_contract_address"`
 	// L1 System Config Address
 	L1SystemConfigAddress common.Address `json:"l1_system_config_address"`
-
 	// MANTLE DA MODIFY //
 	// Use Da from MantleDA(EigenDA)
-	MantleDaSwitch bool
-
-	// MantleDA(EigenDA) Dlsm contract address
-	DlsmContractAddress string
+	MantleDaSwitch bool `json:"mantle_da_switch"`
+	// MantleDA(EigenDA) DataLayrServiceManage contract address
+	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.

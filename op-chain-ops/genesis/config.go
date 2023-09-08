@@ -72,6 +72,9 @@ type DeployConfig struct {
 	// Seconds after genesis block that Regolith hard fork activates. 0 to activate at genesis. Nil to disable regolith
 	L2GenesisRegolithTimeOffset *hexutil.Uint64 `json:"l2GenesisRegolithTimeOffset,omitempty"`
 
+	// RollupType sets whether rollup data is stored in L1 or MantleDA. 0 -> L1; 1 -> MantleDA
+	RollupType uint `json:"rollupType"`
+
 	// Owner of the ProxyAdmin predeploy
 	ProxyAdminOwner common.Address `json:"proxyAdminOwner"`
 	// Owner of the system on L1
@@ -94,6 +97,12 @@ type DeployConfig struct {
 	SystemConfigProxy common.Address `json:"systemConfigProxy"`
 	// OptimismPortal proxy address on L1
 	OptimismPortalProxy common.Address `json:"optimismPortalProxy"`
+
+	//EigenDataLayerChain proxy address on L1
+	EigenDataLayerChainProxy common.Address `json:"eigenDataLayerChainProxy"`
+	//EigenDataLayerFee proxy address on L1
+	EigenDataLayerFeeProxy common.Address `json:"eigenDataLayerFeeProxy"`
+
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
@@ -113,9 +122,9 @@ type DeployConfig struct {
 	FundDevAccounts bool `json:"fundDevAccounts"`
 
 	// MANTLE DA MODIFY //
-	MantleDaSwitch bool
+	MantleDaSwitch bool `json:"mantleDaSwitch"`
 
-	DlsmContractAddress string
+	DataLayrServiceManagerAddr string `json:"dataLayrServiceManagerAddr"`
 }
 
 // Check will ensure that the config is sane and return an error when it is not
@@ -340,18 +349,18 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
 			},
 		},
-		BlockTime:              d.L2BlockTime,
-		MaxSequencerDrift:      d.MaxSequencerDrift,
-		SeqWindowSize:          d.SequencerWindowSize,
-		ChannelTimeout:         d.ChannelTimeout,
-		L1ChainID:              new(big.Int).SetUint64(d.L1ChainID),
-		L2ChainID:              new(big.Int).SetUint64(d.L2ChainID),
-		BatchInboxAddress:      d.BatchInboxAddress,
-		DepositContractAddress: d.OptimismPortalProxy,
-		L1SystemConfigAddress:  d.SystemConfigProxy,
-		RegolithTime:           d.RegolithTime(l1StartBlock.Time()),
-		MantleDaSwitch:         d.MantleDaSwitch,
-		DlsmContractAddress:    d.DlsmContractAddress,
+		BlockTime:                  d.L2BlockTime,
+		MaxSequencerDrift:          d.MaxSequencerDrift,
+		SeqWindowSize:              d.SequencerWindowSize,
+		ChannelTimeout:             d.ChannelTimeout,
+		L1ChainID:                  new(big.Int).SetUint64(d.L1ChainID),
+		L2ChainID:                  new(big.Int).SetUint64(d.L2ChainID),
+		BatchInboxAddress:          d.BatchInboxAddress,
+		DepositContractAddress:     d.OptimismPortalProxy,
+		L1SystemConfigAddress:      d.SystemConfigProxy,
+		RegolithTime:               d.RegolithTime(l1StartBlock.Time()),
+		MantleDaSwitch:             d.MantleDaSwitch,
+		DataLayrServiceManagerAddr: d.DataLayrServiceManagerAddr,
 	}, nil
 }
 
