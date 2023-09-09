@@ -10,7 +10,7 @@ import {sleep} from "@eth-optimism/core-utils";
 const deployFn: DeployFunction = async (hre) => {
   const proxyAdmin = await getDeploymentAddress(hre, 'ProxyAdmin')
 
-  await sleep(5000)
+  await sleep(6000)
   await deploy({
     hre,
     name: 'OptimismPortalProxy',

@@ -6,7 +6,7 @@ import {sleep} from "@eth-optimism/core-utils";
 const deployFn: DeployFunction = async (hre) => {
   const { deployer } = await hre.getNamedAccounts()
 
-  await sleep(5000)
+  await sleep(6000)
   await deploy({
     hre,
     name: 'ProxyAdmin',

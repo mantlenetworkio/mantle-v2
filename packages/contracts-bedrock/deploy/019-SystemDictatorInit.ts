@@ -123,7 +123,7 @@ const deployFn: DeployFunction = async (hre) => {
   ) {
     console.log('Upgrading the SystemDictator proxy...')
 
-    await sleep(5000)
+    await sleep(6000)
     // Upgrade and initialize the proxy.
     await SystemDictatorProxyWithSigner.upgradeToAndCall(
       SystemDictatorImpl.address,

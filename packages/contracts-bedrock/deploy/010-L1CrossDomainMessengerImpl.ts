@@ -13,7 +13,7 @@ const deployFn: DeployFunction = async (hre) => {
     'OptimismPortalProxy'
   )
 
-  await sleep(5000)
+  await sleep(6000)
   await deploy({
     hre,
     name: 'L1CrossDomainMessenger',

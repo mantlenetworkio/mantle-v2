@@ -13,7 +13,7 @@ const deployFn: DeployFunction = async (hre) => {
     'Proxy__OVM_L1StandardBridge'
   )
 
-  await sleep(5000)
+  await sleep(6000)
   await deploy({
     hre,
     name: 'OptimismMintableERC20Factory',
