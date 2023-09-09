@@ -14,7 +14,7 @@ const deployFn: DeployFunction = async (hre) => {
     'Proxy__OVM_L1CrossDomainMessenger'
   )
 
-  await sleep(5000)
+  await sleep(6000)
   await deploy({
     hre,
     name: 'L1StandardBridge',
