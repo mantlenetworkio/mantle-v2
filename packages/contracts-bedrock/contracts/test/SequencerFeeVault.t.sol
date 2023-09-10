@@ -61,7 +61,7 @@ contract SequencerFeeVault_Test is Bridge_Initializer {
             Predeploys.L2_STANDARD_BRIDGE,
             address(vault).balance,
             abi.encodeWithSelector(
-                StandardBridge.bridgeL2ETHTo.selector,
+                StandardBridge.bridgeETHTo.selector,
                 vault.l1FeeWallet(),
                 amount,
                 35_000,

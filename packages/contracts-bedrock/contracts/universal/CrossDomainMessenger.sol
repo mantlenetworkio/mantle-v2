@@ -7,6 +7,9 @@ import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
 import { BridgeConstants } from "../libraries/BridgeConstants.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 
 /**
  * @custom:legacy
@@ -118,6 +121,7 @@ abstract contract CrossDomainMessenger is
     Initializable,
     CrossDomainMessengerLegacySpacer1
 {
+    using SafeERC20 for IERC20;
     /**
      * @notice Current message version identifier.
      */
@@ -258,35 +262,36 @@ abstract contract CrossDomainMessenger is
      * @param _minGasLimit Minimum gas limit that the message can be executed with.
      */
     function sendMessage(
-        uint32 _type,
         uint256 _amount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable virtual {
+        revert("CrossDomainMessenger : this function could only be called from L1CrossDomainMessenger or L1CrossDomainMessenger");
         // In the deposit process , _nativeTokenValue means MNT amount.
         // But in the withdrawal process , _nativeTokenValue means the ETH amount.
         uint256 _nativeTokenValue = 0;
-
-        if ( _type == BridgeConstants.MNT_DEPOSIT_TX ){
-            _nativeTokenValue =  _amount;
-        } else if (_type == BridgeConstants.ETH_DEPOSIT_TX ){
-            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal ETH value");
-            _nativeTokenValue =  0;
-        } else if ( _type == BridgeConstants.ETH_WITHDRAWAL_TX ){
-            _nativeTokenValue =  _amount;
-        } else if (_type == BridgeConstants.MNT_WITHDRAWAL_TX ){
-            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal MNT value");
-            _nativeTokenValue =  0;
-        }else if (_type==BridgeConstants.ERC721_TX){
-            _amount = BridgeConstants.ERC721_AMOUNT;
-        }
+//
+//        if ( _type == BridgeConstants.MNT_DEPOSIT_TX ){
+//            _nativeTokenValue =  _amount;
+//        } else if (_type == BridgeConstants.ETH_DEPOSIT_TX ){
+//            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal ETH value");
+//            _nativeTokenValue =  0;
+//        } else if ( _type == BridgeConstants.ETH_WITHDRAWAL_TX ){
+//            _nativeTokenValue =  _amount;
+//        } else if (_type == BridgeConstants.MNT_WITHDRAWAL_TX ){
+//            require(msg.value==_amount,"CrossDomainMessenger : deposit amount must equal MNT value");
+//            _nativeTokenValue =  0;
+//        }else if (_type==BridgeConstants.ERC721_TX){
+//            _amount = BridgeConstants.ERC721_AMOUNT;
+//        }
 
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
         // the minimum gas limit specified by the user.
         _sendMessage(
+            _amount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
             _nativeTokenValue,
@@ -510,6 +515,7 @@ abstract contract CrossDomainMessenger is
      * @param _data     Message data.
      */
     function _sendMessage(
+        uint256 _amount,
         address _to,
         uint64 _gasLimit,
         uint256 _value,

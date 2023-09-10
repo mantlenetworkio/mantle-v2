@@ -12,6 +12,9 @@ import { SecureMerkleTrie } from "../libraries/trie/SecureMerkleTrie.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @custom:proxied
@@ -21,6 +24,8 @@ import { Semver } from "../universal/Semver.sol";
  *         Users are encouraged to use the L1CrossDomainMessenger for a higher-level interface.
  */
 contract OptimismPortal is Initializable, ResourceMetering, Semver {
+    using SafeERC20 for IERC20;
+
     /**
      * @notice Represents a proven withdrawal.
      *
@@ -205,7 +210,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     // solhint-disable-next-line ordering
     receive() external payable {
-        depositTransaction(msg.sender, msg.value, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
+        depositTransaction(0,msg.sender, msg.value, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
     /**
@@ -432,6 +437,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @param _data       Data to trigger the recipient with.
      */
     function depositTransaction(
+        uint256 _mntValue,
         address _to,
         uint256 _value,
         uint64 _gasLimit,
@@ -459,6 +465,10 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // that the transaction can fit into the p2p network policy of 128kb even though deposit
         // transactions are not gossipped over the p2p network.
         require(_data.length <= 120_000, "OptimismPortal: data too large");
+
+        if (_mntValue!=0){
+            IERC20(BridgeConstants.L1_MNT).safeTransferFrom(msg.sender,address(this),_mntValue);
+        }
 
         // Transform the from-address to its alias if the caller is a contract.
         address from = msg.sender;

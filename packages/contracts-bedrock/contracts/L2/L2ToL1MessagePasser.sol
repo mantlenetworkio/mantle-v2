@@ -6,6 +6,11 @@ import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Burn } from "../libraries/Burn.sol";
 import { Semver } from "../universal/Semver.sol";
+import { Predeploys } from "../libraries/Predeploys.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+
 
 /**
  * @custom:proxied
@@ -73,6 +78,8 @@ contract L2ToL1MessagePasser is Semver {
      * @notice Allows users to withdraw MNT by sending directly to this contract.
      */
     receive() external payable {
+        //TODO change this
+        revert("");
         initiateWithdrawal(msg.value,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
@@ -96,17 +103,18 @@ contract L2ToL1MessagePasser is Semver {
      * @param _data     Data to forward to L1 target.
      */
     function initiateWithdrawal(
-        uint256 _value,
+        uint256 _ethValue,
         address _target,
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
+        IERC20(Predeploys.BVM_ETH).transferFrom(msg.sender,address(this),_ethValue);
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
                 sender: msg.sender,
                 target: _target,
-                value: _value,
+                value: _ethValue,
                 gasLimit: _gasLimit,
                 data: _data
             })
@@ -118,7 +126,7 @@ contract L2ToL1MessagePasser is Semver {
             messageNonce(),
             msg.sender,
             _target,
-            _value,
+            _ethValue,
             _gasLimit,
             _data,
             withdrawalHash

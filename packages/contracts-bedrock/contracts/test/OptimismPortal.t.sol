@@ -107,7 +107,7 @@ contract OptimismPortal_Test is Portal_Initializer {
     function test_depositTransaction_contractCreation_reverts() external {
         // contract creation must have a target of address(0)
         vm.expectRevert("OptimismPortal: must send to address(0) when creating a contract");
-        op.depositTransaction(address(1), 1, 0, true, hex"");
+        op.depositTransaction(0,address(1), 1, 0, true, hex"");
     }
 
     /**
@@ -119,6 +119,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         uint64 gasLimit = op.minimumGasLimit(uint64(size));
         vm.expectRevert("OptimismPortal: data too large");
         op.depositTransaction({
+            _mntValue : 0,
             _to: address(0),
             _value: 0,
             _gasLimit: gasLimit,
@@ -134,6 +135,7 @@ contract OptimismPortal_Test is Portal_Initializer {
     function test_depositTransaction_smallGasLimit_reverts() external {
         vm.expectRevert("OptimismPortal: gas limit too small");
         op.depositTransaction({
+            _mntValue : 0,
             _to: address(1),
             _value: 0,
             _gasLimit: 0,
@@ -158,6 +160,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         }
 
         op.depositTransaction({
+            _mntValue : 0,
+
             _to: address(0x40),
             _value: 0,
             _gasLimit: gasLimit,
@@ -192,6 +196,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction(
+            0,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -214,6 +219,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction(
+            0,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -238,7 +244,7 @@ contract OptimismPortal_Test is Portal_Initializer {
             NON_ZERO_DATA
         );
 
-        op.depositTransaction(ZERO_ADDRESS, ZERO_VALUE, NON_ZERO_GASLIMIT, true, NON_ZERO_DATA);
+        op.depositTransaction(0,ZERO_ADDRESS, ZERO_VALUE, NON_ZERO_GASLIMIT, true, NON_ZERO_DATA);
     }
 
     // Test: depositTransaction should emit the correct log when a contract deposits a contract creation with 0 value
@@ -254,7 +260,7 @@ contract OptimismPortal_Test is Portal_Initializer {
             NON_ZERO_DATA
         );
 
-        op.depositTransaction(ZERO_ADDRESS, ZERO_VALUE, NON_ZERO_GASLIMIT, true, NON_ZERO_DATA);
+        op.depositTransaction(0,ZERO_ADDRESS, ZERO_VALUE, NON_ZERO_GASLIMIT, true, NON_ZERO_DATA);
     }
 
     // Test: depositTransaction should increase its eth balance when an EOA deposits a transaction with ETH
@@ -274,6 +280,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            0,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -297,6 +304,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            0,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -322,6 +330,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            0,
             ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -345,6 +354,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         );
 
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            0,
             ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -1224,6 +1234,7 @@ contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
 
         // Do a deposit, should not revert
         op.depositTransaction{ gas: MAX_GAS_LIMIT }({
+            _mntValue : 0,
             _to: address(0x20),
             _value: 0x40,
             _gasLimit: _gasLimit,

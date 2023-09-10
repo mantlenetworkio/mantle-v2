@@ -85,8 +85,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
             abi.encodeCall(
                 L2Messenger.sendMessage,
                 (
-                    BridgeConstants.ERC721_TX,
-                    1,
+                    0,
                     address(otherBridge),
                     abi.encodeCall(
                         L2ERC721Bridge.finalizeBridgeERC721,
@@ -172,8 +171,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
             abi.encodeCall(
                 L2Messenger.sendMessage,
                 (
-                    BridgeConstants.ERC721_TX,
-                    1,
+                    0,
                     address(otherBridge),
                     abi.encodeCall(
                         L1ERC721Bridge.finalizeBridgeERC721,

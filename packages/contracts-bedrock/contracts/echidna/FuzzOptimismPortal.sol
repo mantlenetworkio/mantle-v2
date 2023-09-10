@@ -43,7 +43,7 @@ contract EchidnaFuzzOptimismPortal {
     ) public payable {
         failedToComplete = true;
         require(!_isCreation || _to == address(0), "EchidnaFuzzOptimismPortal: invalid test case.");
-        portal.depositTransaction{ value: _mint }(_to, _value, _gasLimit, _isCreation, _data);
+        portal.depositTransaction{ value: _mint }(0,_to, _value, _gasLimit, _isCreation, _data);
         failedToComplete = false;
     }
 

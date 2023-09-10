@@ -64,13 +64,13 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
         );
 
         vm.prank(alice);
-        L2Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"ff", uint32(100));
+        L2Messenger.sendMessage(0,recipient, hex"ff", uint32(100));
     }
 
     function test_sendMessage_twice_succeeds() external {
         uint256 nonce = L2Messenger.messageNonce();
-        L2Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"aa", uint32(500_000));
-        L2Messenger.sendMessage(BridgeConstants.ERC20_TX,0,recipient, hex"aa", uint32(500_000));
+        L2Messenger.sendMessage(0,recipient, hex"aa", uint32(500_000));
+        L2Messenger.sendMessage(0,recipient, hex"aa", uint32(500_000));
         // the nonce increments for each message sent
         assertEq(nonce + 2, L2Messenger.messageNonce());
     }

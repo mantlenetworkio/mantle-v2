@@ -96,7 +96,7 @@ contract PreBridgeETH is Bridge_Initializer {
             vm.expectCall(
                 address(L1Bridge),
                 500,
-                abi.encodeWithSelector(L1Bridge.bridgeL1ETH.selector, 50000, hex"dead")
+                abi.encodeWithSelector(L1Bridge.bridgeETH.selector, 50000, hex"dead")
             );
         }
         vm.expectCall(
@@ -187,7 +187,7 @@ contract L1StandardBridge_BridgeETH_Test is PreBridgeETH {
     // - ETH ends up in the optimismPortal
     function test_bridgeETH_succeeds() external {
         _preBridgeETH({ isLegacy: false });
-        L1Bridge.bridgeL1ETH{ value: 500 }(50000, hex"dead");
+        L1Bridge.bridgeETH{ value: 500 }(50000, hex"dead");
         assertEq(address(op).balance, 500);
     }
 }
@@ -220,7 +220,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
             vm.expectCall(
                 address(L1Bridge),
                 600,
-                abi.encodeWithSelector(L1Bridge.bridgeL1ETHTo.selector, bob, 60000, hex"dead")
+                abi.encodeWithSelector(L1Bridge.bridgeETHTo.selector, bob, 60000, hex"dead")
             );
         }
 
@@ -320,7 +320,7 @@ contract L1StandardBridge_BridgeETHTo_Test is PreBridgeETHTo {
     // - ETH ends up in the optimismPortal
     function test_bridgeETHTo_succeeds() external {
         _preBridgeETHTo({ isLegacy: false });
-        L1Bridge.bridgeL1ETHTo{ value: 600 }(bob, 60000, hex"dead");
+        L1Bridge.bridgeETHTo{ value: 600 }(bob, 60000, hex"dead");
         assertEq(address(op).balance, 600);
     }
 }

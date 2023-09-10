@@ -228,7 +228,7 @@ abstract contract StandardBridge {
      *                     to identify the transaction.
      */
     function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable virtual onlyEOA {
-        _initiateBridgeETH(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
@@ -250,7 +250,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable virtual{
-        _initiateBridgeETH(msg.sender, _to, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
     /**
      * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
@@ -337,6 +337,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable virtual onlyOtherBridge {
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         require(msg.value == _amount || _localToken == Predeploys.BVM_ETH, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
@@ -379,6 +380,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         bytes calldata _extraData
     ) public virtual onlyOtherBridge {
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
@@ -416,7 +418,8 @@ abstract contract StandardBridge {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable onlyOtherBridge {
+    ) public payable virtual onlyOtherBridge {
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         if (_localToken == address(0) && _remoteToken == BridgeConstants.L1_MNT) {
             // layer2 deposit
             require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
@@ -456,6 +459,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual {
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         uint32 _type = BridgeConstants.ETH_DEPOSIT_TX;
         if (_isOptimismMintableERC20(_localToken)) {
             require(_localToken == Predeploys.BVM_ETH, "StandardBridge: _initiateBridgeETH only support for ETH bridging.");
@@ -478,7 +482,6 @@ abstract contract StandardBridge {
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
         MESSENGER.sendMessage{value: msg.value}(
-            _type,
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -515,6 +518,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual {
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
@@ -532,7 +536,6 @@ abstract contract StandardBridge {
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
 
         MESSENGER.sendMessage(
-            BridgeConstants.ERC20_TX,
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -571,7 +574,8 @@ abstract contract StandardBridge {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
-    ) internal {
+    ) internal virtual{
+        revert("StandardBridge : must be called by L1StandardBridge or L2StandardBridge. ");
         uint32 _type = BridgeConstants.MNT_DEPOSIT_TX;
         if (_localToken == address(0) && _remoteToken == BridgeConstants.L1_MNT) {
             require(
@@ -595,7 +599,6 @@ abstract contract StandardBridge {
         // contracts may override this function in order to emit legacy events as well.
         _emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
         MESSENGER.sendMessage{value: msg.value}(
-            _type,
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
