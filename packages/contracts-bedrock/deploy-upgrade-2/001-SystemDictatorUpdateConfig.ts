@@ -123,6 +123,7 @@ const deployFn: DeployFunction = async (hre) => {
           )
         }
         deployL2StartingTimestamp = l1StartingBlock.timestamp
+        console.log("deployL2StartingTimestamp: "+deployL2StartingTimestamp.toString())
       }
 
       await SystemDictator.updateDynamicConfig(
