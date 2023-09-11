@@ -121,7 +121,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         op.depositTransaction({
             _mntValue : 0,
             _to: address(0),
-            _value: 0,
+            _mntTxValue: 0,
             _gasLimit: gasLimit,
             _isCreation: false,
             _data: new bytes(size)
@@ -137,7 +137,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         op.depositTransaction({
             _mntValue : 0,
             _to: address(1),
-            _value: 0,
+            _mntTxValue: 0,
             _gasLimit: 0,
             _isCreation: false,
             _data: hex""
@@ -163,7 +163,7 @@ contract OptimismPortal_Test is Portal_Initializer {
             _mntValue : 0,
 
             _to: address(0x40),
-            _value: 0,
+            _mntTxValue: 0,
             _gasLimit: gasLimit,
             _isCreation: false,
             _data: _data
@@ -1236,7 +1236,7 @@ contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
         op.depositTransaction{ gas: MAX_GAS_LIMIT }({
             _mntValue : 0,
             _to: address(0x20),
-            _value: 0x40,
+            _mntTxValue: 0x40,
             _gasLimit: _gasLimit,
             _isCreation: false,
             _data: hex""

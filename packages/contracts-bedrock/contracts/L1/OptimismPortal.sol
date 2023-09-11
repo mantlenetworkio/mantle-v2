@@ -430,8 +430,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
+     * @param _mntValue   Target address on L2.
      * @param _to         Target address on L2.
-     * @param _value      ETH value to send to the recipient.
+     * @param _mntTxValue ETH value to send to the recipient.
      * @param _gasLimit   Minimum L2 gas limit (can be greater than or equal to this value).
      * @param _isCreation Whether or not the transaction is a contract creation.
      * @param _data       Data to trigger the recipient with.
@@ -483,7 +484,6 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
             _mntValue,
             _mntTxValue,
             msg.value,
-            _value,
             _gasLimit,
             _isCreation,
             _data

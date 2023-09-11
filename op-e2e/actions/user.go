@@ -327,7 +327,7 @@ func (s *CrossLayerUser) ActDeposit(t Testing) {
 		depositGas = gas
 	}
 
-	tx, err := s.L1.env.Bindings.OptimismPortal.DepositTransaction(&s.L1.txOpts, toAddr, depositTransferValue, depositGas, isCreation, s.L2.txCallData)
+	tx, err := s.L1.env.Bindings.OptimismPortal.DepositTransaction(&s.L1.txOpts, big.NewInt(0), toAddr, depositTransferValue, depositGas, isCreation, s.L2.txCallData)
 	require.NoError(t, err, "failed to create deposit tx")
 
 	// Send the actual tx (since tx opts don't send by default)
@@ -361,7 +361,7 @@ func (s *CrossLayerUser) ActStartWithdrawal(t Testing) {
 	if s.L1.txToAddr != nil {
 		targetAddr = *s.L2.txToAddr
 	}
-	tx, err := s.L2.env.Bindings.L2ToL1MessagePasser.InitiateWithdrawal(&s.L2.txOpts, targetAddr, new(big.Int).SetUint64(s.L1.txOpts.GasLimit), s.L1.txCallData)
+	tx, err := s.L2.env.Bindings.L2ToL1MessagePasser.InitiateWithdrawal(&s.L2.txOpts, big.NewInt(0), targetAddr, new(big.Int).SetUint64(s.L1.txOpts.GasLimit), s.L1.txCallData)
 	require.NoError(t, err, "create initiate withdraw tx")
 	err = s.L2.env.EthCl.SendTransaction(t.Ctx(), tx)
 	require.NoError(t, err, "must send tx")
