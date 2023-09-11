@@ -439,7 +439,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     function depositTransaction(
         uint256 _mntValue,
         address _to,
-        uint256 _value,
+        uint256 _mntTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -480,6 +480,8 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // We use opaque data so that we can update the TransactionDeposited event in the future
         // without breaking the current interface.
         bytes memory opaqueData = abi.encodePacked(
+            _mntValue,
+            _mntTxValue,
             msg.value,
             _value,
             _gasLimit,
