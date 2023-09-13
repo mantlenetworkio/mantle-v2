@@ -61,7 +61,7 @@ var (
 	RetrieverSocketFlag = cli.StringFlag{
 		Name:     "da.retriever-socket",
 		Usage:    "Socket address of the da retriever",
-		Required: true,
+		Required: false,
 		EnvVar:   prefixEnvVar("RETRIEVER_SOCKET"),
 	}
 	RetrieverTimeoutFlag = cli.DurationFlag{
@@ -70,22 +70,22 @@ var (
 		Value:  50 * time.Millisecond,
 		EnvVar: prefixEnvVar("RETRIEVER_TIMEOUT"),
 	}
-	DlsmContractAddressFlag = cli.StringFlag{
+	DataLayrServiceManagerAddrFlag = cli.StringFlag{
 		Name:     "da.dlsm-address",
 		Usage:    "Address of the dlsm contract",
-		Required: true,
+		Required: false,
 		EnvVar:   prefixEnvVar("DLSM_ADDRESS"),
 	}
 	GraphProviderFlag = cli.StringFlag{
 		Name:     "da.graph-provider",
 		Usage:    "Graphql endpoint for graph node",
-		Required: true,
+		Required: false,
 		EnvVar:   prefixEnvVar("GRAPH_PROVIDER"),
 	}
 	MantleDaSwitchFlag = cli.BoolFlag{
 		Name:     "da.mantle-switch",
 		Usage:    "Enable the mantle da rollup",
-		Required: true,
+		Required: false,
 		EnvVar:   prefixEnvVar("MANTLE_DA_SWITCH"),
 	}
 
@@ -264,7 +264,7 @@ var optionalFlags = []cli.Flag{
 	RetrieverSocketFlag,
 	RetrieverTimeoutFlag,
 	GraphProviderFlag,
-	DlsmContractAddressFlag,
+	DataLayrServiceManagerAddrFlag,
 	MantleDaSwitchFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
