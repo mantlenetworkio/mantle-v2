@@ -210,7 +210,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     // solhint-disable-next-line ordering
     receive() external payable {
-        depositTransaction(0,msg.sender, msg.value, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
+        depositTransaction(0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
     /**

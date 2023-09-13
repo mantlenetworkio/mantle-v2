@@ -451,13 +451,14 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
-
+        require(
+            _isCorrectTokenPair(_localToken, _remoteToken),
+            "StandardBridge: wrong remote token for BVM_ETH local token"
+        );
         //move the BVM_ETH mint to op-geth.
 
         _emitETHBridgeFinalized(_from, _to, _amount, _extraData);
 
-        bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
-        require(success, "StandardBridge: ETH transfer failed");
     }
 
     /**
