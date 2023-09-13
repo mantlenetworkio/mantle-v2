@@ -13,6 +13,7 @@ import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
 
 /**
  * @custom:proxied
@@ -58,7 +59,6 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _value,
         bytes memory _data
     ) internal override {
-        IERC20(BridgeConstants.L1_MNT).approve(address(PORTAL),_mntAmount);
         PORTAL.depositTransaction{ value: msg.value }(_mntAmount,_to, _value, _gasLimit, false, _data);
     }
 
@@ -70,6 +70,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     ) external payable override {
         if (_mntAmount!=0){
             IERC20(BridgeConstants.L1_MNT).safeTransferFrom(msg.sender,address(this) ,_mntAmount);
+            bool success = IERC20(BridgeConstants.L1_MNT).approve(BridgeConstants.OPTIMISM_PORTAL ,_mntAmount);
+            require(success,"the approve for L1 mnt to OptimismPortal failed");
         }
 
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
@@ -80,20 +82,20 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
             _mntAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            msg.value,
+            _mntAmount,
             abi.encodeWithSelector(
-                this.relayMessage.selector,
+                L2CrossDomainMessenger.relayMessage.selector,
                 messageNonce(),
                 msg.sender,
                 _target,
-                msg.value,
+                _mntAmount,
                 _minGasLimit,
                 _message
             )
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, msg.value);
+        emit SentMessageExtension1(msg.sender, _mntAmount);
 
         unchecked {
             ++msgNonce;

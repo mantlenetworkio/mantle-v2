@@ -29,7 +29,7 @@ func SendDepositTx(t *testing.T, cfg SystemConfig, l1Client *ethclient.Client, l
 	require.Nil(t, err)
 
 	// Finally send TX
-	tx, err := depositContract.DepositTransaction(l1Opts, l2Opts.ToAddr, l2Opts.Value, l2Opts.GasLimit, l2Opts.IsCreation, l2Opts.Data)
+	tx, err := depositContract.DepositTransaction(l1Opts, big.NewInt(0), l2Opts.ToAddr, l2Opts.Value, l2Opts.GasLimit, l2Opts.IsCreation, l2Opts.Data)
 	require.Nil(t, err, "with deposit tx")
 
 	// Wait for transaction on L1

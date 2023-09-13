@@ -491,7 +491,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA override {
+    function bridgeETH(uint256 _value,uint32 _minGasLimit, bytes calldata _extraData) public payable override onlyEOA {
         _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
@@ -511,6 +511,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      *                     to identify the transaction.
      */
     function bridgeETHTo(
+        uint256 _value,
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
@@ -711,9 +712,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
-
+        uint256 zeroMNTValue = 0;
         MESSENGER.sendMessage{value: msg.value}(
-            _amount,
+            zeroMNTValue,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 L2StandardBridge.finalizeBridgeETH.selector,
@@ -756,9 +757,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-
+        uint256 zeroMNTValue = 0;
         MESSENGER.sendMessage(
-            _amount,
+            zeroMNTValue,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 L2StandardBridge.finalizeBridgeERC20.selector,
@@ -798,14 +799,14 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        uint32 _type = BridgeConstants.MNT_DEPOSIT_TX;
         require(_localToken == BridgeConstants.L1_MNT && _remoteToken == address(0),
-            "StandardBridge: localToken and remoteToken are not belong to MNT.");
+            "L1StandardBridge: localToken and remoteToken are not belong to MNT.");
 
 
         IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
-
+        bool success = IERC20(_localToken).approve( BridgeConstants.L1_CROSSDOMAIN_MESSENGER, _amount);
+        require(success,"L1StandardBridge: approve for L1 MNT failed. ");
 
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child

@@ -227,7 +227,7 @@ abstract contract StandardBridge {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable virtual onlyEOA {
+    function bridgeETH(uint256 _value,uint32 _minGasLimit, bytes calldata _extraData) public payable virtual onlyEOA {
         _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
     /**
@@ -239,6 +239,7 @@ abstract contract StandardBridge {
      *         be locked if the receiver is the other bridge, because finalizeBridgeETH will revert
      *         in that case.
      *
+     * @param _value       Amount of the BVM_ETH or ETH
      * @param _to          Address of the receiver.
      * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
      * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
@@ -246,6 +247,7 @@ abstract contract StandardBridge {
      *                     to identify the transaction.
      */
     function bridgeETHTo(
+        uint256 _value,
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
@@ -529,9 +531,9 @@ abstract contract StandardBridge {
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-
+        uint256 zero = 0;
         MESSENGER.sendMessage(
-            _amount,
+            zero,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 this.finalizeBridgeERC20.selector,

@@ -61,12 +61,13 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _ethValue,
         address _to,
         uint64 _gasLimit,
-        uint256 _value,
+        uint256 _mntValue,
         bytes memory _data
     ) internal override {
         L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER)).initiateWithdrawal{
-            value: msg.value
-        }(_value,_to, _gasLimit, _data);
+            value: _mntValue
+        }(_ethValue,_to, _gasLimit, _data);
+
     }
 
     function sendMessage(
@@ -79,7 +80,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         // But in the withdrawal process , _nativeTokenValue means the ETH amount.
         uint256 _mntAmount = msg.value;
         if (_ethAmount!=0){
-            IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender,address(this),_mntAmount);
+            IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender,address(this),_ethAmount);
             IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_TO_L1_MESSAGE_PASSER,_ethAmount);
         }
 
@@ -92,7 +93,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
             _ethAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            _ethAmount,
+            _mntAmount,
             abi.encodeWithSelector(
                 L1CrossDomainMessenger.relayMessage.selector,
                 messageNonce(),

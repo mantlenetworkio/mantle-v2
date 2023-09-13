@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var l1Erc20 = ""
-var l2Erc20 = ""
+var l1Erc20 = "0x89F06180e62a6d3e5ac130bbCE7bD004b434100b"
+var l2Erc20 = "0x89F06180e62a6d3e5ac130bbCE7bD004b434100b"
 
 const (
 	l1url = "http://localhost:8545"
@@ -56,6 +56,13 @@ const (
 
 func TestEnv(t *testing.T) {
 	// check l1 mnt token
+	//a := getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000001")
+	//t.Logf("a : %v", a)
+	//
+	//a = getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000002")
+	//t.Logf("a : %v", a)
+	//a = getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000003")
+	//t.Logf("a : %v", a)
 
 	t.Log("check l1 mnt token address.....")
 	checkTokenAddress(t)
@@ -71,7 +78,7 @@ func TestEnv(t *testing.T) {
 
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
-	TestERC20DepositAndWithdrawal(t)
+	//TestERC20DepositAndWithdrawal(t)
 	TestMNTDepositAndWithdrawal(t)
 	TestETHDepositAndWithdrawal(t)
 }
@@ -354,8 +361,8 @@ func TestMNTDepositAndWithdrawal(t *testing.T) {
 	t.Log("MNT after withdraw.....\\")
 	time.Sleep(10 * time.Second)
 
-	afterBalanceL1 = getTestTokenBalanceFromL1(t, userAddress)
-	afterBalanceL2 = getTestTokenBalanceFromL2(t, userAddress)
+	afterBalanceL1 = getMNTBalanceFromL1(t, userAddress)
+	afterBalanceL2 = getMNTBalanceFromL2(t, userAddress)
 
 	t.Log("l1 mnt balance: ", afterBalanceL1)
 	t.Log("l2 mnt balance: ", afterBalanceL2)
@@ -417,7 +424,7 @@ func TestERC20DepositAndWithdrawal(t *testing.T) {
 	t.Log("l1 erc20 balance: ", afterBalanceL1)
 	t.Log("l2 erc20 balance: ", afterBalanceL2)
 	t.Log("erc20 deposit amount: ", DECIMAL0_1)
-
+	require.NotEqual(t, beforeBalanceL1, afterBalanceL1)
 	require.Equal(t, afterBalanceL2.Uint64()+afterBalanceL1.Uint64(), beforeBalanceL2.Uint64()+beforeBalanceL1.Uint64())
 
 	// TEST withdraw ETH
@@ -843,12 +850,12 @@ func SingleWithdrawalTx(t *testing.T, withdrawalTx string) {
 	require.NoError(t, err)
 
 	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
-	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt, finalizeReceipt)
+	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt.TxHash, finalizeReceipt.TxHash)
 
 }
 
 func TestWithdrawal(t *testing.T) {
-	withdrawalTx := "0x6f443e34040fd7dcf9d93b88fdea4e3e57acf8b5f7c2d74bc8f02b0ec1a765e6"
+	withdrawalTx := "0xd6b71afe402197053b5934831ac1ac9ddfc540acc1017bbeec966f2287aa3a0d"
 	l1Client, err := ethclient.Dial(l1url)
 	require.NoError(t, err)
 	l2Client, err := ethclient.Dial(l2url)

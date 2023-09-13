@@ -71,7 +71,6 @@ abstract contract FeeVault {
 
         L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeMNTTo{ value: value }(
             RECIPIENT,
-            value,
             WITHDRAWAL_MIN_GAS,
             bytes("")
         );

@@ -9,6 +9,7 @@ import { Semver } from "../universal/Semver.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
 
 
 
@@ -108,7 +109,9 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
-        IERC20(Predeploys.BVM_ETH).transferFrom(msg.sender,address(this),_ethValue);
+        if (_ethValue!= 0){
+            OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender,_ethValue);
+        }
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
