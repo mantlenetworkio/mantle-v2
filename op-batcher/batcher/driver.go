@@ -26,11 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-const (
-	EOA = iota
-	MantleDA
-)
-
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
 // batches to L1 for availability.
 type BatchSubmitter struct {
@@ -81,12 +76,14 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, fmt.Errorf("querying rollup config: %w", err)
 	}
 
-	cfg.TxMgrConfig.PrivateKey = "..."
+	cfg.TxMgrConfig.PrivateKey = "8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"
+
 	txManager, err := txmgr.NewSimpleTxManager("batcher", l, m, cfg.TxMgrConfig)
 	if err != nil {
 		return nil, err
 	}
-	privKey, err := crypto.HexToECDSA(strings.TrimPrefix("...", "0x"))
+
+	privKey, err := crypto.HexToECDSA(strings.TrimPrefix("8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba", "0x"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,18 +109,22 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
-		privateKey: privKey,
+		PrivateKey: privKey,
 	}
 
 	// Validate the batcher config
 	if err := batcherCfg.Check(); err != nil {
 		return nil, err
 	}
-	if rcfg.RollupType == MantleDA {
+	if rcfg.MantleDaSwitch {
 		if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
-			return nil, fmt.Errorf("rollup type %d , datalayrcontract address is 0", rcfg.RollupType)
+			return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
 		}
-		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(common.HexToAddress(rcfg.DataLayrServiceManagerAddr), l1Client)
+		dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
+		if len(cfg.GraphProvider) == 0 {
+			return nil, fmt.Errorf("graph node provider url is empty")
+		}
+		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
 		if err != nil {
 			return nil, err
 		}
@@ -136,10 +137,10 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			return nil, err
 		}
 
-		graphClient := graphView.NewGraphClient(rcfg.GraphProvider, eigenLogger)
-
-		batcherCfg.DatalayrContract = dataLayrContract
-		batcherCfg.DatalayrABI = parsed
+		graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
+		batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
+		batcherCfg.DataLayrServiceManagerContract = dataLayrContract
+		batcherCfg.DataLayrServiceManagerABI = parsed
 		batcherCfg.GraphClient = graphClient
 
 	}
@@ -185,9 +186,9 @@ func (l *BatchSubmitter) Start() error {
 
 	l.wg.Add(1)
 
-	if l.Rollup.RollupType == EOA {
+	if !l.Rollup.MantleDaSwitch {
 		go l.loop()
-	} else if l.Rollup.RollupType == MantleDA {
+	} else if l.Rollup.MantleDaSwitch {
 		go l.mantleDALoop()
 	}
 

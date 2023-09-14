@@ -166,12 +166,12 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 // NOTE: If the [TxCandidate.GasLimit] is non-zero, it will be used as the transaction's gas.
 // NOTE: Otherwise, the [SimpleTxManager] will query the specified backend for an estimate.
 func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.Transaction, error) {
-	//gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
-	//if err != nil {
-	//	m.metr.RPCError()
-	//	return nil, fmt.Errorf("failed to get gas price info: %w", err)
-	//}
-	//gasFeeCap := calcGasFeeCap(basefee, gasTipCap)
+	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
+	if err != nil {
+		m.metr.RPCError()
+		return nil, fmt.Errorf("failed to get gas price info: %w", err)
+	}
+	gasFeeCap := calcGasFeeCap(basefee, gasTipCap)
 
 	nonce, err := m.nextNonce(ctx)
 	if err != nil {
@@ -182,9 +182,9 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		ChainID:   m.chainID,
 		Nonce:     nonce,
 		To:        candidate.To,
-		GasTipCap: big.NewInt(1500000000),
-		//GasFeeCap: gasFeeCap,
-		Data: candidate.TxData,
+		GasTipCap: gasTipCap,
+		GasFeeCap: gasFeeCap,
+		Data:      candidate.TxData,
 	}
 
 	m.l.Info("creating tx", "to", rawTx.To, "from", m.cfg.From)
@@ -197,9 +197,9 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		gas, err := m.backend.EstimateGas(ctx, ethereum.CallMsg{
 			From:      m.cfg.From,
 			To:        candidate.To,
-			GasFeeCap: big.NewInt(1500000000),
-			//GasTipCap: gasTipCap,
-			Data: rawTx.Data,
+			GasFeeCap: gasTipCap,
+			GasTipCap: gasTipCap,
+			Data:      rawTx.Data,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas: %w", err)

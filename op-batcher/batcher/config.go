@@ -7,6 +7,7 @@ import (
 	"github.com/Layr-Labs/datalayr/common/logging"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -46,13 +47,14 @@ type Config struct {
 	MaxPendingTransactions uint64
 
 	// Rollup MantleDA
-	DisperserSocket      string
-	DisperserTimeout     uint64
-	DataStoreDuration    uint64
-	GraphPollingDuration time.Duration
-	DatalayrContract     *bindings.ContractDataLayrServiceManager
-	DatalayrABI          *abi.ABI
-	GraphClient          *graphView.GraphClient
+	DisperserSocket                string
+	DisperserTimeout               time.Duration
+	DataStoreDuration              uint64
+	GraphPollingDuration           time.Duration
+	DataLayrServiceManagerAddr     common.Address
+	DataLayrServiceManagerContract *bindings.ContractDataLayrServiceManager
+	DataLayrServiceManagerABI      *abi.ABI
+	GraphClient                    *graphView.GraphClient
 
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
@@ -60,7 +62,7 @@ type Config struct {
 	// Channel builder parameters
 	Channel ChannelConfig
 
-	privateKey *ecdsa.PrivateKey
+	PrivateKey *ecdsa.PrivateKey
 }
 
 // Check ensures that the [Config] is valid.
@@ -71,10 +73,7 @@ func (c *Config) Check() error {
 	if err := c.Channel.Check(); err != nil {
 		return err
 	}
-	if c.Rollup.RollupType == 1 {
-		if len(c.Rollup.GraphProvider) == 0 {
-			return ErrGraphProviderEmpty
-		}
+	if c.Rollup.MantleDaSwitch {
 		if len(c.DisperserSocket) == 0 {
 			return ErrDisperserSocketEmpty
 		}
@@ -106,13 +105,16 @@ type CLIConfig struct {
 	DisperserSocket string
 
 	// DisperserTimeout timeout for context
-	DisperserTimeout uint64
+	DisperserTimeout time.Duration
 
 	// DataStoreDuration data store time on MantleDA
 	DataStoreDuration uint64
 
 	//GraphPollingDuration listen to graph node polling time
 	GraphPollingDuration time.Duration
+
+	//GraphProvider is graph node url of MantleDA
+	GraphProvider string
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -186,9 +188,10 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MaxChannelDuration:     ctx.GlobalUint64(flags.MaxChannelDurationFlag.Name),
 		MaxL1TxSize:            ctx.GlobalUint64(flags.MaxL1TxSizeBytesFlag.Name),
 		DisperserSocket:        ctx.GlobalString(flags.DisperserSocketFlag.Name),
-		DisperserTimeout:       ctx.GlobalUint64(flags.DisperserTimeoutFlag.Name),
+		DisperserTimeout:       ctx.GlobalDuration(flags.DisperserTimeoutFlag.Name),
 		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
 		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
+		GraphProvider:          ctx.GlobalString(flags.GraphProviderFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),

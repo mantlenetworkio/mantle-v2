@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-const ROLLUP_MAX_SIZE_ = 1024 * 1024 * 300
+const RollupMaxSize = 1024 * 1024 * 300
 
 var ErrUploadDataFinished = errors.New("data has been upload to MantleDA nodes")
 var ErrInitDataStore = errors.New("init data store transaction failed")
@@ -102,7 +102,7 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 
 	// Collect next transaction data
 	_, err = l.state.TxData(l1tip.ID())
-	if !l.state.pendingChannel.IsFull() {
+	if l.state.pendingChannel != nil && !l.state.pendingChannel.IsFull() {
 		if err == io.EOF {
 			l.log.Trace("no transaction data available")
 			return err
@@ -162,7 +162,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 	}
 
 	//TODO
-	walletA := crypto.PubkeyToAddress(l.privateKey.PublicKey)
+	walletA := crypto.PubkeyToAddress(l.PrivateKey.PublicKey)
 	nonce64, err := l.L1Client.NonceAt(
 		ctx, walletA, nil,
 	)
@@ -176,7 +176,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 		return nil, err
 	}
 	opts, err = bind.NewKeyedTransactorWithChainID(
-		l.privateKey, chainId,
+		l.PrivateKey, chainId,
 	)
 
 	if err != nil {
@@ -186,13 +186,14 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 	opts.Nonce = nonce
 	opts.NoSend = true
 	opts.GasTipCap = big.NewInt(1500000000)
-	tx, err := l.DatalayrContract.InitDataStore(opts, walletA, walletA, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex, uploadHeader)
+	tx, err := l.DataLayrServiceManagerContract.InitDataStore(opts, walletA, walletA, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex, uploadHeader)
 	if err != nil {
 		return nil, err
 	}
 	return l.txMgr.SendTx(ctx, tx)
+
 	//txdata, err := l.DataStoreTxData(
-	//	l.DatalayrABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
+	//	l.DataLayrServiceManagerABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
 	//)
 	//if err != nil {
 	//	return nil, err
@@ -204,7 +205,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 	//}
 	//
 	//candiddate := txmgr.TxCandidate{
-	//	To:       &l.Rollup.DataLayerChainAddress,
+	//	To:       &l.DataLayrServiceManagerAddr,
 	//	TxData:   txdata,
 	//	GasLimit: intrinsicGas,
 	//}
@@ -224,17 +225,17 @@ func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
 	}
 	defer conn.Close()
 	c := pb.NewDataDispersalClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(l.DisperserTimeout))
+	ctx, cancel := context.WithTimeout(context.Background(), l.DisperserTimeout)
 	defer cancel()
 	request := &pb.EncodeStoreRequest{
 		Duration: l.DataStoreDuration,
 		Data:     data,
 	}
-	opt := grpc.MaxCallSendMsgSize(1024 * 1024 * 300)
+	opt := grpc.MaxCallSendMsgSize(RollupMaxSize)
 	reply, err := c.EncodeStore(ctx, request, opt)
 	l.log.Info("op-batcher get store", "reply", reply)
 	if err != nil {
-		l.log.Error("MtBatcher get store err", err)
+		l.log.Error("op-batcher get store err", err)
 		return common.StoreParams{}, err
 	}
 	l.log.Info("op-batcher get store end")
@@ -282,7 +283,7 @@ func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (co
 	}
 	defer conn.Close()
 	c := pb.NewDataDispersalClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(l.DisperserTimeout))
+	ctx, cancel := context.WithTimeout(context.Background(), l.DisperserTimeout)
 	defer cancel()
 	request := &pb.DisperseStoreRequest{
 		HeaderHash:  headerHash,
@@ -344,7 +345,7 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 	}
 
 	//TODO
-	walletA := crypto.PubkeyToAddress(l.privateKey.PublicKey)
+	walletA := crypto.PubkeyToAddress(l.PrivateKey.PublicKey)
 	nonce64, err := l.L1Client.NonceAt(
 		ctx, walletA, nil,
 	)
@@ -358,7 +359,7 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 		return nil, err
 	}
 	opts, err = bind.NewKeyedTransactorWithChainID(
-		l.privateKey, chainId,
+		l.PrivateKey, chainId,
 	)
 
 	if err != nil {
@@ -368,13 +369,13 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 	opts.Nonce = nonce
 	opts.NoSend = true
 	opts.GasTipCap = big.NewInt(1500000000)
-	tx, err := l.DatalayrContract.ConfirmDataStore(opts, callData, searchData)
+	tx, err := l.DataLayrServiceManagerContract.ConfirmDataStore(opts, callData, searchData)
 	if err != nil {
 		return nil, err
 	}
 	return l.txMgr.SendTx(ctx, tx)
 
-	//txdata, err := l.ConfirmDataTxData(l.DatalayrABI, callData, searchData)
+	//txdata, err := l.ConfirmDataTxData(l.DataLayrServiceManagerABI, callData, searchData)
 	//if err != nil {
 	//	return nil, err
 	//}
@@ -383,7 +384,7 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 	//	return nil, err
 	//}
 	//candiddate := txmgr.TxCandidate{
-	//	To:       &l.Rollup.DataLayerChainAddress,
+	//	To:       &l.DataLayrServiceManagerAddr,
 	//	TxData:   txdata,
 	//	GasLimit: intrinsicGas,
 	//}

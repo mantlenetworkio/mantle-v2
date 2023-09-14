@@ -205,16 +205,18 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 			}
 		}
 	}
-	dataStoreId := dlsmData["dataStoreId"].(uint32)
-	// fetch frame by dataStoreId
-	daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
-	if err != nil {
-		log.Error("retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
-	}
-	err = rlp.DecodeBytes(daFrames, &out)
-	if err != nil {
-		log.Error("decode retrieval frames in error", "err", err)
-		return nil
+	if len(dlsmData) > 0 {
+		dataStoreId := dlsmData["dataStoreId"].(uint32)
+		// fetch frame by dataStoreId
+		daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
+		if err != nil {
+			log.Error("retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
+		}
+		err = rlp.DecodeBytes(daFrames, &out)
+		if err != nil {
+			log.Error("decode retrieval frames in error", "err", err)
+			return nil
+		}
 	}
 	return out
 }

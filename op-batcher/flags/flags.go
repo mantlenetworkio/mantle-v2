@@ -46,7 +46,7 @@ var (
 		Usage:  "Duration to store blob",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DATA_STORE_DURATION"),
 	}
-	DisperserTimeoutFlag = cli.Uint64Flag{
+	DisperserTimeoutFlag = cli.DurationFlag{
 		Name:   "timeout",
 		Usage:  "disperser timeout",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_TIMEOUT"),
@@ -56,6 +56,11 @@ var (
 		Usage:  "polling duration for fetch data from da graph node",
 		Value:  1200 * time.Millisecond,
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_POLLING_DURATION"),
+	}
+	GraphProviderFlag = cli.StringFlag{
+		Name:   "graph-node-provider",
+		Usage:  "graph node url of MantleDA graph node",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_PROVIDER"),
 	}
 	SubSafetyMarginFlag = cli.Uint64Flag{
 		Name: "sub-safety-margin",
@@ -116,6 +121,7 @@ var optionalFlags = []cli.Flag{
 	DisperserSocketFlag,
 	DataStoreDurationFlag,
 	GraphPollingDurationFlag,
+	GraphProviderFlag,
 }
 
 func init() {

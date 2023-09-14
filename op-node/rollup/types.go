@@ -75,11 +75,6 @@ type Config struct {
 	// Active if RegolithTime != nil && L2 block timestamp >= *RegolithTime, inactive otherwise.
 	RegolithTime *uint64 `json:"regolith_time,omitempty"`
 
-	// RollupType sets whether rollup data is stored in L1 or MantleDA. 0 -> L1; 1 -> MantleDA
-	RollupType uint `json:"rollup_type"`
-	// GraphProvider sets the url of graph node in MantleDA
-	GraphProvider string `json:"graph_provider"`
-
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
