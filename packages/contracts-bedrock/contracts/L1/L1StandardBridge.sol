@@ -675,7 +675,7 @@ contract L1StandardBridge is StandardBridge, Semver {
             "_localToken and _remoteToken must be MNT address.");
 
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
-        IERC20(_localToken).safeTransfer(_to, _amount);
+        IERC20(_localToken).safeTransferFrom(BridgeConstants.OPTIMISM_PORTAL,_to, _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.

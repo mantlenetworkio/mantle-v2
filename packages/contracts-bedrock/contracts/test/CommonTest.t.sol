@@ -74,7 +74,8 @@ contract CommonTest is Test {
         address _from,
         address _to,
         uint256 _mint,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -83,7 +84,7 @@ contract CommonTest is Test {
             _from,
             _to,
             0,
-            abi.encodePacked(_mint, _value, _gasLimit, _isCreation, _data)
+            abi.encodePacked(_mint, _mntValue,_ethValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -507,9 +508,10 @@ contract FFIInterface is Test {
         cmds[2] = vm.toString(_tx.nonce);
         cmds[3] = vm.toString(_tx.sender);
         cmds[4] = vm.toString(_tx.target);
-        cmds[5] = vm.toString(_tx.value);
-        cmds[6] = vm.toString(_tx.gasLimit);
-        cmds[7] = vm.toString(_tx.data);
+        cmds[5] = vm.toString(_tx.mntValue);
+        cmds[6] = vm.toString(_tx.ethValue);
+        cmds[7] = vm.toString(_tx.gasLimit);
+        cmds[8] = vm.toString(_tx.data);
 
         bytes memory result = vm.ffi(cmds);
         (
@@ -527,7 +529,8 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
@@ -537,9 +540,10 @@ contract FFIInterface is Test {
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -549,7 +553,8 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
@@ -559,9 +564,10 @@ contract FFIInterface is Test {
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -590,6 +596,7 @@ contract FFIInterface is Test {
         address _to,
         uint256 _mint,
         uint256 _value,
+        uint256 _ethValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
@@ -603,8 +610,9 @@ contract FFIInterface is Test {
         cmds[5] = vm.toString(_to);
         cmds[6] = vm.toString(_mint);
         cmds[7] = vm.toString(_value);
-        cmds[8] = vm.toString(_gas);
-        cmds[9] = vm.toString(_data);
+        cmds[8] = vm.toString(_ethValue);
+        cmds[9] = vm.toString(_gas);
+        cmds[10] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -619,13 +627,14 @@ contract FFIInterface is Test {
         cmds[1] = "encodeDepositTransaction";
         cmds[2] = vm.toString(txn.from);
         cmds[3] = vm.toString(txn.to);
-        cmds[4] = vm.toString(txn.value);
+        cmds[4] = vm.toString(txn.mntValue);
         cmds[5] = vm.toString(txn.mint);
-        cmds[6] = vm.toString(txn.gasLimit);
-        cmds[7] = vm.toString(txn.isCreation);
-        cmds[8] = vm.toString(txn.data);
-        cmds[9] = vm.toString(txn.l1BlockHash);
-        cmds[10] = vm.toString(txn.logIndex);
+        cmds[6] = vm.toString(txn.ethValue);
+        cmds[7] = vm.toString(txn.gasLimit);
+        cmds[8] = vm.toString(txn.isCreation);
+        cmds[9] = vm.toString(txn.data);
+        cmds[10] = vm.toString(txn.l1BlockHash);
+        cmds[11] = vm.toString(txn.logIndex);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));
@@ -635,7 +644,8 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes memory) {
@@ -645,9 +655,10 @@ contract FFIInterface is Test {
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));

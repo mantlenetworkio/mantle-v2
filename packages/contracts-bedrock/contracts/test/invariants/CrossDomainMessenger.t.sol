@@ -41,7 +41,8 @@ contract RelayActor is StdUtils {
      */
     function relay(
         uint8 _version,
-        uint8 _value,
+        uint8 _mntValue,
+        uint8 _ethValue,
         bytes memory _message
     ) external {
         address target = address(0x04); // ID precompile
@@ -61,7 +62,7 @@ contract RelayActor is StdUtils {
         // Restrict the value to the range of [0, 1]
         // This is just so we get variance of calls with and without value. The ID precompile
         // will not reject value being sent to it.
-        _value = _value % 2;
+        _ethValue = _ethValue % 2;
 
         // If the message should succeed, supply it `baseGas`. If not, supply it an amount of
         // gas that is too low to complete the call.
@@ -76,7 +77,8 @@ contract RelayActor is StdUtils {
             Encoding.encodeVersionedNonce(0, _version),
             sender,
             target,
-            _value,
+            _mntValue,
+            _ethValue,
             minGasLimit,
             _message
         );
@@ -90,14 +92,15 @@ contract RelayActor is StdUtils {
         // the outer min gas limit.
         vm.startPrank(address(op));
         if (!doFail) {
-            vm.expectCallMinGas(address(0x04), _value, minGasLimit, _message);
+            vm.expectCallMinGas(address(0x04), _ethValue, minGasLimit, _message);
         }
         try
-            xdm.relayMessage{ gas: gas, value: _value }(
+            xdm.relayMessage{ gas: gas, value: _ethValue }(
                 Encoding.encodeVersionedNonce(0, _version),
                 sender,
                 target,
-                _value,
+                _mntValue,
+                _ethValue,
                 minGasLimit,
                 _message
             )

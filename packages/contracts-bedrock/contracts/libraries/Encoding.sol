@@ -30,10 +30,11 @@ library Encoding {
         raw[1] = RLPWriter.writeAddress(_tx.from);
         raw[2] = _tx.isCreation ? RLPWriter.writeBytes("") : RLPWriter.writeAddress(_tx.to);
         raw[3] = RLPWriter.writeUint(_tx.mint);
-        raw[4] = RLPWriter.writeUint(_tx.value);
-        raw[5] = RLPWriter.writeUint(uint256(_tx.gasLimit));
-        raw[6] = RLPWriter.writeBool(false);
-        raw[7] = RLPWriter.writeBytes(_tx.data);
+        raw[4] = RLPWriter.writeUint(_tx.mntValue);
+        raw[5] = RLPWriter.writeUint(_tx.ethValue);
+        raw[6] = RLPWriter.writeUint(uint256(_tx.gasLimit));
+        raw[7] = RLPWriter.writeBool(false);
+        raw[8] = RLPWriter.writeBytes(_tx.data);
         return abi.encodePacked(uint8(0x7e), RLPWriter.writeList(raw));
     }
 
@@ -44,7 +45,8 @@ library Encoding {
      * @param _nonce    Message nonce with version encoded into the first two bytes.
      * @param _sender   Address of the sender of the message.
      * @param _target   Address of the target of the message.
-     * @param _value    ETH value to send to the target.
+     * @param _mntValue MNT value to send to the target.
+     * @param _ethValue ETH value to send to the target.
      * @param _gasLimit Gas limit to use for the message.
      * @param _data     Data to send with the message.
      *
@@ -54,7 +56,8 @@ library Encoding {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) internal pure returns (bytes memory) {
@@ -62,7 +65,7 @@ library Encoding {
         if (version == 0) {
             return encodeCrossDomainMessageV0(_target, _sender, _data, _nonce);
         } else if (version == 1) {
-            return encodeCrossDomainMessageV1(_nonce, _sender, _target, _value, _gasLimit, _data);
+            return encodeCrossDomainMessageV1(_nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data);
         } else {
             revert("Encoding: unknown cross domain message version");
         }
@@ -100,7 +103,8 @@ library Encoding {
      * @param _nonce    Message nonce.
      * @param _sender   Address of the sender of the message.
      * @param _target   Address of the target of the message.
-     * @param _value    ETH value to send to the target.
+     * @param _mntValue MNT value to send to the target.
+     * @param _ethValue ETH value to send to the target.
      * @param _gasLimit Gas limit to use for the message.
      * @param _data     Data to send with the message.
      *
@@ -110,17 +114,19 @@ library Encoding {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) internal pure returns (bytes memory) {
         return
             abi.encodeWithSignature(
-                "relayMessage(uint256,address,address,uint256,uint256,bytes)",
+                "relayMessage(uint256,address,address,uint256,uint256,uint256,bytes)",
                 _nonce,
                 _sender,
                 _target,
-                _value,
+                _mntValue,
+                _ethValue,
                 _gasLimit,
                 _data
             );

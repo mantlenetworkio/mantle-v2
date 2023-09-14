@@ -29,6 +29,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             alice,
             recipient,
             0,
+            0,
             100,
             hex"ff"
         );
@@ -36,6 +37,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             address(messagePasser),
             abi.encodeWithSelector(
                 L2ToL1MessagePasser.initiateWithdrawal.selector,
+                0,
                 address(L1Messenger),
                 L2Messenger.baseGas(hex"ff", 100),
                 xDomainCallData
@@ -56,7 +58,8 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
                     nonce: messagePasser.messageNonce(),
                     sender: address(L2Messenger),
                     target: address(L1Messenger),
-                    value: 0,
+                    mntValue: 0,
+                    ethValue: 0,
                     gasLimit: L2Messenger.baseGas(hex"ff", 100),
                     data: xDomainCallData
                 })
@@ -98,6 +101,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             target,
             0, // value
             0,
+            0,
             hex"1111"
         );
     }
@@ -119,6 +123,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             target,
             0,
             0,
+            0,
             hex"1111"
         );
 
@@ -129,6 +134,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             sender,
             target,
             0, // value
+            0,
             0,
             hex"1111"
         );
@@ -154,6 +160,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             target,
             0,
             0,
+            0,
             message
         );
     }
@@ -169,6 +176,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce(0, 1),
             address(0),
             address(0),
+            0,
             0,
             0,
             hex""
@@ -192,6 +200,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             target,
             value,
             0,
+            0,
             hex"1111"
         );
 
@@ -203,6 +212,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             sender,
             target,
             value,
+            0,
             0,
             hex"1111"
         );
@@ -223,6 +233,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             sender,
             target,
             value,
+            0,
             0,
             hex"1111"
         );

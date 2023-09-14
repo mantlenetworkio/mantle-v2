@@ -48,6 +48,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             address(L2Bridge),
             address(L1Bridge),
             100,
+            0,
             200_000,
             message
         );
@@ -56,7 +57,8 @@ contract L2StandardBridge_Test is Bridge_Initializer {
                 nonce: nonce,
                 sender: address(L2Messenger),
                 target: address(L1Messenger),
-                value: 100,
+                mntValue: 0,
+                ethValue:100,
                 gasLimit: baseGas,
                 data: withdrawalData
             })
@@ -192,7 +194,8 @@ contract PreBridgeERC20 is Bridge_Initializer {
                 nonce: nonce,
                 sender: address(L2Messenger),
                 target: address(L1Messenger),
-                value: 0,
+                mntValue: 0,
+                ethValue: 0,
                 gasLimit: baseGas,
                 data: withdrawalData
             })
@@ -341,6 +344,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
             address(L2Bridge),
             address(L1Bridge),
             0,
+            0,
             1000,
             message
         );
@@ -349,7 +353,8 @@ contract PreBridgeERC20To is Bridge_Initializer {
                 nonce: nonce,
                 sender: address(L2Messenger),
                 target: address(L1Messenger),
-                value: 0,
+                mntValue: 0,
+                ethValue: 0,
                 gasLimit: baseGas,
                 data: withdrawalData
             })

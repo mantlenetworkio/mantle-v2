@@ -48,7 +48,8 @@ contract L2ToL1MessagePasser is Semver {
      * @param nonce          Unique value corresponding to each withdrawal.
      * @param sender         The L2 account address which initiated the withdrawal.
      * @param target         The L1 account address the call will be send to.
-     * @param value          The ETH value submitted for withdrawal, to be forwarded to the target.
+     * @param mntValue       The MNT value submitted for withdrawal, to be forwarded to the target.
+     * @param ethValue       The ETH value submitted for withdrawal, to be forwarded to the target.
      * @param gasLimit       The minimum amount of gas that must be provided when withdrawing.
      * @param data           The data to be forwarded to the target on L1.
      * @param withdrawalHash The hash of the withdrawal.
@@ -57,7 +58,8 @@ contract L2ToL1MessagePasser is Semver {
         uint256 indexed nonce,
         address indexed sender,
         address indexed target,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint256 gasLimit,
         bytes data,
         bytes32 withdrawalHash
@@ -117,7 +119,8 @@ contract L2ToL1MessagePasser is Semver {
                 nonce: messageNonce(),
                 sender: msg.sender,
                 target: _target,
-                value: _ethValue,
+                mntValue: msg.value,
+                ethValue: _ethValue,
                 gasLimit: _gasLimit,
                 data: _data
             })
@@ -129,6 +132,7 @@ contract L2ToL1MessagePasser is Semver {
             messageNonce(),
             msg.sender,
             _target,
+            msg.value,
             _ethValue,
             _gasLimit,
             _data,

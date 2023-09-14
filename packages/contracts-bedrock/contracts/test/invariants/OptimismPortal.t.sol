@@ -23,7 +23,8 @@ contract OptimismPortal_Invariant_Harness is Portal_Initializer {
             nonce: 0,
             sender: alice,
             target: bob,
-            value: 100,
+            mntValue: 0,
+            ethValue: 100,
             gasLimit: 100_000,
             data: hex""
         });
@@ -159,6 +160,6 @@ contract OptimismPortal_CanAlwaysFinalizeAfterWindow is OptimismPortal_Invariant
 
         op.finalizeWithdrawalTransaction(_defaultTx);
 
-        assertEq(address(bob).balance, bobBalanceBefore + _defaultTx.value);
+        assertEq(address(bob).balance, bobBalanceBefore + _defaultTx.ethValue);
     }
 }

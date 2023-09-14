@@ -407,19 +407,19 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
-
+        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
+        bool l1mntSuccess = IERC20(BridgeConstants.L1_MNT).transfer(_tx.target,_tx.mntValue);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
 
         // All withdrawals are immediately finalized. Replayability can
         // be achieved through contracts built on top of this contract
-        emit WithdrawalFinalized(withdrawalHash, success);
+        emit WithdrawalFinalized(withdrawalHash, success && l1mntSuccess);
 
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if (success == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if (success && l1mntSuccess == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }

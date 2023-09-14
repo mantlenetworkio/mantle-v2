@@ -225,10 +225,11 @@ abstract contract CrossDomainMessenger is
      * @notice Additional event data to emit, required as of Bedrock. Cannot be merged with the
      *         SentMessage event without breaking the ABI of this contract, this is good enough.
      *
-     * @param sender Address of the sender of the message.
-     * @param value  ETH value sent along with the message to the recipient.
+     * @param sender    Address of the sender of the message.
+     * @param mntValue  MNT value sent along with the message to the recipient.
+     * @param ethValue  ETH value sent along with the message to the recipient.
      */
-    event SentMessageExtension1(address indexed sender, uint256 value);
+    event SentMessageExtension1(address indexed sender, uint256 mntValue,uint256 ethValue);
 
     /**
      * @notice Emitted whenever a message is successfully relayed on this chain.
@@ -300,6 +301,7 @@ abstract contract CrossDomainMessenger is
                 messageNonce(),
                 msg.sender,
                 _target,
+                0,
                 _nativeTokenValue,
                 _minGasLimit,
                 _message
@@ -307,7 +309,7 @@ abstract contract CrossDomainMessenger is
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, _nativeTokenValue);
+        emit SentMessageExtension1(msg.sender, 0,_nativeTokenValue);
 
         unchecked {
             ++msgNonce;
@@ -330,6 +332,7 @@ abstract contract CrossDomainMessenger is
         uint256 _nonce,
         address _sender,
         address _target,
+        uint256 _mntValue,
         uint256 _value,
         uint256 _minGasLimit,
         bytes calldata _message
@@ -356,6 +359,7 @@ abstract contract CrossDomainMessenger is
             _nonce,
             _sender,
             _target,
+            _mntValue,
             _value,
             _minGasLimit,
             _message

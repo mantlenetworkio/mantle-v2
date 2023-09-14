@@ -89,13 +89,14 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
                 msg.sender,
                 _target,
                 _mntAmount,
+                msg.value,
                 _minGasLimit,
                 _message
             )
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, _mntAmount);
+        emit SentMessageExtension1(msg.sender, _mntAmount,msg.value);
 
         unchecked {
             ++msgNonce;
@@ -110,7 +111,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      * @param _nonce       Nonce of the message being relayed.
      * @param _sender      Address of the user who sent the message.
      * @param _target      Address that the message is targeted at.
-     * @param _value       ETH value to send with the message.
+     * @param _mntValue    MNT value to send with the message.
+     * @param _ethValue    ETH value to send with the message.
      * @param _minGasLimit Minimum amount of gas that the message can be executed with.
      * @param _message     Message to send to the target.
      */
@@ -118,7 +120,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _minGasLimit,
         bytes calldata _message
     ) external payable override {
@@ -144,7 +147,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
             _nonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _minGasLimit,
             _message
         );
@@ -152,7 +156,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         if (_isOtherMessenger()) {
             // These properties should always hold when the message is first submitted (as
             // opposed to being replayed).
-            assert(msg.value == _value);
+            assert(msg.value == _ethValue);
             assert(!failedMessages[versionedHash]);
         } else {
             require(
@@ -203,12 +207,15 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
 
             return;
         }
-
+        bool mntSuccess = true;
+        if (_mntValue!=0){
+            mntSuccess = IERC20(BridgeConstants.L1_MNT).approve(_target,_mntValue);
+        }
         xDomainMsgSender = _sender;
-        bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _value, _message);
+        bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _ethValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
 
-        if (success) {
+        if (success && mntSuccess) {
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {

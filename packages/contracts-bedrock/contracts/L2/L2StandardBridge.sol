@@ -595,7 +595,7 @@ contract L2StandardBridge is StandardBridge, Semver {
             "StandardBridge: wrong remote token for BVM_ETH local token"
         );
         //move the BVM_ETH mint to op-geth.
-
+        IERC20(Predeploys.BVM_ETH).safeTransferFrom(Predeploys.L2_CROSS_DOMAIN_MESSENGER,_to,_amount);
         _emitETHBridgeFinalized(_from, _to, _amount, _extraData);
 
     }

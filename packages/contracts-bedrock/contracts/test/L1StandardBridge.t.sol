@@ -115,6 +115,7 @@ contract PreBridgeETH is Bridge_Initializer {
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             500,
             50000,
             message
@@ -249,6 +250,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             600,
             60000,
             message
@@ -378,6 +380,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
             address(L1Bridge),
             address(L2Bridge),
             0,
+            0,
             10000,
             message
         );
@@ -476,6 +479,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             0,
             10000,
             message
