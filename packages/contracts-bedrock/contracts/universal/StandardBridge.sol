@@ -537,45 +537,7 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual{
-        uint32 _type = BridgeConstants.MNT_DEPOSIT_TX;
-        if (_localToken == address(0) && _remoteToken == BridgeConstants.L1_MNT) {
-            require(
-                msg.value == _amount,
-                "StandardBridge: bridging MNT must include sufficient MNT value"
-            );
-            _type = BridgeConstants.MNT_WITHDRAWAL_TX;
 
-        } else if (_localToken == BridgeConstants.L1_MNT && _remoteToken == address(0)) {
-            // L1 deposit part
-
-            IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
-            _type = BridgeConstants.MNT_DEPOSIT_TX;
-
-        } else {
-            revert( "StandardBridge: localToken and remoteToken are not belong to MNT.");
-        }
-
-        // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
-        // contracts may override this function in order to emit legacy events as well.
-        _emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-        MESSENGER.sendMessage{value: msg.value}(
-            _amount,
-            address(OTHER_BRIDGE),
-            abi.encodeWithSelector(
-                this.finalizeBridgeMNT.selector,
-                // Because this call will be executed on the remote chain, we reverse the order of
-                // the remote and local token addresses relative to their order in the
-                // finalizeBridgeERC20 function.
-                _remoteToken,
-                _localToken,
-                _from,
-                _to,
-                _amount,
-                _extraData
-            ),
-            _minGasLimit
-        );
     }
 
     /**

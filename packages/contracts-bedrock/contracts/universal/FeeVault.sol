@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
+import "../../../sdk/test/contracts/AbsolutelyNothing.sol";
 
 /**
  * @title FeeVault
@@ -57,8 +58,7 @@ abstract contract FeeVault {
      * @notice Triggers a withdrawal of funds to the L1 fee wallet.
      */
     function withdraw() external {
-        //TODO change the withdraw process from ETH to MNT.
-        revert("this function need to discuss.");
+        //TODO change the withdraw process from ETH to MNT. Not sure if it could work .
         require(
             address(this).balance >= MIN_WITHDRAWAL_AMOUNT,
             "FeeVault: withdrawal amount must be greater than minimum withdrawal amount"
