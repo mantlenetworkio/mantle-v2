@@ -407,8 +407,8 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         bool l1mntSuccess = IERC20(BridgeConstants.L1_MNT).transfer(_tx.target,_tx.mntValue);
+        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
 

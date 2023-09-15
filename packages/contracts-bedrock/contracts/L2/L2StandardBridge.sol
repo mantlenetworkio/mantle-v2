@@ -230,10 +230,6 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(_localToken == Predeploys.BVM_ETH && _remoteToken==address(0),
             "L2StandardBridge : _initiateBridgeETH function only support for ETH bridging." );
 
-        require(
-            _isCorrectTokenPair(_localToken, _remoteToken),
-            "StandardBridge: wrong remote token for ETH withdrawal process"
-        );
         IERC20(_localToken).safeTransferFrom(msg.sender,address(this),_amount);
         IERC20(_localToken).approve(Predeploys.L2_CROSS_DOMAIN_MESSENGER,_amount);
 
@@ -584,16 +580,13 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
-        require( _localToken == Predeploys.BVM_ETH && _localToken ==address(0)   ,
+        require( _localToken == Predeploys.BVM_ETH && _remoteToken ==address(0)   ,
             "L2StandardBridge: this function only support for BVM_ETH bridging.");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
-        require(
-            _isCorrectTokenPair(_localToken, _remoteToken),
-            "StandardBridge: wrong remote token for BVM_ETH local token"
-        );
+
         //move the BVM_ETH mint to op-geth.
         IERC20(Predeploys.BVM_ETH).safeTransferFrom(Predeploys.L2_CROSS_DOMAIN_MESSENGER,_to,_amount);
         _emitETHBridgeFinalized(_from, _to, _amount, _extraData);
@@ -661,7 +654,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
 
-        bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
+        bool success = SafeCall.call(_to, gasleft(), _amount, _extraData);
         require(success, "StandardBridge: MNT transfer failed");
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
