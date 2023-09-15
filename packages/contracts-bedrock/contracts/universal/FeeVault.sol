@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
-import "../../../sdk/test/contracts/AbsolutelyNothing.sol";
 
 /**
  * @title FeeVault
