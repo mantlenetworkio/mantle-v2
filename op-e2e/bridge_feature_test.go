@@ -55,12 +55,12 @@ const (
 )
 
 func TestEnv(t *testing.T) {
-	// check l1 mnt token
-	//a := getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000001")
-	//t.Logf("a : %v", a)
-	//
-	//a = getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000002")
-	//t.Logf("a : %v", a)
+	//check l1 mnt token
+	a := getETHBalanceFromL2(t, "0x4200000000000000000000000000000000000007")
+	t.Logf("a : %v", a)
+
+	a = getETHBalanceFromL2(t, "0x7A11000000000000000000000000000000001113")
+	t.Logf("a : %v", a)
 	//a = getETHBalanceFromL2(t, "0x6900000000000000000000000000000000000003")
 	//t.Logf("a : %v", a)
 
@@ -79,7 +79,7 @@ func TestEnv(t *testing.T) {
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
 	//TestERC20DepositAndWithdrawal(t)
-	TestMNTDepositAndWithdrawal(t)
+	//TestMNTDepositAndWithdrawal(t)
 	TestETHDepositAndWithdrawal(t)
 }
 
@@ -872,5 +872,33 @@ func TestWithdrawal(t *testing.T) {
 
 	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
 	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt, finalizeReceipt)
+
+}
+
+func TestFindDepositTx(t *testing.T) {
+	//l1Client, err := ethclient.Dial(l1url)
+	//require.NoError(t, err)
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+
+	bn, err := l2Client.BlockNumber(context.Background())
+	require.NoError(t, err)
+	t.Log("now block number", bn)
+	for i := 0; i < int(bn); i++ {
+		block, err := l2Client.BlockByNumber(context.Background(), big.NewInt(int64(bn)-int64(i)))
+		require.NoError(t, err)
+		txs := block.Transactions()
+		balance, err := l2Client.BalanceAt(context.Background(), common.HexToAddress("0x4200000000000000000000000000000000000007"), big.NewInt(int64(bn)-int64(i)))
+		require.NoError(t, err)
+		t.Log("balance = ", balance)
+		t.Log("bn = ", int64(bn)-int64(i))
+
+		for _, tx := range txs {
+			if tx.IsDepositTx() == true && tx.ETHValue() != nil {
+				t.Log("find deposit tx", tx.Hash())
+				t.Log("tx data = ", tx.ETHValue())
+			}
+		}
+	}
 
 }
