@@ -537,7 +537,8 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 				Nonce:    params.Nonce,
 				Sender:   params.Sender,
 				Target:   params.Target,
-				Value:    params.Value,
+				MntValue: params.MNTValue,
+				EthValue: params.ETHValue,
 				GasLimit: params.GasLimit,
 				Data:     params.Data,
 			}
@@ -546,7 +547,7 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 			withdrawalProofParam := params.WithdrawalProof
 
 			// Determine if this will be a bad withdrawal.
-			badWithdrawal := i < 8
+			badWithdrawal := i < 9
 			if badWithdrawal {
 				// Select a field to overwrite depending on which test case this is.
 				fieldIndex := i
@@ -568,25 +569,30 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 						typeProvider.Fuzz(&withdrawalTransaction.Target)
 					}
 				} else if fieldIndex == 3 {
-					originalValue := new(big.Int).Set(withdrawalTransaction.Value)
-					for originalValue.Cmp(withdrawalTransaction.Value) == 0 {
-						typeProvider.Fuzz(&withdrawalTransaction.Value)
+					originalValue := new(big.Int).Set(withdrawalTransaction.MntValue)
+					for originalValue.Cmp(withdrawalTransaction.MntValue) == 0 {
+						typeProvider.Fuzz(&withdrawalTransaction.MntValue)
 					}
 				} else if fieldIndex == 4 {
+					originalValue := new(big.Int).Set(withdrawalTransaction.EthValue)
+					for originalValue.Cmp(withdrawalTransaction.EthValue) == 0 {
+						typeProvider.Fuzz(&withdrawalTransaction.EthValue)
+					}
+				} else if fieldIndex == 5 {
 					originalValue := new(big.Int).Set(withdrawalTransaction.GasLimit)
 					for originalValue.Cmp(withdrawalTransaction.GasLimit) == 0 {
 						typeProvider.Fuzz(&withdrawalTransaction.GasLimit)
 					}
-				} else if fieldIndex == 5 {
+				} else if fieldIndex == 6 {
 					originalValue := new(big.Int).Set(l2OutputIndexParam)
 					for originalValue.Cmp(l2OutputIndexParam) == 0 {
 						typeProvider.Fuzz(&l2OutputIndexParam)
 					}
-				} else if fieldIndex == 6 {
+				} else if fieldIndex == 7 {
 					// TODO: this is a large structure that is unlikely to ever produce the same value, however we should
 					//  verify that we actually generated different values.
 					typeProvider.Fuzz(&outputRootProofParam)
-				} else if fieldIndex == 7 {
+				} else if fieldIndex == 8 {
 					typeProvider.Fuzz(&withdrawalProofParam)
 					originalValue := make([][]byte, len(withdrawalProofParam))
 					for i := 0; i < len(withdrawalProofParam); i++ {

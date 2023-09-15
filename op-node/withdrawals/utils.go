@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 )
 
-var MessagePassedTopic = crypto.Keccak256Hash([]byte("MessagePassed(uint256,address,address,uint256,uint256,bytes,bytes32)"))
+var MessagePassedTopic = crypto.Keccak256Hash([]byte("MessagePassed(uint256,address,address,uint256,uint256,uint256,bytes,bytes32)"))
 
 // WaitForFinalizationPeriod waits until there is OutputProof for an L2 block number larger than the supplied l2BlockNumber
 // and that the output is finalized.
@@ -135,7 +135,8 @@ type ProvenWithdrawalParameters struct {
 	Nonce           *big.Int
 	Sender          common.Address
 	Target          common.Address
-	Value           *big.Int
+	MNTValue        *big.Int
+	ETHValue        *big.Int
 	GasLimit        *big.Int
 	L2OutputIndex   *big.Int
 	Data            []byte
@@ -195,7 +196,8 @@ func ProveWithdrawalParameters(ctx context.Context, proofCl ProofClient, l2Recei
 		Nonce:         ev.Nonce,
 		Sender:        ev.Sender,
 		Target:        ev.Target,
-		Value:         ev.Value,
+		MNTValue:      ev.MntValue,
+		ETHValue:      ev.EthValue,
 		GasLimit:      ev.GasLimit,
 		L2OutputIndex: l2OutputIndex,
 		Data:          ev.Data,
@@ -228,11 +230,12 @@ func WithdrawalHash(ev *bindings.L2ToL1MessagePasserMessagePassed) (common.Hash,
 		{Name: "nonce", Type: Uint256Type},
 		{Name: "sender", Type: AddressType},
 		{Name: "target", Type: AddressType},
-		{Name: "value", Type: Uint256Type},
+		{Name: "mntValue", Type: Uint256Type},
+		{Name: "ethValue", Type: Uint256Type},
 		{Name: "gasLimit", Type: Uint256Type},
 		{Name: "data", Type: BytesType},
 	}
-	enc, err := args.Pack(ev.Nonce, ev.Sender, ev.Target, ev.Value, ev.GasLimit, ev.Data)
+	enc, err := args.Pack(ev.Nonce, ev.Sender, ev.Target, ev.MntValue, ev.EthValue, ev.GasLimit, ev.Data)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to pack for withdrawal hash: %w", err)
 	}
