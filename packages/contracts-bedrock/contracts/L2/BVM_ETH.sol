@@ -20,5 +20,13 @@ contract BVM_ETH is OptimismMintableERC20 {
     constructor()
     OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, address(0), "Ether", "WETH")
     {}
+
+    function mint(address _to, uint256 _amount)
+        public
+        virtual
+        override
+    {
+        revert("BVM_ETH: mint is disabled pending further community discussion.");
+    }
 }
 
