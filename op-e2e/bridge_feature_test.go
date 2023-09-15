@@ -79,8 +79,8 @@ func TestEnv(t *testing.T) {
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
 	//TestERC20DepositAndWithdrawal(t)
-	//TestMNTDepositAndWithdrawal(t)
-	TestETHDepositAndWithdrawal(t)
+	TestMNTDepositAndWithdrawal(t)
+	//TestETHDepositAndWithdrawal(t)
 }
 
 func checkBalance(t *testing.T) *big.Int {

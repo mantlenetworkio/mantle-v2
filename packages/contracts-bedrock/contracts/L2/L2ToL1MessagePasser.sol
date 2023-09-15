@@ -111,9 +111,6 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
-        if (_ethValue!= 0){
-            OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender,_ethValue);
-        }
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
