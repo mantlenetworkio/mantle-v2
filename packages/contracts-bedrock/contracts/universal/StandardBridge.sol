@@ -412,23 +412,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable virtual onlyOtherBridge {
-        if (_localToken == address(0) && _remoteToken == BridgeConstants.L1_MNT) {
-            // layer2 deposit
-            require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
-            require(_to != address(this), "StandardBridge: cannot send to self");
-            require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
-
-            bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
-            require(success, "StandardBridge: MNT transfer failed");
-        } else if (_localToken == BridgeConstants.L1_MNT && _remoteToken == address(0)) {
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
-            IERC20(_localToken).safeTransfer(_to, _amount);
-        }
-
-        // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
-        // contracts may override this function in order to emit legacy events as well.
-        _emitMNTBridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
     }
 
     /**
