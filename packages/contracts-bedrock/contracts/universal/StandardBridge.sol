@@ -230,6 +230,7 @@ abstract contract StandardBridge {
     function bridgeETH(uint256 _value,uint32 _minGasLimit, bytes calldata _extraData) public payable virtual onlyEOA {
         _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
+
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
      *         smart contract and the call fails, the ETH will be temporarily locked in the
@@ -254,6 +255,7 @@ abstract contract StandardBridge {
     ) public payable virtual{
         _initiateBridgeETH(address(0),Predeploys.BVM_ETH,msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
+
     /**
      * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
      *         ERC20 token on the other chain does not recognize the local token as the correct
@@ -339,7 +341,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable virtual onlyOtherBridge {
-        require(msg.value == _amount || _localToken == Predeploys.BVM_ETH, "StandardBridge: amount sent does not match amount required");
+        require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
@@ -347,17 +349,8 @@ abstract contract StandardBridge {
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeFinalized(_from, _to, _amount, _extraData);
 
-        if (_isOptimismMintableERC20(_localToken)) {
-            require(
-                _isCorrectTokenPair(_localToken, _remoteToken),
-                "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token"
-            );
-
-            OptimismMintableERC20(_localToken).mint(_to, _amount);
-        } else {
-            bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
-            require(success, "StandardBridge: ETH transfer failed");
-        }
+        bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
+        require(success, "StandardBridge: ETH transfer failed");
     }
 
     /**
@@ -458,29 +451,17 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual {
-        uint32 _type = BridgeConstants.ETH_DEPOSIT_TX;
-        if (_isOptimismMintableERC20(_localToken)) {
-            require(_localToken == Predeploys.BVM_ETH, "StandardBridge: _initiateBridgeETH only support for ETH bridging.");
-            require(
-                _isCorrectTokenPair(_localToken, _remoteToken),
-                "StandardBridge: wrong remote token for ETH withdrawal process"
-            );
-
-            OptimismMintableERC20(_localToken).burn(_from, _amount);
-            _type = BridgeConstants.ETH_WITHDRAWAL_TX;
-        } else {
-            require(
-                msg.value == _amount ,
-                "StandardBridge: bridging ETH must include sufficient ETH value"
-            );
-        }
+        require(
+            msg.value == _amount,
+            "StandardBridge: bridging ETH must include sufficient ETH value"
+        );
 
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage{value: msg.value}(
-            _amount,
+        MESSENGER.sendMessage{ value: _amount }(
+            0,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 this.finalizeBridgeETH.selector,
@@ -531,9 +512,9 @@ abstract contract StandardBridge {
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-        uint256 zero = 0;
+
         MESSENGER.sendMessage(
-            zero,
+            0,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 this.finalizeBridgeERC20.selector,
