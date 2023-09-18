@@ -8,8 +8,8 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
+import { L1CrossDomainMessenger } from "./L1CrossDomainMessenger.sol";
 
 /**
  * @custom:proxied
@@ -25,6 +25,8 @@ import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
  */
 contract L1StandardBridge is StandardBridge, Semver {
     using SafeERC20 for IERC20;
+
+    address public immutable L1_MNT_ADDRESS;
 
     /**
  * @custom:legacy
@@ -135,10 +137,12 @@ contract L1StandardBridge is StandardBridge, Semver {
      *
      * @param _messenger Address of the L1CrossDomainMessenger.
      */
-    constructor(address payable _messenger)
+    constructor(address payable _messenger,address _l1mnt)
         Semver(1, 1, 0)
         StandardBridge(_messenger, payable(Predeploys.L2_STANDARD_BRIDGE))
-    {}
+    {
+        L1_MNT_ADDRESS = _l1mnt;
+    }
 
     /**
      * @notice Allows EOAs to bridge ETH by sending directly to the bridge.
@@ -196,7 +200,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external payable onlyEOA {
-        _initiateMNTDeposit(BridgeConstants.L1_MNT,address(0),msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+        _initiateMNTDeposit(L1_MNT_ADDRESS,address(0),msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -219,7 +223,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external payable {
-        _initiateMNTDeposit(BridgeConstants.L1_MNT,address(0),msg.sender, _to, _amount, _minGasLimit, _extraData);
+        _initiateMNTDeposit(L1_MNT_ADDRESS,address(0),msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -299,7 +303,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) external payable {
-        finalizeBridgeMNT(address(0),BridgeConstants.L1_MNT,_from, _to, _amount, _extraData);
+        finalizeBridgeMNT(address(0),L1_MNT_ADDRESS,_from, _to, _amount, _extraData);
     }
 
     /**
@@ -671,11 +675,11 @@ contract L1StandardBridge is StandardBridge, Semver {
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
 
-        require(_localToken == BridgeConstants.L1_MNT && _remoteToken == address(0),
+        require(_localToken == L1_MNT_ADDRESS && _remoteToken == address(0),
             "_localToken and _remoteToken must be MNT address.");
 
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
-        IERC20(_localToken).safeTransferFrom(BridgeConstants.L1_CROSSDOMAIN_MESSENGER,_to, _amount);
+        IERC20(_localToken).safeTransferFrom( address(MESSENGER),_to, _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
@@ -799,13 +803,14 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_localToken == BridgeConstants.L1_MNT && _remoteToken == address(0),
+        require(_localToken == L1_MNT_ADDRESS && _remoteToken == address(0),
             "L1StandardBridge: localToken and remoteToken are not belong to MNT.");
 
 
         IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
-        bool success = IERC20(_localToken).approve( BridgeConstants.L1_CROSSDOMAIN_MESSENGER, _amount);
+        address portal = address(L1CrossDomainMessenger(address(MESSENGER)).PORTAL());
+        bool success = IERC20(_localToken).approve( portal, _amount);
         require(success,"L1StandardBridge: approve for L1 MNT failed. ");
 
 

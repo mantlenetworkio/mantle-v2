@@ -4,13 +4,13 @@ pragma solidity 0.8.15;
 import { CommonTest } from "./CommonTest.t.sol";
 import { LegacyERC20MNT } from "../legacy/LegacyERC20MNT.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
-import { BridgeConstants }from "../libraries/BridgeConstants.sol";
+import { LocalConstants }from "../local/LocalConstants.sol";
 contract LegacyERC20MNT_Test is CommonTest {
     LegacyERC20MNT mnt;
 
     function setUp() public virtual override {
         super.setUp();
-        mnt = new LegacyERC20MNT();
+        mnt = new LegacyERC20MNT(LocalConstants.L1_MNT);
     }
 
     function test_metadata_succeeds() external {
@@ -18,10 +18,10 @@ contract LegacyERC20MNT_Test is CommonTest {
         assertEq(mnt.symbol(), "MNT");
         assertEq(mnt.decimals(), 18);
     }
-
+    //TODO : add the L1 MNT address for test. For now, it only support for local dev network constants.
     function test_crossDomain_succeeds() external {
         assertEq(mnt.l2Bridge(), Predeploys.L2_STANDARD_BRIDGE);
-        assertEq(mnt.l1Token(), BridgeConstants.L1_MNT);
+        assertEq(mnt.l1Token(),  LocalConstants.L1_MNT);
     }
 
     function test_transfer_doesNotExist_reverts() external {

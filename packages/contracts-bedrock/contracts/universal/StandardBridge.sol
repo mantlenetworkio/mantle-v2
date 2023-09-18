@@ -9,7 +9,6 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { IOptimismMintableERC20, ILegacyMintableERC20 } from "./IOptimismMintableERC20.sol";
 import { CrossDomainMessenger } from "./CrossDomainMessenger.sol";
 import { OptimismMintableERC20 } from "./OptimismMintableERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 
 /**
@@ -411,9 +410,7 @@ abstract contract StandardBridge {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable virtual onlyOtherBridge {
-
-    }
+    ) public payable virtual ;
 
     /**
      * @notice Initiates a bridge of ETH through the CrossDomainMessenger.
@@ -536,9 +533,7 @@ abstract contract StandardBridge {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
-    ) internal virtual{
-
-    }
+    ) internal virtual;
 
     /**
      * @notice Checks if a given address is an OptimismMintableERC20. Not perfect, but good enough.

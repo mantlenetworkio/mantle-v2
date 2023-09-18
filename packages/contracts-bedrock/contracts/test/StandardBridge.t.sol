@@ -32,6 +32,26 @@ contract StandardBridgeTester is StandardBridge {
     }
 
     receive() external payable override {}
+
+    function finalizeBridgeMNT(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _extraData
+    ) public payable override {}
+
+    function _initiateBridgeMNT(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal override {}
+
 }
 
 /**

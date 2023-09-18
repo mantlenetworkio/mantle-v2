@@ -57,7 +57,6 @@ abstract contract FeeVault {
      * @notice Triggers a withdrawal of funds to the L1 fee wallet.
      */
     function withdraw() external {
-        //TODO change the withdraw process from ETH to MNT. Not sure if it could work .
         require(
             address(this).balance >= MIN_WITHDRAWAL_AMOUNT,
             "FeeVault: withdrawal amount must be greater than minimum withdrawal amount"

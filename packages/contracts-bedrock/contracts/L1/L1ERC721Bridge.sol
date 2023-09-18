@@ -5,7 +5,6 @@ import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { L2ERC721Bridge } from "../L2/L2ERC721Bridge.sol";
 import { Semver } from "../universal/Semver.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @title L1ERC721Bridge

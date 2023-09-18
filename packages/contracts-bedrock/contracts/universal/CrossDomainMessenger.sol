@@ -6,7 +6,6 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

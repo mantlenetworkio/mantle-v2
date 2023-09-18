@@ -31,6 +31,8 @@ import { LegacyMintableERC20 } from "../legacy/LegacyMintableERC20.sol";
 import { SystemConfig } from "../L1/SystemConfig.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
 import { Constants } from "../libraries/Constants.sol";
+import { L1MantleToken } from "../L1/TestMantleToken.sol";
+
 
 contract CommonTest is Test {
     address alice = address(128);
@@ -157,8 +159,27 @@ contract L2OutputOracle_Initializer is CommonTest {
         vm.label(Predeploys.L2_TO_L1_MESSAGE_PASSER, "L2ToL1MessagePasser");
     }
 }
+contract MNTToken_Initializer is L2OutputOracle_Initializer {
+    // Test target
+    L1MantleToken internal l1MNTImpl;
+    L1MantleToken internal l1MNT;
 
-contract Portal_Initializer is L2OutputOracle_Initializer {
+
+
+    function setUp() public virtual override {
+        super.setUp();
+        l1MNTImpl = new L1MantleToken();
+        Proxy proxy = new Proxy(multisig);
+        vm.prank(multisig);
+        proxy.upgradeToAndCall(
+            address(l1MNTImpl),
+            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10000000000000000000000000,address(0))
+        );
+        l1MNT = L1MantleToken(payable(address(proxy)));
+        vm.label(address(l1MNT), "L1MantleToken");
+    }
+}
+contract Portal_Initializer is MNTToken_Initializer {
     // Test target
     OptimismPortal internal opImpl;
     OptimismPortal internal op;
@@ -190,7 +211,8 @@ contract Portal_Initializer is L2OutputOracle_Initializer {
             _l2Oracle: oracle,
             _guardian: guardian,
             _paused: true,
-            _config: systemConfig
+            _config: systemConfig,
+            _l1MNT : address(l1MNT)
         });
 
         Proxy proxy = new Proxy(multisig);
@@ -253,7 +275,7 @@ contract Messenger_Initializer is Portal_Initializer {
         addressManager = new AddressManager();
 
         // Setup implementation
-        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op);
+        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op,address(l1MNT));
 
         // Setup the address manager and proxy
         vm.prank(multisig);
@@ -392,7 +414,7 @@ contract Bridge_Initializer is Messenger_Initializer {
             abi.encode(true)
         );
         vm.startPrank(multisig);
-        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)))).code);
+        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)),address(l1MNT))).code);
         vm.clearMockedCalls();
         address L1Bridge_Impl = proxy.getImplementation();
         vm.stopPrank();
@@ -404,7 +426,7 @@ contract Bridge_Initializer is Messenger_Initializer {
 
         // Deploy the L2StandardBridge, move it to the correct predeploy
         // address and then initialize it
-        L2StandardBridge l2B = new L2StandardBridge(payable(proxy));
+        L2StandardBridge l2B = new L2StandardBridge(payable(proxy),address(l1MNT));
         vm.etch(Predeploys.L2_STANDARD_BRIDGE, address(l2B).code);
         L2Bridge = L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE));
 
@@ -415,7 +437,7 @@ contract Bridge_Initializer is Messenger_Initializer {
         vm.etch(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY, address(factory).code);
         L2TokenFactory = OptimismMintableERC20Factory(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
 
-        vm.etch(Predeploys.LEGACY_ERC20_MNT, address(new LegacyERC20MNT()).code);
+        vm.etch(Predeploys.LEGACY_ERC20_MNT, address(new LegacyERC20MNT(address(l1MNT))).code);
 
         L1Token = new ERC20("Native L1 Token", "L1T");
 

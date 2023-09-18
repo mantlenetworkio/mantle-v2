@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 /**
  * @custom:legacy
  * @custom:proxied
@@ -18,8 +17,8 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
     /**
      * @notice Initializes the contract as an Optimism Mintable ERC20.
      */
-    constructor()
-        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, BridgeConstants.L1_MNT, "Mantle Token", "MNT")
+    constructor(address _l1mnt)
+        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT")
     {}
 
     /**

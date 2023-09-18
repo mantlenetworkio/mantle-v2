@@ -9,11 +9,12 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { console } from "forge-std/console.sol";
 import { StandardBridge } from "../universal/StandardBridge.sol";
 import { L2ToL1MessagePasser } from "../L2/L2ToL1MessagePasser.sol";
+import { L1StandardBridge } from "../L1/L1StandardBridge.sol";
+
 import { Hashing } from "../libraries/Hashing.sol";
 import { Types } from "../libraries/Types.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 
 contract L2StandardBridge_Test is Bridge_Initializer {
@@ -33,7 +34,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         uint256 nonce = L2Messenger.messageNonce();
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeETH.selector,
+            L1StandardBridge.finalizeBridgeETH.selector,
             Predeploys.BVM_ETH,
             address(0),
             alice,
@@ -94,7 +95,6 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             address(L2Messenger),
             abi.encodeWithSelector(
                 CrossDomainMessenger.sendMessage.selector,
-                BridgeConstants.ETH_WITHDRAWAL_TX,
                 100,
                 address(L1Bridge),
                 message,

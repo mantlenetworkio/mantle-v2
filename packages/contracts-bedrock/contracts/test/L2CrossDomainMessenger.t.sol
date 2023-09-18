@@ -11,7 +11,6 @@ import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Types } from "../libraries/Types.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 
 contract L2CrossDomainMessenger_Test is Messenger_Initializer {

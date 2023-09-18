@@ -14,7 +14,6 @@ import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @custom:proxied
@@ -87,6 +86,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     bool public paused;
 
+    address public immutable L1_MNT_ADDRESS;
+
+
     /**
      * @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
      *         are read by the rollup node and used to derive deposit transactions on L2.
@@ -156,11 +158,13 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         L2OutputOracle _l2Oracle,
         address _guardian,
         bool _paused,
-        SystemConfig _config
+        SystemConfig _config,
+        address _l1MNT
     ) Semver(1, 6, 0) {
         L2_ORACLE = _l2Oracle;
         GUARDIAN = _guardian;
         SYSTEM_CONFIG = _config;
+        L1_MNT_ADDRESS = _l1MNT;
         initialize(_paused);
     }
 
@@ -407,7 +411,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool l1mntSuccess = IERC20(BridgeConstants.L1_MNT).transfer(_tx.target,_tx.mntValue);
+        bool l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target,_tx.mntValue);
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
@@ -468,7 +472,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         require(_data.length <= 120_000, "OptimismPortal: data too large");
 
         if (_mntValue!=0){
-            IERC20(BridgeConstants.L1_MNT).safeTransferFrom(msg.sender,address(this),_mntValue);
+            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender,address(this),_mntValue);
         }
 
         // Transform the from-address to its alias if the caller is a contract.

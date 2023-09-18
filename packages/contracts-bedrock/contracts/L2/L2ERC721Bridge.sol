@@ -6,7 +6,6 @@ import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC16
 import { L1ERC721Bridge } from "../L1/L1ERC721Bridge.sol";
 import { IOptimismMintableERC721 } from "../universal/IOptimismMintableERC721.sol";
 import { Semver } from "../universal/Semver.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /**
  * @title L2ERC721Bridge

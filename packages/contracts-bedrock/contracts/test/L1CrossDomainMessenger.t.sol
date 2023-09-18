@@ -10,7 +10,6 @@ import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 /* Target contract dependencies */
 import { L2OutputOracle } from "../L1/L2OutputOracle.sol";

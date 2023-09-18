@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 
 import { OptimismPortal } from "./OptimismPortal.sol";
 import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
@@ -29,16 +28,18 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      */
     OptimismPortal public immutable PORTAL;
 
+    address public immutable L1_MNT_ADDRESS;
     /**
      * @custom:semver 1.4.0
      *
      * @param _portal Address of the OptimismPortal contract on this network.
      */
-    constructor(OptimismPortal _portal)
+    constructor(OptimismPortal _portal,address l1mnt)
         Semver(1, 4, 0)
         CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER)
     {
         PORTAL = _portal;
+        L1_MNT_ADDRESS = l1mnt;
         initialize();
     }
 
@@ -69,8 +70,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         if (_mntAmount!=0){
-            IERC20(BridgeConstants.L1_MNT).safeTransferFrom(msg.sender,address(this) ,_mntAmount);
-            bool success = IERC20(BridgeConstants.L1_MNT).approve(BridgeConstants.OPTIMISM_PORTAL ,_mntAmount);
+            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender,address(this) ,_mntAmount);
+            bool success = IERC20(L1_MNT_ADDRESS).approve(address(PORTAL) ,_mntAmount);
             require(success,"the approve for L1 mnt to OptimismPortal failed");
         }
 
@@ -209,7 +210,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
         bool mntSuccess = true;
         if (_mntValue!=0){
-            mntSuccess = IERC20(BridgeConstants.L1_MNT).approve(_target,_mntValue);
+            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target,_mntValue);
         }
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _ethValue, _message);

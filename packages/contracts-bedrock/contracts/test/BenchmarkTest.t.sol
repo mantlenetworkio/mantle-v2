@@ -7,7 +7,6 @@ import { Vm } from "forge-std/Vm.sol";
 import "./CommonTest.t.sol";
 import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
-import { BridgeConstants } from "../libraries/BridgeConstants.sol";
 // Free function for setting the prevBaseFee param in the OptimismPortal.
 function setPrevBaseFee(
     Vm _vm,
