@@ -9,10 +9,10 @@ import (
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
 
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
+
+	"github.com/ethereum/go-ethereum/log"
 )
 
 const POLLING_INTERVAL = 30 * time.Second
@@ -108,7 +108,7 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 				"Confirmed", dataStore.Confirmed,
 				"ConfirmTxHash", dataStore.ConfirmTxHash)
 			if !dataStore.Confirmed {
-				log.Info("This batch is not confirmed")
+				log.Warn("This batch is not confirmed")
 				continue
 			}
 			frames, err := mda.getFramesByDataStoreId(dataStoreId)

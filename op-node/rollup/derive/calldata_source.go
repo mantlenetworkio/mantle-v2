@@ -168,12 +168,12 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
-		log.Error("Abi new uint32 type error", "err", err)
+		log.Warn("Abi new uint32 type error", "err", err)
 		return nil
 	}
 	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
 	if err != nil {
-		log.Error("Abi new bytes32 type error", "err", err)
+		log.Warn("Abi new bytes32 type error", "err", err)
 		return nil
 	}
 	confirmDataStoreArgs := abi.Arguments{
@@ -187,35 +187,44 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 			Indexed: false,
 		},
 	}
-	var dlsmData = make(map[string]interface{})
+	var dataStoreData = make(map[string]interface{})
 	for _, receipt := range receipts {
-		for _, rlog := range receipt.Logs {
-			if rlog.Topics[0] == ConfirmDataStoreEventABIHash {
-				if len(rlog.Data) > 0 {
-					err := confirmDataStoreArgs.UnpackIntoMap(dlsmData, rlog.Data)
+		for _, rLog := range receipt.Logs {
+			if rLog.Address.String() != config.DataLayrServiceManagerAddr {
+				continue
+			}
+			if rLog.Topics[0] != ConfirmDataStoreEventABIHash {
+				continue
+			}
+			log.Info("Data layer service manager address and Confirm dataStore event ABI hash",
+				"DataLayrServiceManagerAddr", rLog.Address.String(),
+				"AbiHash", rLog.Topics[0],
+			)
+			if len(rLog.Data) > 0 {
+				err := confirmDataStoreArgs.UnpackIntoMap(dataStoreData, rLog.Data)
+				if err != nil {
+					log.Error("Unpack data into map fail", "err", err)
+					continue
+				}
+				if dataStoreData != nil {
+					dataStoreId := dataStoreData["dataStoreId"].(uint32)
+					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
+					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
 					if err != nil {
-						log.Error("unpack data into map fail", "err", err)
+						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
 						continue
 					}
+					log.Info("Retrieval frames from mantle da success", "daFrames length", len(daFrames), "dataStoreId", dataStoreId)
+					err = rlp.DecodeBytes(daFrames, &out)
+					if err != nil {
+						log.Error("Decode retrieval frames in error", "err", err)
+						continue
+					}
+					log.Info("Decode bytes success", "out length", len(out), "dataStoreId", dataStoreId)
 				}
+				return out
 			}
 		}
 	}
-	if len(dlsmData) > 0 {
-		dataStoreId := dlsmData["dataStoreId"].(uint32)
-		log.Info("Parse confirmed dataStoreId success", "dataStoreId", dlsmData["dataStoreId"].(uint32))
-		// fetch frame by dataStoreId
-		daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
-		if err != nil {
-			log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
-			return nil
-		}
-		err = rlp.DecodeBytes(daFrames, &out)
-		if err != nil {
-			log.Error("Decode retrieval frames in error", "err", err)
-			return nil
-		}
-		log.Info("Decode bytes success", "out length", len(out))
-	}
-	return out
+	return nil
 }
