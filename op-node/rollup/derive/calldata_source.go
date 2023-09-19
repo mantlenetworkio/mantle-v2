@@ -4,18 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-
+	"github.com/ethereum-optimism/optimism/l2geth/rlp"
+	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-
-	"github.com/ethereum-optimism/optimism/l2geth/rlp"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"io"
 )
 
 var (
@@ -76,6 +74,7 @@ type DataSource struct {
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
 func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, block eth.BlockID, batcherAddr common.Address) DataIter {
 	if cfg.MantleDaSwitch {
+		log.Info("Derived by mantle da", "MantleDaSwitch", cfg.MantleDaSwitch)
 		_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
 		if err != nil {
 			return &DataSource{
@@ -167,6 +166,7 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 
 func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
 	var out []eth.Data
+	log.Info("start enter to DataFromMantleDa function")
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
 		log.Error("Abi new uint32 type error", "err", err)
@@ -190,9 +190,6 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	}
 	var dlsmData = make(map[string]interface{})
 	for _, receipt := range receipts {
-		if receipt.ContractAddress.String() != config.DataLayrServiceManagerAddr {
-			continue
-		}
 		for _, rlog := range receipt.Logs {
 			if rlog.Topics[0] == ConfirmDataStoreEventABIHash {
 				if len(rlog.Data) > 0 {
@@ -207,16 +204,19 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	}
 	if len(dlsmData) > 0 {
 		dataStoreId := dlsmData["dataStoreId"].(uint32)
+		log.Info("Parse confirmed dataStoreId success", "dataStoreId", dlsmData["dataStoreId"].(uint32))
 		// fetch frame by dataStoreId
 		daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
 		if err != nil {
-			log.Error("retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
+			log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
+			return nil
 		}
 		err = rlp.DecodeBytes(daFrames, &out)
 		if err != nil {
-			log.Error("decode retrieval frames in error", "err", err)
+			log.Error("Decode retrieval frames in error", "err", err)
 			return nil
 		}
+		log.Info("Decode bytes success", "out length", len(out))
 	}
 	return out
 }

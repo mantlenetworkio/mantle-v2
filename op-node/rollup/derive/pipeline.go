@@ -3,9 +3,8 @@ package derive
 import (
 	"context"
 	"fmt"
-	"io"
-
 	"github.com/ethereum/go-ethereum/log"
+	"io"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"

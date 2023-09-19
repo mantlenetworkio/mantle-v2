@@ -15,10 +15,13 @@ import (
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
 )
 
+const POLLING_INTERVAL = 500 * time.Millisecond
+
 type MantleDataStoreConfig struct {
-	RetrieverSocket  string
-	RetrieverTimeout time.Duration
-	GraphProvider    string
+	RetrieverSocket          string
+	RetrieverTimeout         time.Duration
+	GraphProvider            string
+	DataStorePollingDuration time.Duration
 }
 
 type MantleDataStore struct {
@@ -52,9 +55,13 @@ func (mda *MantleDataStore) getDataStoreById(dataStoreId uint32) (*graphView.Dat
 		log.Error("Query subgraph fail", "err", err)
 		return nil, err
 	}
+	log.Debug("Query dataStore success",
+		"DurationDataStoreId", query.DataStore.DurationDataStoreId,
+		"Confirmed", query.DataStore.Confirmed,
+		"ConfirmTxHash", query.DataStore.ConfirmTxHash)
 	dataStore, err := query.DataStore.Convert()
 	if err != nil {
-		log.Error("DataStoreGql convert to DataStore fail", "err", err)
+		log.Warn("DataStoreGql convert to DataStore fail", "err", err)
 		return nil, err
 	}
 	return dataStore, nil
@@ -77,25 +84,45 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
 	}
+	log.Debug("Get reply data success", "reply length", len(reply.GetData()))
 	return reply.GetData(), nil
 }
 
 func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error) {
-	if dataStoreId <= 0 {
-		return nil, errors.New("dataStoreId less than 0")
+	exit := time.NewTimer(mda.Cfg.DataStorePollingDuration)
+	ticker := time.NewTicker(POLLING_INTERVAL)
+	for {
+		select {
+		case <-ticker.C:
+			if dataStoreId <= 0 {
+				log.Error("DataStoreId less than zero", "dataStoreId", dataStoreId)
+				return nil, errors.New("dataStoreId less than 0")
+			}
+			dataStore, err := mda.getDataStoreById(dataStoreId)
+			if err != nil {
+				log.Warn("Get datastore by id fail", "err", err)
+				continue
+			}
+			log.Info("Get dataStore success",
+				"DurationDataStoreId", dataStore.DurationDataStoreId,
+				"Confirmed", dataStore.Confirmed,
+				"ConfirmTxHash", dataStore.ConfirmTxHash)
+			if !dataStore.Confirmed {
+				log.Info("This batch is not confirmed")
+				continue
+			}
+			frames, err := mda.getFramesByDataStoreId(dataStoreId)
+			if err != nil {
+				log.Warn("Get frames fail", "err", err)
+				continue
+			}
+			return frames, nil
+		case <-exit.C:
+			// todo: add metrics in the future
+			return nil, errors.New("Get frame ticker exit")
+		case err := <-mda.Ctx.Done():
+			log.Warn("Retrieval frames from mantle da error", "err", err)
+			return nil, errors.New("Retrieval frames from mantle da error")
+		}
 	}
-	dataStore, err := mda.getDataStoreById(dataStoreId)
-	if err != nil {
-		log.Error("Get datastore fail", "err", err)
-	}
-	if !dataStore.Confirmed {
-		log.Debug("This batch is not confirmed")
-		return nil, errors.New("This batch is not confirmed")
-	}
-	frames, err := mda.getFramesByDataStoreId(dataStoreId)
-	if err != nil {
-		log.Error("Get frames fail", "err", err)
-		return nil, err
-	}
-	return frames, nil
 }

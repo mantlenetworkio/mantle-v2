@@ -171,6 +171,10 @@ func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain
 			return nil, fmt.Errorf("%w: finalized %s, got: %s", ReorgFinalizedErr, result.Finalized, n)
 		}
 		// Check we are not reorging L2 incredibly deep
+		log.Info("L1Origin MaxReorgSeqWindows SeqWindowSize",
+			"n.L1Origin.Number===", n.L1Origin.Number,
+			"MaxReorgSeqWindows*cfg.SeqWindowSize===", MaxReorgSeqWindows*cfg.SeqWindowSize,
+			"prevUnsafe.L1Origin.Number===", prevUnsafe.L1Origin.Number)
 		if n.L1Origin.Number+(MaxReorgSeqWindows*cfg.SeqWindowSize) < prevUnsafe.L1Origin.Number {
 			// If the reorg depth is too large, something is fishy.
 			// This can legitimately happen if L1 goes down for a while. But in that case,

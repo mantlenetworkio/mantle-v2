@@ -88,6 +88,12 @@ var (
 		Required: false,
 		EnvVar:   prefixEnvVar("MANTLE_DA_SWITCH"),
 	}
+	DataStorePollingDurationFlag = cli.DurationFlag{
+		Name:   "da.retriever-timeout",
+		Usage:  "retriever timeout",
+		Value:  120 * time.Second,
+		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
+	}
 
 	/* Optional Flags */
 	L1TrustRPC = cli.BoolFlag{
@@ -266,6 +272,7 @@ var optionalFlags = []cli.Flag{
 	GraphProviderFlag,
 	DataLayrServiceManagerAddrFlag,
 	MantleDaSwitchFlag,
+	DataStorePollingDurationFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
 	MetricsPortFlag,
