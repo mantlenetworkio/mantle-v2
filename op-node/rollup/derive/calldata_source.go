@@ -166,7 +166,6 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 
 func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
 	var out []eth.Data
-	log.Info("start enter to DataFromMantleDa function")
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
 		log.Error("Abi new uint32 type error", "err", err)

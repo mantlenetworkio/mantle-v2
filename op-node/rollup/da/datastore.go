@@ -15,7 +15,7 @@ import (
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
 )
 
-const POLLING_INTERVAL = 500 * time.Millisecond
+const POLLING_INTERVAL = 30 * time.Second
 
 type MantleDataStoreConfig struct {
 	RetrieverSocket          string

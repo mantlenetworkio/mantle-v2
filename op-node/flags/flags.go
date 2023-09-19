@@ -70,28 +70,16 @@ var (
 		Value:  50 * time.Millisecond,
 		EnvVar: prefixEnvVar("RETRIEVER_TIMEOUT"),
 	}
-	DataLayrServiceManagerAddrFlag = cli.StringFlag{
-		Name:     "da.dlsm-address",
-		Usage:    "Address of the dlsm contract",
-		Required: false,
-		EnvVar:   prefixEnvVar("DLSM_ADDRESS"),
-	}
 	GraphProviderFlag = cli.StringFlag{
 		Name:     "da.graph-provider",
 		Usage:    "Graphql endpoint for graph node",
 		Required: false,
 		EnvVar:   prefixEnvVar("GRAPH_PROVIDER"),
 	}
-	MantleDaSwitchFlag = cli.BoolFlag{
-		Name:     "da.mantle-switch",
-		Usage:    "Enable the mantle da rollup",
-		Required: false,
-		EnvVar:   prefixEnvVar("MANTLE_DA_SWITCH"),
-	}
 	DataStorePollingDurationFlag = cli.DurationFlag{
 		Name:   "da.datastore-polling-duration",
 		Usage:  "retriever timeout",
-		Value:  120 * time.Second,
+		Value:  300 * time.Second,
 		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
 	}
 
@@ -270,8 +258,6 @@ var optionalFlags = []cli.Flag{
 	RetrieverSocketFlag,
 	RetrieverTimeoutFlag,
 	GraphProviderFlag,
-	DataLayrServiceManagerAddrFlag,
-	MantleDaSwitchFlag,
 	DataStorePollingDurationFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
