@@ -89,7 +89,7 @@ var (
 		EnvVar:   prefixEnvVar("MANTLE_DA_SWITCH"),
 	}
 	DataStorePollingDurationFlag = cli.DurationFlag{
-		Name:   "da.retriever-timeout",
+		Name:   "da.datastore-polling-duration",
 		Usage:  "retriever timeout",
 		Value:  120 * time.Second,
 		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
