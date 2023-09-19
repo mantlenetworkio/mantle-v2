@@ -809,8 +809,7 @@ contract L1StandardBridge is StandardBridge, Semver {
 
         IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
-        address portal = address(L1CrossDomainMessenger(address(MESSENGER)).PORTAL());
-        bool success = IERC20(_localToken).approve( portal, _amount);
+        bool success = IERC20(_localToken).approve( address(MESSENGER), _amount);
         require(success,"L1StandardBridge: approve for L1 MNT failed. ");
 
 

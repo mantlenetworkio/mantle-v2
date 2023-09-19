@@ -56,6 +56,15 @@ const (
 
 func TestEnv(t *testing.T) {
 	//check l1 mnt token
+	//addressStr := "0xd7f9d102c90b93af52b0cafc42a890936bb5ac36"
+	//t.Log(common.HexToHash(addressStr))
+	//address := common.HexToAddress(addressStr)
+	//t.Log(address.Hash())
+	//hexAmount := common.Bytes2Hex(big.NewInt(1000).Bytes())
+	//t.Log(common.HexToHash(hexAmount))
+	//
+	//return
+
 	a := getETHBalanceFromL2(t, "0x4200000000000000000000000000000000000007")
 	t.Logf("a : %v", a)
 
@@ -78,9 +87,9 @@ func TestEnv(t *testing.T) {
 
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
-	//TestERC20DepositAndWithdrawal(t)
+	TestERC20DepositAndWithdrawal(t)
 	TestMNTDepositAndWithdrawal(t)
-	//TestETHDepositAndWithdrawal(t)
+	TestETHDepositAndWithdrawal(t)
 }
 
 func checkBalance(t *testing.T) *big.Int {
