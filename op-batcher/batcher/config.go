@@ -1,7 +1,6 @@
 package batcher
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
@@ -61,8 +60,6 @@ type Config struct {
 
 	// Channel builder parameters
 	Channel ChannelConfig
-
-	PrivateKey *ecdsa.PrivateKey
 }
 
 // Check ensures that the [Config] is valid.

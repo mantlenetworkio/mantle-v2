@@ -8,11 +8,9 @@ import (
 	"github.com/Layr-Labs/datalayr/common/logging"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"io"
 	"math/big"
 	_ "net/http/pprof"
-	"strings"
 	"sync"
 	"time"
 
@@ -76,14 +74,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, fmt.Errorf("querying rollup config: %w", err)
 	}
 
-	cfg.TxMgrConfig.PrivateKey = "8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"
-
 	txManager, err := txmgr.NewSimpleTxManager("batcher", l, m, cfg.TxMgrConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	privKey, err := crypto.HexToECDSA(strings.TrimPrefix("8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba", "0x"))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +100,6 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
-		PrivateKey: privKey,
 	}
 
 	// Validate the batcher config

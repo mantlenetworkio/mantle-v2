@@ -8,11 +8,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -161,60 +160,23 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 		return nil, err
 	}
 
-	//TODO
-	walletA := crypto.PubkeyToAddress(l.PrivateKey.PublicKey)
-	nonce64, err := l.L1Client.NonceAt(
-		ctx, walletA, nil,
+	txdata, err := l.DataStoreTxData(
+		l.DataLayrServiceManagerABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
 	)
 	if err != nil {
 		return nil, err
 	}
-	nonce := new(big.Int).SetUint64(nonce64)
-	var opts *bind.TransactOpts
-	chainId, err := l.L1Client.ChainID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	opts, err = bind.NewKeyedTransactorWithChainID(
-		l.PrivateKey, chainId,
-	)
 
+	candiddate := txmgr.TxCandidate{
+		To:     &l.DataLayrServiceManagerAddr,
+		TxData: txdata,
+	}
+	receipt, err := l.txMgr.Send(ctx, candiddate)
 	if err != nil {
 		return nil, err
 	}
-	opts.Context = ctx
-	opts.Nonce = nonce
-	opts.NoSend = true
-	opts.GasTipCap = big.NewInt(1500000000)
-	tx, err := l.DataLayrServiceManagerContract.InitDataStore(opts, walletA, walletA, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex, uploadHeader)
-	if err != nil {
-		return nil, err
-	}
-	return l.txMgr.SendTx(ctx, tx)
 
-	//txdata, err := l.DataStoreTxData(
-	//	l.DataLayrServiceManagerABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
-	//)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//candiddate := txmgr.TxCandidate{
-	//	To:       &l.DataLayrServiceManagerAddr,
-	//	TxData:   txdata,
-	//	GasLimit: intrinsicGas,
-	//}
-	//receipt, err := l.txMgr.Send(ctx, candiddate)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//return receipt, nil
+	return receipt, nil
 }
 
 func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
@@ -344,51 +306,16 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 		},
 	}
 
-	//TODO
-	walletA := crypto.PubkeyToAddress(l.PrivateKey.PublicKey)
-	nonce64, err := l.L1Client.NonceAt(
-		ctx, walletA, nil,
-	)
+	txdata, err := l.ConfirmDataTxData(l.DataLayrServiceManagerABI, callData, searchData)
 	if err != nil {
 		return nil, err
 	}
-	nonce := new(big.Int).SetUint64(nonce64)
-	var opts *bind.TransactOpts
-	chainId, err := l.L1Client.ChainID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	opts, err = bind.NewKeyedTransactorWithChainID(
-		l.PrivateKey, chainId,
-	)
 
-	if err != nil {
-		return nil, err
+	candiddate := txmgr.TxCandidate{
+		To:     &l.DataLayrServiceManagerAddr,
+		TxData: txdata,
 	}
-	opts.Context = ctx
-	opts.Nonce = nonce
-	opts.NoSend = true
-	opts.GasTipCap = big.NewInt(1500000000)
-	tx, err := l.DataLayrServiceManagerContract.ConfirmDataStore(opts, callData, searchData)
-	if err != nil {
-		return nil, err
-	}
-	return l.txMgr.SendTx(ctx, tx)
-
-	//txdata, err := l.ConfirmDataTxData(l.DataLayrServiceManagerABI, callData, searchData)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//intrinsicGas, err := core.IntrinsicGas(txdata, nil, false, true, true, false)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//candiddate := txmgr.TxCandidate{
-	//	To:       &l.DataLayrServiceManagerAddr,
-	//	TxData:   txdata,
-	//	GasLimit: intrinsicGas,
-	//}
-	//return l.txMgr.Send(ctx, candiddate)
+	return l.txMgr.Send(ctx, candiddate)
 }
 
 func (l *BatchSubmitter) ConfirmDataTxData(abi *abi.ABI, callData []byte, searchData bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
