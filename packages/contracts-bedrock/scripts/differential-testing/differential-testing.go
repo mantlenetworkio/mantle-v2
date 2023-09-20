@@ -151,8 +151,9 @@ func main() {
 		checkOk(ok)
 		data := common.FromHex(args[8])
 
+		ethvalue := big.NewInt(0)
 		// Create deposit transaction
-		depositTx := makeDepositTx(from, to, value, mint, gasLimit, false, data, l1BlockHash, logIndex)
+		depositTx := makeDepositTx(from, to, value, mint, ethvalue, gasLimit, false, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -181,8 +182,8 @@ func main() {
 		l1BlockHash := common.HexToHash(args[8])
 		logIndex, ok := new(big.Int).SetString(args[9], 10)
 		checkOk(ok)
-
-		depositTx := makeDepositTx(from, to, value, mint, gasLimit, isCreate, data, l1BlockHash, logIndex)
+		ethValue := big.NewInt(0)
+		depositTx := makeDepositTx(from, to, value, mint, ethValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -198,14 +199,15 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
 		gasLimit, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
 		data := common.FromHex(args[6])
 
+		ethValue := big.NewInt(0)
 		// Hash withdrawal
-		hash, err := hashWithdrawal(nonce, sender, target, value, gasLimit, data)
+		hash, err := hashWithdrawal(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error hashing withdrawal")
 
 		// Pack hash
@@ -235,13 +237,15 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
 		gasLimit, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
 		data := common.FromHex(args[6])
 
-		wdHash, err := hashWithdrawal(nonce, sender, target, value, gasLimit, data)
+		ethValue := big.NewInt(0)
+
+		wdHash, err := hashWithdrawal(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error hashing withdrawal")
 
 		// Compute the storage slot the withdrawalHash will be stored in

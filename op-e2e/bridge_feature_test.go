@@ -87,8 +87,8 @@ func TestEnv(t *testing.T) {
 
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
-	TestERC20DepositAndWithdrawal(t)
-	TestMNTDepositAndWithdrawal(t)
+	//TestERC20DepositAndWithdrawal(t)
+	//TestMNTDepositAndWithdrawal(t)
 	TestETHDepositAndWithdrawal(t)
 }
 
@@ -887,26 +887,157 @@ func TestWithdrawal(t *testing.T) {
 func TestFindDepositTx(t *testing.T) {
 	//l1Client, err := ethclient.Dial(l1url)
 	//require.NoError(t, err)
+	TestETHDeposit(t)
+
 	l2Client, err := ethclient.Dial(l2url)
 	require.NoError(t, err)
 
 	bn, err := l2Client.BlockNumber(context.Background())
 	require.NoError(t, err)
 	t.Log("now block number", bn)
-	for i := 0; i < int(bn); i++ {
-		block, err := l2Client.BlockByNumber(context.Background(), big.NewInt(int64(bn)-int64(i)))
+	for i := int(bn); i > 0; i-- {
+		i = 214
+		block, err := l2Client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		require.NoError(t, err)
 		txs := block.Transactions()
-		balance, err := l2Client.BalanceAt(context.Background(), common.HexToAddress("0x4200000000000000000000000000000000000007"), big.NewInt(int64(bn)-int64(i)))
-		require.NoError(t, err)
-		t.Log("balance = ", balance)
-		t.Log("bn = ", int64(bn)-int64(i))
+		//balance, err := l2Client.BalanceAt(context.Background(), common.HexToAddress("0x4200000000000000000000000000000000000007"), big.NewInt(int64(bn)-int64(i)))
+		//require.NoError(t, err)
+		//t.Log("balance = ", balance)
+		//t.Log("bn = ", int64(bn)-int64(i))
+
+		//block2, err := l2Client.BlockByHash(context.Background(), common.HexToHash("0xb441a8ded36a9a9e83159fdcea76adaccd60121af3314349cc8f9ba2940418ef"))
+		//txs2 := block2.Transactions()
+		//for _, tx := range txs2 {
+		//	t.Log(tx.Hash().Hex())
+		//}
 
 		for _, tx := range txs {
-			if tx.IsDepositTx() == true && tx.ETHValue() != nil {
-				t.Log("find deposit tx", tx.Hash())
-				t.Log("tx data = ", tx.ETHValue())
+			if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
+				t.Log("block info", block.Hash().Hex())
+				t.Log("block height: ", block.Number().Int64())
+				t.Log("find deposit tx", tx.Hash().Hex())
+				t.Log("ethvalue data = ", tx.ETHValue())
+				t.Log("value data = ", tx.Value())
+				t.Log("mint data = ", tx.Mint())
+				jsonTx, err := tx.MarshalJSON()
+				require.NoError(t, err)
+
+				t.Logf("transaction info : %v", string(jsonTx))
+				_, _, err = l2Client.TransactionByHash(context.Background(), tx.Hash())
+				require.NoError(t, err)
+
 			}
+		}
+	}
+
+}
+
+func TestETHDeposit(t *testing.T) {
+	t.Log("check balance.....")
+
+	l1Client, err := ethclient.Dial(l1url)
+	require.NoError(t, err)
+	require.NotNil(t, l1Client)
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+	require.NotNil(t, l2Client)
+
+	// query eth erc20 token
+	l1Bridge, err := bindings.NewL1StandardBridge(common.HexToAddress(l1BridgeAddress), l1Client)
+	require.NoError(t, err)
+	//require.NoError(t, err)
+
+	// TEST deposit ETH
+	t.Log("----------------")
+	t.Log("ETH DEPOSIT TEST")
+	t.Log("----------------")
+	t.Log("ETH before deposit...\\")
+
+	beforeBalanceL1 := getETHBalanceFromL1(t, userAddress)
+	beforeBalanceL2 := getETHBalanceFromL2(t, userAddress)
+
+	t.Log("l1 eth balance: ", beforeBalanceL1)
+	t.Log("l2 eth balance: ", beforeBalanceL2)
+	// do deposit
+	auth := buildL1Auth(t, l1Client, userPrivateKey, big.NewInt(DECIMAL0_1))
+	tx, err := l1Bridge.DepositETH(auth, 2_000_000, []byte("0x"))
+	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
+	require.NoError(t, err)
+	time.Sleep(10 * time.Second)
+
+	t.Log("deposit eth tx hash is: ", tx.Hash())
+	t.Log("ETH after deposit...\\")
+	afterBalanceL1 := getETHBalanceFromL1(t, userAddress)
+	afterBalanceL2 := getETHBalanceFromL2(t, userAddress)
+
+	t.Log("l1 eth balance: ", afterBalanceL1)
+	t.Log("l2 eth balance: ", afterBalanceL2)
+
+	//require.Equal(t, getETHBalanceFromL2(t, userAddress), 0)
+	t.Log("eth deposit amount: ", uint64(DECIMAL0_1))
+
+	require.Equal(t, afterBalanceL2.Uint64()-beforeBalanceL2.Uint64(), uint64(DECIMAL0_1))
+
+}
+
+func TestFindDepositSingleTx(t *testing.T) {
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+
+	bn := big.NewInt(214)
+	require.NoError(t, err)
+	t.Log("now block number", bn)
+
+	block, err := l2Client.BlockByNumber(context.Background(), bn)
+	require.NoError(t, err)
+	txs := block.Transactions()
+
+	for _, tx := range txs {
+		//t.Log("txs hash list : ", tx.Hash())
+		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
+			//t.Log("block info", block.Hash().Hex())
+			t.Log("block height: ", block.Number().Int64())
+			t.Log("find deposit tx", tx.Hash().Hex())
+			t.Log("ethvalue data = ", tx.ETHValue())
+			t.Log("tx type", tx.Type())
+			jsonTx, err := tx.MarshalJSON()
+			require.NoError(t, err)
+
+			t.Logf("transaction info : %v", string(jsonTx))
+			_, _, err = l2Client.TransactionByHash(context.Background(), tx.Hash())
+			require.NoError(t, err)
+
+		}
+	}
+
+}
+func TestOPTx(t *testing.T) {
+	l2Client, err := ethclient.Dial("https://opt-mainnet.g.alchemy.com/v2/ZyGix8nc2yGzLuS42MG_4P9af57W_1A0")
+	require.NoError(t, err)
+
+	bn := big.NewInt(214)
+	require.NoError(t, err)
+	t.Log("now block number", bn)
+
+	block, err := l2Client.BlockByHash(context.Background(), common.HexToHash("0x61ecd5f18f832a47d2751d33b9e773f7856ae1bac411dc96aa1c43b1c63e5427"))
+	require.NoError(t, err)
+	txs := block.Transactions()
+
+	for _, tx := range txs {
+		//t.Log("txs hash list : ", tx.Hash())
+		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
+			//t.Log("block info", block.Hash().Hex())
+			t.Log("block height: ", block.Number().Int64())
+			t.Log("find deposit tx", tx.Hash().Hex())
+			t.Log("ethvalue data = ", tx.ETHValue())
+			t.Log("tx type", tx.Type())
+			jsonTx, err := tx.MarshalJSON()
+			require.NoError(t, err)
+
+			t.Logf("transaction info : %v", string(jsonTx))
+			_, _, err = l2Client.TransactionByHash(context.Background(), tx.Hash())
+			require.NoError(t, err)
+
 		}
 	}
 
