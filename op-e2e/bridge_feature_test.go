@@ -55,15 +55,6 @@ const (
 )
 
 func TestEnv(t *testing.T) {
-	//check l1 mnt token
-	//addressStr := "0xd7f9d102c90b93af52b0cafc42a890936bb5ac36"
-	//t.Log(common.HexToHash(addressStr))
-	//address := common.HexToAddress(addressStr)
-	//t.Log(address.Hash())
-	//hexAmount := common.Bytes2Hex(big.NewInt(1000).Bytes())
-	//t.Log(common.HexToHash(hexAmount))
-	//
-	//return
 
 	a := getETHBalanceFromL2(t, "0x4200000000000000000000000000000000000007")
 	t.Logf("a : %v", a)
@@ -887,7 +878,6 @@ func TestWithdrawal(t *testing.T) {
 func TestFindDepositTx(t *testing.T) {
 	//l1Client, err := ethclient.Dial(l1url)
 	//require.NoError(t, err)
-	TestETHDeposit(t)
 
 	l2Client, err := ethclient.Dial(l2url)
 	require.NoError(t, err)
@@ -896,21 +886,9 @@ func TestFindDepositTx(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("now block number", bn)
 	for i := int(bn); i > 0; i-- {
-		i = 214
 		block, err := l2Client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		require.NoError(t, err)
 		txs := block.Transactions()
-		//balance, err := l2Client.BalanceAt(context.Background(), common.HexToAddress("0x4200000000000000000000000000000000000007"), big.NewInt(int64(bn)-int64(i)))
-		//require.NoError(t, err)
-		//t.Log("balance = ", balance)
-		//t.Log("bn = ", int64(bn)-int64(i))
-
-		//block2, err := l2Client.BlockByHash(context.Background(), common.HexToHash("0xb441a8ded36a9a9e83159fdcea76adaccd60121af3314349cc8f9ba2940418ef"))
-		//txs2 := block2.Transactions()
-		//for _, tx := range txs2 {
-		//	t.Log(tx.Hash().Hex())
-		//}
-
 		for _, tx := range txs {
 			if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
 				t.Log("block info", block.Hash().Hex())
@@ -991,7 +969,6 @@ func TestFindDepositSingleTx(t *testing.T) {
 	block, err := l2Client.BlockByNumber(context.Background(), bn)
 	require.NoError(t, err)
 	txs := block.Transactions()
-
 	for _, tx := range txs {
 		//t.Log("txs hash list : ", tx.Hash())
 		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
@@ -1041,4 +1018,16 @@ func TestOPTx(t *testing.T) {
 		}
 	}
 
+}
+
+func TestTx(t *testing.T) {
+	l2Client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
+
+	bn := big.NewInt(214)
+	require.NoError(t, err)
+	t.Log("now block number", bn)
+	tx, _, err := l2Client.TransactionByHash(context.Background(), common.HexToHash("0xf9bef38d02729976f8550c692a09f7270cad6769ec8e256d7058cfdbe662f55e"))
+	t.Log("ethvalue data = ", tx.ETHValue())
+	t.Log(tx.MarshalJSON())
 }
