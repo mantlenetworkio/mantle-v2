@@ -398,7 +398,7 @@ func main() {
 					}
 
 					// Ensure that the target's balance was increasedData correctly
-					wdValue, err := wd.Value()
+					wdValue, err := wd.ETHValue()
 					if err != nil {
 						return err
 					}

@@ -234,7 +234,7 @@ func findCrossDomainMessage(receipt *types.Receipt) (*crossdomain.CrossDomainMes
 		// Parse the new extension event
 		if event.Name == "SentMessageExtension1" {
 			e, _ := l2xdm.ParseSentMessageExtension1(*log)
-			msg.Value = e.Value
+			msg.Value = e.EthValue
 		}
 	}
 	if seen {

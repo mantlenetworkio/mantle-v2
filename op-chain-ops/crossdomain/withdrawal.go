@@ -38,17 +38,17 @@ type Withdrawal struct {
 func NewWithdrawal(
 	nonce *big.Int,
 	sender, target *common.Address,
-	mntvalue, ethvalue, gasLimit *big.Int,
+	mntValue, ethValue, gasLimit *big.Int,
 	data []byte,
 ) *Withdrawal {
 	return &Withdrawal{
 		Nonce:    nonce,
 		Sender:   sender,
 		Target:   target,
-		MNTValue: mntvalue,
-		ETHValue: ethvalue,
+		MNTValue: mntValue,
+		ETHValue: ethValue,
 		GasLimit: gasLimit,
-		Data:     hexutil.Bytes(data),
+		Data:     data,
 	}
 }
 
