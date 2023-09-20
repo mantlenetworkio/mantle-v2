@@ -22,6 +22,11 @@ const deployFn: DeployFunction = async (hre) => {
     'SystemConfigProxy'
   )
 
+  const Proxy__L1MantleToken = await getContractFromArtifact(
+    hre,
+    'Proxy__L1MantleToken'
+  )
+
   const portalGuardian = hre.deployConfig.portalGuardian
   const portalGuardianCode = await hre.ethers.provider.getCode(portalGuardian)
   if (portalGuardianCode === '0x') {
@@ -48,6 +53,7 @@ const deployFn: DeployFunction = async (hre) => {
       portalGuardian,
       true, // paused
       Artifact__SystemConfigProxy.address,
+      Proxy__L1MantleToken.address
     ],
     postDeployAction: async (contract) => {
       await assertContractVariable(
@@ -64,6 +70,11 @@ const deployFn: DeployFunction = async (hre) => {
         contract,
         'SYSTEM_CONFIG',
         Artifact__SystemConfigProxy.address
+      )
+      await assertContractVariable(
+        contract,
+        'L1_MNT_ADDRESS',
+        Proxy__L1MantleToken.address
       )
     },
   })

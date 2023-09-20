@@ -13,12 +13,16 @@ const deployFn: DeployFunction = async (hre) => {
     hre,
     'Proxy__OVM_L1CrossDomainMessenger'
   )
+  const Proxy__L1MantleToken = await getContractFromArtifact(
+    hre,
+    'Proxy__L1MantleToken'
+  )
 
   await sleep(6000)
   await deploy({
     hre,
     name: 'L1StandardBridge',
-    args: [L1CrossDomainMessengerProxy.address],
+    args: [L1CrossDomainMessengerProxy.address, Proxy__L1MantleToken.address],
     postDeployAction: async (contract) => {
       await assertContractVariable(
         contract,
@@ -29,6 +33,11 @@ const deployFn: DeployFunction = async (hre) => {
         contract,
         'OTHER_BRIDGE',
         predeploys.L2StandardBridge
+      )
+      await assertContractVariable(
+        contract,
+        'L1_MNT_ADDRESS',
+        Proxy__L1MantleToken.address
       )
     },
   })
