@@ -81,9 +81,7 @@ contract L2ToL1MessagePasser is Semver {
      * @notice Allows users to withdraw MNT by sending directly to this contract.
      */
     receive() external payable {
-        //TODO change this
-        revert("");
-        initiateWithdrawal(msg.value,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
+        initiateWithdrawal(0,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
     /**
@@ -113,6 +111,7 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
+
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
