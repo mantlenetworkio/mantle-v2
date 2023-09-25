@@ -78,8 +78,8 @@ func TestEnv(t *testing.T) {
 
 func TestMainProcess(t *testing.T) {
 	TestEnv(t)
-	//TestERC20DepositAndWithdrawal(t)
-	//TestMNTDepositAndWithdrawal(t)
+	TestERC20DepositAndWithdrawal(t)
+	TestMNTDepositAndWithdrawal(t)
 	TestETHDepositAndWithdrawal(t)
 }
 
@@ -244,7 +244,7 @@ func TestETHDepositAndWithdrawal(t *testing.T) {
 	tx, err := l1Bridge.DepositETH(auth, 2_000_000, []byte("0x"))
 	_, err = waitForTransaction(tx.Hash(), l1Client, 100*time.Second)
 	require.NoError(t, err)
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	t.Log("deposit eth tx hash is: ", tx.Hash())
 	t.Log("ETH after deposit...\\")
