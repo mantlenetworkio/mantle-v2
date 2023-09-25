@@ -181,6 +181,14 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 		return nil, fmt.Errorf("cannot set legacy MNT: %w", err)
 	}
 
+	// We need to update the code for BVM_ETH. This is NOT a standard predeploy because it's
+	// deployed at the 0xdeaddeaddead... address and therefore won't be updated by the previous
+	// function call to SetImplementations.
+	log.Info("Updating code for BVM_ETH")
+	if err := SetLegacyBVMETH(db, storage, immutable); err != nil {
+		return nil, fmt.Errorf("cannot set BVM_ETH: %w", err)
+	}
+
 	// Now we migrate legacy withdrawals from the LegacyMessagePasser contract to their new format
 	// in the Bedrock L2ToL1MessagePasser contract. Note that we do NOT delete the withdrawals from
 	// the LegacyMessagePasser contract. Here we operate on the list of withdrawals that we

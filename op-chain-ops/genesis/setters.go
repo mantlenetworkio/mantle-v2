@@ -156,6 +156,15 @@ func SetLegacyMNT(db vm.StateDB, storage state.StorageConfig, immutable immutabl
 	return setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
 }
 
+func SetLegacyBVMETH(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
+	deployResults, err := immutables.BuildOptimism(immutable)
+	if err != nil {
+		return err
+	}
+
+	return setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
+}
+
 // SetImplementations will set the implementations of the contracts in the state
 // and configure the proxies to point to the implementations. It also sets
 // the appropriate storage values for each contract at the proxy address.
