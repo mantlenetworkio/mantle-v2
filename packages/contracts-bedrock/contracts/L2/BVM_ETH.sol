@@ -26,7 +26,7 @@ contract BVM_ETH is OptimismMintableERC20 {
         virtual
         override
     {
-        revert("BVM_ETH: mint is disabled pending further community discussion.");
+        revert("BVM_ETH: mint is disabled by normal contract calling. BVM_ETH mint can only be triggered in deposit transaction execution, similar to MNT mint on L2.");
     }
 
     /**
