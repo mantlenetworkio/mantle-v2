@@ -28,5 +28,29 @@ contract BVM_ETH is OptimismMintableERC20 {
     {
         revert("BVM_ETH: mint is disabled pending further community discussion.");
     }
+
+    /**
+ * @notice A modifier that only allows the bridge to call
+     */
+    modifier onlyL2Passer() {
+        require(msg.sender == 0x4200000000000000000000000000000000000016 , "OptimismMintableERC20: only L2MessagePasser can burn");
+        _;
+    }
+
+    /**
+    * @notice Allows the StandardBridge on this network to burn tokens.
+     *
+     * @param _from   Address to burn tokens from.
+     * @param _amount Amount of tokens to burn.
+     */
+    function burn(address _from, uint256 _amount)
+        external
+        virtual
+        override
+        onlyL2Passer
+    {
+        _burn(_from, _amount);
+        emit Burn(_from, _amount);
+    }
 }
 
