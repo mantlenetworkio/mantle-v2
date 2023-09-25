@@ -93,8 +93,6 @@ contract L2ToL1MessagePasser is Semver {
     function burn() external {
         uint256 balance = address(this).balance;
         Burn.mnt(balance);
-        uint256 ethBalance = IERC20(Predeploys.BVM_ETH).balanceOf(address(this));
-        OptimismMintableERC20(Predeploys.BVM_ETH).burn(address(this),ethBalance);
         emit WithdrawerBalanceBurnt(balance);
     }
 
@@ -111,6 +109,9 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
+        if (_ethValue!=0){
+            OptimismMintableERC20(Predeploys.BVM_ETH).burn(Predeploys.L2_CROSS_DOMAIN_MESSENGER,_ethValue);
+        }
 
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
