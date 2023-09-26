@@ -171,12 +171,12 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
 		log.Warn("Abi new uint32 type error", "err", err)
-		return nil
+		return out
 	}
 	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
 	if err != nil {
 		log.Warn("Abi new bytes32 type error", "err", err)
-		return nil
+		return out
 	}
 	confirmDataStoreArgs := abi.Arguments{
 		{
@@ -211,7 +211,7 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 				if dataStoreData != nil {
 					dataStoreId := dataStoreData["dataStoreId"].(uint32)
 					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
-					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
+					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId - 1)
 					if err != nil {
 						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
 						continue
@@ -228,5 +228,5 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 			}
 		}
 	}
-	return nil
+	return out
 }

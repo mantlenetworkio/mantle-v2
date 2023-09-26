@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-const POLLING_INTERVAL = 30 * time.Second
+const POLLING_INTERVAL = 1 * time.Second
 
 type MantleDataStoreConfig struct {
 	RetrieverSocket          string

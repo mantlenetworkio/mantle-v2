@@ -79,7 +79,7 @@ var (
 	DataStorePollingDurationFlag = cli.DurationFlag{
 		Name:   "da.datastore-polling-duration",
 		Usage:  "retriever timeout",
-		Value:  768 * time.Second,
+		Value:  120 * time.Second,
 		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
 	}
 
