@@ -486,8 +486,6 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual {
-        require(_localToken!=Predeploys.BVM_ETH && _localToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
-        require(_localToken!=Predeploys.LEGACY_ERC20_MNT && _remoteToken!=Predeploys.LEGACY_ERC20_MNT,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),

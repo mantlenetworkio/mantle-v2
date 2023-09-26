@@ -307,6 +307,58 @@ contract L2StandardBridge is StandardBridge, Semver {
             _minGasLimit
         );
     }
+
+    /**
+ * @notice Sends ERC20 tokens to a receiver's address on the other chain.
+     *
+     * @param _localToken  Address of the ERC20 on this chain.
+     * @param _remoteToken Address of the corresponding token on the remote chain.
+     * @param _to          Address of the receiver.
+     * @param _amount      Amount of local tokens to deposit.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function _initiateBridgeERC20(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal override {
+        require(_localToken!=Predeploys.BVM_ETH || _remoteToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
+        require(_localToken!=Predeploys.LEGACY_ERC20_MNT || _localToken!=L1_MNT_ADDRESS,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
+        require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),"StandardBridge: wrong remote token for Optimism Mintable ERC20 local token" );
+
+
+        OptimismMintableERC20(_localToken).burn(_from, _amount);
+
+
+        // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
+        // contracts may override this function in order to emit legacy events as well.
+        _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+
+        MESSENGER.sendMessage(
+            0,
+            address(OTHER_BRIDGE),
+            abi.encodeWithSelector(
+                this.finalizeBridgeERC20.selector,
+                // Because this call will be executed on the remote chain, we reverse the order of
+                // the remote and local token addresses relative to their order in the
+                // finalizeBridgeERC20 function.
+                _remoteToken,
+                _localToken,
+                _from,
+                _to,
+                _amount,
+                _extraData
+            ),
+            _minGasLimit
+        );
+    }
     /**
      * @notice Emits the legacy WithdrawalInitiated event followed by the ETHBridgeInitiated event.
      *         This is necessary for backwards compatibility with the legacy bridge.
