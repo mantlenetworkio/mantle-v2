@@ -237,8 +237,6 @@ contract L2StandardBridge is StandardBridge, Semver {
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 L1StandardBridge.finalizeBridgeETH.selector,
-                address(0),
-                Predeploys.BVM_ETH,
                 _from,
                 _to,
                 _amount,
@@ -285,8 +283,6 @@ contract L2StandardBridge is StandardBridge, Semver {
                 // Because this call will be executed on the remote chain, we reverse the order of
                 // the remote and local token addresses relative to their order in the
                 // finalizeBridgeERC20 function.
-                L1_MNT_ADDRESS,
-                Predeploys.LEGACY_ERC20_MNT, // To be compatible with deposit map in L1StandardBridge
                 _from,
                 _to,
                 _amount,
