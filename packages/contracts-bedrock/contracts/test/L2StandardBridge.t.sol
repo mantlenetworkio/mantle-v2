@@ -35,8 +35,6 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         bytes memory message = abi.encodeWithSelector(
             L1StandardBridge.finalizeBridgeETH.selector,
-            Predeploys.BVM_ETH,
-            address(0),
             alice,
             alice,
             100,
@@ -527,7 +525,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: amount sent does not match amount required");
-        L2Bridge.finalizeBridgeETH{ value: 50 }(Predeploys.BVM_ETH,address(0),alice, alice, 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 50 }(alice, alice, 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToSelf_reverts() external {
@@ -539,7 +537,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: cannot send to self");
-        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, address(L2Bridge), 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L2Bridge), 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToMessenger_reverts() external {
@@ -551,7 +549,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.deal(address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: cannot send to messenger");
-        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, address(L2Messenger), 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L2Messenger), 100, hex"");
     }
 }
 
@@ -572,6 +570,6 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeFinalized(alice, alice, 100, hex"");
 
-        L2Bridge.finalizeBridgeETH{ value: 100 }(Predeploys.BVM_ETH,address(0),alice, alice, 100, hex"");
+        L2Bridge.finalizeBridgeETH{ value: 100 }(alice, alice, 100, hex"");
     }
 }
