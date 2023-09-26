@@ -356,7 +356,7 @@ func NewDeployConfigWithNetwork(network, path string) (*DeployConfig, error) {
 
 // NewL2ImmutableConfig will create an ImmutableConfig given an instance of a
 // DeployConfig and a block.
-func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.ImmutableConfig, error) {
+func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, error) {
 	immutable := make(immutables.ImmutableConfig)
 
 	if config.L1StandardBridgeProxy == (common.Address{}) {
@@ -435,7 +435,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
 		"timestamp":      block.Time(),
-		"basefee":        block.BaseFee(),
+		"basefee":        block.BaseFee(), //TODO
 		"hash":           block.Hash(),
 		"sequenceNumber": 0,
 		"batcherHash":    config.BatchSenderAddress.Hash(),

@@ -245,6 +245,13 @@ func main() {
 					return err
 				}
 
+				// successful messages can be skipped, received messages failed
+				// their execution and should be replayed
+				if isSuccess {
+					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex())
+					continue
+				}
+
 				xdmHash := crypto.Keccak256Hash(withdrawal.Data)
 				if err != nil {
 					return err
@@ -265,12 +272,6 @@ func main() {
 				slot, err := withdrawal.StorageSlot()
 				if err != nil {
 					return err
-				}
-				// successful messages can be skipped, received messages failed
-				// their execution and should be replayed
-				if isSuccessNew {
-					log.Info("Message already relayed", "index", i, "hash", hash.Hex(), "slot", slot.Hex())
-					continue
 				}
 
 				// check the storage value of the slot to ensure that it is in

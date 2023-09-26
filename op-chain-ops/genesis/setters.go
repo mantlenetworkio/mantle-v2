@@ -24,7 +24,6 @@ var (
 	UntouchablePredeploys = map[common.Address]bool{
 		predeploys.GovernanceTokenAddr: true,
 		predeploys.WETH9Addr:           true,
-		predeploys.BVM_ETHAddr:         true,
 	}
 
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
@@ -40,8 +39,8 @@ var (
 		},
 		// TODO the hash need to be set correctly.
 		predeploys.BVM_ETHAddr: {
-			1:     common.HexToHash("0x7cc935d7f4ab7df5d5920d1f44616fa76c483bd1c2980f9867caedb26128e848"),
-			31337: common.HexToHash("0x7cc935d7f4ab7df5d5920d1f44616fa76c483bd1c2980f9867caedb26128e848"),
+			1:     common.HexToHash("0x1f8e2f900d248b4e2c1d64781e57e85270f45ed64c4a641def5269e69a98100c"),
+			31337: common.HexToHash("0x1f8e2f900d248b4e2c1d64781e57e85270f45ed64c4a641def5269e69a98100c"),
 		},
 	}
 
@@ -162,7 +161,7 @@ func SetLegacyBVMETH(db vm.StateDB, storage state.StorageConfig, immutable immut
 		return err
 	}
 
-	return setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
+	return setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.BVM_ETHAddr, predeploys.BVM_ETHAddr)
 }
 
 // SetImplementations will set the implementations of the contracts in the state

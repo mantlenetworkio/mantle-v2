@@ -115,7 +115,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 	}
 
 	// Generate and verify the configuration for immutable variables to be set on L2.
-	immutable, err := NewL2ImmutableConfig(config, l1Block)
+	immutable, err := NewL2ImmutableConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create immutable config: %w", err)
 	}
