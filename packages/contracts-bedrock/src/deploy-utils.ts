@@ -11,6 +11,7 @@ import 'hardhat-deploy'
 import '@eth-optimism/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
+export const deploySleepTime = 10 * 1000;
 /**
  * Wrapper around hardhat-deploy with some extra features.
  *

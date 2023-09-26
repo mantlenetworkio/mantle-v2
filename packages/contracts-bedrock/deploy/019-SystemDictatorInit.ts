@@ -7,6 +7,7 @@ import '@eth-optimism/hardhat-deploy-config'
 import 'hardhat-deploy'
 
 import {
+  deploySleepTime,
   getContractsFromArtifacts,
   getDeploymentAddress,
 } from '../src/deploy-utils'
@@ -123,7 +124,7 @@ const deployFn: DeployFunction = async (hre) => {
   ) {
     console.log('Upgrading the SystemDictator proxy...')
 
-    await sleep(6000)
+    await sleep(deploySleepTime)
     // Upgrade and initialize the proxy.
     await SystemDictatorProxyWithSigner.upgradeToAndCall(
       SystemDictatorImpl.address,
