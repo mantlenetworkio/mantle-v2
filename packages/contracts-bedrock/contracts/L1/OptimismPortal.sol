@@ -64,6 +64,11 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     address public immutable GUARDIAN;
 
     /**
+     * @notice Address of  the L1 Mantle Token .
+     */
+    address public immutable L1_MNT_ADDRESS;
+
+    /**
      * @notice Address of the L2 account which initiated a withdrawal in this transaction. If the
      *         of this variable is the default L2 sender address, then we are NOT inside of a call
      *         to finalizeWithdrawalTransaction.
@@ -85,8 +90,6 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         withdrawals are paused. This may be removed in the future.
      */
     bool public paused;
-
-    address public immutable L1_MNT_ADDRESS;
 
 
     /**

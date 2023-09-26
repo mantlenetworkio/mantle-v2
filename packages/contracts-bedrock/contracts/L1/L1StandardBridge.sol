@@ -200,7 +200,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external payable onlyEOA {
-        _initiateMNTDeposit(L1_MNT_ADDRESS,address(0),msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+        _initiateMNTDeposit(L1_MNT_ADDRESS,Predeploys.LEGACY_ERC20_MNT,msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -223,7 +223,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) external payable {
-        _initiateMNTDeposit(L1_MNT_ADDRESS,address(0),msg.sender, _to, _amount, _minGasLimit, _extraData);
+        _initiateMNTDeposit(L1_MNT_ADDRESS,Predeploys.LEGACY_ERC20_MNT,msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -297,13 +297,13 @@ contract L1StandardBridge is StandardBridge, Semver {
      * @param _amount    Amount of MNT to withdraw.
      * @param _extraData Optional data forwarded from L2.
      */
-    function finalizeMNTWithdrawal(
+    function finalizeMantleWithdrawal(
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _extraData
     ) external payable {
-        finalizeBridgeMNT(address(0),L1_MNT_ADDRESS,_from, _to, _amount, _extraData);
+        finalizeBridgeMNT(L1_MNT_ADDRESS,Predeploys.LEGACY_ERC20_MNT,_from, _to, _amount, _extraData);
     }
 
     /**
@@ -321,7 +321,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) external payable {
-        finalizeBridgeETH(Predeploys.BVM_ETH,address(0),_from, _to, _amount, _extraData);
+        finalizeBridgeETH(address(0),Predeploys.BVM_ETH,_from, _to, _amount, _extraData);
     }
 
     /**
@@ -675,7 +675,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
 
-        require(_localToken == L1_MNT_ADDRESS && _remoteToken == address(0),
+        require(_localToken == L1_MNT_ADDRESS && _remoteToken == Predeploys.LEGACY_ERC20_MNT,
             "_localToken and _remoteToken must be MNT address.");
 
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
@@ -803,7 +803,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_localToken == L1_MNT_ADDRESS && _remoteToken == address(0),
+        require(_localToken == L1_MNT_ADDRESS && _remoteToken == Predeploys.LEGACY_ERC20_MNT,
             "L1StandardBridge: localToken and remoteToken are not belong to MNT.");
 
 

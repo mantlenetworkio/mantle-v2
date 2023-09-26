@@ -50,6 +50,14 @@ abstract contract StandardBridge {
      */
     address private spacer_1_0_20;
 
+
+    /**
+ * @custom:legacy
+     * @custom:spacer l1MantleAddress
+     * @notice Spacer for backwards compatibility.
+     */
+    address private spacer_2_0_20;
+
     /**
      * @notice Mapping that stores deposits for a given pair of local and remote tokens.
      */
@@ -478,6 +486,8 @@ abstract contract StandardBridge {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal virtual {
+        require(_localToken!=Predeploys.BVM_ETH && _localToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
+        require(_localToken!=Predeploys.LEGACY_ERC20_MNT && _remoteToken!=Predeploys.LEGACY_ERC20_MNT,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
         if (_isOptimismMintableERC20(_localToken)) {
             require(
                 _isCorrectTokenPair(_localToken, _remoteToken),
