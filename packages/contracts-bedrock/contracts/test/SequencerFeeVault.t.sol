@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import { Bridge_Initializer } from "./CommonTest.t.sol";
 
 import { SequencerFeeVault } from "../L2/SequencerFeeVault.sol";
-import { StandardBridge } from "../universal/StandardBridge.sol";
+import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 
 contract SequencerFeeVault_Test is Bridge_Initializer {
@@ -61,7 +61,7 @@ contract SequencerFeeVault_Test is Bridge_Initializer {
             Predeploys.L2_STANDARD_BRIDGE,
             address(vault).balance,
             abi.encodeWithSelector(
-                StandardBridge.bridgeETHTo.selector,
+                L2StandardBridge.bridgeETHTo.selector,
                 vault.l1FeeWallet(),
                 amount,
                 35_000,

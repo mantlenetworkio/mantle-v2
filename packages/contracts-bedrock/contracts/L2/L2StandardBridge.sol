@@ -160,9 +160,9 @@ contract L2StandardBridge is StandardBridge, Semver {
         bytes calldata _extraData
     ) external payable {
         if (_l1Token == L1_MNT_ADDRESS && _l2Token == Predeploys.LEGACY_ERC20_MNT) {
-            finalizeBridgeMNT(_l2Token,_l1Token,_from, _to, _amount, _extraData);
+            finalizeBridgeMNT(_from, _to, _amount, _extraData);
         } else if (_l1Token == address(0) && _l2Token == Predeploys.BVM_ETH){
-            finalizeBridgeETH(_l2Token,_l1Token,_from, _to, _amount, _extraData);
+            finalizeBridgeETH(_from, _to, _amount, _extraData);
         } else{
             finalizeBridgeERC20(_l2Token, _l1Token, _from, _to, _amount, _extraData);
         }
@@ -198,10 +198,9 @@ contract L2StandardBridge is StandardBridge, Semver {
         bytes memory _extraData
     ) internal {
         if (_l2Token == Predeploys.BVM_ETH ) {
-            _initiateBridgeETH(_l2Token,address(0), _from, _to, _amount, _minGasLimit, _extraData);
-        } else if (_l2Token == Predeploys.LEGACY_ERC20_MNT ){
-            require(msg.value==_amount,"L2StandardBridge :_amount must equal the MNT value.");
-            _initiateBridgeMNT(Predeploys.LEGACY_ERC20_MNT, L1_MNT_ADDRESS ,_from, _to, _amount, _minGasLimit, _extraData);
+            _initiateBridgeETH(_from, _to, _amount, _minGasLimit, _extraData);
+        } else if (_l2Token == address(0) ){
+            _initiateBridgeMNT(_from, _to, _amount, _minGasLimit, _extraData);
         } else {
             address l1Token = OptimismMintableERC20(_l2Token).l1Token();
             _initiateBridgeERC20(_l2Token, l1Token, _from, _to, _amount, _minGasLimit, _extraData);
@@ -220,19 +219,14 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     to identify the transaction.
      */
     function _initiateBridgeETH(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_localToken == Predeploys.BVM_ETH && _remoteToken==address(0),
-            "L2StandardBridge : _initiateBridgeETH function only support for ETH bridging." );
-
-        IERC20(_localToken).safeTransferFrom(msg.sender,address(this),_amount);
-        IERC20(_localToken).approve(Predeploys.L2_CROSS_DOMAIN_MESSENGER,_amount);
+        IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this),_amount);
+        IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_CROSS_DOMAIN_MESSENGER, _amount);
 
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
@@ -243,8 +237,6 @@ contract L2StandardBridge is StandardBridge, Semver {
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
                 L1StandardBridge.finalizeBridgeETH.selector,
-                _remoteToken,
-                _localToken,
                 _from,
                 _to,
                 _amount,
@@ -259,8 +251,6 @@ contract L2StandardBridge is StandardBridge, Semver {
     /**
      * @notice Sends MNT tokens to a receiver's address on the other chain.
      *
-     * @param _localToken  Address of the MNT on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
      * @param _to          Address of the receiver.
      * @param _amount      Amount of local tokens to deposit.
      * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
@@ -269,16 +259,12 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     to identify the transaction.
      */
     function _initiateBridgeMNT(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override{
-        require(_localToken == Predeploys.LEGACY_ERC20_MNT && _remoteToken == L1_MNT_ADDRESS,
-            "L2StandardBridge : only support for MNT bridging.");
         require(
             msg.value == _amount,
             "StandardBridge: bridging MNT must include sufficient MNT value"
@@ -287,7 +273,7 @@ contract L2StandardBridge is StandardBridge, Semver {
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
-        _emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        _emitMNTBridgeInitiated(_from, _to, _amount, _extraData);
         uint256 zeroETHValue = 0;
         MESSENGER.sendMessage{value: msg.value}(
             zeroETHValue,
@@ -297,8 +283,6 @@ contract L2StandardBridge is StandardBridge, Semver {
                 // Because this call will be executed on the remote chain, we reverse the order of
                 // the remote and local token addresses relative to their order in the
                 // finalizeBridgeERC20 function.
-                _remoteToken,
-                _localToken,
                 _from,
                 _to,
                 _amount,
@@ -448,15 +432,13 @@ contract L2StandardBridge is StandardBridge, Semver {
      * @inheritdoc StandardBridge
      */
     function _emitMNTBridgeInitiated(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         bytes memory _extraData
     ) internal override {
-        emit WithdrawalInitiated(_remoteToken, _localToken, _from, _to, _amount, _extraData);
-        super._emitMNTBridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        emit WithdrawalInitiated(L1_MNT_ADDRESS, address(0x0), _from, _to, _amount, _extraData);
+        super._emitMNTBridgeInitiated(_from, _to, _amount, _extraData);
     }
 
     /**
@@ -466,15 +448,13 @@ contract L2StandardBridge is StandardBridge, Semver {
      * @inheritdoc StandardBridge
      */
     function _emitMNTBridgeFinalized(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         bytes memory _extraData
     ) internal override {
-        emit DepositFinalized(_remoteToken, _localToken, _from, _to, _amount, _extraData);
-        super._emitMNTBridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        emit DepositFinalized(L1_MNT_ADDRESS, address(0x0), _from, _to, _amount, _extraData);
+        super._emitMNTBridgeFinalized(_from, _to, _amount, _extraData);
     }
 
     /**
@@ -485,11 +465,9 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint256 _value,uint32 _minGasLimit, bytes calldata _extraData) public payable override onlyEOA {
-        _initiateBridgeETH(Predeploys.BVM_ETH,address(0),msg.sender, msg.sender, _value, _minGasLimit, _extraData);
+    function bridgeETH(uint256 _value, uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
+        _initiateBridgeETH(msg.sender, msg.sender, _value, _minGasLimit, _extraData);
     }
-
-
 
     /**
      * @notice Sends ETH to a receiver's address on the other chain. Note that if ETH is sent to a
@@ -512,8 +490,8 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable override {
-        _initiateBridgeETH(Predeploys.BVM_ETH,address(0),msg.sender, _to, _value, _minGasLimit, _extraData);
+    ) public payable {
+        _initiateBridgeETH(msg.sender, _to, _value, _minGasLimit, _extraData);
     }
 
     /**
@@ -534,19 +512,16 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable  {
-        _initiateBridgeMNT(Predeploys.LEGACY_ERC20_MNT ,L1_MNT_ADDRESS,msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeMNT(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
-
 
     function bridgeMNTTo(
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable  {
-        _initiateBridgeMNT(Predeploys.LEGACY_ERC20_MNT ,L1_MNT_ADDRESS,msg.sender, _to, msg.value, _minGasLimit, _extraData);
+        _initiateBridgeMNT(msg.sender, _to, msg.value, _minGasLimit, _extraData);
     }
-
-
 
     /**
      * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
@@ -626,15 +601,11 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                   to identify the transaction.
      */
     function finalizeBridgeETH(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
-        require( _localToken == Predeploys.BVM_ETH && _remoteToken ==address(0)   ,
-            "L2StandardBridge: this function only support for BVM_ETH bridging.");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
         // Emit the correct events. By default this will be _amount, but child
@@ -683,8 +654,6 @@ contract L2StandardBridge is StandardBridge, Semver {
 * @notice Finalizes an MNT bridge on this chain. Can only be triggered by the other
      *         StandardBridge contract on the remote chain.
      *
-     * @param _localToken  Address of the MNT on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
      * @param _from        Address of the sender.
      * @param _to          Address of the receiver.
      * @param _amount      Amount of the MNT being bridged.
@@ -693,15 +662,11 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     to identify the transaction.
      */
     function finalizeBridgeMNT(
-        address _localToken,
-        address _remoteToken,
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _extraData
     ) public payable override virtual onlyOtherBridge {
-        require(_remoteToken == L1_MNT_ADDRESS && _localToken == Predeploys.LEGACY_ERC20_MNT,
-            "this function only support by MNT path");
         require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
@@ -711,7 +676,6 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(success, "StandardBridge: MNT transfer failed");
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
-        _emitMNTBridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        _emitMNTBridgeFinalized(_from, _to, _amount, _extraData);
     }
-
 }
