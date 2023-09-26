@@ -393,6 +393,10 @@ func main() {
 							if err := handleFinalizeETHWithdrawal(args); err != nil {
 								return err
 							}
+						case "finalizeMantleWithdrawal":
+							if err := handleFinalizeMNTWithdrawal(args); err != nil {
+								return err
+							}
 						default:
 							log.Info("Unhandled method", "name", method.Name)
 						}
@@ -525,6 +529,36 @@ func callStorageRange(c *util.Clients, addr common.Address) (state.Storage, erro
 
 // handleFinalizeETHWithdrawal will ensure that the calldata is correct
 func handleFinalizeETHWithdrawal(args []any) error {
+	from, ok := args[0].(common.Address)
+	if !ok {
+		return fmt.Errorf("invalid type: from")
+	}
+	to, ok := args[1].(common.Address)
+	if !ok {
+		return fmt.Errorf("invalid type: to")
+	}
+	amount, ok := args[2].(*big.Int)
+	if !ok {
+		return fmt.Errorf("invalid type: amount")
+	}
+	extraData, ok := args[3].([]byte)
+	if !ok {
+		return fmt.Errorf("invalid type: extraData")
+	}
+
+	log.Info(
+		"decoded calldata",
+		"from", from,
+		"to", to,
+		"amount", amount,
+		"extraData", extraData,
+	)
+
+	return nil
+}
+
+// handleFinalizeMNTWithdrawal will ensure that the calldata is correct
+func handleFinalizeMNTWithdrawal(args []any) error {
 	from, ok := args[0].(common.Address)
 	if !ok {
 		return fmt.Errorf("invalid type: from")
