@@ -2,7 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 
 import {
   assertContractVariable,
-  deploy,
+  deploy, deploySleepTime,
   getContractFromArtifact,
 } from '../src/deploy-utils'
 import {sleep} from "@eth-optimism/core-utils";
@@ -13,7 +13,7 @@ const deployFn: DeployFunction = async (hre) => {
     'Proxy__OVM_L1StandardBridge'
   )
 
-  await sleep(6000)
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'OptimismMintableERC20Factory',

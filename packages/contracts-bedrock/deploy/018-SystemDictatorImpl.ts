@@ -2,11 +2,11 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 import '@eth-optimism/hardhat-deploy-config'
 import 'hardhat-deploy'
 
-import { deploy } from '../src/deploy-utils'
+import {deploy, deploySleepTime} from '../src/deploy-utils'
 import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
-  await sleep(6000)
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'SystemDictator',

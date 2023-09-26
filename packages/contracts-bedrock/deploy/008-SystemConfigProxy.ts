@@ -2,7 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 
 import {
   assertContractVariable,
-  deploy,
+  deploy, deploySleepTime,
   getDeploymentAddress,
 } from '../src/deploy-utils'
 import {sleep} from "@eth-optimism/core-utils";
@@ -10,7 +10,7 @@ import {sleep} from "@eth-optimism/core-utils";
 const deployFn: DeployFunction = async (hre) => {
   const proxyAdmin = await getDeploymentAddress(hre, 'ProxyAdmin')
 
-  await sleep(6000)
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'SystemConfigProxy',

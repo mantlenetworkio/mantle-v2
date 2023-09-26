@@ -2,7 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 import '@eth-optimism/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
-import { assertContractVariable, deploy } from '../src/deploy-utils'
+import {assertContractVariable, deploy, deploySleepTime} from '../src/deploy-utils'
 import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
@@ -19,7 +19,7 @@ const deployFn: DeployFunction = async (hre) => {
     )
   }
 
-  await sleep(6000)
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'L2OutputOracle',

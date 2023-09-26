@@ -3,7 +3,7 @@ import '@eth-optimism/hardhat-deploy-config'
 
 import {
   assertContractVariable,
-  deploy,
+  deploy, deploySleepTime,
   getContractFromArtifact,
 } from '../src/deploy-utils'
 import {sleep} from "@eth-optimism/core-utils";
@@ -44,7 +44,7 @@ const deployFn: DeployFunction = async (hre) => {
   // ensure that users do not interact with it and instead
   // interact with the proxied contract.
   // The `portalGuardian` is set at the GUARDIAN.
-  await sleep(6000)
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'OptimismPortal',
