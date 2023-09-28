@@ -83,8 +83,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      * @notice Allows EOAs to bridge ETH by sending directly to the bridge.
      */
     receive() external payable override onlyEOA {
-        _initiateWithdrawal(
-            Predeploys.LEGACY_ERC20_MNT,
+        _initiateBridgeMNT(
             msg.sender,
             msg.sender,
             msg.value,
@@ -313,10 +312,11 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_localToken!=Predeploys.BVM_ETH || _remoteToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
-        require(_localToken!=Predeploys.LEGACY_ERC20_MNT || _localToken!=L1_MNT_ADDRESS,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
-        require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),"StandardBridge: wrong remote token for Optimism Mintable ERC20 local token" );
+        require(_localToken!=Predeploys.BVM_ETH && _localToken!=address(0x0),
+            "StandardBridge: BridgeERC20 do not support ETH or MNT bridging.");
 
+        require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),
+            "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token");
 
         OptimismMintableERC20(_localToken).burn(_from, _amount);
 
@@ -638,12 +638,10 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) public onlyOtherBridge override {
-
         require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),
             "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token");
-            OptimismMintableERC20(_localToken).mint(_to, _amount);
 
-
+        OptimismMintableERC20(_localToken).mint(_to, _amount);
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);

@@ -798,9 +798,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_remoteToken!=Predeploys.BVM_ETH || _localToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
-        require(_remoteToken!=Predeploys.LEGACY_ERC20_MNT || _localToken!=L1_MNT_ADDRESS,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
-        require(!_isOptimismMintableERC20(_localToken),"StandardBridge: wrong local token for Optimism Mintable ERC20 remote token");
+        require(_localToken!=address(0) && _localToken!=L1_MNT_ADDRESS,
+            "StandardBridge: BridgeERC20 do not support ETH or MNT bridging.");
+
         IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
         deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
 
