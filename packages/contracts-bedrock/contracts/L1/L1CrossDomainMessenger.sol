@@ -57,12 +57,14 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _mntAmount,
         address _to,
         uint64 _gasLimit,
-        uint256 _value,
         bytes memory _data
     ) internal override {
-        PORTAL.depositTransaction{ value: msg.value }(_mntAmount,_to, _value, _gasLimit, false, _data);
+        PORTAL.depositTransaction{value: msg.value}(_mntAmount, _to, _mntAmount, _gasLimit, false, _data);
     }
 
+    /**
+     * @inheritdoc CrossDomainMessenger
+     */
     function sendMessage(
         uint256 _mntAmount,
         address _target,
@@ -70,8 +72,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         if (_mntAmount!=0){
-            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender,address(this) ,_mntAmount);
-            bool success = IERC20(L1_MNT_ADDRESS).approve(address(PORTAL) ,_mntAmount);
+            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender, address(this), _mntAmount);
+            bool success = IERC20(L1_MNT_ADDRESS).approve(address(PORTAL), _mntAmount);
             require(success,"the approve for L1 mnt to OptimismPortal failed");
         }
 
@@ -83,7 +85,6 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
             _mntAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            _mntAmount,
             abi.encodeWithSelector(
                 L2CrossDomainMessenger.relayMessage.selector,
                 messageNonce(),
@@ -210,7 +211,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
         bool mntSuccess = true;
         if (_mntValue!=0){
-            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target,_mntValue);
+            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target, _mntValue);
         }
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _ethValue, _message);

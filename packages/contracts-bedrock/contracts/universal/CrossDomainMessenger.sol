@@ -257,12 +257,13 @@ abstract contract CrossDomainMessenger is
      *         permanently locked. The same will occur if the target on the other chain is
      *         considered unsafe (see the _isUnsafeTarget() function).
      *
-     * @param _target      Target contract or wallet address.
-     * @param _message     Message to trigger the target address with.
-     * @param _minGasLimit Minimum gas limit that the message can be executed with.
+     * @param _otherSideNativeTokenAmount   Bridge the other side native token amount.
+     * @param _target                       Target contract or wallet address.
+     * @param _message                      Message to trigger the target address with.
+     * @param _minGasLimit                  Minimum gas limit that the message can be executed with.
      */
     function sendMessage(
-        uint256 _amount,
+        uint256 _otherSideNativeTokenAmount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
@@ -272,10 +273,9 @@ abstract contract CrossDomainMessenger is
         // guarantee the property that the call to the target contract will always have at least
         // the minimum gas limit specified by the user.
         _sendMessage(
-            _amount,
+            _otherSideNativeTokenAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            msg.value,
             abi.encodeWithSelector(
                 this.relayMessage.selector,
                 messageNonce(),
@@ -493,16 +493,15 @@ abstract contract CrossDomainMessenger is
      *         contracts because the logic for this depends on the network where the messenger is
      *         being deployed.
      *
-     * @param _to       Recipient of the message on the other chain.
-     * @param _gasLimit Minimum gas limit the message can be executed with.
-     * @param _value    Amount of ETH to send with the message.
-     * @param _data     Message data.
+     * @param _otherSideNativeTokenAmount   Bridge the other side native token amount.
+     * @param _to                           Recipient of the message on the other chain.
+     * @param _gasLimit                     Minimum gas limit the message can be executed with.
+     * @param _data                         Message data.
      */
     function _sendMessage(
-        uint256 _amount,
+        uint256 _otherSideNativeTokenAmount,
         address _to,
         uint64 _gasLimit,
-        uint256 _value,
         bytes memory _data
     ) internal virtual;
 
