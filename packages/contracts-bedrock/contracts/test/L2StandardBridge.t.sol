@@ -75,6 +75,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             nonce,
             address(L2Messenger),
             address(L1Messenger),
+            0,
             100,
             baseGas,
             withdrawalData,
@@ -87,7 +88,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L2Messenger));
-        emit SentMessageExtension1(address(L2Bridge), 100);
+        emit SentMessageExtension1(address(L2Bridge), 0, 100);
 
         vm.expectCall(
             address(L2Messenger),
@@ -114,6 +115,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         vm.prank(alice, alice);
         (bool success, ) = address(L2Bridge).call{ value: 100 }(hex"");
         assertEq(success, true);
+        assertEq(ERC20(Predeploys.BVM_ETH).balanceOf(address(messagePasser)) ,100);
         assertEq(address(messagePasser).balance, 100);
     }
 
@@ -256,6 +258,7 @@ contract PreBridgeERC20 is Bridge_Initializer {
             address(L2Messenger),
             address(L1Messenger),
             0,
+            0,
             baseGas,
             withdrawalData,
             withdrawalHash
@@ -267,7 +270,7 @@ contract PreBridgeERC20 is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true);
-        emit SentMessageExtension1(address(L2Bridge), 0);
+        emit SentMessageExtension1(address(L2Bridge), 0, 0);
 
         vm.prank(alice, alice);
     }
@@ -370,6 +373,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
             address(L2Messenger),
             address(L1Messenger),
             0,
+            0,
             baseGas,
             withdrawalData,
             withdrawalHash
@@ -381,7 +385,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L2Messenger));
-        emit SentMessageExtension1(address(L2Bridge), 0);
+        emit SentMessageExtension1(address(L2Bridge), 0, 0);
 
         if (_isLegacy) {
             vm.expectCall(

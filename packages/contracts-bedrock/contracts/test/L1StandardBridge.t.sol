@@ -10,6 +10,9 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { stdStorage, StdStorage } from "forge-std/Test.sol";
+import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
+import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
+
 
 contract L1StandardBridge_Getter_Test is Bridge_Initializer {
     function test_getters_succeeds() external {
@@ -49,7 +52,7 @@ contract L1StandardBridge_Receive_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
                 address(L2Bridge),
                 abi.encodeWithSelector(
                     StandardBridge.finalizeBridgeETH.selector,
@@ -159,7 +162,7 @@ contract PreBridgeETH is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 500);
+        emit SentMessageExtension1(address(L1Bridge), 0, 500);
 
         vm.prank(alice, alice);
     }
@@ -293,7 +296,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 600);
+        emit SentMessageExtension1(address(L1Bridge), 0, 600);
 
         // deposit eth to bob
         vm.prank(alice, alice);
@@ -423,7 +426,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 0);
+        emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
         vm.prank(alice);
         L1Bridge.depositERC20(address(L1Token), address(L2Token), 100, 10000, hex"");
@@ -523,7 +526,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 0);
+        emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
         deal(address(L1Token), alice, 100000, true);
 

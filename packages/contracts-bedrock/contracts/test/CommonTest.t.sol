@@ -75,8 +75,8 @@ contract CommonTest is Test {
     function emitTransactionDeposited(
         address _from,
         address _to,
-        uint256 _mint,
         uint256 _mntValue,
+        uint256 _mntTxValue,
         uint256 _ethValue,
         uint64 _gasLimit,
         bool _isCreation,
@@ -86,7 +86,7 @@ contract CommonTest is Test {
             _from,
             _to,
             0,
-            abi.encodePacked(_mint, _mntValue,_ethValue, _gasLimit, _isCreation, _data)
+            abi.encodePacked(_mntTxValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -168,12 +168,13 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
 
     function setUp() public virtual override {
         super.setUp();
+
         l1MNTImpl = new L1MantleToken();
         Proxy proxy = new Proxy(multisig);
         vm.prank(multisig);
         proxy.upgradeToAndCall(
             address(l1MNTImpl),
-            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10000000000000000000000000,address(0))
+            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10e50,multisig)
         );
         l1MNT = L1MantleToken(payable(address(proxy)));
         vm.label(address(l1MNT), "L1MantleToken");
@@ -240,13 +241,14 @@ contract Messenger_Initializer is Portal_Initializer {
         uint256 gasLimit
     );
 
-    event SentMessageExtension1(address indexed sender, uint256 value);
+    event SentMessageExtension1(address indexed sender, uint256 mntValue, uint256 ethValue);
 
     event MessagePassed(
         uint256 indexed nonce,
         address indexed sender,
         address indexed target,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint256 gasLimit,
         bytes data,
         bytes32 withdrawalHash
@@ -259,7 +261,8 @@ contract Messenger_Initializer is Portal_Initializer {
         address indexed from,
         address indexed to,
         uint256 mint,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint64 gasLimit,
         bool isCreation,
         bytes data

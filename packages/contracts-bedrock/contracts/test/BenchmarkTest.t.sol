@@ -47,8 +47,8 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
             nonce: 0,
             sender: alice,
             target: bob,
-            mntValue: 100,
-            ethValue: ZERO_VALUE,
+            mntValue: ZERO_VALUE,
+            ethValue: 100,
             gasLimit: 100_000,
             data: hex""
         });

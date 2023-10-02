@@ -41,6 +41,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             address(op),
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
+                0,
                 Predeploys.L2_CROSS_DOMAIN_MESSENGER,
                 0,
                 L1Messenger.baseGas(hex"ff", 100),
@@ -84,10 +85,10 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
 
         // SentMessageExtension1 event
         vm.expectEmit(true, true, true, true);
-        emit SentMessageExtension1(alice, 0);
+        emit SentMessageExtension1(alice, 0, 0);
 
         vm.prank(alice);
-        L1Messenger.sendMessage(0,recipient, hex"ff", uint32(100));
+        L1Messenger.sendMessage( 0, recipient, hex"ff", uint32(100));
     }
 
     // sendMessage: should be able to send the same message twice
@@ -258,8 +259,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -272,8 +273,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -293,8 +294,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -404,8 +405,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }),
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -430,8 +431,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -458,8 +459,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -482,8 +483,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }),
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -505,8 +506,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -526,8 +527,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -544,8 +545,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }),
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -566,8 +567,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -594,8 +595,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );
@@ -615,8 +616,8 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce({ _nonce: 0, _version: 0 }), // nonce
             sender,
             target,
-            value,
             0,
+            value,
             0,
             hex"1111"
         );

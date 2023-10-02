@@ -50,6 +50,7 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             address(L2Messenger),
             address(L1Messenger),
             0,
+            0,
             L2Messenger.baseGas(hex"ff", 100),
             xDomainCallData,
             Hashing.hashWithdrawal(
