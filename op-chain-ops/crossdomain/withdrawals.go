@@ -90,6 +90,7 @@ func GetPendingWithdrawals(messengers *Messengers, version *big.Int, start, end 
 			event.Sender,
 			event.Target,
 			common.Big0,
+			common.Big0,
 			event.GasLimit,
 			event.Message,
 		)

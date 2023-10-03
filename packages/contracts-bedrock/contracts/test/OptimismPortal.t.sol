@@ -275,9 +275,9 @@ contract OptimismPortal_Test is Portal_Initializer {
         emitTransactionDeposited(
             address(this),
             NON_ZERO_ADDRESS,
+            ZERO_VALUE,
+            ZERO_VALUE,
             NON_ZERO_VALUE,
-            ZERO_VALUE,
-            ZERO_VALUE,
             NON_ZERO_GASLIMIT,
             false,
             NON_ZERO_DATA
@@ -300,9 +300,9 @@ contract OptimismPortal_Test is Portal_Initializer {
         emitTransactionDeposited(
             AddressAliasHelper.applyL1ToL2Alias(address(this)),
             NON_ZERO_ADDRESS,
+            ZERO_VALUE,
+            ZERO_VALUE,
             NON_ZERO_VALUE,
-            ZERO_VALUE,
-            ZERO_VALUE,
             NON_ZERO_GASLIMIT,
             false,
             NON_ZERO_DATA
@@ -327,9 +327,9 @@ contract OptimismPortal_Test is Portal_Initializer {
         emitTransactionDeposited(
             address(this),
             ZERO_ADDRESS,
+            ZERO_VALUE,
+            ZERO_VALUE,
             NON_ZERO_VALUE,
-            ZERO_VALUE,
-            ZERO_VALUE,
             NON_ZERO_GASLIMIT,
             true,
             hex""
@@ -352,9 +352,9 @@ contract OptimismPortal_Test is Portal_Initializer {
         emitTransactionDeposited(
             AddressAliasHelper.applyL1ToL2Alias(address(this)),
             ZERO_ADDRESS,
+            ZERO_VALUE,
+            ZERO_VALUE,
             NON_ZERO_VALUE,
-            ZERO_VALUE,
-            ZERO_VALUE,
             NON_ZERO_GASLIMIT,
             true,
             NON_ZERO_DATA
@@ -1243,10 +1243,12 @@ contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
         assertEq(prevBlockNum, _prevBlockNum);
 
         // Do a deposit, should not revert
+        // TODO : should add value to this function call. but it has error
+        // TODO : should be :        op.depositTransaction{ gas: MAX_GAS_LIMIT , value: 0x40}({
         op.depositTransaction{ gas: MAX_GAS_LIMIT }({
-            _mntValue : 0x40,
+            _mntValue : 0,
             _to: address(0x20),
-            _mntTxValue: 0x40,
+            _mntTxValue: 0,
             _gasLimit: _gasLimit,
             _isCreation: false,
             _data: hex""

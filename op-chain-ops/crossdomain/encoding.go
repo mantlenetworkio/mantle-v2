@@ -51,11 +51,12 @@ func EncodeCrossDomainMessageV1(
 	nonce *big.Int,
 	sender common.Address,
 	target common.Address,
-	value *big.Int,
+	mntValue *big.Int,
+	ethValue *big.Int,
 	gasLimit *big.Int,
 	data []byte,
 ) ([]byte, error) {
-	return relayMessage1.Pack("relayMessage", nonce, sender, target, value, gasLimit, data)
+	return relayMessage1.Pack("relayMessage", nonce, sender, target, mntValue, ethValue, gasLimit, data)
 }
 
 // DecodeVersionedNonce will decode the version that is encoded in the nonce
