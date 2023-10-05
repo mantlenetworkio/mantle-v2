@@ -32,6 +32,7 @@ import { SystemConfig } from "../L1/SystemConfig.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
 import { Constants } from "../libraries/Constants.sol";
 import { L1MantleToken } from "../L1/TestMantleToken.sol";
+import { BVM_ETH } from "../L2/BVM_ETH.sol";
 
 
 contract CommonTest is Test {
@@ -86,7 +87,7 @@ contract CommonTest is Test {
             _from,
             _to,
             0,
-            abi.encodePacked(_mntTxValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
+            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -165,7 +166,6 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
     L1MantleToken internal l1MNT;
 
 
-
     function setUp() public virtual override {
         super.setUp();
 
@@ -180,7 +180,24 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
         vm.label(address(l1MNT), "L1MantleToken");
     }
 }
-contract Portal_Initializer is MNTToken_Initializer {
+
+contract BVMETH_Initializer is MNTToken_Initializer {
+    // Test target
+    BVM_ETH internal l2ETH ;
+
+
+
+    function setUp() public virtual override {
+        super.setUp();
+        vm.prank(multisig);
+        vm.etch(Predeploys.BVM_ETH, address(new BVM_ETH()).code);
+        l2ETH= BVM_ETH(payable(Predeploys.BVM_ETH));
+        vm.label(address(l2ETH), "BVM_ETH");
+    }
+}
+
+
+contract Portal_Initializer is BVMETH_Initializer {
     // Test target
     OptimismPortal internal opImpl;
     OptimismPortal internal op;
