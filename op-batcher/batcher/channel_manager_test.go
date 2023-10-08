@@ -1,11 +1,16 @@
 package batcher
 
 import (
+	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
@@ -13,10 +18,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	derivetest "github.com/ethereum-optimism/optimism/op-node/rollup/derive/test"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/stretchr/testify/require"
 )
 
 // TestPendingChannelTimeout tests that the channel manager

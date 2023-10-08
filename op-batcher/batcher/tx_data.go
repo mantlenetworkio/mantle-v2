@@ -2,6 +2,7 @@ package batcher
 
 import (
 	"fmt"
+
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 )
 

@@ -2,21 +2,22 @@ package batcher
 
 import (
 	"errors"
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/urfave/cli"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/urfave/cli"
+
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-batcher/rpc"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"

@@ -3,20 +3,23 @@ package batcher
 import (
 	"context"
 	"errors"
-	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceDL"
-	"github.com/ethereum-optimism/optimism/l2geth/rlp"
-	"github.com/ethereum-optimism/optimism/op-batcher/common"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	ecommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"math/big"
 	"time"
+
+	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceDL"
+
+	"github.com/ethereum-optimism/optimism/l2geth/rlp"
+	"github.com/ethereum-optimism/optimism/op-batcher/common"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ecommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const RollupMaxSize = 1024 * 1024 * 300

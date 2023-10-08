@@ -4,17 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum/go-ethereum/common"
 	"io"
 	"math/big"
 	_ "net/http/pprof"
 	"sync"
 	"time"
 
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"

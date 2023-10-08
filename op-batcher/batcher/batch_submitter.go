@@ -3,13 +3,13 @@ package batcher
 import (
 	"context"
 	"fmt"
+	"github.com/urfave/cli"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/urfave/cli"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
