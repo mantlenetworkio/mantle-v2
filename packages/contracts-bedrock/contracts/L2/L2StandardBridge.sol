@@ -83,8 +83,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      * @notice Allows EOAs to bridge ETH by sending directly to the bridge.
      */
     receive() external payable override onlyEOA {
-        _initiateWithdrawal(
-            Predeploys.LEGACY_ERC20_MNT,
+        _initiateBridgeMNT(
             msg.sender,
             msg.sender,
             msg.value,
@@ -313,13 +312,22 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
-        require(_localToken!=Predeploys.BVM_ETH || _remoteToken!=address(0),"StandardBridge: BridgeERC20 do not support ETH bridging. ");
-        require(_localToken!=Predeploys.LEGACY_ERC20_MNT || _localToken!=L1_MNT_ADDRESS,"StandardBridge: BridgeERC20 do not support MNT bridging. ");
-        require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),"StandardBridge: wrong remote token for Optimism Mintable ERC20 local token" );
+        require(_localToken!=Predeploys.BVM_ETH && _remoteToken!=address(0),
+            "L2StandardBridge: BridgeERC20 do not support ETH bridging.");
+        require(_localToken!=address(0x0) && _remoteToken!=L1_MNT_ADDRESS,
+            "L2StandardBridge: BridgeERC20 do not support MNT bridging.");
 
+        if (_isOptimismMintableERC20(_localToken)) {
+            require(
+                _isCorrectTokenPair(_localToken, _remoteToken),
+                "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token"
+            );
 
-        OptimismMintableERC20(_localToken).burn(_from, _amount);
-
+            OptimismMintableERC20(_localToken).burn(_from, _amount);
+        } else {
+            IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
+        }
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.
@@ -638,12 +646,17 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) public onlyOtherBridge override {
+        if (_isOptimismMintableERC20(_localToken)) {
+            require(
+                _isCorrectTokenPair(_localToken, _remoteToken),
+                "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token"
+            );
 
-        require(_isOptimismMintableERC20(_localToken) && _isCorrectTokenPair(_localToken, _remoteToken),
-            "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token");
             OptimismMintableERC20(_localToken).mint(_to, _amount);
-
-
+        } else {
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
+            IERC20(_localToken).safeTransfer(_to, _amount);
+        }
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);

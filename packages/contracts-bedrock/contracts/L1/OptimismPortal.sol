@@ -414,7 +414,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target,_tx.mntValue);
+        bool l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
@@ -437,9 +437,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
-     * @param _mntValue   Target address on L2.
+     * @param _mntValue   Mint MNT amount to from address on L2
      * @param _to         Target address on L2.
-     * @param _mntTxValue ETH value to send to the recipient.
+     * @param _mntTxValue MNT value to send to the recipient.
      * @param _gasLimit   Minimum L2 gas limit (can be greater than or equal to this value).
      * @param _isCreation Whether or not the transaction is a contract creation.
      * @param _data       Data to trigger the recipient with.

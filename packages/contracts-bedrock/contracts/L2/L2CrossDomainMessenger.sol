@@ -61,29 +61,26 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _ethValue,
         address _to,
         uint64 _gasLimit,
-        uint256 _mntValue,
         bytes memory _data
     ) internal override {
         L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER)).initiateWithdrawal{
-            value: _mntValue
-        }(_ethValue,_to, _gasLimit, _data);
-
+            value: msg.value
+        }(_ethValue, _to, _gasLimit, _data);
     }
 
+    /**
+     * @inheritdoc CrossDomainMessenger
+     */
     function sendMessage(
         uint256 _ethAmount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable override {
-        // In the deposit process , _nativeTokenValue means MNT amount.
-        // But in the withdrawal process , _nativeTokenValue means the ETH amount.
-        uint256 _mntAmount = msg.value;
         if (_ethAmount!=0){
-            IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender,address(this),_ethAmount);
-            IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_TO_L1_MESSAGE_PASSER,_ethAmount);
+            IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
+            IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_TO_L1_MESSAGE_PASSER, _ethAmount);
         }
-
 
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
@@ -93,7 +90,6 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
             _ethAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            _mntAmount,
             abi.encodeWithSelector(
                 L1CrossDomainMessenger.relayMessage.selector,
                 messageNonce(),

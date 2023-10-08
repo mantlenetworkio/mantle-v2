@@ -99,6 +99,7 @@ contract L2ToL1MessagePasser is Semver {
     /**
      * @notice Sends a message from L2 to L1.
      *
+     * @param _ethValue eth amount bridged to L1.
      * @param _target   Address to call on L1 execution.
      * @param _gasLimit Minimum gas limit for executing the message on L1.
      * @param _data     Data to forward to L1 target.
@@ -110,7 +111,7 @@ contract L2ToL1MessagePasser is Semver {
         bytes memory _data
     ) public payable {
         if (_ethValue!=0){
-            OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender,_ethValue);
+            OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
         }
 
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
