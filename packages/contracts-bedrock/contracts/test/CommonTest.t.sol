@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 /* Testing utilities */
-import { Test, StdUtils } from "forge-std/Test.sol";
+import { stdStorage, StdStorage , Test, StdUtils } from "forge-std/Test.sol";
 import { L2OutputOracle } from "../L1/L2OutputOracle.sol";
 import { L2ToL1MessagePasser } from "../L2/L2ToL1MessagePasser.sol";
 import { L1StandardBridge } from "../L1/L1StandardBridge.sol";
@@ -161,6 +161,8 @@ contract L2OutputOracle_Initializer is CommonTest {
     }
 }
 contract MNTToken_Initializer is L2OutputOracle_Initializer {
+    using stdStorage for StdStorage;
+
     // Test target
     L1MantleToken internal l1MNTImpl;
     L1MantleToken internal l1MNT;
@@ -184,6 +186,7 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
 contract BVMETH_Initializer is MNTToken_Initializer {
     // Test target
     BVM_ETH internal l2ETH ;
+    using stdStorage for StdStorage;
 
 
 
@@ -400,6 +403,11 @@ contract Bridge_Initializer is Messenger_Initializer {
     event ETHBridgeInitiated(address indexed from, address indexed to, uint256 amount, bytes data);
 
     event ETHBridgeFinalized(address indexed from, address indexed to, uint256 amount, bytes data);
+
+    event MNTBridgeInitiated(address indexed from, address indexed to, uint256 amount, bytes extraData);
+
+    event MNTBridgeFinalized(address indexed from, address indexed to, uint256 amount, bytes extraData);
+
 
     event ERC20BridgeInitiated(
         address indexed localToken,

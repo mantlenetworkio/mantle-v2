@@ -110,7 +110,7 @@ abstract contract StandardBridge {
      */
     event MNTBridgeInitiated(
         address indexed from,
-        address to,
+        address indexed to,
         uint256 amount,
         bytes extraData
     );
@@ -125,7 +125,7 @@ abstract contract StandardBridge {
      */
     event MNTBridgeFinalized(
         address indexed from,
-        address to,
+        address indexed to,
         uint256 amount,
         bytes extraData
     );
