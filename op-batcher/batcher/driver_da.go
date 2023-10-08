@@ -32,12 +32,16 @@ func (l *BatchSubmitter) mantleDALoop() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := l.loadBlocksIntoState(l.shutdownCtx); errors.Is(err, ErrReorg) {
+			err := l.loadBlocksIntoState(l.shutdownCtx)
+			if errors.Is(err, ErrReorg) {
 				err := l.state.Close()
 				if err != nil {
 					l.log.Error("error closing the channel manager to handle a L2 reorg", "err", err)
 				}
 				l.state.Clear()
+				continue
+			} else if err != nil {
+				l.log.Error("load block into state err,", "err", err)
 				continue
 			}
 			l.publishStateToMantleDA()
@@ -101,16 +105,8 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 
 	// Collect next transaction data
 	_, err = l.state.TxData(l1tip.ID())
-	if l.state.pendingChannel != nil && !l.state.pendingChannel.IsFull() {
-		if err == io.EOF {
-			l.log.Trace("no transaction data available")
-			return err
-		} else if err != nil {
-			l.log.Error("unable to get tx data", "err", err)
-			return err
-		}
-	}
-	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && l.state.pendingChannel.NumFrames() == 0 {
+
+	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && !l.state.pendingChannel.HasFrame() {
 		if len(l.state.pendingTransactions) > 0 {
 			var txsdata [][]byte
 			for _, v := range l.state.pendingTransactions {
@@ -123,7 +119,7 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 			return errors.New("there is no frame in the current channel")
 		}
 	}
-	return nil
+	return err
 }
 
 func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte) error {
