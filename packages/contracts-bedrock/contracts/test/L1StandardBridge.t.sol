@@ -83,7 +83,7 @@ contract PreBridgeETH is Bridge_Initializer {
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeETH.selector,
+            L2StandardBridge.finalizeBridgeETH.selector,
             alice,
             alice,
             500,
@@ -134,7 +134,7 @@ contract PreBridgeETH is Bridge_Initializer {
                 OptimismPortal.depositTransaction.selector,
                 0,
                 address(L2Messenger),
-                500,
+                0,
                 baseGas,
                 false,
                 innerMessage
@@ -267,11 +267,12 @@ contract PreBridgeETHTo is Bridge_Initializer {
         uint64 baseGas = L1Messenger.baseGas(message, 60000);
         vm.expectCall(
             address(op),
+            600,
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
                 0,
                 address(L2Messenger),
-                600,
+                0,
                 baseGas,
                 false,
                 innerMessage
