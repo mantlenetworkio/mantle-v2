@@ -156,6 +156,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.prank(alice,alice);
         l2ETH.approve(address(L2Bridge),100);
+        vm.prank(alice,alice);
         L2Bridge.withdraw{ value: 0 }({
             _l2Token: Predeploys.BVM_ETH,
             _amount: 100,
@@ -539,6 +540,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         deal(address(l2ETH),address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
         l2ETH.approve(address(L2Bridge) , 50);
+        vm.prank(address(L2Messenger));
         vm.expectRevert("StandardBridge: amount sent does not match amount required");
         L2Bridge.finalizeBridgeETH{ value: 50 }(alice, alice, 100, hex"");
     }
@@ -581,7 +583,7 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         vm.prank(messenger);
         l2ETH.approve(address(L2Bridge),100);
 
-
+        vm.prank(messenger);
         vm.expectEmit(true, true, true, true);
         emit DepositFinalized(address(0), Predeploys.BVM_ETH, alice, alice, 100, hex"");
 
