@@ -137,8 +137,9 @@ contract L2StandardBridge_Test is Bridge_Initializer {
      *         withdraw ether from L2 to L1.
      */
     function test_withdraw_ether_succeeds() external {
-        assertTrue(alice.balance >= 100);
-        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 0);
+        deal(address(l2ETH),alice,150);
+        assertTrue(l2ETH.balanceOf(alice) >= 100);
+        assertEq(l2ETH.balanceOf(Predeploys.L2_TO_L1_MESSAGE_PASSER), 0);
 
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit WithdrawalInitiated({
@@ -153,8 +154,9 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit ETHBridgeInitiated({ from: alice, to: alice, amount: 100, data: hex"" });
 
-        vm.prank(alice, alice);
-        L2Bridge.withdraw{ value: 100 }({
+        vm.prank(alice,alice);
+        l2ETH.approve(address(L2Bridge),100);
+        L2Bridge.withdraw{ value: 0 }({
             _l2Token: Predeploys.BVM_ETH,
             _amount: 100,
             _minGasLimit: 1000,
