@@ -553,7 +553,7 @@ contract FFIInterface is Test {
             bytes[] memory
         )
     {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "getProveWithdrawalTransactionInputs";
         cmds[2] = vm.toString(_tx.nonce);
@@ -585,7 +585,7 @@ contract FFIInterface is Test {
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashCrossDomainMessage";
         cmds[2] = vm.toString(_nonce);
@@ -609,7 +609,7 @@ contract FFIInterface is Test {
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashWithdrawal";
         cmds[2] = vm.toString(_nonce);
@@ -652,7 +652,7 @@ contract FFIInterface is Test {
         bytes memory _data,
         uint64 _logIndex
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](10);
+        string[] memory cmds = new string[](11);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashDepositTransaction";
         cmds[2] = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -673,7 +673,7 @@ contract FFIInterface is Test {
         external
         returns (bytes memory)
     {
-        string[] memory cmds = new string[](11);
+        string[] memory cmds = new string[](12);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeDepositTransaction";
         cmds[2] = vm.toString(txn.from);
@@ -700,7 +700,7 @@ contract FFIInterface is Test {
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes memory) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeCrossDomainMessage";
         cmds[2] = vm.toString(_nonce);

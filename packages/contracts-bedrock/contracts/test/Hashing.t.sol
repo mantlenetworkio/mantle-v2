@@ -6,6 +6,7 @@ import { Types } from "../libraries/Types.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { LegacyCrossDomainUtils } from "../libraries/LegacyCrossDomainUtils.sol";
+import { console } from "forge-std/console.sol";
 
 contract Hashing_hashDepositSource_Test is CommonTest {
     /**
@@ -39,7 +40,6 @@ contract Hashing_hashCrossDomainMessage_Test is CommonTest {
         // Ensure the version is valid.
         uint16 version = uint16(bound(uint256(_version), 0, 1));
         uint256 nonce = Encoding.encodeVersionedNonce(_nonce, version);
-
         assertEq(
             Hashing.hashCrossDomainMessage(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data),
             ffi.hashCrossDomainMessage(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data)
