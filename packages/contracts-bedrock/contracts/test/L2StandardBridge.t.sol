@@ -127,9 +127,9 @@ contract L2StandardBridge_Test is Bridge_Initializer {
     function test_withdraw_insufficientValue_reverts() external {
         assertEq(address(messagePasser).balance, 0);
 
-        vm.expectRevert("StandardBridge: bridging ETH must include sufficient ETH value");
+        vm.expectRevert("StandardBridge: bridging MNT must include sufficient MNT value");
         vm.prank(alice, alice);
-        L2Bridge.withdraw(address(Predeploys.BVM_ETH), 100, 1000, hex"");
+        L2Bridge.withdraw(address(0), 100, 1000, hex"");
     }
 
     /**
@@ -164,7 +164,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             _extraData: hex""
         });
 
-        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 100);
+        assertEq(l2ETH.balanceOf(Predeploys.L2_TO_L1_MESSAGE_PASSER), 100);
     }
 }
 
@@ -541,8 +541,8 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.prank(address(L2Messenger));
         l2ETH.approve(address(L2Bridge) , 50);
         vm.prank(address(L2Messenger));
-        vm.expectRevert("StandardBridge: amount sent does not match amount required");
-        L2Bridge.finalizeBridgeETH{ value: 50 }(alice, alice, 100, hex"");
+        vm.expectRevert("ERC20: insufficient allowance");
+        L2Bridge.finalizeBridgeETH{ value: 0 }(alice, alice, 100, hex"");
     }
 
     function test_finalizeBridgeETH_sendToSelf_reverts() external {

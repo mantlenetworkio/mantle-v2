@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { CommonTest } from "./CommonTest.t.sol";
+import { BVMETH_Initializer } from "./CommonTest.t.sol";
 import { L2ToL1MessagePasser } from "../L2/L2ToL1MessagePasser.sol";
 import { Types } from "../libraries/Types.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 
-contract L2ToL1MessagePasserTest is CommonTest {
-    L2ToL1MessagePasser messagePasser;
+contract L2ToL1MessagePasserTest is BVMETH_Initializer {
 
     event MessagePassed(
         uint256 indexed nonce,
@@ -24,7 +23,6 @@ contract L2ToL1MessagePasserTest is CommonTest {
 
     function setUp() public virtual override {
         super.setUp();
-        messagePasser = new L2ToL1MessagePasser();
     }
 
     function testFuzz_initiateWithdrawal_succeeds(
@@ -53,6 +51,7 @@ contract L2ToL1MessagePasserTest is CommonTest {
         emit MessagePassed(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data, withdrawalHash);
 
         vm.deal(_sender, _mntValue);
+        deal(address(l2ETH),_sender,_ethValue);
         vm.prank(_sender);
         messagePasser.initiateWithdrawal{ value: _mntValue }(_ethValue, _target, _gasLimit, _data);
 
@@ -122,8 +121,8 @@ contract L2ToL1MessagePasserTest is CommonTest {
 
     // Test: burn should destroy the ETH held in the contract
     function test_burn_succeeds() external {
-        messagePasser.initiateWithdrawal{ value: 0 }(
-            NON_ZERO_VALUE,
+        messagePasser.initiateWithdrawal{ value: NON_ZERO_VALUE }(
+            ZERO_VALUE,
             NON_ZERO_ADDRESS,
             NON_ZERO_GASLIMIT,
             NON_ZERO_DATA

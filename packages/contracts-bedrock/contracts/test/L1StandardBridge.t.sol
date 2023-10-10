@@ -468,7 +468,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeERC20.selector,
+            L2StandardBridge.finalizeBridgeERC20.selector,
             address(L2Token),
             address(L1Token),
             alice,
@@ -481,7 +481,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -490,7 +490,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         );
 
         bytes memory innerMessage = abi.encodeWithSelector(
-            CrossDomainMessenger.relayMessage.selector,
+            L2CrossDomainMessenger.relayMessage.selector,
             nonce,
             address(L1Bridge),
             address(L2Bridge),

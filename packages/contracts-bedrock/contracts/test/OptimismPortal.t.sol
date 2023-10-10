@@ -967,6 +967,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
                 )
             )
         );
+        deal(address(l1MNT),address(op),insufficientGasTx.mntValue);
 
         op.proveWithdrawalTransaction(
             insufficientGasTx,
