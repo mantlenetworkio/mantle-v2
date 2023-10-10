@@ -264,6 +264,7 @@ github.com/Azure/go-autorest/autorest/date v0.3.0 h1:7gUk1U5M/CQbp9WoqinNzJar+8K
 github.com/Azure/go-autorest/autorest/mocks v0.4.1 h1:K0laFcLE6VLTOwNgSxaGbUcLPuGXlNkbVvq4cW4nIHk=
 github.com/Azure/go-autorest/logger v0.1.0 h1:ruG4BSDXONFRrZZJ2GUXDiUyVpayPmb1GnWeHDdaNKY=
 github.com/Azure/go-autorest/tracing v0.6.0 h1:TYi4+3m5t6K48TGI9AUdb+IzbnSxvnvUMfuitfgcfuo=
+github.com/BurntSushi/toml v1.2.0 h1:Rt8g24XnyGTyglgET/PRUNlrUeu9F5L+7FilkXfZgs0=
 github.com/BurntSushi/toml v1.2.0/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=
 github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 h1:sR+/8Yb4slttB4vD+b9btVEnWgL3Q00OBTzVT8B9C0c=
@@ -491,7 +492,7 @@ github.com/ianlancetaylor/demangle v0.0.0-20220319035150-800ac71e25c2/go.mod h1:
 github.com/imkira/go-interpol v1.1.0 h1:KIiKr0VSG2CUW1hl1jpiyuzuJeKUUpC8iM1AIE7N1Vk=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
 github.com/influxdata/flux v0.65.1 h1:77BcVUCzvN5HMm8+j9PRBQ4iZcu98Dl4Y9rf+J5vhnc=
-github.com/influxdata/influxdb v1.8.3 h1:WEypI1BQFTT4teLM+1qkEcvUi0dAvopAI/ir0vAiBg8=
+github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d h1:/WZQPMZNsjZ7IlCpsLGdQBINg5bxKQ1K1sh6awxLtkA=
 github.com/influxdata/influxql v1.1.1-0.20200828144457-65d3ef77d385 h1:ED4e5Cc3z5vSN2Tz2GkOHN7vs4Sxe2yds6CXvDnvZFE=
 github.com/influxdata/promql/v2 v2.12.0 h1:kXn3p0D7zPw16rOtfDR+wo6aaiH8tSMfhPwONTxrlEc=
 github.com/influxdata/roaring v0.4.13-0.20180809181101-fc520f41fab6 h1:UzJnB7VRL4PSkUJHwsyzseGOmrO/r4yA+AuxGJxiZmA=
@@ -575,8 +576,8 @@ github.com/mailgun/raymond/v2 v2.0.46/go.mod h1:lsgvL50kgt1ylcFJYZiULi5fjPBkkhNf
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mantlenetworkio/op-geth v1.101105.2-0.20230502202351-9cc072e922f6/go.mod h1:X9t7oeerFMU9/zMIjZKT/jbIca+O05QqtBTLjL+XVeA=
-github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740 h1:r8l1mU02MOr/noM6bffgwUXWK1yLqsVT/IOPjErIWHQ=
-github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740/go.mod h1:SGLXBOtu2JlKrNoUG76EatI2uJX/WZRY4nmEyvE9Q38=
+github.com/mantlenetworkio/op-geth v1.101105.3 h1:2jzYw7kS8H/JHJZ4IOlFR4TCSAtRDpOMelB8DaBMiiY=
+github.com/mantlenetworkio/op-geth v1.101105.3/go.mod h1:SGLXBOtu2JlKrNoUG76EatI2uJX/WZRY4nmEyvE9Q38=
 github.com/mantlenetworkio/op-geth v1.101200.2-rc.1.0.20230908180308-3cea832f24c3/go.mod h1:gRnPb21PoKcHm3kHqj9BQlQkwmhOGUvQoGEbC7z852Q=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd h1:HvFwW+cm9bCbZ/+vuGNq7CRWXql8c0y8nGeYpqmpvmk=
 github.com/mattn/go-ieproxy v0.0.0-20190702010315-6dee0af9227d h1:oNAwILwmgWKFpuU+dXvI6dl9jG2mAWAZLX3r9s0PPiw=
