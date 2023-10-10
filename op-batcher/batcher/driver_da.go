@@ -112,11 +112,11 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 
 	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && !l.state.pendingChannel.HasFrame() {
 		if len(l.state.pendingTransactions) > 0 {
-			var txsdata [][]byte
+			var txsData [][]byte
 			for _, v := range l.state.pendingTransactions {
-				txsdata = append(txsdata, v.Bytes())
+				txsData = append(txsData, v.Bytes())
 			}
-			err := l.DisperseStoreData(txsdata)
+			err := l.disperseStoreData(txsData)
 			return err
 		} else {
 			l.log.Error("there is no frame in the current channel")
@@ -126,11 +126,11 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 	return err
 }
 
-func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte) error {
+func (l *BatchSubmitter) disperseStoreData(txsData [][]byte) error {
 
-	//if txsdata has been successfully upload to MantleDA, we don't need to re-upload.
+	//if txsData has been successfully upload to MantleDA, we don't need to re-upload.
 	if l.state.params == nil {
-		txnBufBytes, err := rlp.EncodeToBytes(txsdata)
+		txnBufBytes, err := rlp.EncodeToBytes(txsData)
 		if err != nil {
 			l.log.Error("rlp unable to encode txn", "err", err)
 			return err
@@ -143,7 +143,7 @@ func (l *BatchSubmitter) DisperseStoreData(txsdata [][]byte) error {
 		}
 		l.log.Info("Operator Info", "NumSys", params.NumSys, "NumPar", params.NumPar, "TotalOperatorsIndex", params.TotalOperatorsIndex, "NumTotal", params.NumTotal)
 		//cache params
-		l.state.params = &params
+		l.state.params = params
 	}
 
 	return ErrUploadDataFinished
@@ -160,18 +160,18 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 		return nil, err
 	}
 
-	txdata, err := l.DataStoreTxData(
+	dataStoreTxData, err := l.dataStoreTxData(
 		l.DataLayrServiceManagerABI, uploadHeader, uint8(l.state.params.Duration), l.state.params.ReferenceBlockNumber, l.state.params.TotalOperatorsIndex,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	candiddate := txmgr.TxCandidate{
+	candidate := txmgr.TxCandidate{
 		To:     &l.DataLayrServiceManagerAddr,
-		TxData: txdata,
+		TxData: dataStoreTxData,
 	}
-	receipt, err := l.txMgr.Send(ctx, candiddate)
+	receipt, err := l.txMgr.Send(ctx, candidate)
 	if err != nil {
 		return nil, err
 	}
@@ -179,11 +179,11 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 	return receipt, nil
 }
 
-func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
+func (l *BatchSubmitter) callEncode(data []byte) (*common.StoreParams, error) {
 	conn, err := grpc.Dial(l.DisperserSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.log.Error("op-batcher disperser cannot connect to", "DisperserSocket", l.DisperserSocket)
-		return common.StoreParams{}, err
+		return nil, err
 	}
 	defer conn.Close()
 	c := pb.NewDataDispersalClient(conn)
@@ -198,12 +198,12 @@ func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
 	l.log.Info("op-batcher get store", "reply", reply)
 	if err != nil {
 		l.log.Error("op-batcher get store err", err)
-		return common.StoreParams{}, err
+		return nil, err
 	}
 	l.log.Info("op-batcher get store end")
 	g := reply.GetStore()
 	feeBigInt := new(big.Int).SetBytes(g.Fee)
-	params := common.StoreParams{
+	params := &common.StoreParams{
 		ReferenceBlockNumber: g.ReferenceBlockNumber,
 		TotalOperatorsIndex:  g.TotalOperatorsIndex,
 		OrigDataSize:         g.OrigDataSize,
@@ -224,8 +224,8 @@ func (l *BatchSubmitter) callEncode(data []byte) (common.StoreParams, error) {
 	return params, nil
 }
 
-func (l *BatchSubmitter) DataStoreTxData(abi *abi.ABI, uploadHeader []byte, duration uint8, blockNumber uint32, totalOperatorsIndex uint32) ([]byte, error) {
-	l.log.Info("encode initDataStore", "feePayer", l.txMgr.From(), "confirmer", l.txMgr.From(), "duration", duration, "referenceBlockNumber", blockNumber, "totalOperatorsIndex", totalOperatorsIndex)
+func (l *BatchSubmitter) dataStoreTxData(abi *abi.ABI, uploadHeader []byte, duration uint8, blockNumber uint32, totalOperatorsIndex uint32) ([]byte, error) {
+	l.log.Info("encode initDataStore", "feePayer", l.txMgr.From(), "confirmor", l.txMgr.From(), "duration", duration, "referenceBlockNumber", blockNumber, "totalOperatorsIndex", totalOperatorsIndex)
 
 	return abi.Pack(
 		"initDataStore",
@@ -237,11 +237,11 @@ func (l *BatchSubmitter) DataStoreTxData(abi *abi.ABI, uploadHeader []byte, dura
 		uploadHeader)
 }
 
-func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (common.DisperseMeta, error) {
+func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (*common.DisperseMeta, error) {
 	conn, err := grpc.Dial(l.DisperserSocket, grpc.WithInsecure())
 	if err != nil {
 		l.log.Error("op-batcher Dial DisperserSocket", "err", err)
-		return common.DisperseMeta{}, err
+		return nil, err
 	}
 	defer conn.Close()
 	c := pb.NewDataDispersalClient(conn)
@@ -253,7 +253,7 @@ func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (co
 	}
 	reply, err := c.DisperseStore(ctx, request)
 	if err != nil {
-		return common.DisperseMeta{}, err
+		return nil, err
 	}
 	sigs := reply.GetSigs()
 	aggSig := common.AggregateSignature{
@@ -262,7 +262,7 @@ func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (co
 		UsedAggPubkeyG2:   sigs.UsedAggPubkeyG2,
 		NonSignerPubkeys:  sigs.NonSignerPubkeys,
 	}
-	meta := common.DisperseMeta{
+	meta := &common.DisperseMeta{
 		Sigs:            aggSig,
 		ApkIndex:        reply.GetApkIndex(),
 		TotalStakeIndex: reply.GetTotalStakeIndex(),
@@ -270,7 +270,7 @@ func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (co
 	return meta, nil
 }
 
-func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (*types.Receipt, error) {
+func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (*types.Receipt, error) {
 	event, ok := l.GraphClient.PollingInitDataStore(
 		ctx,
 		txHash[:],
@@ -289,8 +289,8 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 		l.log.Error("op-batcher call Disperse fail", "err", err)
 		return nil, err
 	}
-	callData := common.MakeCalldata(l.state.params, meta, event.StoreNumber, event.MsgHash)
-	searchData := bindings.IDataLayrServiceManagerDataStoreSearchData{
+	callData := common.MakeCalldata(l.state.params, *meta, event.StoreNumber, event.MsgHash)
+	searchData := &bindings.IDataLayrServiceManagerDataStoreSearchData{
 		Duration:  event.Duration,
 		Timestamp: new(big.Int).SetUint64(uint64(event.InitTime)),
 		Index:     event.Index,
@@ -306,19 +306,19 @@ func (l *BatchSubmitter) ConfirmStoredData(txHash []byte, ctx context.Context) (
 		},
 	}
 
-	txdata, err := l.ConfirmDataTxData(l.DataLayrServiceManagerABI, callData, searchData)
+	confirmTxData, err := l.confirmDataTxData(l.DataLayrServiceManagerABI, callData, searchData)
 	if err != nil {
 		return nil, err
 	}
 
-	candiddate := txmgr.TxCandidate{
+	candidate := txmgr.TxCandidate{
 		To:     &l.DataLayrServiceManagerAddr,
-		TxData: txdata,
+		TxData: confirmTxData,
 	}
-	return l.txMgr.Send(ctx, candiddate)
+	return l.txMgr.Send(ctx, candidate)
 }
 
-func (l *BatchSubmitter) ConfirmDataTxData(abi *abi.ABI, callData []byte, searchData bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
+func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, searchData *bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
 	return abi.Pack(
 		"confirmDataStore",
 		callData,
@@ -334,7 +334,7 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(r *types.Receipt, ctx contex
 		l.log.Info("initDataStore tx successfully published", "tx_hash", r.TxHash)
 		l.state.initStoreDataReceipt = r
 		//start to confirmData
-		r, err := l.ConfirmStoredData(r.TxHash.Bytes(), ctx)
+		r, err := l.confirmStoredData(r.TxHash.Bytes(), ctx)
 		if err != nil {
 			l.log.Error("failed to confirm data", "err", err)
 			return nil, err
