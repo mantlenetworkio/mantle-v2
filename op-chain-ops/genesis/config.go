@@ -121,9 +121,13 @@ type DeployConfig struct {
 
 	FundDevAccounts bool `json:"fundDevAccounts"`
 
-	// MANTLE DA MODIFY //
+	// The switch of open rollup mantleDA or not,
+	// If true, rollup tx data to MantleDA;
+	// If false, rollup tx data to EOA address
 	MantleDaSwitch bool `json:"mantleDaSwitch"`
 
+	// Contract Address of DataLayrServiceManager, call initDataStore and confirmDataStore
+	// Submit transaction meta info to MantleDA contracts
 	DataLayrServiceManagerAddr string `json:"dataLayrServiceManagerAddr"`
 }
 

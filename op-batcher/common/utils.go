@@ -2,11 +2,13 @@ package common
 
 import (
 	"fmt"
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/header"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"os"
+
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/header"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func CreateUploadHeader(params *StoreParams) ([]byte, error) {

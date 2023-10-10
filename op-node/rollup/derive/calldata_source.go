@@ -18,10 +18,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
-var (
-	ConfirmDataStoreEventABI     = "ConfirmDataStore(uint32,bytes32)"
-	ConfirmDataStoreEventABIHash = crypto.Keccak256Hash([]byte(ConfirmDataStoreEventABI))
-)
+const ConfirmDataStoreEventABI = "ConfirmDataStore(uint32,bytes32)"
+
+var ConfirmDataStoreEventABIHash = crypto.Keccak256Hash([]byte(ConfirmDataStoreEventABI))
 
 type DataIter interface {
 	Next(ctx context.Context) (eth.Data, error)

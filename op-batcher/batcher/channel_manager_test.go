@@ -1,12 +1,13 @@
 package batcher
 
 import (
-	"github.com/stretchr/testify/require"
 	"io"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

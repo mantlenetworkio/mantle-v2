@@ -2,8 +2,9 @@ package batcher
 
 import (
 	"errors"
-	"github.com/urfave/cli"
 	"time"
+
+	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"

@@ -3,11 +3,12 @@ package batcher
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"io"
 	"math/big"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceDL"
 

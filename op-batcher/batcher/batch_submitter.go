@@ -3,11 +3,12 @@ package batcher
 import (
 	"context"
 	"fmt"
-	"github.com/urfave/cli"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/urfave/cli"
 
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
 
