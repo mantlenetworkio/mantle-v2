@@ -201,12 +201,12 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	return logger, nil
 }
 
-func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig, error) {
+func NewMantleDataStoreConfig(ctx *cli.Context) (*datastore.MantleDataStoreConfig, error) {
 	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
 	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
 	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
 	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
-	return datastore.MantleDataStoreConfig{
+	return &datastore.MantleDataStoreConfig{
 		RetrieverSocket:          retrieverSocket,
 		RetrieverTimeout:         retrieverTimeout,
 		GraphProvider:            graphProvider,
