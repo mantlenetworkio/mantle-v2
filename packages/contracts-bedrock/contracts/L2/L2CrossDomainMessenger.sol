@@ -79,7 +79,6 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     ) external payable override {
         if (_ethAmount!=0){
             IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
-            IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_TO_L1_MESSAGE_PASSER, _ethAmount);
         }
 
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
