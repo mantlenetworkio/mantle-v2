@@ -13,7 +13,8 @@ contract L2ToL1MessagePasserTest is CommonTest {
         uint256 indexed nonce,
         address indexed sender,
         address indexed target,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint256 gasLimit,
         bytes data,
         bytes32 withdrawalHash
@@ -49,11 +50,11 @@ contract L2ToL1MessagePasserTest is CommonTest {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit MessagePassed(nonce, _sender, _target, _ethValue, _gasLimit, _data, withdrawalHash);
+        emit MessagePassed(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data, withdrawalHash);
 
-        vm.deal(_sender, _ethValue);
+        vm.deal(_sender, _mntValue);
         vm.prank(_sender);
-        messagePasser.initiateWithdrawal{ value: 0 }(_ethValue, _target, _gasLimit, _data);
+        messagePasser.initiateWithdrawal{ value: _mntValue }(_ethValue, _target, _gasLimit, _data);
 
         assertEq(messagePasser.sentMessages(withdrawalHash), true);
 
@@ -82,13 +83,14 @@ contract L2ToL1MessagePasserTest is CommonTest {
             address(this),
             address(4),
             100,
+            0,
             64000,
             hex"",
             withdrawalHash
         );
 
         vm.deal(address(this), 2**64);
-        messagePasser.initiateWithdrawal{ value: 100 }(100, address(4), 64000, hex"");
+        messagePasser.initiateWithdrawal{ value: 100 }(0, address(4), 64000, hex"");
     }
 
     // Test: initiateWithdrawal should emit the correct log when called by an EOA
@@ -108,9 +110,9 @@ contract L2ToL1MessagePasserTest is CommonTest {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit MessagePassed(nonce, alice, target, mntValue, gasLimit, data, withdrawalHash);
+        emit MessagePassed(nonce, alice, target, mntValue, ethValue, gasLimit, data, withdrawalHash);
 
-        messagePasser.initiateWithdrawal{ value: 0 }(mntValue,target, gasLimit, data);
+        messagePasser.initiateWithdrawal{ value: mntValue }(ethValue,target, gasLimit, data);
 
         // the sent messages mapping is filled
         assertEq(messagePasser.sentMessages(withdrawalHash), true);

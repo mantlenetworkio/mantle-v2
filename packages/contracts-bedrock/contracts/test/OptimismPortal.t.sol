@@ -92,7 +92,7 @@ contract OptimismPortal_Test is Portal_Initializer {
 
     function test_receive_succeeds() external {
         vm.expectEmit(true, true, false, true);
-        emitTransactionDeposited(alice, alice, 100, 0,100, 100_000, false, hex"");
+        emitTransactionDeposited(alice, alice, 0, 0,100, 100_000, false, hex"");
 
         // give alice money and send as an eoa
         vm.deal(alice, 2**64);
@@ -437,8 +437,8 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
             nonce: 0,
             sender: alice,
             target: bob,
-            mntValue: 100,
-            ethValue: 0,
+            mntValue: 0,
+            ethValue: 100,
             gasLimit: 100_000,
             data: hex""
         });
@@ -1042,7 +1042,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
     function testDiff_finalizeWithdrawalTransaction_succeeds(
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external {
@@ -1054,7 +1054,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         );
 
         // Total ETH supply is currently about 120M ETH.
-        uint256 value = bound(_value, 0, 200_000_000 ether);
+        uint256 value = bound(_ethValue, 0, 200_000_000 ether);
         vm.deal(address(op), value);
 
         uint256 gasLimit = bound(_gasLimit, 0, 50_000_000);
