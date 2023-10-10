@@ -575,6 +575,8 @@ github.com/mailgun/raymond/v2 v2.0.46/go.mod h1:lsgvL50kgt1ylcFJYZiULi5fjPBkkhNf
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mantlenetworkio/op-geth v1.101105.2-0.20230502202351-9cc072e922f6/go.mod h1:X9t7oeerFMU9/zMIjZKT/jbIca+O05QqtBTLjL+XVeA=
+github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740 h1:r8l1mU02MOr/noM6bffgwUXWK1yLqsVT/IOPjErIWHQ=
+github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740/go.mod h1:SGLXBOtu2JlKrNoUG76EatI2uJX/WZRY4nmEyvE9Q38=
 github.com/mantlenetworkio/op-geth v1.101200.2-rc.1.0.20230908180308-3cea832f24c3/go.mod h1:gRnPb21PoKcHm3kHqj9BQlQkwmhOGUvQoGEbC7z852Q=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd h1:HvFwW+cm9bCbZ/+vuGNq7CRWXql8c0y8nGeYpqmpvmk=
 github.com/mattn/go-ieproxy v0.0.0-20190702010315-6dee0af9227d h1:oNAwILwmgWKFpuU+dXvI6dl9jG2mAWAZLX3r9s0PPiw=
