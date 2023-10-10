@@ -223,7 +223,7 @@ func main() {
 				&derive.L1BlockInfo{
 					Number:        block.NumberU64(),
 					Time:          block.Time(),
-					BaseFee:       block.BaseFee(), //TODO
+					BaseFee:       block.BaseFee(),
 					BlockHash:     block.Hash(),
 					BatcherAddr:   config.BatchSenderAddress,
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
