@@ -467,6 +467,12 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
 
+        deal(address(L1Token), alice, 100000, true);
+        vm.store(address(L1Token), bytes32(uint256(0x2)), bytes32(uint256(100000))); //set total supply
+
+        vm.prank(alice);
+        L1Token.approve(address(L1Bridge), type(uint256).max);
+
         bytes memory message = abi.encodeWithSelector(
             L2StandardBridge.finalizeBridgeERC20.selector,
             address(L2Token),
@@ -541,11 +547,6 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
         emit SentMessageExtension1(address(L1Bridge), 0, 0);
-
-        deal(address(L1Token), alice, 100000, true);
-
-        vm.prank(alice);
-        L1Token.approve(address(L1Bridge), type(uint256).max);
 
         vm.expectCall(
             address(L1Token),
