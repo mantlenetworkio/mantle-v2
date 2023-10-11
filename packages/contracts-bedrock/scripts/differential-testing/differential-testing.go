@@ -97,14 +97,16 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[5], 10)
+		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		data := common.FromHex(args[6])
+		gasLimit, ok := new(big.Int).SetString(args[6], 10)
+		checkOk(ok)
+		data := common.FromHex(args[7])
 
 		// Encode cross domain message
-		encoded, err := encodeCrossDomainMessage(nonce, sender, target, value, gasLimit, data)
+		encoded, err := encodeCrossDomainMessage(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error encoding cross domain message")
 
 		// Pack encoded cross domain message
@@ -118,14 +120,16 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[5], 10)
+		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		data := common.FromHex(args[6])
+		gasLimit, ok := new(big.Int).SetString(args[6], 10)
+		checkOk(ok)
+		data := common.FromHex(args[7])
 
 		// Encode cross domain message
-		encoded, err := encodeCrossDomainMessage(nonce, sender, target, value, gasLimit, data)
+		encoded, err := encodeCrossDomainMessage(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error encoding cross domain message")
 
 		// Hash encoded cross domain message
@@ -147,12 +151,14 @@ func main() {
 		checkOk(ok)
 		value, ok := new(big.Int).SetString(args[6], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[7], 10)
+		ethValue, ok := new(big.Int).SetString(args[7], 10)
 		checkOk(ok)
-		data := common.FromHex(args[8])
+		gasLimit, ok := new(big.Int).SetString(args[8], 10)
+		checkOk(ok)
+		data := common.FromHex(args[9])
 
 		// Create deposit transaction
-		depositTx := makeDepositTx(from, to, value, mint, gasLimit, false, data, l1BlockHash, logIndex)
+		depositTx := makeDepositTx(from, to, value, mint, ethValue, gasLimit, false, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -170,19 +176,20 @@ func main() {
 		// Parse input arguments
 		from := common.HexToAddress(args[1])
 		to := common.HexToAddress(args[2])
-		value, ok := new(big.Int).SetString(args[3], 10)
+		mntValue, ok := new(big.Int).SetString(args[3], 10)
 		checkOk(ok)
-		mint, ok := new(big.Int).SetString(args[4], 10)
+		mntTxValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[5], 10)
+		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		isCreate := args[6] == "true"
-		data := common.FromHex(args[7])
-		l1BlockHash := common.HexToHash(args[8])
-		logIndex, ok := new(big.Int).SetString(args[9], 10)
+		gasLimit, ok := new(big.Int).SetString(args[6], 10)
 		checkOk(ok)
-
-		depositTx := makeDepositTx(from, to, value, mint, gasLimit, isCreate, data, l1BlockHash, logIndex)
+		isCreate := args[7] == "true"
+		data := common.FromHex(args[8])
+		l1BlockHash := common.HexToHash(args[9])
+		logIndex, ok := new(big.Int).SetString(args[10], 10)
+		checkOk(ok)
+		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -198,14 +205,15 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[5], 10)
+		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		data := common.FromHex(args[6])
-
+		gasLimit, ok := new(big.Int).SetString(args[6], 10)
+		checkOk(ok)
+		data := common.FromHex(args[7])
 		// Hash withdrawal
-		hash, err := hashWithdrawal(nonce, sender, target, value, gasLimit, data)
+		hash, err := hashWithdrawal(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error hashing withdrawal")
 
 		// Pack hash
@@ -235,13 +243,15 @@ func main() {
 		checkOk(ok)
 		sender := common.HexToAddress(args[2])
 		target := common.HexToAddress(args[3])
-		value, ok := new(big.Int).SetString(args[4], 10)
+		mntValue, ok := new(big.Int).SetString(args[4], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[5], 10)
+		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		data := common.FromHex(args[6])
+		gasLimit, ok := new(big.Int).SetString(args[6], 10)
+		checkOk(ok)
+		data := common.FromHex(args[7])
 
-		wdHash, err := hashWithdrawal(nonce, sender, target, value, gasLimit, data)
+		wdHash, err := hashWithdrawal(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 		checkErr(err, "Error hashing withdrawal")
 
 		// Compute the storage slot the withdrawalHash will be stored in
@@ -266,7 +276,7 @@ func main() {
 		checkErr(err, "Error creating secure trie")
 
 		// Put a "true" bool in the storage slot
-		state.UpdateStorage(common.Address{}, hash.Bytes(), []byte{0x01})
+		state.TryUpdate(hash.Bytes(), []byte{0x01})
 
 		// Create a secure trie for the world state
 		world, err := trie.NewStateTrie(
@@ -283,7 +293,7 @@ func main() {
 		}
 		writer := new(bytes.Buffer)
 		checkErr(account.EncodeRLP(writer), "Error encoding account")
-		world.UpdateStorage(common.Address{}, predeploys.L2ToL1MessagePasserAddr.Bytes(), writer.Bytes())
+		world.TryUpdate(predeploys.L2ToL1MessagePasserAddr.Bytes(), writer.Bytes())
 
 		// Get the proof
 		var proof proofList

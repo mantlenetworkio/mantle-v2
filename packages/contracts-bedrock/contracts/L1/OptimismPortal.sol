@@ -12,6 +12,8 @@ import { SecureMerkleTrie } from "../libraries/trie/SecureMerkleTrie.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @custom:proxied
@@ -21,6 +23,8 @@ import { Semver } from "../universal/Semver.sol";
  *         Users are encouraged to use the L1CrossDomainMessenger for a higher-level interface.
  */
 contract OptimismPortal is Initializable, ResourceMetering, Semver {
+    using SafeERC20 for IERC20;
+
     /**
      * @notice Represents a proven withdrawal.
      *
@@ -60,6 +64,11 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     address public immutable GUARDIAN;
 
     /**
+     * @notice Address of  the L1 Mantle Token .
+     */
+    address public immutable L1_MNT_ADDRESS;
+
+    /**
      * @notice Address of the L2 account which initiated a withdrawal in this transaction. If the
      *         of this variable is the default L2 sender address, then we are NOT inside of a call
      *         to finalizeWithdrawalTransaction.
@@ -81,6 +90,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         withdrawals are paused. This may be removed in the future.
      */
     bool public paused;
+
 
     /**
      * @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
@@ -151,11 +161,13 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         L2OutputOracle _l2Oracle,
         address _guardian,
         bool _paused,
-        SystemConfig _config
+        SystemConfig _config,
+        address _l1MNT
     ) Semver(1, 6, 0) {
         L2_ORACLE = _l2Oracle;
         GUARDIAN = _guardian;
         SYSTEM_CONFIG = _config;
+        L1_MNT_ADDRESS = _l1MNT;
         initialize(_paused);
     }
 
@@ -205,7 +217,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     // solhint-disable-next-line ordering
     receive() external payable {
-        depositTransaction(msg.sender, msg.value, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
+        depositTransaction(0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
     /**
@@ -402,19 +414,19 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
-
+        bool l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
+        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
 
         // All withdrawals are immediately finalized. Replayability can
         // be achieved through contracts built on top of this contract
-        emit WithdrawalFinalized(withdrawalHash, success);
+        emit WithdrawalFinalized(withdrawalHash, success && l1mntSuccess);
 
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if (success == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if (success && l1mntSuccess == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }
@@ -425,15 +437,17 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
+     * @param _mntValue   Mint MNT amount to from address on L2
      * @param _to         Target address on L2.
-     * @param _value      ETH value to send to the recipient.
+     * @param _mntTxValue MNT value to send to the recipient.
      * @param _gasLimit   Minimum L2 gas limit (can be greater than or equal to this value).
      * @param _isCreation Whether or not the transaction is a contract creation.
      * @param _data       Data to trigger the recipient with.
      */
     function depositTransaction(
+        uint256 _mntValue,
         address _to,
-        uint256 _value,
+        uint256 _mntTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -460,6 +474,10 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // transactions are not gossipped over the p2p network.
         require(_data.length <= 120_000, "OptimismPortal: data too large");
 
+        if (_mntValue!=0){
+            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender,address(this),_mntValue);
+        }
+
         // Transform the from-address to its alias if the caller is a contract.
         address from = msg.sender;
         if (msg.sender != tx.origin) {
@@ -470,8 +488,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // We use opaque data so that we can update the TransactionDeposited event in the future
         // without breaking the current interface.
         bytes memory opaqueData = abi.encodePacked(
+            _mntValue,
+            _mntTxValue,
             msg.value,
-            _value,
             _gasLimit,
             _isCreation,
             _data

@@ -55,8 +55,9 @@ library Types {
         address from;
         address to;
         bool isCreation;
-        uint256 value;
+        uint256 mntValue;
         uint256 mint;
+        uint256 ethValue;
         uint64 gasLimit;
         bytes data;
         bytes32 l1BlockHash;
@@ -77,7 +78,8 @@ library Types {
         uint256 nonce;
         address sender;
         address target;
-        uint256 value;
+        uint256 mntValue;
+        uint256 ethValue;
         uint256 gasLimit;
         bytes data;
     }

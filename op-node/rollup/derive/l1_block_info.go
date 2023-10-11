@@ -169,6 +169,7 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 		From:                L1InfoDepositerAddress,
 		To:                  &L1BlockAddress,
 		Mint:                nil,
+		EthValue:            nil,
 		Value:               big.NewInt(0),
 		Gas:                 150_000_000,
 		IsSystemTransaction: true,

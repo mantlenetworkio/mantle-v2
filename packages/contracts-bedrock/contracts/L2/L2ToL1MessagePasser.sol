@@ -6,6 +6,12 @@ import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Burn } from "../libraries/Burn.sol";
 import { Semver } from "../universal/Semver.sol";
+import { Predeploys } from "../libraries/Predeploys.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+
+
 
 /**
  * @custom:proxied
@@ -42,7 +48,8 @@ contract L2ToL1MessagePasser is Semver {
      * @param nonce          Unique value corresponding to each withdrawal.
      * @param sender         The L2 account address which initiated the withdrawal.
      * @param target         The L1 account address the call will be send to.
-     * @param value          The ETH value submitted for withdrawal, to be forwarded to the target.
+     * @param mntValue       The MNT value submitted for withdrawal, to be forwarded to the target.
+     * @param ethValue       The ETH value submitted for withdrawal, to be forwarded to the target.
      * @param gasLimit       The minimum amount of gas that must be provided when withdrawing.
      * @param data           The data to be forwarded to the target on L1.
      * @param withdrawalHash The hash of the withdrawal.
@@ -51,7 +58,8 @@ contract L2ToL1MessagePasser is Semver {
         uint256 indexed nonce,
         address indexed sender,
         address indexed target,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint256 gasLimit,
         bytes data,
         bytes32 withdrawalHash
@@ -70,10 +78,10 @@ contract L2ToL1MessagePasser is Semver {
     constructor() Semver(1, 0, 0) {}
 
     /**
-     * @notice Allows users to withdraw ETH by sending directly to this contract.
+     * @notice Allows users to withdraw MNT by sending directly to this contract.
      */
     receive() external payable {
-        initiateWithdrawal(msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
+        initiateWithdrawal(0,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
     /**
@@ -84,28 +92,35 @@ contract L2ToL1MessagePasser is Semver {
      */
     function burn() external {
         uint256 balance = address(this).balance;
-        Burn.eth(balance);
+        Burn.mnt(balance);
         emit WithdrawerBalanceBurnt(balance);
     }
 
     /**
      * @notice Sends a message from L2 to L1.
      *
+     * @param _ethValue eth amount bridged to L1.
      * @param _target   Address to call on L1 execution.
      * @param _gasLimit Minimum gas limit for executing the message on L1.
      * @param _data     Data to forward to L1 target.
      */
     function initiateWithdrawal(
+        uint256 _ethValue,
         address _target,
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
+        if (_ethValue!=0){
+            OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
+        }
+
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
                 sender: msg.sender,
                 target: _target,
-                value: msg.value,
+                mntValue: msg.value,
+                ethValue: _ethValue,
                 gasLimit: _gasLimit,
                 data: _data
             })
@@ -118,6 +133,7 @@ contract L2ToL1MessagePasser is Semver {
             msg.sender,
             _target,
             msg.value,
+            _ethValue,
             _gasLimit,
             _data,
             withdrawalHash

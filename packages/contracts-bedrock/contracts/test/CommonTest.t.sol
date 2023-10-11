@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 /* Testing utilities */
-import { Test, StdUtils } from "forge-std/Test.sol";
+import { stdStorage, StdStorage , Test, StdUtils } from "forge-std/Test.sol";
 import { L2OutputOracle } from "../L1/L2OutputOracle.sol";
 import { L2ToL1MessagePasser } from "../L2/L2ToL1MessagePasser.sol";
 import { L1StandardBridge } from "../L1/L1StandardBridge.sol";
@@ -16,7 +16,7 @@ import { OptimismPortal } from "../L1/OptimismPortal.sol";
 import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
 import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
-import { LegacyERC20ETH } from "../legacy/LegacyERC20ETH.sol";
+import { LegacyERC20MNT } from "../legacy/LegacyERC20MNT.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { Types } from "../libraries/Types.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -31,6 +31,9 @@ import { LegacyMintableERC20 } from "../legacy/LegacyMintableERC20.sol";
 import { SystemConfig } from "../L1/SystemConfig.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
 import { Constants } from "../libraries/Constants.sol";
+import { L1MantleToken } from "../L1/TestMantleToken.sol";
+import { BVM_ETH } from "../L2/BVM_ETH.sol";
+
 
 contract CommonTest is Test {
     address alice = address(128);
@@ -73,8 +76,9 @@ contract CommonTest is Test {
     function emitTransactionDeposited(
         address _from,
         address _to,
-        uint256 _mint,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _mntTxValue,
+        uint256 _ethValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -83,7 +87,7 @@ contract CommonTest is Test {
             _from,
             _to,
             0,
-            abi.encodePacked(_mint, _value, _gasLimit, _isCreation, _data)
+            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -156,8 +160,47 @@ contract L2OutputOracle_Initializer is CommonTest {
         vm.label(Predeploys.L2_TO_L1_MESSAGE_PASSER, "L2ToL1MessagePasser");
     }
 }
+contract MNTToken_Initializer is L2OutputOracle_Initializer {
+    using stdStorage for StdStorage;
 
-contract Portal_Initializer is L2OutputOracle_Initializer {
+    // Test target
+    L1MantleToken internal l1MNTImpl;
+    L1MantleToken internal l1MNT;
+
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        l1MNTImpl = new L1MantleToken();
+        Proxy proxy = new Proxy(multisig);
+        vm.prank(multisig);
+        proxy.upgradeToAndCall(
+            address(l1MNTImpl),
+            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10e50,multisig)
+        );
+        l1MNT = L1MantleToken(payable(address(proxy)));
+        vm.label(address(l1MNT), "L1MantleToken");
+    }
+}
+
+contract BVMETH_Initializer is MNTToken_Initializer {
+    // Test target
+    BVM_ETH internal l2ETH ;
+    using stdStorage for StdStorage;
+
+
+
+    function setUp() public virtual override {
+        super.setUp();
+        vm.prank(multisig);
+        vm.etch(Predeploys.BVM_ETH, address(new BVM_ETH()).code);
+        l2ETH= BVM_ETH(payable(Predeploys.BVM_ETH));
+        vm.label(address(l2ETH), "BVM_ETH");
+    }
+}
+
+
+contract Portal_Initializer is BVMETH_Initializer {
     // Test target
     OptimismPortal internal opImpl;
     OptimismPortal internal op;
@@ -189,7 +232,8 @@ contract Portal_Initializer is L2OutputOracle_Initializer {
             _l2Oracle: oracle,
             _guardian: guardian,
             _paused: true,
-            _config: systemConfig
+            _config: systemConfig,
+            _l1MNT : address(l1MNT)
         });
 
         Proxy proxy = new Proxy(multisig);
@@ -217,13 +261,14 @@ contract Messenger_Initializer is Portal_Initializer {
         uint256 gasLimit
     );
 
-    event SentMessageExtension1(address indexed sender, uint256 value);
+    event SentMessageExtension1(address indexed sender, uint256 mntValue, uint256 ethValue);
 
     event MessagePassed(
         uint256 indexed nonce,
         address indexed sender,
         address indexed target,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint256 gasLimit,
         bytes data,
         bytes32 withdrawalHash
@@ -236,7 +281,8 @@ contract Messenger_Initializer is Portal_Initializer {
         address indexed from,
         address indexed to,
         uint256 mint,
-        uint256 value,
+        uint256 mntValue,
+        uint256 ethValue,
         uint64 gasLimit,
         bool isCreation,
         bytes data
@@ -252,7 +298,8 @@ contract Messenger_Initializer is Portal_Initializer {
         addressManager = new AddressManager();
 
         // Setup implementation
-        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op);
+        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op,address(l1MNT));
+
 
         // Setup the address manager and proxy
         vm.prank(multisig);
@@ -275,7 +322,9 @@ contract Messenger_Initializer is Portal_Initializer {
         vm.label(address(addressManager), "AddressManager");
         vm.label(address(L1MessengerImpl), "L1CrossDomainMessenger_Impl");
         vm.label(address(L1Messenger), "L1CrossDomainMessenger_Proxy");
-        vm.label(Predeploys.LEGACY_ERC20_ETH, "LegacyERC20ETH");
+        vm.label(Predeploys.LEGACY_ERC20_MNT, "LegacyERC20MNT");
+        vm.label(Predeploys.BVM_ETH, "LegacyERC20ETH");
+
         vm.label(Predeploys.L2_CROSS_DOMAIN_MESSENGER, "L2CrossDomainMessenger");
 
         vm.label(
@@ -356,6 +405,11 @@ contract Bridge_Initializer is Messenger_Initializer {
 
     event ETHBridgeFinalized(address indexed from, address indexed to, uint256 amount, bytes data);
 
+    event MNTBridgeInitiated(address indexed from, address indexed to, uint256 amount, bytes extraData);
+
+    event MNTBridgeFinalized(address indexed from, address indexed to, uint256 amount, bytes extraData);
+
+
     event ERC20BridgeInitiated(
         address indexed localToken,
         address indexed remoteToken,
@@ -389,7 +443,7 @@ contract Bridge_Initializer is Messenger_Initializer {
             abi.encode(true)
         );
         vm.startPrank(multisig);
-        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)))).code);
+        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)),address(l1MNT))).code);
         vm.clearMockedCalls();
         address L1Bridge_Impl = proxy.getImplementation();
         vm.stopPrank();
@@ -401,7 +455,7 @@ contract Bridge_Initializer is Messenger_Initializer {
 
         // Deploy the L2StandardBridge, move it to the correct predeploy
         // address and then initialize it
-        L2StandardBridge l2B = new L2StandardBridge(payable(proxy));
+        L2StandardBridge l2B = new L2StandardBridge(payable(proxy),address(l1MNT));
         vm.etch(Predeploys.L2_STANDARD_BRIDGE, address(l2B).code);
         L2Bridge = L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE));
 
@@ -412,7 +466,7 @@ contract Bridge_Initializer is Messenger_Initializer {
         vm.etch(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY, address(factory).code);
         L2TokenFactory = OptimismMintableERC20Factory(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
 
-        vm.etch(Predeploys.LEGACY_ERC20_ETH, address(new LegacyERC20ETH()).code);
+        vm.etch(Predeploys.LEGACY_ERC20_MNT, address(new LegacyERC20MNT(address(l1MNT))).code);
 
         L1Token = new ERC20("Native L1 Token", "L1T");
 
@@ -499,15 +553,16 @@ contract FFIInterface is Test {
             bytes[] memory
         )
     {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "getProveWithdrawalTransactionInputs";
         cmds[2] = vm.toString(_tx.nonce);
         cmds[3] = vm.toString(_tx.sender);
         cmds[4] = vm.toString(_tx.target);
-        cmds[5] = vm.toString(_tx.value);
-        cmds[6] = vm.toString(_tx.gasLimit);
-        cmds[7] = vm.toString(_tx.data);
+        cmds[5] = vm.toString(_tx.mntValue);
+        cmds[6] = vm.toString(_tx.ethValue);
+        cmds[7] = vm.toString(_tx.gasLimit);
+        cmds[8] = vm.toString(_tx.data);
 
         bytes memory result = vm.ffi(cmds);
         (
@@ -525,19 +580,21 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashCrossDomainMessage";
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -547,19 +604,21 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashWithdrawal";
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -588,11 +647,12 @@ contract FFIInterface is Test {
         address _to,
         uint256 _mint,
         uint256 _value,
+        uint256 _ethValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](10);
+        string[] memory cmds = new string[](11);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashDepositTransaction";
         cmds[2] = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -601,8 +661,9 @@ contract FFIInterface is Test {
         cmds[5] = vm.toString(_to);
         cmds[6] = vm.toString(_mint);
         cmds[7] = vm.toString(_value);
-        cmds[8] = vm.toString(_gas);
-        cmds[9] = vm.toString(_data);
+        cmds[8] = vm.toString(_ethValue);
+        cmds[9] = vm.toString(_gas);
+        cmds[10] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -612,18 +673,19 @@ contract FFIInterface is Test {
         external
         returns (bytes memory)
     {
-        string[] memory cmds = new string[](11);
+        string[] memory cmds = new string[](12);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeDepositTransaction";
         cmds[2] = vm.toString(txn.from);
         cmds[3] = vm.toString(txn.to);
-        cmds[4] = vm.toString(txn.value);
+        cmds[4] = vm.toString(txn.mntValue);
         cmds[5] = vm.toString(txn.mint);
-        cmds[6] = vm.toString(txn.gasLimit);
-        cmds[7] = vm.toString(txn.isCreation);
-        cmds[8] = vm.toString(txn.data);
-        cmds[9] = vm.toString(txn.l1BlockHash);
-        cmds[10] = vm.toString(txn.logIndex);
+        cmds[6] = vm.toString(txn.ethValue);
+        cmds[7] = vm.toString(txn.gasLimit);
+        cmds[8] = vm.toString(txn.isCreation);
+        cmds[9] = vm.toString(txn.data);
+        cmds[10] = vm.toString(txn.l1BlockHash);
+        cmds[11] = vm.toString(txn.logIndex);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));
@@ -633,19 +695,21 @@ contract FFIInterface is Test {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external returns (bytes memory) {
-        string[] memory cmds = new string[](8);
+        string[] memory cmds = new string[](9);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeCrossDomainMessage";
         cmds[2] = vm.toString(_nonce);
         cmds[3] = vm.toString(_sender);
         cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_value);
-        cmds[6] = vm.toString(_gasLimit);
-        cmds[7] = vm.toString(_data);
+        cmds[5] = vm.toString(_mntValue);
+        cmds[6] = vm.toString(_ethValue);
+        cmds[7] = vm.toString(_gasLimit);
+        cmds[8] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));

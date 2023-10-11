@@ -10,6 +10,9 @@ import { Predeploys } from "../libraries/Predeploys.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { stdStorage, StdStorage } from "forge-std/Test.sol";
+import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
+import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
+
 
 contract L1StandardBridge_Getter_Test is Bridge_Initializer {
     function test_getters_succeeds() external {
@@ -49,10 +52,11 @@ contract L1StandardBridge_Receive_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
+                0,
                 address(L2Bridge),
                 abi.encodeWithSelector(
-                    StandardBridge.finalizeBridgeETH.selector,
+                    L2StandardBridge.finalizeBridgeETH.selector,
                     alice,
                     alice,
                     100,
@@ -79,7 +83,7 @@ contract PreBridgeETH is Bridge_Initializer {
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeETH.selector,
+            L2StandardBridge.finalizeBridgeETH.selector,
             alice,
             alice,
             500,
@@ -103,7 +107,8 @@ contract PreBridgeETH is Bridge_Initializer {
             address(L1Messenger),
             500,
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
+                0,
                 address(L2Bridge),
                 message,
                 50000
@@ -111,10 +116,11 @@ contract PreBridgeETH is Bridge_Initializer {
         );
 
         bytes memory innerMessage = abi.encodeWithSelector(
-            CrossDomainMessenger.relayMessage.selector,
+            L2CrossDomainMessenger.relayMessage.selector,
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             500,
             50000,
             message
@@ -126,8 +132,9 @@ contract PreBridgeETH is Bridge_Initializer {
             500,
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
+                0,
                 address(L2Messenger),
-                500,
+                0,
                 baseGas,
                 false,
                 innerMessage
@@ -135,7 +142,8 @@ contract PreBridgeETH is Bridge_Initializer {
         );
 
         bytes memory opaqueData = abi.encodePacked(
-            uint256(500),
+            uint256(0),
+            uint256(0),
             uint256(500),
             baseGas,
             false,
@@ -158,7 +166,7 @@ contract PreBridgeETH is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 500);
+        emit SentMessageExtension1(address(L1Bridge), 0, 500);
 
         vm.prank(alice, alice);
     }
@@ -225,7 +233,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
         }
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeETH.selector,
+            L2StandardBridge.finalizeBridgeETH.selector,
             alice,
             bob,
             600,
@@ -237,7 +245,8 @@ contract PreBridgeETHTo is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
+                0,
                 address(L2Bridge),
                 message,
                 60000
@@ -245,10 +254,11 @@ contract PreBridgeETHTo is Bridge_Initializer {
         );
 
         bytes memory innerMessage = abi.encodeWithSelector(
-            CrossDomainMessenger.relayMessage.selector,
+            L2CrossDomainMessenger.relayMessage.selector,
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             600,
             60000,
             message
@@ -257,10 +267,12 @@ contract PreBridgeETHTo is Bridge_Initializer {
         uint64 baseGas = L1Messenger.baseGas(message, 60000);
         vm.expectCall(
             address(op),
+            600,
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
+                0,
                 address(L2Messenger),
-                600,
+                0,
                 baseGas,
                 false,
                 innerMessage
@@ -268,7 +280,8 @@ contract PreBridgeETHTo is Bridge_Initializer {
         );
 
         bytes memory opaqueData = abi.encodePacked(
-            uint256(600),
+            uint256(0),
+            uint256(0),
             uint256(600),
             baseGas,
             false,
@@ -291,7 +304,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 600);
+        emit SentMessageExtension1(address(L1Bridge), 0, 600);
 
         // deposit eth to bob
         vm.prank(alice, alice);
@@ -352,7 +365,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         );
 
         bytes memory message = abi.encodeWithSelector(
-            StandardBridge.finalizeBridgeERC20.selector,
+            L2StandardBridge.finalizeBridgeERC20.selector,
             address(L2Token),
             address(L1Token),
             alice,
@@ -365,7 +378,8 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessage.selector,
+                0,
                 address(L2Bridge),
                 message,
                 10000
@@ -373,10 +387,11 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         );
 
         bytes memory innerMessage = abi.encodeWithSelector(
-            CrossDomainMessenger.relayMessage.selector,
+            L2CrossDomainMessenger.relayMessage.selector,
             nonce,
             address(L1Bridge),
             address(L2Bridge),
+            0,
             0,
             10000,
             message
@@ -387,6 +402,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
             address(op),
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
+                0,
                 address(L2Messenger),
                 0,
                 baseGas,
@@ -396,6 +412,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         );
 
         bytes memory opaqueData = abi.encodePacked(
+            uint256(0),
             uint256(0),
             uint256(0),
             baseGas,
@@ -420,7 +437,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 0);
+        emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
         vm.prank(alice);
         L1Bridge.depositERC20(address(L1Token), address(L2Token), 100, 10000, hex"");
@@ -465,6 +482,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
             address(L1Messenger),
             abi.encodeWithSelector(
                 CrossDomainMessenger.sendMessage.selector,
+                0,
                 address(L2Bridge),
                 message,
                 10000
@@ -477,6 +495,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
             address(L1Bridge),
             address(L2Bridge),
             0,
+            0,
             10000,
             message
         );
@@ -486,6 +505,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
             address(op),
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
+                0,
                 address(L2Messenger),
                 0,
                 baseGas,
@@ -495,6 +515,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         );
 
         bytes memory opaqueData = abi.encodePacked(
+            uint256(0),
             uint256(0),
             uint256(0),
             baseGas,
@@ -519,7 +540,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
 
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L1Messenger));
-        emit SentMessageExtension1(address(L1Bridge), 0);
+        emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
         deal(address(L1Token), alice, 100000, true);
 

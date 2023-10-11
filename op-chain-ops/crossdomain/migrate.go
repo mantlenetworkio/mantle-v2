@@ -74,6 +74,7 @@ func MigrateWithdrawal(
 	l1CrossDomainMessenger *common.Address,
 	chainID *big.Int,
 ) (*Withdrawal, error) {
+	//TODO now we have 2 values (mntValue and ethValue ) in Events ,it should also be updated on migration.
 	// Attempt to parse the value
 	value, err := withdrawal.Value()
 	if err != nil {
@@ -91,6 +92,7 @@ func MigrateWithdrawal(
 	versionedNonce := EncodeVersionedNonce(withdrawal.XDomainNonce, new(big.Int))
 	// Encode the call to `relayMessage` on the `CrossDomainMessenger`.
 	// The minGasLimit can safely be 0 here.
+	// TODO `relayMessage` also change the params about value.
 	data, err := abi.Pack(
 		"relayMessage",
 		versionedNonce,
@@ -105,11 +107,12 @@ func MigrateWithdrawal(
 	}
 
 	gasLimit := MigrateWithdrawalGasLimit(data, chainID)
-
+	// TODO  just put zero amount on the `NewWithdrawal` function for fixing compile error.
 	w := NewWithdrawal(
 		versionedNonce,
 		&predeploys.L2CrossDomainMessengerAddr,
 		l1CrossDomainMessenger,
+		big.NewInt(0),
 		value,
 		new(big.Int).SetUint64(gasLimit),
 		data,

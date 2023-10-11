@@ -7,7 +7,6 @@ import { Vm } from "forge-std/Vm.sol";
 import "./CommonTest.t.sol";
 import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
-
 // Free function for setting the prevBaseFee param in the OptimismPortal.
 function setPrevBaseFee(
     Vm _vm,
@@ -48,7 +47,8 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
             nonce: 0,
             sender: alice,
             target: bob,
-            value: 100,
+            mntValue: 100,
+            ethValue: ZERO_VALUE,
             gasLimit: 100_000,
             data: hex""
         });
@@ -90,6 +90,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
 
     function test_depositTransaction_benchmark() external {
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -101,6 +102,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
     function test_depositTransaction_benchmark_1() external {
         setPrevBaseFee(vm, address(op), 1 gwei);
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
             NON_ZERO_GASLIMIT,
@@ -127,7 +129,7 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage(bob, data, uint32(100));
+        L1Messenger.sendMessage( 0, bob, data, uint32(100));
     }
 
     function test_sendMessage_benchmark_1() external {
@@ -137,7 +139,7 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage(bob, data, uint32(100));
+        L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
 }
 

@@ -68,7 +68,8 @@ contract ExternalRelay is CommonTest {
             _nonce: Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
             _sender: _innerSender,
             _target: address(this),
-            _value: 0,
+            _mntValue: 0,
+            _ethValue : 0,
             _gasLimit: 0,
             _data: callMessage
         });
@@ -81,7 +82,8 @@ contract ExternalRelay is CommonTest {
             _nonce: Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
             _sender: _innerSender,
             _target: address(this),
-            _value: 0,
+            _mntValue: 0,
+            _ethValue : 0,
             _minGasLimit: 0,
             _message: callMessage
         });
@@ -159,7 +161,8 @@ contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
             _nonce: Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
             _sender: sender,
             _target: target,
-            _value: 0,
+            _mntValue: 0,
+            _ethValue : 0,
             _gasLimit: gasLimit,
             _data: callMessage
         });
@@ -171,7 +174,8 @@ contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
             _nonce: Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
             _sender: sender,
             _target: target,
-            _value: 0,
+            _mntValue: 0,
+            _ethValue : 0,
             _minGasLimit: gasLimit,
             _message: callMessage
         });

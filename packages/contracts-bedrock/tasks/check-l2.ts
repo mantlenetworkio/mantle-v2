@@ -453,36 +453,36 @@ const check = {
   // - check BRIDGE
   // - check REMOTE_TOKEN
   // - totalSupply should be set to 0
-  LegacyERC20ETH: async (hre: HardhatRuntimeEnvironment, signer: Signer) => {
-    const LegacyERC20ETH = await hre.ethers.getContractAt(
-      'LegacyERC20ETH',
-      predeploys.LegacyERC20ETH,
+  LegacyERC20MNT: async (hre: HardhatRuntimeEnvironment, signer: Signer) => {
+    const LegacyERC20MNT = await hre.ethers.getContractAt(
+      'LegacyERC20MNT',
+      predeploys.LegacyERC20MNT,
       signer
     )
 
-    const name = await LegacyERC20ETH.name()
-    assert(name === 'Ether')
+    const name = await LegacyERC20MNT.name()
+    assert(name === 'Mantle Token')
     console.log(`  - name: ${name}`)
 
-    const symbol = await LegacyERC20ETH.symbol()
-    assert(symbol === 'ETH')
+    const symbol = await LegacyERC20MNT.symbol()
+    assert(symbol === 'MNT')
     console.log(`  - symbol: ${symbol}`)
 
-    const decimals = await LegacyERC20ETH.decimals()
+    const decimals = await LegacyERC20MNT.decimals()
     assert(decimals === 18)
     console.log(`  - decimals: ${decimals}`)
 
-    const BRIDGE = await LegacyERC20ETH.BRIDGE()
+    const BRIDGE = await LegacyERC20MNT.BRIDGE()
     assert(BRIDGE === predeploys.L2StandardBridge)
 
-    const REMOTE_TOKEN = await LegacyERC20ETH.REMOTE_TOKEN()
+    const REMOTE_TOKEN = await LegacyERC20MNT.REMOTE_TOKEN()
     assert(REMOTE_TOKEN === hre.ethers.constants.AddressZero)
 
-    const totalSupply = await LegacyERC20ETH.totalSupply()
+    const totalSupply = await LegacyERC20MNT.totalSupply()
     assert(totalSupply.eq(0))
     console.log(`  - totalSupply: ${totalSupply}`)
 
-    await checkProxy(hre, 'LegacyERC20ETH', signer.provider)
+    await checkProxy(hre, 'LegacyERC20MNT', signer.provider)
     // No proxy at this address, don't call assertProxy
   },
   // WETH9

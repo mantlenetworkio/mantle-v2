@@ -23,7 +23,10 @@ func GenerateDeposit(sourceHash common.Hash, rng *rand.Rand) *types.DepositTx {
 	if rng.Intn(2) == 0 {
 		mint = RandomETH(rng, 200)
 	}
-
+	var ethValue *big.Int
+	if rng.Intn(2) == 0 {
+		ethValue = RandomETH(rng, 200)
+	}
 	dep := &types.DepositTx{
 		SourceHash:          sourceHash,
 		From:                RandomAddress(rng),
@@ -33,6 +36,7 @@ func GenerateDeposit(sourceHash common.Hash, rng *rand.Rand) *types.DepositTx {
 		Data:                data,
 		Mint:                mint,
 		IsSystemTransaction: false,
+		EthValue:            ethValue,
 	}
 	return dep
 }

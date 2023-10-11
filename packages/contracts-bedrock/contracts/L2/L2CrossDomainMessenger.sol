@@ -10,6 +10,10 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
+import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 
 /**
  * @custom:proxied
@@ -20,6 +24,7 @@ import { Constants } from "../libraries/Constants.sol";
  *         level message passing contracts.
  */
 contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
+    using SafeERC20 for IERC20;
     /**
      * @custom:semver 1.4.0
      *
@@ -53,42 +58,51 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
      * @inheritdoc CrossDomainMessenger
      */
     function _sendMessage(
+        uint256 _ethValue,
         address _to,
         uint64 _gasLimit,
-        uint256 _value,
         bytes memory _data
     ) internal override {
         L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER)).initiateWithdrawal{
-            value: _value
-        }(_to, _gasLimit, _data);
+            value: msg.value
+        }(_ethValue, _to, _gasLimit, _data);
     }
 
+    /**
+     * @inheritdoc CrossDomainMessenger
+     */
     function sendMessage(
+        uint256 _ethAmount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable override {
+        if (_ethAmount!=0){
+            IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
+        }
+
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
         // the minimum gas limit specified by the user.
         _sendMessage(
+            _ethAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            msg.value,
             abi.encodeWithSelector(
-                this.relayMessage.selector,
+                L1CrossDomainMessenger.relayMessage.selector,
                 messageNonce(),
                 msg.sender,
                 _target,
                 msg.value,
+                _ethAmount,
                 _minGasLimit,
                 _message
             )
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, msg.value);
+        emit SentMessageExtension1(msg.sender, msg.value,_ethAmount);
 
         unchecked {
             ++msgNonce;
@@ -103,7 +117,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
      * @param _nonce       Nonce of the message being relayed.
      * @param _sender      Address of the user who sent the message.
      * @param _target      Address that the message is targeted at.
-     * @param _value       ETH value to send with the message.
+     * @param _mntValue    MNT value to send with the message.
+     * @param _ethValue    ETH value to send with the message.
      * @param _minGasLimit Minimum amount of gas that the message can be executed with.
      * @param _message     Message to send to the target.
      */
@@ -111,7 +126,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _minGasLimit,
         bytes calldata _message
     ) external payable override {
@@ -137,7 +153,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
             _nonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _minGasLimit,
             _message
         );
@@ -145,7 +162,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         if (_isOtherMessenger()) {
             // These properties should always hold when the message is first submitted (as
             // opposed to being replayed).
-            assert(msg.value == _value);
+            assert(msg.value == _mntValue);
             assert(!failedMessages[versionedHash]);
         } else {
             require(
@@ -196,12 +213,15 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
 
             return;
         }
-
+        bool ethSuccess = true;
+        if (_ethValue!=0){
+            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target,_ethValue);
+        }
         xDomainMsgSender = _sender;
-        bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _value, _message);
+        bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _mntValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
 
-        if (success) {
+        if (success && ethSuccess) {
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {
