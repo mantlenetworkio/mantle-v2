@@ -26,8 +26,6 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
     }
 
     function testFuzz_initiateWithdrawal_succeeds(
-        address _sender,
-        address _target,
         uint256 _mntValue,
         uint256 _ethValue,
         uint256 _gasLimit,
@@ -38,8 +36,8 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: nonce,
-                sender: _sender,
-                target: _target,
+                sender: alice,
+                target: alice,
                 mntValue: _mntValue,
                 ethValue: _ethValue,
                 gasLimit: _gasLimit,
@@ -47,13 +45,15 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
             })
         );
 
-        vm.expectEmit(true, true, true, true);
-        emit MessagePassed(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data, withdrawalHash);
+        vm.deal(alice, _mntValue);
+        deal(address(l2ETH), alice, _ethValue);
+        vm.store(address(l2ETH), bytes32(uint256(0x2)), bytes32(_ethValue)); //set total supply
 
-        vm.deal(_sender, _mntValue);
-        deal(address(l2ETH),_sender,_ethValue);
-        vm.prank(_sender);
-        messagePasser.initiateWithdrawal{ value: _mntValue }(_ethValue, _target, _gasLimit, _data);
+        vm.expectEmit(true, true, true, true);
+        emit MessagePassed(nonce, alice, alice, _mntValue, _ethValue, _gasLimit, _data, withdrawalHash);
+
+        vm.prank(alice);
+        messagePasser.initiateWithdrawal{ value: _mntValue }(_ethValue, alice, _gasLimit, _data);
 
         assertEq(messagePasser.sentMessages(withdrawalHash), true);
 
