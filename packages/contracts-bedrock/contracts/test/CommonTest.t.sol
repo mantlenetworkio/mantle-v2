@@ -31,7 +31,7 @@ import { LegacyMintableERC20 } from "../legacy/LegacyMintableERC20.sol";
 import { SystemConfig } from "../L1/SystemConfig.sol";
 import { ResourceMetering } from "../L1/ResourceMetering.sol";
 import { Constants } from "../libraries/Constants.sol";
-import { L1MantleToken } from "../L1/TestMantleToken.sol";
+import { L1MantleToken } from "../local/TestMantleToken.sol";
 import { BVM_ETH } from "../L2/BVM_ETH.sol";
 
 

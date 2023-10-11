@@ -126,7 +126,7 @@ l1-blocknumber-bindings: compile
 	./gen_bindings.sh contracts/legacy/L1BlockNumber.sol:L1BlockNumber $(pkg)
 
 l1mnt-bindings:compile
-	./gen_bindings.sh contracts/L1/TestMantleToken.sol:L1MantleToken $(pkg)
+	./gen_bindings.sh contracts/local/TestMantleToken.sol:L1MantleToken $(pkg)
 
 l2eth-bindings:compile
 	./gen_bindings.sh contracts/L2/BVM_ETH.sol:BVM_ETH $(pkg)
