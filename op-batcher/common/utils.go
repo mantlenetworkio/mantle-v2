@@ -1,14 +1,9 @@
 package common
 
 import (
-	"fmt"
-	"math/big"
-	"os"
-
-	"github.com/Layr-Labs/datalayr/common/graphView"
+	"errors"
 	"github.com/Layr-Labs/datalayr/common/header"
-
-	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
 )
 
 func CreateUploadHeader(params *StoreParams) ([]byte, error) {
@@ -35,61 +30,46 @@ func CreateUploadHeader(params *StoreParams) ([]byte, error) {
 	return uploadHeader, nil
 }
 
-func GetMessageHash(event graphView.DataStoreInit) []byte {
-	msg := make([]byte, 0)
-	msg = append(msg, uint32ToByteSlice(event.StoreNumber)...)
-	msg = append(msg, event.DataCommitment[:]...)
-	msg = append(msg, byte(event.Duration))
-	msg = append(msg, packTo(uint32ToByteSlice(event.InitTime), 32)...)
-	msg = append(msg, uint32ToByteSlice(event.Index)...)
-	msgHash := crypto.Keccak256(msg)
-	return msgHash
-}
-
-func uint32ToByteSlice(x uint32) []byte {
-	res := make([]byte, 4)
-	res[0] = byte(x >> 24)
-	res[1] = byte((x >> 16) & 255)
-	res[2] = byte((x >> 8) & 255)
-	res[3] = byte(x & 255)
-	return res
-}
-
-func packTo(x []byte, n int) []byte {
-	for i := len(x); i < n; i++ {
-		x = append([]byte{byte(0)}, x...)
-	}
-	return x
-}
-
 func MakeCalldata(
 	params *StoreParams,
 	meta DisperseMeta,
 	storeNumber uint32,
 	msgHash [32]byte,
-) []byte {
+) ([]byte, error) {
 
-	totalStakeIndexBytes := bigIntToBytes(
+	totalStakeIndexBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(meta.TotalStakeIndex),
 		6,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	storeNumberBytes := bigIntToBytes(
+	storeNumberBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(storeNumber)),
 		4,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	referenceBlockNumberBytes := bigIntToBytes(
+	referenceBlockNumberBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(params.ReferenceBlockNumber)),
 		4,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	numNonPubKeysBytes := bigIntToBytes(
+	numNonPubKeysBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(len(meta.Sigs.NonSignerPubkeys))),
 		4,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	flattenedNonPubKeysBytes := make([]byte, 0, len(meta.Sigs.NonSignerPubkeys))
+	flattenedNonPubKeysBytes := make([]byte, 0)
 	for i := 0; i < len(meta.Sigs.NonSignerPubkeys); i++ {
 		flattenedNonPubKeysBytes = append(
 			flattenedNonPubKeysBytes,
@@ -97,10 +77,13 @@ func MakeCalldata(
 		)
 	}
 
-	apkIndexBytes := bigIntToBytes(
+	apkIndexBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(meta.ApkIndex)),
 		4,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	var calldata []byte
 	calldata = append(calldata, msgHash[:]...)
@@ -113,22 +96,21 @@ func MakeCalldata(
 	calldata = append(calldata, meta.Sigs.StoredAggPubkeyG1...)
 	calldata = append(calldata, meta.Sigs.UsedAggPubkeyG2...)
 	calldata = append(calldata, meta.Sigs.AggSig...)
-	return calldata
+	return calldata, nil
 
 }
 
-func bigIntToBytes(n *big.Int, packTo int) []byte {
+func bigIntToBytes(n *big.Int, packTo int) ([]byte, error) {
 	bigIntBytes := n.Bytes()
 	bigIntLen := len(bigIntBytes)
 	intBytes := make([]byte, packTo)
 
 	if bigIntLen > packTo {
-		fmt.Println("Cannot pad bytes: Desired length is less than existing length")
-		os.Exit(1)
+		return nil, errors.New("cannot pad bytes: Desired length is less than existing length")
 	}
 
 	for i := 0; i < bigIntLen; i++ {
 		intBytes[packTo-1-i] = bigIntBytes[bigIntLen-1-i]
 	}
-	return intBytes
+	return intBytes, nil
 }
