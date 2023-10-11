@@ -180,7 +180,7 @@ func (l *BatchSubmitter) Start() error {
 
 	if !l.Rollup.MantleDaSwitch {
 		go l.loop()
-	} else if l.Rollup.MantleDaSwitch {
+	} else {
 		go l.mantleDALoop()
 	}
 

@@ -89,7 +89,7 @@ func MakeCalldata(
 		4,
 	)
 
-	flattenedNonPubKeysBytes := make([]byte, 0)
+	flattenedNonPubKeysBytes := make([]byte, 0, len(meta.Sigs.NonSignerPubkeys))
 	for i := 0; i < len(meta.Sigs.NonSignerPubkeys); i++ {
 		flattenedNonPubKeysBytes = append(
 			flattenedNonPubKeysBytes,
