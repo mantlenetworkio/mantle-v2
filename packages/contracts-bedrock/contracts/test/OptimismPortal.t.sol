@@ -1244,9 +1244,7 @@ contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
         assertEq(prevBlockNum, _prevBlockNum);
 
         // Do a deposit, should not revert
-        // TODO : should add value to this function call. but it has error
-        // TODO : should be :        op.depositTransaction{ gas: MAX_GAS_LIMIT , value: 0x40}({
-        op.depositTransaction{ gas: MAX_GAS_LIMIT }({
+        op.depositTransaction{ value : 0x40 }({
             _mntValue : 0,
             _to: address(0x20),
             _mntTxValue: 0,
