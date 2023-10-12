@@ -50,11 +50,13 @@ var (
 	//TODO replace ETH slot to MNT slot
 	LegacyMNTCheckSlots = map[common.Hash]common.Hash{
 		// Bridge
-		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000004200000000000000000000000000000000000010"),
+		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
+		// l1Token
+		common.Hash{31: 0x05}: common.HexToHash("0x0000000000000000000000003c3a81e81dc49a522a592e7622a7e711c06bf354"),
 		// Symbol
-		common.Hash{31: 0x04}: common.HexToHash("0x4554480000000000000000000000000000000000000000000000000000000006"),
+		common.Hash{31: 0x04}: common.HexToHash("0x4d4e540000000000000000000000000000000000000000000000000000000006"),
 		// Name
-		common.Hash{31: 0x03}: common.HexToHash("0x457468657200000000000000000000000000000000000000000000000000000a"),
+		common.Hash{31: 0x03}: common.HexToHash("0x4d616e746c6520546f6b656e0000000000000000000000000000000000000018"),
 		// Total supply
 		common.Hash{31: 0x02}: {},
 	}
@@ -247,14 +249,13 @@ func PostCheckPredeploys(prevDB, currDB *state.StateDB) error {
 		addr := common.BigToAddress(bigAddr)
 		// Get the code for the predeploy
 		code := currDB.GetCode(addr)
-		// There must be code for the predeploy
-		if len(code) == 0 {
-			return fmt.Errorf("no code found at predeploy %s", addr)
-		}
-
 		if UntouchablePredeploys[addr] {
 			log.Trace("skipping untouchable predeploy", "address", addr)
 			continue
+		}
+		// There must be code for the predeploy
+		if len(code) == 0 {
+			return fmt.Errorf("no code found at predeploy %s", addr)
 		}
 
 		// There must be an admin
@@ -285,8 +286,8 @@ func PostCheckPredeploys(prevDB, currDB *state.StateDB) error {
 			continue
 		}
 
-		if *proxyAddr == predeploys.LegacyERC20MNTAddr {
-			log.Trace("skipping legacy mnt predeploy")
+		if *proxyAddr == predeploys.LegacyERC20MNTAddr || *proxyAddr == predeploys.BVM_ETHAddr {
+			log.Trace("skipping legacy mnt and eth predeploy")
 			continue
 		}
 
@@ -542,18 +543,23 @@ func PostCheckL1Block(db *state.StateDB, info *derive.L1BlockInfo) error {
 	}
 	log.Debug("validated L1Block implementation", "expected", expImplementation)
 
+	expectedSlotCount := 8
+	if info.BaseFee.Cmp(big.NewInt(0)) == 0 {
+		expectedSlotCount = 7
+	}
 	var count int
 	err = db.ForEachStorage(predeploys.L1BlockAddr, func(key, value common.Hash) bool {
 		count++
+		log.Debug("L1BlockAddr storage", "count", count, "key", key.String(), "value", value.String())
 		return true
 	})
 	if err != nil {
 		return fmt.Errorf("failed to iterate over L1Block storage: %w", err)
 	}
-	if count != 8 {
+	if count != expectedSlotCount {
 		return fmt.Errorf("expected L1Block to have 8 storage slots, but got %d", count)
 	}
-	log.Debug("validated L1Block storage slot count", "expected", 8)
+	log.Debug("validated L1Block storage slot count", "expected", expectedSlotCount)
 
 	return nil
 }

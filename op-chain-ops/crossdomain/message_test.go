@@ -21,6 +21,7 @@ func TestEncode(t *testing.T) {
 			common.Address{},
 			common.Address{19: 0x01},
 			big.NewInt(0),
+			big.NewInt(0),
 			big.NewInt(5),
 			[]byte{},
 		)
@@ -39,6 +40,7 @@ func TestEncode(t *testing.T) {
 			crossdomain.EncodeVersionedNonce(common.Big1, common.Big1),
 			common.Address{19: 0x01},
 			common.Address{19: 0x02},
+			big.NewInt(100),
 			big.NewInt(100),
 			big.NewInt(555),
 			[]byte{},
@@ -66,6 +68,7 @@ func TestHash(t *testing.T) {
 			common.Address{},
 			common.Address{19: 0x01},
 			big.NewInt(10),
+			big.NewInt(10),
 			big.NewInt(5),
 			[]byte{},
 		)
@@ -84,6 +87,7 @@ func TestHash(t *testing.T) {
 			crossdomain.EncodeVersionedNonce(common.Big0, common.Big1),
 			common.Address{},
 			common.Address{19: 0x01},
+			big.NewInt(0),
 			big.NewInt(0),
 			big.NewInt(5),
 			[]byte{},

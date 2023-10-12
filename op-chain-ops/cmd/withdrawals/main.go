@@ -245,6 +245,13 @@ func main() {
 					return err
 				}
 
+				// successful messages can be skipped, received messages failed
+				// their execution and should be replayed
+				if isSuccess {
+					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex())
+					continue
+				}
+
 				xdmHash := crypto.Keccak256Hash(withdrawal.Data)
 				if err != nil {
 					return err
@@ -265,12 +272,6 @@ func main() {
 				slot, err := withdrawal.StorageSlot()
 				if err != nil {
 					return err
-				}
-				// successful messages can be skipped, received messages failed
-				// their execution and should be replayed
-				if isSuccessNew {
-					log.Info("Message already relayed", "index", i, "hash", hash.Hex(), "slot", slot.Hex())
-					continue
 				}
 
 				// check the storage value of the slot to ensure that it is in
@@ -392,13 +393,17 @@ func main() {
 							if err := handleFinalizeETHWithdrawal(args); err != nil {
 								return err
 							}
+						case "finalizeMantleWithdrawal":
+							if err := handleFinalizeMNTWithdrawal(args); err != nil {
+								return err
+							}
 						default:
 							log.Info("Unhandled method", "name", method.Name)
 						}
 					}
 
 					// Ensure that the target's balance was increasedData correctly
-					wdValue, err := wd.Value()
+					wdValue, err := wd.ETHValue()
 					if err != nil {
 						return err
 					}
@@ -524,6 +529,36 @@ func callStorageRange(c *util.Clients, addr common.Address) (state.Storage, erro
 
 // handleFinalizeETHWithdrawal will ensure that the calldata is correct
 func handleFinalizeETHWithdrawal(args []any) error {
+	from, ok := args[0].(common.Address)
+	if !ok {
+		return fmt.Errorf("invalid type: from")
+	}
+	to, ok := args[1].(common.Address)
+	if !ok {
+		return fmt.Errorf("invalid type: to")
+	}
+	amount, ok := args[2].(*big.Int)
+	if !ok {
+		return fmt.Errorf("invalid type: amount")
+	}
+	extraData, ok := args[3].([]byte)
+	if !ok {
+		return fmt.Errorf("invalid type: extraData")
+	}
+
+	log.Info(
+		"decoded calldata",
+		"from", from,
+		"to", to,
+		"amount", amount,
+		"extraData", extraData,
+	)
+
+	return nil
+}
+
+// handleFinalizeMNTWithdrawal will ensure that the calldata is correct
+func handleFinalizeMNTWithdrawal(args []any) error {
 	from, ok := args[0].(common.Address)
 	if !ok {
 		return fmt.Errorf("invalid type: from")

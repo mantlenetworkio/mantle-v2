@@ -8,13 +8,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/immutables"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
@@ -232,58 +232,41 @@ func (d *DeployConfig) Check() error {
 // required for the L2 genesis creation. Legacy systems use the `Proxy__` prefix
 // while modern systems use the `Proxy` suffix. First check for the legacy
 // deployments so that this works with upgrading a system.
-func (d *DeployConfig) GetDeployedAddresses(hh *hardhat.Hardhat) error {
-	var err error
-
+func (d *DeployConfig) GetDeployedAddresses(l1SystemContracts *crossdomain.L1SystemContracts) error {
 	if d.L1StandardBridgeProxy == (common.Address{}) {
-		var l1StandardBridgeProxyDeployment *hardhat.Deployment
-		l1StandardBridgeProxyDeployment, err = hh.GetDeployment("Proxy__OVM_L1StandardBridge")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1StandardBridgeProxyDeployment, err = hh.GetDeployment("L1StandardBridgeProxy")
-			if err != nil {
-				return err
-			}
+		if l1SystemContracts.L1StandardBridgeProxy == (common.Address{}) {
+			return fmt.Errorf("L1StandardBridgeProxy is zero address")
 		}
-		d.L1StandardBridgeProxy = l1StandardBridgeProxyDeployment.Address
+		d.L1StandardBridgeProxy = l1SystemContracts.L1StandardBridgeProxy
 	}
 
 	if d.L1CrossDomainMessengerProxy == (common.Address{}) {
-		var l1CrossDomainMessengerProxyDeployment *hardhat.Deployment
-		l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("Proxy__OVM_L1CrossDomainMessenger")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
-			if err != nil {
-				return err
-			}
+		if l1SystemContracts.L1CrossDomainMessengerProxy == (common.Address{}) {
+			return fmt.Errorf("L1CrossDomainMessengerProxy is zero address")
 		}
-		d.L1CrossDomainMessengerProxy = l1CrossDomainMessengerProxyDeployment.Address
+		d.L1CrossDomainMessengerProxy = l1SystemContracts.L1CrossDomainMessengerProxy
 	}
 
 	if d.L1ERC721BridgeProxy == (common.Address{}) {
-		// There is no legacy deployment of this contract
-		l1ERC721BridgeProxyDeployment, err := hh.GetDeployment("L1ERC721BridgeProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.L1ERC721BridgeProxy == (common.Address{}) {
+			return fmt.Errorf("L1ERC721BridgeProxy is zero address")
 		}
-		d.L1ERC721BridgeProxy = l1ERC721BridgeProxyDeployment.Address
+		d.L1ERC721BridgeProxy = l1SystemContracts.L1ERC721BridgeProxy
 	}
 
 	if d.SystemConfigProxy == (common.Address{}) {
-		systemConfigProxyDeployment, err := hh.GetDeployment("SystemConfigProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.SystemConfigProxy == (common.Address{}) {
+			return fmt.Errorf("SystemConfigProxy is zero address")
 		}
-		d.SystemConfigProxy = systemConfigProxyDeployment.Address
+		d.SystemConfigProxy = l1SystemContracts.SystemConfigProxy
 	}
 
 	if d.OptimismPortalProxy == (common.Address{}) {
-		optimismPortalProxyDeployment, err := hh.GetDeployment("OptimismPortalProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.OptimismPortalProxy == (common.Address{}) {
+			return fmt.Errorf("OptimismPortalProxy is zero address")
 		}
-		d.OptimismPortalProxy = optimismPortalProxyDeployment.Address
+		d.OptimismPortalProxy = l1SystemContracts.OptimismPortalProxy
 	}
-
 	return nil
 }
 
@@ -373,7 +356,7 @@ func NewDeployConfigWithNetwork(network, path string) (*DeployConfig, error) {
 
 // NewL2ImmutableConfig will create an ImmutableConfig given an instance of a
 // DeployConfig and a block.
-func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.ImmutableConfig, error) {
+func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, error) {
 	immutable := make(immutables.ImmutableConfig)
 
 	if config.L1StandardBridgeProxy == (common.Address{}) {
@@ -384,6 +367,12 @@ func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.
 	}
 	if config.L1ERC721BridgeProxy == (common.Address{}) {
 		return immutable, fmt.Errorf("L1ERC721BridgeProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
+	if config.SystemConfigProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("SystemConfigProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
+	if config.OptimismPortalProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("OptimismPortalProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
 	}
 	if config.SequencerFeeVaultRecipient == (common.Address{}) {
 		return immutable, fmt.Errorf("SequencerFeeVaultRecipient cannot be address(0): %w", ErrInvalidImmutablesConfig)
@@ -446,7 +435,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
 		"timestamp":      block.Time(),
-		"basefee":        block.BaseFee(),
+		"basefee":        block.BaseFee(), //TODO
 		"hash":           block.Hash(),
 		"sequenceNumber": 0,
 		"batcherHash":    config.BatchSenderAddress.Hash(),
