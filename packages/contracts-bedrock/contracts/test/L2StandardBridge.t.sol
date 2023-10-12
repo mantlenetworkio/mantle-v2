@@ -541,7 +541,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         );
         deal(address(l2ETH),address(L2Messenger), 100);
         vm.prank(address(L2Messenger));
-        l2ETH.approve(address(L2Bridge) , 50);
+        l2ETH.approve(address(L2Bridge), 50);
         vm.prank(address(L2Messenger));
         vm.expectRevert("ERC20: insufficient allowance");
         L2Bridge.finalizeBridgeETH{ value: 0 }(alice, alice, 100, hex"");
@@ -580,10 +580,10 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
             abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
             abi.encode(address(L2Bridge.OTHER_BRIDGE()))
         );
-        deal(address(l2ETH),messenger,100);
+        deal(address(l2ETH),messenger, 100);
 //        vm.deal(messenger, 100);
         vm.prank(messenger);
-        l2ETH.approve(address(L2Bridge),100);
+        l2ETH.approve(address(L2Bridge), 100);
 
         vm.prank(messenger);
         vm.expectEmit(true, true, true, true);

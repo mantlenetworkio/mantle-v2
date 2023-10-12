@@ -91,7 +91,6 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     bool public paused;
 
-
     /**
      * @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
      *         are read by the rollup node and used to derive deposit transactions on L2.
@@ -474,8 +473,8 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // transactions are not gossipped over the p2p network.
         require(_data.length <= 120_000, "OptimismPortal: data too large");
 
-        if (_mntValue!=0){
-            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender,address(this),_mntValue);
+        if (_mntValue != 0) {
+            IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender, address(this), _mntValue);
         }
 
         // Transform the from-address to its alias if the caller is a contract.

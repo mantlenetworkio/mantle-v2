@@ -34,7 +34,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      *
      * @param _portal Address of the OptimismPortal contract on this network.
      */
-    constructor(OptimismPortal _portal,address l1mnt)
+    constructor(OptimismPortal _portal, address l1mnt)
         Semver(1, 4, 0)
         CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER)
     {
@@ -98,7 +98,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, _mntAmount,msg.value);
+        emit SentMessageExtension1(msg.sender, _mntAmount, msg.value);
 
         unchecked {
             ++msgNonce;

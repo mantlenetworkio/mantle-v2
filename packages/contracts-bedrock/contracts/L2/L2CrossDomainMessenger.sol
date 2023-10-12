@@ -14,7 +14,6 @@ import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
 /**
  * @custom:proxied
  * @custom:predeploy 0x4200000000000000000000000000000000000007
@@ -77,7 +76,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable override {
-        if (_ethAmount!=0){
+        if (_ethAmount != 0) {
             IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
         }
 
@@ -102,7 +101,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, msg.value,_ethAmount);
+        emit SentMessageExtension1(msg.sender, msg.value, _ethAmount);
 
         unchecked {
             ++msgNonce;
@@ -214,8 +213,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
             return;
         }
         bool ethSuccess = true;
-        if (_ethValue!=0){
-            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target,_ethValue);
+        if (_ethValue != 0) {
+            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target, _ethValue);
         }
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _mntValue, _message);

@@ -98,7 +98,7 @@ contract L2OutputOracle_Initializer is CommonTest {
     L2OutputOracle oracleImpl;
 
     L2ToL1MessagePasser messagePasser =
-        L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER));
+    L2ToL1MessagePasser(payable(Predeploys.L2_TO_L1_MESSAGE_PASSER));
 
     // Constructor arguments
     address internal proposer = 0x000000000000000000000000000000000000AbBa;
@@ -160,6 +160,7 @@ contract L2OutputOracle_Initializer is CommonTest {
         vm.label(Predeploys.L2_TO_L1_MESSAGE_PASSER, "L2ToL1MessagePasser");
     }
 }
+
 contract MNTToken_Initializer is L2OutputOracle_Initializer {
     using stdStorage for StdStorage;
 
@@ -176,7 +177,7 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
         vm.prank(multisig);
         proxy.upgradeToAndCall(
             address(l1MNTImpl),
-            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10e50,multisig)
+            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10e50, multisig)
         );
         l1MNT = L1MantleToken(payable(address(proxy)));
         vm.label(address(l1MNT), "L1MantleToken");
@@ -185,7 +186,7 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
 
 contract BVMETH_Initializer is MNTToken_Initializer {
     // Test target
-    BVM_ETH internal l2ETH ;
+    BVM_ETH internal l2ETH;
     using stdStorage for StdStorage;
 
 
@@ -194,7 +195,7 @@ contract BVMETH_Initializer is MNTToken_Initializer {
         super.setUp();
         vm.prank(multisig);
         vm.etch(Predeploys.BVM_ETH, address(new BVM_ETH()).code);
-        l2ETH= BVM_ETH(payable(Predeploys.BVM_ETH));
+        l2ETH = BVM_ETH(payable(Predeploys.BVM_ETH));
         vm.label(address(l2ETH), "BVM_ETH");
     }
 }
@@ -233,7 +234,7 @@ contract Portal_Initializer is BVMETH_Initializer {
             _guardian: guardian,
             _paused: true,
             _config: systemConfig,
-            _l1MNT : address(l1MNT)
+            _l1MNT: address(l1MNT)
         });
 
         Proxy proxy = new Proxy(multisig);
@@ -251,7 +252,7 @@ contract Messenger_Initializer is Portal_Initializer {
     AddressManager internal addressManager;
     L1CrossDomainMessenger internal L1Messenger;
     L2CrossDomainMessenger internal L2Messenger =
-        L2CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
+    L2CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
 
     event SentMessage(
         address indexed target,
@@ -298,8 +299,7 @@ contract Messenger_Initializer is Portal_Initializer {
         addressManager = new AddressManager();
 
         // Setup implementation
-        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op,address(l1MNT));
-
+        L1CrossDomainMessenger L1MessengerImpl = new L1CrossDomainMessenger(op, address(l1MNT));
 
         // Setup the address manager and proxy
         vm.prank(multisig);
@@ -443,7 +443,7 @@ contract Bridge_Initializer is Messenger_Initializer {
             abi.encode(true)
         );
         vm.startPrank(multisig);
-        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)),address(l1MNT))).code);
+        proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)), address(l1MNT))).code);
         vm.clearMockedCalls();
         address L1Bridge_Impl = proxy.getImplementation();
         vm.stopPrank();
@@ -455,7 +455,7 @@ contract Bridge_Initializer is Messenger_Initializer {
 
         // Deploy the L2StandardBridge, move it to the correct predeploy
         // address and then initialize it
-        L2StandardBridge l2B = new L2StandardBridge(payable(proxy),address(l1MNT));
+        L2StandardBridge l2B = new L2StandardBridge(payable(proxy), address(l1MNT));
         vm.etch(Predeploys.L2_STANDARD_BRIDGE, address(l2B).code);
         L2Bridge = L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE));
 
@@ -530,7 +530,7 @@ contract ERC721Bridge_Initializer is Messenger_Initializer {
         vm.etch(
             Predeploys.L2_ERC721_BRIDGE,
             address(new L2ERC721Bridge(Predeploys.L2_CROSS_DOMAIN_MESSENGER, address(L1Bridge)))
-                .code
+            .code
         );
 
         // Set up a reference to the L2ERC721Bridge.
@@ -780,7 +780,7 @@ contract CallerCaller {
                 revert(add(returndata, 0x20), mload(returndata))
             }
             default {
-                return(add(returndata, 0x20), mload(returndata))
+                return (add(returndata, 0x20), mload(returndata))
             }
         }
     }
@@ -809,7 +809,7 @@ contract ConfigurableCaller {
                     revert(add(returndata, 0x20), mload(returndata))
                 }
                 default {
-                    return(add(returndata, 0x20), mload(returndata))
+                    return (add(returndata, 0x20), mload(returndata))
                 }
             }
         }

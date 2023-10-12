@@ -111,7 +111,7 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
         vm.expectEmit(true, true, true, true);
         emit MessagePassed(nonce, alice, target, mntValue, ethValue, gasLimit, data, withdrawalHash);
 
-        messagePasser.initiateWithdrawal{ value: mntValue }(ethValue,target, gasLimit, data);
+        messagePasser.initiateWithdrawal{ value: mntValue }(ethValue, target, gasLimit, data);
 
         // the sent messages mapping is filled
         assertEq(messagePasser.sentMessages(withdrawalHash), true);

@@ -129,7 +129,7 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage( 0, bob, data, uint32(100));
+        L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
 
     function test_sendMessage_benchmark_1() external {

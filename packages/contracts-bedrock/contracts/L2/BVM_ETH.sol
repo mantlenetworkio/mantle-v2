@@ -33,7 +33,7 @@ contract BVM_ETH is OptimismMintableERC20 {
  * @notice A modifier that only allows the L2_TO_L1_MESSAGE_PASSER to call
      */
     modifier onlyL2Passer() {
-        require(msg.sender == Predeploys.L2_TO_L1_MESSAGE_PASSER , "OptimismMintableERC20: only L2MessagePasser can burn");
+        require(msg.sender == Predeploys.L2_TO_L1_MESSAGE_PASSER, "OptimismMintableERC20: only L2MessagePasser can burn");
         _;
     }
 

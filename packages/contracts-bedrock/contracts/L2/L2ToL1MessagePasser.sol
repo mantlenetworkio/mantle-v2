@@ -11,8 +11,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
 
-
-
 /**
  * @custom:proxied
  * @custom:predeploy 0x4200000000000000000000000000000000000016
@@ -81,7 +79,7 @@ contract L2ToL1MessagePasser is Semver {
      * @notice Allows users to withdraw MNT by sending directly to this contract.
      */
     receive() external payable {
-        initiateWithdrawal(0,msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
+        initiateWithdrawal(0, msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
     /**
@@ -110,7 +108,7 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
-        if (_ethValue!=0){
+        if (_ethValue != 0) {
             OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
         }
 

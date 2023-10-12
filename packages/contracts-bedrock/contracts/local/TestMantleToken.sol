@@ -64,7 +64,7 @@ contract L1MantleToken is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-        _mint(msg.sender, 10000 * 10**uint(decimals()));
+        _mint(msg.sender, 10000 * 10 ** uint(decimals()));
 
     }
 
