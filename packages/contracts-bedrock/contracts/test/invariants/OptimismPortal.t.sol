@@ -23,7 +23,8 @@ contract OptimismPortal_Invariant_Harness is Portal_Initializer {
             nonce: 0,
             sender: alice,
             target: bob,
-            value: 100,
+            mntValue: 0,
+            ethValue: 100,
             gasLimit: 100_000,
             data: hex""
         });
@@ -56,6 +57,65 @@ contract OptimismPortal_Invariant_Harness is Portal_Initializer {
         vm.deal(address(op), 0xFFFFFFFF);
     }
 }
+
+contract OptimismPortal_Invariant_Harness_MNT is OptimismPortal_Invariant_Harness {
+    // Reusable default MNT values for a test withdrawal
+    uint256 _proposedOutputIndexForMNT;
+    uint256 _proposedBlockNumberForMNT;
+    Types.WithdrawalTransaction _defaultMNTTx;
+    bytes32 _stateRootForMNT;
+    bytes32 _storageRootForMNT;
+    bytes32 _outputRootForMNT;
+    bytes32 _withdrawalHashForMNT;
+    bytes[] _withdrawalProofForMNT;
+    Types.OutputRootProof internal _outputRootProofForMNT;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        _defaultMNTTx = Types.WithdrawalTransaction({
+            nonce: 1,
+            sender: alice,
+            target: bob,
+            mntValue: 100,
+            ethValue: 0,
+            gasLimit: 100_000,
+            data: hex""
+        });
+        // Get withdrawal proof data we can use for testing.
+        (_stateRootForMNT, _storageRootForMNT, _outputRootForMNT, _withdrawalHashForMNT, _withdrawalProofForMNT) = ffi
+        .getProveWithdrawalTransactionInputs(_defaultMNTTx);
+
+        // Setup a dummy output root proof for reuse.
+        _outputRootProofForMNT = Types.OutputRootProof({
+            version: bytes32(uint256(0)),
+            stateRoot: _stateRootForMNT,
+            messagePasserStorageRoot: _storageRootForMNT,
+            latestBlockhash: bytes32(uint256(1))
+        });
+        _proposedBlockNumberForMNT = oracle.nextBlockNumber();
+        _proposedOutputIndexForMNT = oracle.nextOutputIndex();
+
+        // Configure the oracle to return the output root we've prepared.
+        vm.warp(oracle.computeL2Timestamp(_proposedBlockNumberForMNT) + 1);
+        vm.prank(oracle.PROPOSER());
+        oracle.proposeL2Output(_outputRootForMNT, _proposedBlockNumberForMNT, bytes32(uint256(1)), 1);
+
+        // Warp beyond the finalization period for the block we've proposed.
+        vm.warp(
+            oracle.getL2Output(_proposedOutputIndexForMNT).timestamp +
+            oracle.FINALIZATION_PERIOD_SECONDS() +
+            1
+        );
+        // Fund the portal so that we can withdraw ETH.
+
+        vm.deal(address(op), 0xFFFFFFFF);
+
+    }
+}
+
+
+
 
 contract OptimismPortal_CannotTimeTravel is OptimismPortal_Invariant_Harness {
     function setUp() public override {
@@ -159,6 +219,6 @@ contract OptimismPortal_CanAlwaysFinalizeAfterWindow is OptimismPortal_Invariant
 
         op.finalizeWithdrawalTransaction(_defaultTx);
 
-        assertEq(address(bob).balance, bobBalanceBefore + _defaultTx.value);
+        assertEq(address(bob).balance, bobBalanceBefore + _defaultTx.ethValue);
     }
 }

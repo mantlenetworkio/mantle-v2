@@ -3,7 +3,6 @@ module github.com/ethereum-optimism/optimism
 go 1.19
 
 require (
-	github.com/Layr-Labs/datalayr/common v0.0.0
 	github.com/btcsuite/btcd v0.23.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
@@ -42,7 +41,6 @@ require (
 )
 
 require (
-	github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
@@ -93,8 +91,8 @@ require (
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/huin/goupnp v1.1.0 // indirect
+	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
-	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/ipfs/go-cid v0.3.2 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
@@ -183,7 +181,6 @@ require (
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -192,6 +189,10 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-replace github.com/ethereum/go-ethereum v1.11.6 => github.com/ethereum-optimism/op-geth v1.101105.2-0.20230502202351-9cc072e922f6
+//replace github.com/ethereum/go-ethereum v1.11.6 => github.com/ethereum-optimism/op-geth v1.101105.2-0.20230502202351-9cc072e922f6
+
+replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740
+
 replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
-replace	github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 => ./datalayr/lib/merkzg
+
+replace github.com/Layr-Labs/datalayr/lib/merkzg v0.0.0 => ./datalayr/lib/merkzg

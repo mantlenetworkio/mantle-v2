@@ -7,11 +7,11 @@ pragma solidity 0.8.15;
  */
 library Burn {
     /**
-     * Burns a given amount of ETH.
+     * Burns a given amount of MNT.
      *
-     * @param _amount Amount of ETH to burn.
+     * @param _amount Amount of MNT to burn.
      */
-    function eth(uint256 _amount) internal {
+    function mnt(uint256 _amount) internal {
         new Burner{ value: _amount }();
     }
 

@@ -185,7 +185,8 @@ func (w *LegacyWithdrawal) CrossDomainMessage() *CrossDomainMessage {
 		Nonce:    w.XDomainNonce,
 		Sender:   w.XDomainSender,
 		Target:   w.XDomainTarget,
-		Value:    new(big.Int),
+		EthValue: new(big.Int),
+		MntValue: new(big.Int),
 		GasLimit: new(big.Int),
 		Data:     []byte(w.XDomainData),
 	}

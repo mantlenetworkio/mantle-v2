@@ -14,7 +14,7 @@ var (
 	// relayMessage0ABI represents the v0 relay message encoding
 	relayMessage0ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_target\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_message\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"_messageNonce\",\"type\":\"uint256\"}],\"name\":\"relayMessage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 	// relayMessage1ABI represents the v1 relay message encoding
-	relayMessage1ABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_message\",\"type\":\"bytes\"}],\"name\":\"relayMessage\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+	relayMessage1ABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_mntValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_ethValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_message\",\"type\":\"bytes\"}],\"name\":\"relayMessage\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 	// relayMessage0 represents the ABI of relay message v0
 	relayMessage0 abi.ABI
 	// relayMessage1 represents the ABI of relay message v1
@@ -51,11 +51,12 @@ func EncodeCrossDomainMessageV1(
 	nonce *big.Int,
 	sender common.Address,
 	target common.Address,
-	value *big.Int,
+	mntValue *big.Int,
+	ethValue *big.Int,
 	gasLimit *big.Int,
 	data []byte,
 ) ([]byte, error) {
-	return relayMessage1.Pack("relayMessage", nonce, sender, target, value, gasLimit, data)
+	return relayMessage1.Pack("relayMessage", nonce, sender, target, mntValue, ethValue, gasLimit, data)
 }
 
 // DecodeVersionedNonce will decode the version that is encoded in the nonce

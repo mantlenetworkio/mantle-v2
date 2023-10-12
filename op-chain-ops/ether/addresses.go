@@ -111,7 +111,7 @@ func IterateMintEvents(db ethdb.Database, headNum uint64, cb AddressCBWithHead, 
 		}
 		for _, receipt := range receipts {
 			for _, l := range receipt.Logs {
-				if l.Address != predeploys.LegacyERC20ETHAddr {
+				if l.Address != predeploys.LegacyERC20MNTAddr {
 					continue
 				}
 

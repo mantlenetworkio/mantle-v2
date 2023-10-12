@@ -47,8 +47,8 @@ type StorageCheckMap = map[common.Hash]common.Hash
 var (
 	L2XDMOwnerSlot      = common.Hash{31: 0x33}
 	ProxyAdminOwnerSlot = common.Hash{}
-
-	LegacyETHCheckSlots = map[common.Hash]common.Hash{
+	//TODO replace ETH slot to MNT slot
+	LegacyMNTCheckSlots = map[common.Hash]common.Hash{
 		// Bridge
 		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000004200000000000000000000000000000000000010"),
 		// Symbol
@@ -285,8 +285,8 @@ func PostCheckPredeploys(prevDB, currDB *state.StateDB) error {
 			continue
 		}
 
-		if *proxyAddr == predeploys.LegacyERC20ETHAddr {
-			log.Trace("skipping legacy eth predeploy")
+		if *proxyAddr == predeploys.LegacyERC20MNTAddr {
+			log.Trace("skipping legacy mnt predeploy")
 			continue
 		}
 
@@ -392,19 +392,19 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		addresses[ether.CalcOVMETHStorageKey(addr)] = addr
 	}
 
-	log.Info("checking legacy eth fixed storage slots")
-	for slot, expValue := range LegacyETHCheckSlots {
-		actValue := migratedDB.GetState(predeploys.LegacyERC20ETHAddr, slot)
+	log.Info("checking legacy mnt fixed storage slots")
+	for slot, expValue := range LegacyMNTCheckSlots {
+		actValue := migratedDB.GetState(predeploys.LegacyERC20MNTAddr, slot)
 		if actValue != expValue {
-			return fmt.Errorf("expected slot %s on %s to be %s, but got %s", slot, predeploys.LegacyERC20ETHAddr, expValue, actValue)
+			return fmt.Errorf("expected slot %s on %s to be %s, but got %s", slot, predeploys.LegacyERC20MNTAddr, expValue, actValue)
 		}
 	}
 
 	var count int
 	threshold := 100 - int(100*OVMETHSampleLikelihood)
-	progress := util.ProgressLogger(100, "checking legacy eth balance slots")
+	progress := util.ProgressLogger(100, "checking legacy mnt balance slots")
 	var innerErr error
-	err := prevDB.ForEachStorage(predeploys.LegacyERC20ETHAddr, func(key, value common.Hash) bool {
+	err := prevDB.ForEachStorage(predeploys.LegacyERC20MNTAddr, func(key, value common.Hash) bool {
 		val := rand.Intn(100)
 
 		// Randomly sample storage slots.
@@ -413,7 +413,7 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		}
 
 		// Ignore fixed slots.
-		if _, ok := LegacyETHCheckSlots[key]; ok {
+		if _, ok := LegacyMNTCheckSlots[key]; ok {
 			return true
 		}
 
@@ -445,9 +445,9 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 			return false
 		}
 		// Migrated OVM ETH balance should be zero, since we wipe the slots.
-		migratedBalance := migratedDB.GetState(predeploys.LegacyERC20ETHAddr, key)
+		migratedBalance := migratedDB.GetState(predeploys.LegacyERC20MNTAddr, key)
 		if migratedBalance.Big().Cmp(common.Big0) != 0 {
-			innerErr = fmt.Errorf("expected OVM_ETH post-migration ERC20 balance for %s to be 0, but got %s", addr, migratedBalance)
+			innerErr = fmt.Errorf("expected BVM_MNT post-migration ERC20 balance for %s to be 0, but got %s", addr, migratedBalance)
 			return false
 		}
 

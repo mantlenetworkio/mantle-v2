@@ -67,7 +67,7 @@ abstract contract FeeVault {
 
         emit Withdrawal(value, RECIPIENT, msg.sender);
 
-        L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeETHTo{ value: value }(
+        L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeMNTTo{ value: value }(
             RECIPIENT,
             WITHDRAWAL_MIN_GAS,
             bytes("")

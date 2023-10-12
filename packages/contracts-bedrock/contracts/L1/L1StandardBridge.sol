@@ -8,6 +8,8 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
+import { L1CrossDomainMessenger } from "./L1CrossDomainMessenger.sol";
 
 /**
  * @custom:proxied
@@ -23,6 +25,41 @@ import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
  */
 contract L1StandardBridge is StandardBridge, Semver {
     using SafeERC20 for IERC20;
+
+    address public immutable L1_MNT_ADDRESS;
+
+    /**
+     * @custom:legacy
+     * @notice Emitted whenever a deposit of MNT from L1 into L2 is initiated.
+     *
+     * @param from      Address of the depositor.
+     * @param to        Address of the recipient on L2.
+     * @param amount    Amount of MNT deposited.
+     * @param extraData Extra data attached to the deposit.
+     */
+    event MNTDepositInitiated(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    /**
+     * @custom:legacy
+     * @notice Emitted whenever a withdrawal of MNT from L2 to L1 is finalized.
+     *
+     * @param from      Address of the withdrawer.
+     * @param to        Address of the recipient on L1.
+     * @param amount    Amount of MNT withdrawn.
+     * @param extraData Extra data attached to the withdrawal.
+     */
+    event MNTWithdrawalFinalized(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
     /**
      * @custom:legacy
      * @notice Emitted whenever a deposit of ETH from L1 into L2 is initiated.
@@ -100,10 +137,12 @@ contract L1StandardBridge is StandardBridge, Semver {
      *
      * @param _messenger Address of the L1CrossDomainMessenger.
      */
-    constructor(address payable _messenger)
+    constructor(address payable _messenger, address _l1mnt)
         Semver(1, 1, 0)
         StandardBridge(_messenger, payable(Predeploys.L2_STANDARD_BRIDGE))
-    {}
+    {
+        L1_MNT_ADDRESS = _l1mnt;
+    }
 
     /**
      * @notice Allows EOAs to bridge ETH by sending directly to the bridge.
@@ -145,6 +184,46 @@ contract L1StandardBridge is StandardBridge, Semver {
         bytes calldata _extraData
     ) external payable {
         _initiateETHDeposit(msg.sender, _to, _minGasLimit, _extraData);
+    }
+
+    /**
+    * @custom:legacy
+     * @notice Deposits some amount of MNT into the sender's account on L2.
+     *
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
+     */
+    function depositMNT(
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
+    ) external payable onlyEOA {
+        _initiateMNTDeposit(msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+    }
+
+    /**
+     * @custom:legacy
+     * @notice Deposits some amount of MNT into a target account on L2.
+     *         Note that if MNT is sent to a contract on L2 and the call fails, then that ETH will
+     *         be locked in the L2StandardBridge. ETH may be recoverable if the call can be
+     *         successfully replayed by increasing the amount of gas supplied to the call. If the
+     *         call will fail for any amount of gas, then the ETH will be locked permanently.
+     *
+     * @param _to          Address of the recipient on L2.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
+     */
+    function depositMNTTo(
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
+    ) external payable {
+        _initiateMNTDeposit(msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -207,6 +286,24 @@ contract L1StandardBridge is StandardBridge, Semver {
             _minGasLimit,
             _extraData
         );
+    }
+
+    /**
+ * @custom:legacy
+     * @notice Finalizes a withdrawal of MNT from L2.
+     *
+     * @param _from      Address of the withdrawer on L2.
+     * @param _to        Address of the recipient on L1.
+     * @param _amount    Amount of MNT to withdraw.
+     * @param _extraData Optional data forwarded from L2.
+     */
+    function finalizeMantleWithdrawal(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _extraData
+    ) external payable {
+        finalizeBridgeMNT(_from, _to, _amount, _extraData);
     }
 
     /**
@@ -300,6 +397,25 @@ contract L1StandardBridge is StandardBridge, Semver {
     }
 
     /**
+ * @notice Internal function for initiating an MNT deposit.
+     *
+     * @param _from        Address of the sender on L1.
+     * @param _to          Address of the recipient on L2.
+     * @param _amount      Amount of the ERC20 to deposit.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2.
+     */
+    function _initiateMNTDeposit(
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal {
+        _initiateBridgeMNT(_from, _to, _amount, _minGasLimit, _extraData);
+    }
+
+    /**
      * @notice Emits the legacy ETHDepositInitiated event followed by the ETHBridgeInitiated event.
      *         This is necessary for backwards compatibility with the legacy bridge.
      *
@@ -329,6 +445,38 @@ contract L1StandardBridge is StandardBridge, Semver {
     ) internal override {
         emit ETHWithdrawalFinalized(_from, _to, _amount, _extraData);
         super._emitETHBridgeFinalized(_from, _to, _amount, _extraData);
+    }
+
+    /**
+     * @notice Emits the legacy ETHDepositInitiated event followed by the ETHBridgeInitiated event.
+     *         This is necessary for backwards compatibility with the legacy bridge.
+     *
+     * @inheritdoc StandardBridge
+     */
+    function _emitMNTBridgeInitiated(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _extraData
+    ) internal override {
+        emit MNTDepositInitiated(_from, _to, _amount, _extraData);
+        super._emitMNTBridgeInitiated(_from, _to, _amount, _extraData);
+    }
+
+    /**
+     * @notice Emits the legacy MNTWithdrawalFinalized event followed by the MNTBridgeFinalized
+     *         event. This is necessary for backwards compatibility with the legacy bridge.
+     *
+     * @inheritdoc StandardBridge
+     */
+    function _emitMNTBridgeFinalized(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _extraData
+    ) internal override {
+        emit MNTWithdrawalFinalized(_from, _to, _amount, _extraData);
+        super._emitMNTBridgeFinalized(_from, _to, _amount, _extraData);
     }
 
     /**
@@ -375,7 +523,7 @@ contract L1StandardBridge is StandardBridge, Semver {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA override {
+    function bridgeETH(uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
         _initiateBridgeETH(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
@@ -398,8 +546,40 @@ contract L1StandardBridge is StandardBridge, Semver {
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable override {
+    ) public payable {
         _initiateBridgeETH(msg.sender, _to, msg.value, _minGasLimit, _extraData);
+    }
+
+    /**
+     * @notice Sends MNT to the sender's address on the other chain.
+     *
+     * @param _amount      Amount of the MNT.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function bridgeMNT(uint256 _amount, uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
+        _initiateBridgeMNT(msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
+    }
+
+    /**
+     * @notice Sends MNT to the sender's address on the other chain.
+     *
+     * @param _amount      Amount of the MNT.
+     * @param _to          Address of the receiver.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function bridgeMNTTo(
+        uint256 _amount,
+        address _to,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
+    ) public payable {
+        _initiateBridgeMNT(msg.sender, _to, _amount, _minGasLimit, _extraData);
     }
 
     /**
@@ -484,7 +664,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable onlyOtherBridge override {
+    ) public payable override onlyOtherBridge {
         require(msg.value == _amount, "StandardBridge: amount sent does not match amount required");
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
@@ -492,9 +672,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         // Emit the correct events. By default this will be _amount, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeFinalized(_from, _to, _amount, _extraData);
-
         bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
         require(success, "StandardBridge: ETH transfer failed");
+
     }
 
     /**
@@ -533,5 +713,172 @@ contract L1StandardBridge is StandardBridge, Semver {
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+    }
+
+    /**
+* @notice Finalizes an MNT bridge on this chain. Can only be triggered by the other
+     *         StandardBridge contract on the remote chain.
+     *
+     * @param _from        Address of the sender.
+     * @param _to          Address of the receiver.
+     * @param _amount      Amount of the MNT being bridged.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function finalizeBridgeMNT(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _extraData
+    ) public payable override onlyOtherBridge {
+        IERC20(L1_MNT_ADDRESS).safeTransferFrom(address(MESSENGER), _to, _amount);
+
+        // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
+        // contracts may override this function in order to emit legacy events as well.
+        _emitMNTBridgeFinalized(_from, _to, _amount, _extraData);
+    }
+
+    /**
+ * @notice Initiates a bridge of ETH through the CrossDomainMessenger.
+     *
+     * @param _from        Address of the sender.
+     * @param _to          Address of the receiver.
+     * @param _amount      Amount of ETH being bridged.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function _initiateBridgeETH(
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal override {
+        require(
+            msg.value == _amount,
+            "L1StandardBridge: bridging ETH must include sufficient ETH value"
+        );
+
+        // Emit the correct events. By default this will be _amount, but child
+        // contracts may override this function in order to emit legacy events as well.
+        _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
+        uint256 zeroMNTValue = 0;
+        MESSENGER.sendMessage{value: msg.value}(
+            zeroMNTValue,
+            address(OTHER_BRIDGE),
+            abi.encodeWithSelector(
+                L2StandardBridge.finalizeBridgeETH.selector,
+                _from,
+                _to,
+                _amount,
+                _extraData
+            ),
+            _minGasLimit
+        );
+    }
+
+    /**
+ * @notice Sends ERC20 tokens to a receiver's address on the other chain.
+     *
+     * @param _localToken  Address of the ERC20 on this chain.
+     * @param _remoteToken Address of the corresponding token on the remote chain.
+     * @param _to          Address of the receiver.
+     * @param _amount      Amount of local tokens to deposit.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function _initiateBridgeERC20(
+        address _localToken,
+        address _remoteToken,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal override {
+        require(_localToken != address(0) && _remoteToken != Predeploys.BVM_ETH,
+            "L1StandardBridge: BridgeERC20 do not support ETH bridging.");
+        require(_localToken != L1_MNT_ADDRESS && _remoteToken != address(0x0),
+            "L1StandardBridge: BridgeERC20 do not support MNT bridging.");
+
+        if (_isOptimismMintableERC20(_localToken)) {
+            require(
+                _isCorrectTokenPair(_localToken, _remoteToken),
+                "StandardBridge: wrong remote token for Optimism Mintable ERC20 local token"
+            );
+
+            OptimismMintableERC20(_localToken).burn(_from, _amount);
+        } else {
+            IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
+        }
+
+        // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
+        // contracts may override this function in order to emit legacy events as well.
+        _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        uint256 zeroMNTValue = 0;
+        MESSENGER.sendMessage(
+            zeroMNTValue,
+            address(OTHER_BRIDGE),
+            abi.encodeWithSelector(
+                L2StandardBridge.finalizeBridgeERC20.selector,
+                // Because this call will be executed on the remote chain, we reverse the order of
+                // the remote and local token addresses relative to their order in the
+                // finalizeBridgeERC20 function.
+                _remoteToken,
+                _localToken,
+                _from,
+                _to,
+                _amount,
+                _extraData
+            ),
+            _minGasLimit
+        );
+    }
+
+    /**
+ * @notice Sends MNT tokens to a receiver's address on the other chain.
+     *
+     * @param _to          Address of the receiver.
+     * @param _amount      Amount of local tokens to deposit.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
+    function _initiateBridgeMNT(
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint32 _minGasLimit,
+        bytes memory _extraData
+    ) internal override {
+        IERC20(L1_MNT_ADDRESS).safeTransferFrom(_from, address(this), _amount);
+        bool success = IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
+        require(success, "L1StandardBridge: approve for L1 MNT failed.");
+
+        // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
+        // contracts may override this function in order to emit legacy events as well.
+        _emitMNTBridgeInitiated(_from, _to, _amount, _extraData);
+        MESSENGER.sendMessage{value: msg.value}(
+            _amount,
+            address(OTHER_BRIDGE),
+            abi.encodeWithSelector(
+                L2StandardBridge.finalizeBridgeMNT.selector,
+                // Because this call will be executed on the remote chain, we reverse the order of
+                // the remote and local token addresses relative to their order in the
+                // finalizeBridgeERC20 function.
+                _from,
+                _to,
+                _amount,
+                _extraData
+            ),
+            _minGasLimit
+        );
     }
 }

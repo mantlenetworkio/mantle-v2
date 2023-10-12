@@ -6,6 +6,7 @@ import { Types } from "../libraries/Types.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { LegacyCrossDomainUtils } from "../libraries/LegacyCrossDomainUtils.sol";
+import { console } from "forge-std/console.sol";
 
 contract Hashing_hashDepositSource_Test is CommonTest {
     /**
@@ -31,17 +32,17 @@ contract Hashing_hashCrossDomainMessage_Test is CommonTest {
         uint16 _version,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external {
         // Ensure the version is valid.
         uint16 version = uint16(bound(uint256(_version), 0, 1));
         uint256 nonce = Encoding.encodeVersionedNonce(_nonce, version);
-
         assertEq(
-            Hashing.hashCrossDomainMessage(nonce, _sender, _target, _value, _gasLimit, _data),
-            ffi.hashCrossDomainMessage(nonce, _sender, _target, _value, _gasLimit, _data)
+            Hashing.hashCrossDomainMessage(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data),
+            ffi.hashCrossDomainMessage(nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data)
         );
     }
 
@@ -76,15 +77,16 @@ contract Hashing_hashWithdrawal_Test is CommonTest {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external {
         assertEq(
             Hashing.hashWithdrawal(
-                Types.WithdrawalTransaction(_nonce, _sender, _target, _value, _gasLimit, _data)
+                Types.WithdrawalTransaction(_nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data)
             ),
-            ffi.hashWithdrawal(_nonce, _sender, _target, _value, _gasLimit, _data)
+            ffi.hashWithdrawal(_nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data)
         );
     }
 }
@@ -126,7 +128,8 @@ contract Hashing_hashDepositTransaction_Test is CommonTest {
         address _from,
         address _to,
         uint256 _mint,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
@@ -137,15 +140,16 @@ contract Hashing_hashDepositTransaction_Test is CommonTest {
                     _from,
                     _to,
                     false, // isCreate
-                    _value,
+                    _mntValue,
                     _mint,
+                    _ethValue,
                     _gas,
                     _data,
                     bytes32(uint256(0)),
                     _logIndex
                 )
             ),
-            ffi.hashDepositTransaction(_from, _to, _mint, _value, _gas, _data, _logIndex)
+            ffi.hashDepositTransaction(_from, _to, _mint, _mntValue, _ethValue, _gas, _data, _logIndex)
         );
     }
 }

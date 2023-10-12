@@ -45,7 +45,8 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
         uint240 nonce = 0;
         address sender = bob;
         address target = address(setter);
-        uint256 value = 0;
+        uint256 mntValue = 0;
+        uint256 ethValue = 0;
         uint256 minGasLimit = 0;
         bytes memory message = abi.encodeWithSelector(XDomainSetter2.set.selector, 1);
 
@@ -53,7 +54,8 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce(nonce, 1),
             sender,
             target,
-            value,
+            mntValue,
+            ethValue,
             minGasLimit,
             message
         );
@@ -68,7 +70,8 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce(nonce, 1),
             sender,
             target,
-            value,
+            mntValue,
+            ethValue,
             minGasLimit,
             message
         );
@@ -86,6 +89,7 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
             Encoding.encodeVersionedNonce(1, 1),
             owner,
             address(setter),
+            0,
             0,
             0,
             abi.encodeWithSelector(XDomainSetter2.set.selector, 2)
