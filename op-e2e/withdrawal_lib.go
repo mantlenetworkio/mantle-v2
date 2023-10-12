@@ -19,13 +19,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ProveAndFinalizeWithdrawalForSingleTx(t *testing.T, l1Client *ethclient.Client, ethPrivKey *ecdsa.PrivateKey, l2WithdrawalReceipt *types.Receipt) (*types.Receipt, *types.Receipt) {
-	params, proveReceipt := ProveWithdrawalForSingleTx(t, l1Client, ethPrivKey, l2WithdrawalReceipt)
+func ProveAndFinalizeWithdrawalForSingleTx(t *testing.T, l2Url string, l1Client *ethclient.Client, ethPrivKey *ecdsa.PrivateKey, l2WithdrawalReceipt *types.Receipt) (*types.Receipt, *types.Receipt) {
+	params, proveReceipt := ProveWithdrawalForSingleTx(t, l2Url, l1Client, ethPrivKey, l2WithdrawalReceipt)
 	finalizeReceipt := FinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, l2WithdrawalReceipt, params)
 	return proveReceipt, finalizeReceipt
 }
 
-func ProveWithdrawalForSingleTx(t *testing.T, l1Client *ethclient.Client, ethPrivKey *ecdsa.PrivateKey, l2WithdrawalReceipt *types.Receipt) (withdrawals.ProvenWithdrawalParameters, *types.Receipt) {
+func ProveWithdrawalForSingleTx(t *testing.T, l2Url string, l1Client *ethclient.Client, ethPrivKey *ecdsa.PrivateKey, l2WithdrawalReceipt *types.Receipt) (withdrawals.ProvenWithdrawalParameters, *types.Receipt) {
 	// Get l2BlockNumber for proof generation
 	ctx, cancel := context.WithTimeout(context.Background(), 40*15*time.Second)
 	defer cancel()
@@ -33,7 +33,7 @@ func ProveWithdrawalForSingleTx(t *testing.T, l1Client *ethclient.Client, ethPri
 	blockNumber, err := withdrawals.WaitForFinalizationPeriod(ctx, l1Client, predeploys.DevOptimismPortalAddr, l2WithdrawalReceipt.BlockNumber)
 	require.Nil(t, err)
 
-	rpcClient, err := rpc.Dial("http://127.0.0.1:9545")
+	rpcClient, err := rpc.Dial(l2Url)
 	require.Nil(t, err)
 	proofCl := gethclient.New(rpcClient)
 	receiptCl := ethclient.NewClient(rpcClient)

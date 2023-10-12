@@ -849,7 +849,7 @@ func SingleWithdrawalTx(t *testing.T, withdrawalTx string) {
 	ethPrivKey, err := crypto.HexToECDSA(deployerPrivateKey)
 	require.NoError(t, err)
 
-	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
+	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l2url, l1Client, ethPrivKey, receipt)
 	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt.TxHash, finalizeReceipt.TxHash)
 
 }
@@ -870,7 +870,7 @@ func TestWithdrawal(t *testing.T) {
 	ethPrivKey, err := crypto.HexToECDSA(deployerPrivateKey)
 	require.NoError(t, err)
 
-	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l1Client, ethPrivKey, receipt)
+	proveReceipt, finalizeReceipt := ProveAndFinalizeWithdrawalForSingleTx(t, l2url, l1Client, ethPrivKey, receipt)
 	t.Logf("proveReceipt : %v , finalizeReceipt : %v", proveReceipt, finalizeReceipt)
 
 }
