@@ -15,7 +15,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-const POLLING_INTERVAL = 1 * time.Second
+const (
+	POLLING_INTERVAL     = 1 * time.Second
+	MAX_RPC_MESSAGE_SIZE = 1024 * 1024 * 300
+)
 
 type MantleDataStoreConfig struct {
 	RetrieverSocket          string
@@ -75,7 +78,7 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 	}
 	defer conn.Close()
 	client := pb.NewDataRetrievalClient(conn)
-	opt := grpc.MaxCallRecvMsgSize(1024 * 1024 * 300)
+	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
 	request := &pb.FramesAndDataRequest{
 		DataStoreId: dataStoreId,
 	}
