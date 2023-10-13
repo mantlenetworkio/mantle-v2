@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"google.golang.org/grpc/credentials/insecure"
 	"strconv"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -71,7 +73,7 @@ func (mda *MantleDataStore) getDataStoreById(dataStoreId uint32) (*graphView.Dat
 }
 
 func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, error) {
-	conn, err := grpc.Dial(mda.Cfg.RetrieverSocket, grpc.WithInsecure())
+	conn, err := grpc.Dial(mda.Cfg.RetrieverSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Error("Connect to da retriever fail", "err", err)
 		return nil, err
@@ -111,7 +113,7 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 			log.Info("Get dataStore success",
 				"DurationDataStoreId", dataStore.DurationDataStoreId,
 				"Confirmed", dataStore.Confirmed,
-				"ConfirmTxHash", dataStore.ConfirmTxHash)
+				"ConfirmTxHash", hexutil.Encode(dataStore.ConfirmTxHash[:]))
 			if !dataStore.Confirmed {
 				log.Warn("This batch is not confirmed")
 				continue
