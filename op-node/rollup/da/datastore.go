@@ -89,11 +89,13 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 }
 
 func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error) {
-	exit := time.NewTimer(mda.Cfg.DataStorePollingDuration)
-	ticker := time.NewTicker(POLLING_INTERVAL)
+	pollingTimeout := time.NewTimer(mda.Cfg.DataStorePollingDuration)
+	defer pollingTimeout.Stop()
+	intervalTicker := time.NewTicker(POLLING_INTERVAL)
+	defer intervalTicker.Stop()
 	for {
 		select {
-		case <-ticker.C:
+		case <-intervalTicker.C:
 			if dataStoreId <= 0 {
 				log.Error("DataStoreId less than zero", "dataStoreId", dataStoreId)
 				return nil, errors.New("dataStoreId less than 0")
@@ -117,12 +119,12 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 				continue
 			}
 			return frames, nil
-		case <-exit.C:
+		case <-pollingTimeout.C:
 			// todo: add metrics in the future
 			return nil, errors.New("Get frame ticker exit")
 		case err := <-mda.Ctx.Done():
-			log.Warn("Retrieval frames from mantle da error", "err", err)
-			return nil, errors.New("Retrieval frames from mantle da error")
+			log.Warn("Retrieval service shutting down", "err", err)
+			return nil, errors.New("Retrieval service shutting down")
 		}
 	}
 }

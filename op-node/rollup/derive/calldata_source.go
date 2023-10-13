@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -78,6 +79,8 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 		log.Info("Derived by mantle da", "MantleDaSwitch", cfg.MantleDaSwitch)
 		_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
 		if err != nil {
+			log.Error("Fetch txs by hash fail", "err", err)
+			// Here is the original return method keeping op-stack
 			return &DataSource{
 				open:        false,
 				id:          block,
@@ -96,6 +99,8 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 	}
 	_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 	if err != nil {
+		log.Error("Fetch txs by hash fail", "err", err)
+		// Here is the original return method keeping op-stack
 		return &DataSource{
 			open:        false,
 			id:          block,
@@ -169,12 +174,12 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
-		log.Warn("Abi new uint32 type error", "err", err)
+		log.Error("Abi new uint32 type error", "err", err)
 		return out
 	}
 	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
 	if err != nil {
-		log.Warn("Abi new bytes32 type error", "err", err)
+		log.Error("Abi new bytes32 type error", "err", err)
 		return out
 	}
 	confirmDataStoreArgs := abi.Arguments{
@@ -191,7 +196,7 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 	var dataStoreData = make(map[string]interface{})
 	for _, receipt := range receipts {
 		for _, rLog := range receipt.Logs {
-			if rLog.Address.String() != config.DataLayrServiceManagerAddr {
+			if strings.ToLower(rLog.Address.String()) != strings.ToLower(config.DataLayrServiceManagerAddr) {
 				continue
 			}
 			if rLog.Topics[0] != ConfirmDataStoreEventABIHash {
