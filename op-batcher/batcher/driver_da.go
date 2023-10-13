@@ -329,21 +329,21 @@ func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, search
 		searchData)
 }
 
-func (l *BatchSubmitter) handleInitDataStoreReceipt(r *types.Receipt, ctx context.Context) (*types.Receipt, error) {
-	if r.Status == types.ReceiptStatusFailed {
-		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", r.TxHash)
+func (l *BatchSubmitter) handleInitDataStoreReceipt(txReceiptIn *types.Receipt, ctx context.Context) (*types.Receipt, error) {
+	if txReceiptIn.Status == types.ReceiptStatusFailed {
+		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", txReceiptIn.TxHash)
 		l.recordFailedEigenDATx()
 		return nil, ErrInitDataStore
 	} else {
-		l.log.Info("initDataStore tx successfully published", "tx_hash", r.TxHash)
-		l.state.initStoreDataReceipt = r
-		//start to confirmData
-		r, err := l.confirmStoredData(r.TxHash.Bytes(), ctx)
+		l.log.Info("initDataStore tx successfully published", "tx_hash", txReceiptIn.TxHash)
+		l.state.initStoreDataReceipt = txReceiptIn
+		// start to confirmData
+		txReceiptOut, err := l.confirmStoredData(txReceiptIn.TxHash.Bytes(), ctx)
 		if err != nil {
 			l.log.Error("failed to confirm data", "err", err)
 			return nil, err
 		}
-		return r, nil
+		return txReceiptOut, nil
 	}
 }
 

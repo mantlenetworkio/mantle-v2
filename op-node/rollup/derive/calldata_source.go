@@ -93,7 +93,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 		} else {
 			return &DataSource{
 				open: true,
-				data: DataFromMantleDa(cfg, receipts, syncer, log.New("origin", block)),
+				data: dataFromMantleDa(cfg, receipts, syncer, log.New("origin", block)),
 			}
 		}
 	}
@@ -123,18 +123,22 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 // otherwise it returns a temporary error if fetching the block returns an error.
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
-		if ds.cfg.MantleDaSwitch {
+		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
 			if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
 				ds.open = true
-				ds.data = DataFromMantleDa(ds.cfg, receipts, ds.syncer, log.New("origin", ds.id))
+				ds.data = dataFromMantleDa(ds.cfg, receipts, ds.syncer, log.New("origin", ds.id))
+			} else if errors.Is(err, ethereum.NotFound) {
+				return nil, NewResetError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+			} else {
+				return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 			}
-		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
+		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil { // fetch data from EOA
 			ds.open = true
 			ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
 		} else if errors.Is(err, ethereum.NotFound) {
-			return nil, NewResetError(fmt.Errorf("failed to open calldata source: %w", err))
+			return nil, NewResetError(fmt.Errorf("failed to open eoa calldata source: %w", err))
 		} else {
-			return nil, NewTemporaryError(fmt.Errorf("failed to open calldata source: %w", err))
+			return nil, NewTemporaryError(fmt.Errorf("failed to open eoa calldata source: %w", err))
 		}
 	}
 	if len(ds.data) == 0 {
@@ -170,7 +174,7 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 	return out
 }
 
-func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
+func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
@@ -202,10 +206,6 @@ func DataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 			if rLog.Topics[0] != ConfirmDataStoreEventABIHash {
 				continue
 			}
-			log.Info("Data layer service manager address and Confirm dataStore event ABI hash",
-				"DataLayrServiceManagerAddr", rLog.Address.String(),
-				"AbiHash", rLog.Topics[0],
-			)
 			if len(rLog.Data) > 0 {
 				err := confirmDataStoreArgs.UnpackIntoMap(dataStoreData, rLog.Data)
 				if err != nil {
