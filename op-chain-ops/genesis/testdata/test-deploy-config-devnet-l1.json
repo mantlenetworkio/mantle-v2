@@ -25,6 +25,8 @@
   "l1ERC721BridgeProxy": "0xff000000000000000000000000000000000000ff",
   "l1StandardBridgeProxy": "0xff000000000000000000000000000000000000fd",
   "l1CrossDomainMessengerProxy": "0xff000000000000000000000000000000000000dd",
+  "systemConfigProxy": "0xff000000000000000000000000000000000000de",
+  "optimismPortalProxy": "0xff000000000000000000000000000000000000df",
 
   "deploymentWaitConfirmations": 1,
   "fundDevAccounts": true

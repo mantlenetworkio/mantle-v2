@@ -53,7 +53,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big2, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20ETHAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
 			},
 		},
 		{
@@ -71,7 +71,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big0, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20ETHAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
 			},
 		},
 		{
@@ -102,7 +102,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big0, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20ETHAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
 			},
 		},
 		{
