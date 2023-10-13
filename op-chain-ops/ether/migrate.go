@@ -127,13 +127,13 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 			totalFound = new(big.Int).Add(totalFound, account.balance)
 
 			mutableDB.SetBalance(account.address, account.balance)
-			mutableDB.SetState(predeploys.LegacyERC20ETHAddr, account.legacySlot, common.Hash{})
+			mutableDB.SetState(predeploys.LegacyERC20MNTAddr, account.legacySlot, common.Hash{})
 			count++
 			seenAccounts[account.address] = true
 		}
 	}()
 
-	err := util.IterateState(dbFactory, predeploys.LegacyERC20ETHAddr, func(db *state.StateDB, key, value common.Hash) error {
+	err := util.IterateState(dbFactory, predeploys.LegacyERC20MNTAddr, func(db *state.StateDB, key, value common.Hash) error {
 		// We can safely ignore specific slots (totalSupply, name, symbol).
 		if ignoredSlots[key] {
 			return nil
@@ -237,7 +237,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 	// different than the sum of all balances since we no longer track balances inside the contract
 	// itself. The total supply is going to be weird no matter what, might as well set it to zero
 	// so it's explicitly weird instead of implicitly weird.
-	mutableDB.SetState(predeploys.LegacyERC20ETHAddr, getOVMETHTotalSupplySlot(), common.Hash{})
+	mutableDB.SetState(predeploys.LegacyERC20MNTAddr, getOVMETHTotalSupplySlot(), common.Hash{})
 	log.Info("Set the totalSupply to 0")
 
 	return nil

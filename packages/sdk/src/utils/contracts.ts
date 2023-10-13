@@ -5,7 +5,11 @@ import { ethers, Contract } from 'ethers'
 import { toAddress } from './coercion'
 import { DeepPartial } from './type-utils'
 import { CrossChainMessenger } from '../cross-chain-messenger'
-import { StandardBridgeAdapter, ETHBridgeAdapter } from '../adapters'
+import {
+  StandardBridgeAdapter,
+  ETHBridgeAdapter,
+  MNTBridgeAdapter,
+} from '../adapters'
 import {
   CONTRACT_ADDRESSES,
   DEFAULT_L2_CONTRACT_ADDRESSES,
@@ -176,6 +180,13 @@ export const getBridgeAdapters = (
           },
           ETH: {
             Adapter: ETHBridgeAdapter,
+            l1Bridge:
+              opts?.contracts?.l1?.L1StandardBridge ||
+              CONTRACT_ADDRESSES[l2ChainId].l1.L1StandardBridge,
+            l2Bridge: predeploys.L2StandardBridge,
+          },
+          MNT: {
+            Adapter: MNTBridgeAdapter,
             l1Bridge:
               opts?.contracts?.l1?.L1StandardBridge ||
               CONTRACT_ADDRESSES[l2ChainId].l1.L1StandardBridge,

@@ -3,9 +3,10 @@ package predeploys
 import "github.com/ethereum/go-ethereum/common"
 
 const (
+	BVM_ETH                       = "0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111"
 	L2ToL1MessagePasser           = "0x4200000000000000000000000000000000000016"
 	DeployerWhitelist             = "0x4200000000000000000000000000000000000002"
-	LegacyERC20ETH                = "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
+	LegacyERC20Mantle             = "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
 	WETH9                         = "0x4200000000000000000000000000000000000006"
 	L2CrossDomainMessenger        = "0x4200000000000000000000000000000000000007"
 	L2StandardBridge              = "0x4200000000000000000000000000000000000010"
@@ -24,9 +25,10 @@ const (
 )
 
 var (
+	BVM_ETHAddr                       = common.HexToAddress(BVM_ETH)
 	L2ToL1MessagePasserAddr           = common.HexToAddress(L2ToL1MessagePasser)
 	DeployerWhitelistAddr             = common.HexToAddress(DeployerWhitelist)
-	LegacyERC20ETHAddr                = common.HexToAddress(LegacyERC20ETH)
+	LegacyERC20MNTAddr                = common.HexToAddress(LegacyERC20Mantle)
 	WETH9Addr                         = common.HexToAddress(WETH9)
 	L2CrossDomainMessengerAddr        = common.HexToAddress(L2CrossDomainMessenger)
 	L2StandardBridgeAddr              = common.HexToAddress(L2StandardBridge)
@@ -47,9 +49,10 @@ var (
 )
 
 func init() {
+	Predeploys["BVM_ETH"] = &BVM_ETHAddr
 	Predeploys["L2ToL1MessagePasser"] = &L2ToL1MessagePasserAddr
 	Predeploys["DeployerWhitelist"] = &DeployerWhitelistAddr
-	Predeploys["LegacyERC20ETH"] = &LegacyERC20ETHAddr
+	Predeploys["LegacyERC20MNT"] = &LegacyERC20MNTAddr
 	Predeploys["WETH9"] = &WETH9Addr
 	Predeploys["L2CrossDomainMessenger"] = &L2CrossDomainMessengerAddr
 	Predeploys["L2StandardBridge"] = &L2StandardBridgeAddr

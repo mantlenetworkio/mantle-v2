@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.19
 
-replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v1.101105.3
+replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v1.101105.4-0.20230920071602-50391186e740
 
 replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
 
@@ -36,7 +36,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/schollz/progressbar/v3 v3.13.0
-	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.9
 	github.com/urfave/cli/v2 v2.17.2-0.20221006022127-8f469abc00aa
@@ -75,7 +75,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/edsrzf/mmap-go v1.1.0 // indirect
+	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fjl/memsize v0.0.1 // indirect

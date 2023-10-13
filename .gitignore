@@ -27,6 +27,7 @@ packages/contracts-periphery/coverage*
 packages/contracts-periphery/@openzeppelin*
 packages/contracts-periphery/hardhat*
 packages/contracts-periphery/forge-artifacts*
+packages/contracts-bedrock/coverage*
 
 packages/data-transport-layer/db
 

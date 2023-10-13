@@ -6,6 +6,9 @@ import { SafeCall } from "../libraries/SafeCall.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { Encoding } from "../libraries/Encoding.sol";
 import { Constants } from "../libraries/Constants.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 
 /**
  * @custom:legacy
@@ -117,6 +120,7 @@ abstract contract CrossDomainMessenger is
     Initializable,
     CrossDomainMessengerLegacySpacer1
 {
+    using SafeERC20 for IERC20;
     /**
      * @notice Current message version identifier.
      */
@@ -220,10 +224,11 @@ abstract contract CrossDomainMessenger is
      * @notice Additional event data to emit, required as of Bedrock. Cannot be merged with the
      *         SentMessage event without breaking the ABI of this contract, this is good enough.
      *
-     * @param sender Address of the sender of the message.
-     * @param value  ETH value sent along with the message to the recipient.
+     * @param sender    Address of the sender of the message.
+     * @param mntValue  MNT value sent along with the message to the recipient.
+     * @param ethValue  ETH value sent along with the message to the recipient.
      */
-    event SentMessageExtension1(address indexed sender, uint256 value);
+    event SentMessageExtension1(address indexed sender, uint256 mntValue,uint256 ethValue);
 
     /**
      * @notice Emitted whenever a message is successfully relayed on this chain.
@@ -252,28 +257,31 @@ abstract contract CrossDomainMessenger is
      *         permanently locked. The same will occur if the target on the other chain is
      *         considered unsafe (see the _isUnsafeTarget() function).
      *
-     * @param _target      Target contract or wallet address.
-     * @param _message     Message to trigger the target address with.
-     * @param _minGasLimit Minimum gas limit that the message can be executed with.
+     * @param _otherSideNativeTokenAmount   Bridge the other side native token amount.
+     * @param _target                       Target contract or wallet address.
+     * @param _message                      Message to trigger the target address with.
+     * @param _minGasLimit                  Minimum gas limit that the message can be executed with.
      */
     function sendMessage(
+        uint256 _otherSideNativeTokenAmount,
         address _target,
         bytes calldata _message,
         uint32 _minGasLimit
-    ) external payable {
+    ) external payable virtual {
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
         // the minimum gas limit specified by the user.
         _sendMessage(
+            _otherSideNativeTokenAmount,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
-            msg.value,
             abi.encodeWithSelector(
                 this.relayMessage.selector,
                 messageNonce(),
                 msg.sender,
                 _target,
+                0,
                 msg.value,
                 _minGasLimit,
                 _message
@@ -281,7 +289,7 @@ abstract contract CrossDomainMessenger is
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, msg.value);
+        emit SentMessageExtension1(msg.sender, 0, msg.value);
 
         unchecked {
             ++msgNonce;
@@ -304,10 +312,11 @@ abstract contract CrossDomainMessenger is
         uint256 _nonce,
         address _sender,
         address _target,
+        uint256 _mntValue,
         uint256 _value,
         uint256 _minGasLimit,
         bytes calldata _message
-    ) external payable {
+    ) external payable virtual {
         (, uint16 version) = Encoding.decodeVersionedNonce(_nonce);
         require(
             version < 2,
@@ -330,6 +339,7 @@ abstract contract CrossDomainMessenger is
             _nonce,
             _sender,
             _target,
+            _mntValue,
             _value,
             _minGasLimit,
             _message
@@ -483,15 +493,15 @@ abstract contract CrossDomainMessenger is
      *         contracts because the logic for this depends on the network where the messenger is
      *         being deployed.
      *
-     * @param _to       Recipient of the message on the other chain.
-     * @param _gasLimit Minimum gas limit the message can be executed with.
-     * @param _value    Amount of ETH to send with the message.
-     * @param _data     Message data.
+     * @param _otherSideNativeTokenAmount   Bridge the other side native token amount.
+     * @param _to                           Recipient of the message on the other chain.
+     * @param _gasLimit                     Minimum gas limit the message can be executed with.
+     * @param _data                         Message data.
      */
     function _sendMessage(
+        uint256 _otherSideNativeTokenAmount,
         address _to,
         uint64 _gasLimit,
-        uint256 _value,
         bytes memory _data
     ) internal virtual;
 

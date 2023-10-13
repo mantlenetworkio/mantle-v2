@@ -122,7 +122,7 @@ func NewService(cfg ServiceConfig) (*Service, error) {
 		headerSelector: confirmedHeaderSelector,
 		metrics:        cfg.Metrics,
 		tokenCache: map[common.Address]*db.Token{
-			predeploys.LegacyERC20ETHAddr: db.ETHL1Token,
+			predeploys.BVM_ETHAddr: db.ETHL1Token,
 		},
 	}
 	service.wg.Add(1)

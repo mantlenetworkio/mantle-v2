@@ -32,7 +32,7 @@ func SendWithdrawal(t *testing.T, cfg SystemConfig, l2Client *ethclient.Client, 
 	l2opts, err := bind.NewKeyedTransactorWithChainID(privKey, cfg.L2ChainIDBig())
 	require.Nil(t, err)
 	l2opts.Value = opts.Value
-	tx, err := l2withdrawer.InitiateWithdrawal(l2opts, l2opts.From, big.NewInt(int64(opts.Gas)), opts.Data)
+	tx, err := l2withdrawer.InitiateWithdrawal(l2opts, l2opts.Value, l2opts.From, big.NewInt(int64(opts.Gas)), opts.Data)
 	require.Nil(t, err, "sending initiate withdraw tx")
 
 	receipt, err := waitForTransaction(tx.Hash(), l2Client, 10*time.Duration(cfg.DeployConfig.L1BlockTime)*time.Second)
@@ -121,7 +121,8 @@ func ProveWithdrawal(t *testing.T, cfg SystemConfig, l1Client *ethclient.Client,
 			Nonce:    params.Nonce,
 			Sender:   params.Sender,
 			Target:   params.Target,
-			Value:    params.Value,
+			MntValue: params.MNTValue,
+			EthValue: params.ETHValue,
 			GasLimit: params.GasLimit,
 			Data:     params.Data,
 		},
@@ -156,7 +157,8 @@ func FinalizeWithdrawal(t *testing.T, cfg SystemConfig, l1Client *ethclient.Clie
 			Nonce:    params.Nonce,
 			Sender:   params.Sender,
 			Target:   params.Target,
-			Value:    params.Value,
+			MntValue: params.MNTValue,
+			EthValue: params.ETHValue,
 			GasLimit: params.GasLimit,
 			Data:     params.Data,
 		},

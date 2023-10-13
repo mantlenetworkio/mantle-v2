@@ -320,7 +320,7 @@ func TestMixedDepositValidity(t *testing.T) {
 		} else {
 			transferValue = new(big.Int).Mul(common.Big2, transactor.ExpectedL2Balance) // trigger a revert by trying to transfer our current balance * 2
 		}
-		tx, err := depositContract.DepositTransaction(transactor.Account.L1Opts, toAddr, transferValue, 100_000, false, nil)
+		tx, err := depositContract.DepositTransaction(transactor.Account.L1Opts, big.NewInt(0), toAddr, transferValue, 100_000, false, nil)
 		require.Nil(t, err, "with deposit tx")
 
 		// Wait for the deposit tx to appear in L1.
@@ -486,7 +486,7 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 			// Initiate Withdrawal
 			withdrawAmount := big.NewInt(500_000_000_000)
 			transactor.Account.L2Opts.Value = withdrawAmount
-			tx, err := l2l1MessagePasser.InitiateWithdrawal(transactor.Account.L2Opts, fromAddr, big.NewInt(21000), nil)
+			tx, err := l2l1MessagePasser.InitiateWithdrawal(transactor.Account.L2Opts, withdrawAmount, fromAddr, big.NewInt(21000), nil)
 			require.Nil(t, err, "sending initiate withdraw tx")
 
 			// Wait for the transaction to appear in L2 verifier
@@ -537,7 +537,8 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 				Nonce:    params.Nonce,
 				Sender:   params.Sender,
 				Target:   params.Target,
-				Value:    params.Value,
+				MntValue: params.MNTValue,
+				EthValue: params.ETHValue,
 				GasLimit: params.GasLimit,
 				Data:     params.Data,
 			}
@@ -546,7 +547,7 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 			withdrawalProofParam := params.WithdrawalProof
 
 			// Determine if this will be a bad withdrawal.
-			badWithdrawal := i < 8
+			badWithdrawal := i < 9
 			if badWithdrawal {
 				// Select a field to overwrite depending on which test case this is.
 				fieldIndex := i
@@ -568,25 +569,30 @@ func TestMixedWithdrawalValidity(t *testing.T) {
 						typeProvider.Fuzz(&withdrawalTransaction.Target)
 					}
 				} else if fieldIndex == 3 {
-					originalValue := new(big.Int).Set(withdrawalTransaction.Value)
-					for originalValue.Cmp(withdrawalTransaction.Value) == 0 {
-						typeProvider.Fuzz(&withdrawalTransaction.Value)
+					originalValue := new(big.Int).Set(withdrawalTransaction.MntValue)
+					for originalValue.Cmp(withdrawalTransaction.MntValue) == 0 {
+						typeProvider.Fuzz(&withdrawalTransaction.MntValue)
 					}
 				} else if fieldIndex == 4 {
+					originalValue := new(big.Int).Set(withdrawalTransaction.EthValue)
+					for originalValue.Cmp(withdrawalTransaction.EthValue) == 0 {
+						typeProvider.Fuzz(&withdrawalTransaction.EthValue)
+					}
+				} else if fieldIndex == 5 {
 					originalValue := new(big.Int).Set(withdrawalTransaction.GasLimit)
 					for originalValue.Cmp(withdrawalTransaction.GasLimit) == 0 {
 						typeProvider.Fuzz(&withdrawalTransaction.GasLimit)
 					}
-				} else if fieldIndex == 5 {
+				} else if fieldIndex == 6 {
 					originalValue := new(big.Int).Set(l2OutputIndexParam)
 					for originalValue.Cmp(l2OutputIndexParam) == 0 {
 						typeProvider.Fuzz(&l2OutputIndexParam)
 					}
-				} else if fieldIndex == 6 {
+				} else if fieldIndex == 7 {
 					// TODO: this is a large structure that is unlikely to ever produce the same value, however we should
 					//  verify that we actually generated different values.
 					typeProvider.Fuzz(&outputRootProofParam)
-				} else if fieldIndex == 7 {
+				} else if fieldIndex == 8 {
 					typeProvider.Fuzz(&withdrawalProofParam)
 					originalValue := make([][]byte, len(withdrawalProofParam))
 					for i := 0; i < len(withdrawalProofParam); i++ {

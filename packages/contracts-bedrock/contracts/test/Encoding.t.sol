@@ -29,7 +29,8 @@ contract Encoding_Test is CommonTest {
         uint8 _version,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) external {
@@ -40,7 +41,8 @@ contract Encoding_Test is CommonTest {
             nonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _gasLimit,
             _data
         );
@@ -49,7 +51,8 @@ contract Encoding_Test is CommonTest {
             nonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _gasLimit,
             _data
         );
@@ -88,6 +91,7 @@ contract Encoding_Test is CommonTest {
         address _to,
         uint256 _mint,
         uint256 _value,
+        uint256 _ethValue,
         uint64 _gas,
         bool isCreate,
         bytes memory _data,
@@ -99,6 +103,7 @@ contract Encoding_Test is CommonTest {
             isCreate,
             _value,
             _mint,
+            _ethValue,
             _gas,
             _data,
             bytes32(uint256(0)),

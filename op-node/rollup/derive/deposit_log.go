@@ -95,7 +95,7 @@ func UnmarshalDepositLogEvent(ev *types.Log) (*types.DepositTx, error) {
 }
 
 func unmarshalDepositVersion0(dep *types.DepositTx, to common.Address, opaqueData []byte) error {
-	if len(opaqueData) < 32+32+8+1 {
+	if len(opaqueData) < 32+32+32+8+1 {
 		return fmt.Errorf("unexpected opaqueData length: %d", len(opaqueData))
 	}
 	offset := uint64(0)
@@ -110,6 +110,14 @@ func unmarshalDepositVersion0(dep *types.DepositTx, to common.Address, opaqueDat
 
 	// uint256 value
 	dep.Value = new(big.Int).SetBytes(opaqueData[offset : offset+32])
+	offset += 32
+
+	//uint256 value for ethValue
+	dep.EthValue = new(big.Int).SetBytes(opaqueData[offset : offset+32])
+	// 0 mint is represented as nil to skip minting code
+	if dep.EthValue.Cmp(new(big.Int)) == 0 {
+		dep.EthValue = nil
+	}
 	offset += 32
 
 	// uint64 gas
@@ -189,7 +197,7 @@ func MarshalDepositLogEvent(depositContractAddr common.Address, deposit *types.D
 }
 
 func marshalDepositVersion0(deposit *types.DepositTx) ([]byte, error) {
-	opaqueData := make([]byte, 32+32+8+1, 32+32+8+1+len(deposit.Data))
+	opaqueData := make([]byte, 32+32+32+8+1, 32+32+32+8+1+len(deposit.Data))
 	offset := 0
 
 	// uint256 mint
@@ -206,6 +214,15 @@ func marshalDepositVersion0(deposit *types.DepositTx) ([]byte, error) {
 		return nil, fmt.Errorf("value value exceeds 256 bits: %d", deposit.Value)
 	}
 	deposit.Value.FillBytes(opaqueData[offset : offset+32])
+	offset += 32
+
+	// uint256 value
+	if deposit.EthValue != nil {
+		if deposit.EthValue.BitLen() > 256 {
+			return nil, fmt.Errorf("ethValue value exceeds 256 bits: %d", deposit.Value)
+		}
+		deposit.EthValue.FillBytes(opaqueData[offset : offset+32])
+	}
 	offset += 32
 
 	// uint64 gas

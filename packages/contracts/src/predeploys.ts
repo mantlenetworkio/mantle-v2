@@ -25,6 +25,10 @@ export const predeploys = {
   WETH9: '0x4200000000000000000000000000000000000006',
 }
 
+export const l1DevPredeploys = {
+  L1_MNT: '0x6900000000000000000000000000000000000020',
+}
+
 export const futurePredeploys = {
   // System addresses, for use later
   System0: '0x4200000000000000000000000000000000000042',

@@ -21,7 +21,7 @@ contracts=(
   contracts/L2/L2CrossDomainMessenger.sol:L2CrossDomainMessenger
   contracts/L2/L2StandardBridge.sol:L2StandardBridge
   contracts/L2/L2ToL1MessagePasser.sol:L2ToL1MessagePasser
-  contracts/legacy/LegacyERC20ETH.sol:LegacyERC20ETH
+  contracts/legacy/LegacyERC20MNT.sol:LegacyERC20MNT
   contracts/L2/SequencerFeeVault.sol:SequencerFeeVault
   contracts/L2/BaseFeeVault.sol:BaseFeeVault
   contracts/L2/L1FeeVault.sol:L1FeeVault
