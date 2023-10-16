@@ -4,9 +4,9 @@ a=$1
 
 if [ $a -eq 0 ]
 then
-  rm -rf deployments/devnetL1-mantle
-  cp -r deployments/devnetL1-mantle-bak deployments/devnetL1-mantle
-  yarn deploy --network devnetL1-mantle
+  rm -rf deployments/devnetL1-mantle-bedrock-upgrade
+  cp -r deployments/devnetL1-mantle-bedrock-upgrade-bak deployments/devnetL1-mantle-bedrock-upgrade
+  yarn deploy --network devnetL1-mantle-bedrock-upgrade
 fi
 
 
@@ -15,7 +15,7 @@ then
   echo $a
   mv deploy deploy-deployment
   mv deploy-upgrade-1 deploy
-  yarn deploy --network devnetL1-mantle
+  yarn deploy --network devnetL1-mantle-bedrock-upgrade
 fi
 
 
@@ -24,7 +24,7 @@ then
   echo $a
   mv deploy deploy-upgrade-1
   mv deploy-upgrade-2 deploy
-  yarn deploy --network devnetL1-mantle
+  yarn deploy --network devnetL1-mantle-bedrock-upgrade
 fi
 
 
@@ -33,7 +33,7 @@ then
   echo $a
   mv deploy deploy-upgrade-2
   mv deploy-upgrade-3 deploy
-  yarn deploy --network devnetL1-mantle
+  yarn deploy --network devnetL1-mantle-bedrock-upgrade
 fi
 
 

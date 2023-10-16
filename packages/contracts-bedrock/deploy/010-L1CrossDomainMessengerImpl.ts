@@ -12,16 +12,16 @@ const deployFn: DeployFunction = async (hre) => {
     hre,
     'OptimismPortalProxy'
   )
-  const Proxy__L1MantleToken = await getContractFromArtifact(
-    hre,
-    'Proxy__L1MantleToken'
-  )
+  const l1MantleToken = hre.deployConfig.l1MantleToken
+  if (l1MantleToken === "0x000000000000000000000000000000000000000000000000") {
+    throw new Error(`l1 mantle token is empty`)
+  }
 
   await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'L1CrossDomainMessenger',
-    args: [OptimismPortalProxy.address, Proxy__L1MantleToken.address],
+    args: [OptimismPortalProxy.address, l1MantleToken],
     postDeployAction: async (contract) => {
       await assertContractVariable(
         contract,
@@ -31,7 +31,7 @@ const deployFn: DeployFunction = async (hre) => {
       await assertContractVariable(
         contract,
         'L1_MNT_ADDRESS',
-        Proxy__L1MantleToken.address
+        l1MantleToken
       )
     },
   })
