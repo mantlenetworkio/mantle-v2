@@ -6,6 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
+// Compile https://github.com/mantlenetworkio/mantle/blob/main/packages/contracts/contracts/L1/messaging/L1StandardBridge.sol
+// to get legacy standardBridge ABI
+
 const legacyStandardBridgeABIJson = `
 [
     {

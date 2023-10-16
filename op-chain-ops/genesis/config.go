@@ -435,7 +435,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
 		"timestamp":      block.Time(),
-		"basefee":        block.BaseFee(), //TODO
+		"basefee":        block.BaseFee(),
 		"hash":           block.Hash(),
 		"sequenceNumber": 0,
 		"batcherHash":    config.BatchSenderAddress.Hash(),
