@@ -354,8 +354,7 @@ func NewDeployConfigWithNetwork(network, path string) (*DeployConfig, error) {
 	return NewDeployConfig(deployConfig)
 }
 
-// NewL2ImmutableConfig will create an ImmutableConfig given an instance of a
-// DeployConfig and a block.
+// NewL2ImmutableConfig will create an ImmutableConfig given an instance of a DeployConfig
 func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, error) {
 	immutable := make(immutables.ImmutableConfig)
 
