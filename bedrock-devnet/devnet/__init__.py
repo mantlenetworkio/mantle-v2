@@ -42,7 +42,7 @@ def main():
         write_json(genesis_l1_path, GENESIS_TMPL)
 
     log.info('Starting L1.')
-    run_command(['docker-compose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir
     })
     wait_up(8545)
@@ -80,8 +80,8 @@ def main():
             'CanonicalTransactionChain': '0x0000000000000000000000000000000000000000',
             'BondManager': '0x0000000000000000000000000000000000000000',
         })
-        sdk_addresses['L1CrossDomainMessenger'] = addresses['Proxy__OVM_L1CrossDomainMessenger']
-        sdk_addresses['L1StandardBridge'] = addresses['Proxy__OVM_L1StandardBridge']
+        sdk_addresses['L1CrossDomainMessenger'] = addresses['Proxy__BVM_L1CrossDomainMessenger']
+        sdk_addresses['L1StandardBridge'] = addresses['Proxy__BVM_L1StandardBridge']
         sdk_addresses['OptimismPortal'] = addresses['OptimismPortalProxy']
         sdk_addresses['L2OutputOracle'] = addresses['L2OutputOracleProxy']
         write_json(addresses_json_path, addresses)
@@ -106,13 +106,13 @@ def main():
         shutil.move(devnet_cfg_backup, devnet_cfg_orig)
 
     log.info('Bringing up L2.')
-    run_command(['docker-compose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir
     })
     wait_up(9545)
 
     log.info('Bringing up everything else.')
-    run_command(['docker-compose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir,
         'L2OO_ADDRESS': addresses['L2OutputOracleProxy'],
         'SEQUENCER_BATCH_INBOX_ADDRESS': rollup_config['batch_inbox_address']
