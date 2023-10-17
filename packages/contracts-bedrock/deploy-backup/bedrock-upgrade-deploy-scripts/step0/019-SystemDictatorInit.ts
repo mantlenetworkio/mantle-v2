@@ -116,9 +116,6 @@ const deployFn: DeployFunction = async (hre) => {
     },
   }
 
-  console.log("SystemDictator configuration")
-  console.log(JSON.stringify(config, null, 2))
-
   // Update the implementation if necessary.
   if (
     (await SystemDictatorProxy.callStatic.implementation({
@@ -146,6 +143,9 @@ const deployFn: DeployFunction = async (hre) => {
       30000,
       1000
     )
+
+    console.log("SystemDictator configuration")
+    console.log(JSON.stringify(config, null, 2))
 
     // Verify that the contract was initialized correctly.
     const dictatorConfig = await SystemDictator.config()

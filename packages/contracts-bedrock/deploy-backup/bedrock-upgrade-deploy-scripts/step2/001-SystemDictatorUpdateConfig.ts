@@ -17,7 +17,7 @@ import {
   liveDeployer,
   doPhase,
   isStartOfPhase,
-} from '../../src/deploy-utils'
+} from '../src/deploy-utils'
 
 const deployFn: DeployFunction = async (hre) => {
   const { deployer } = await hre.getNamedAccounts()

@@ -14,7 +14,7 @@ import {
   doOwnershipTransfer,
   doPhase,
   liveDeployer,
-} from '../../src/deploy-utils'
+} from '../src/deploy-utils'
 
 const uint128Max = ethers.BigNumber.from('0xffffffffffffffffffffffffffffffff')
 
