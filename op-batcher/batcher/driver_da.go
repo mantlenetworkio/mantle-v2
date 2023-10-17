@@ -84,12 +84,13 @@ func (l *BatchSubmitter) mantleDALoop() {
 func (l *BatchSubmitter) publishStateToMantleDA() {
 
 	for {
-		err := l.publishTxsToMantleDA(l.killCtx)
+		finish, err := l.publishTxsToMantleDA(l.killCtx)
+		if finish {
+			l.log.Info("init data store transaction has been published")
+			return
+		}
 		if err != nil {
-			if errors.Is(err, ErrUploadDataFinished) {
-				l.log.Info("init data store transaction has been published")
-
-			} else if err != io.EOF {
+			if err != io.EOF {
 				l.log.Error("error sending tx while draining state", "err", err)
 			}
 			return
@@ -98,12 +99,12 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 
 }
 
-func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
+func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) (bool, error) {
 	// send all available transactions
 	l1tip, err := l.l1Tip(ctx)
 	if err != nil {
 		l.log.Error("Failed to query L1 tip", "error", err)
-		return err
+		return false, err
 	}
 	l.recordL1Tip(l1tip)
 
@@ -111,19 +112,21 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) error {
 	_, err = l.state.TxData(l1tip.ID())
 
 	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && !l.state.pendingChannel.HasFrame() {
-		if len(l.state.pendingTransactions) > 0 {
-			var txsData [][]byte
-			for _, v := range l.state.pendingTransactions {
-				txsData = append(txsData, v.Bytes())
-			}
-			err := l.disperseStoreData(txsData)
-			return err
-		} else {
+		if len(l.state.pendingTransactions) == 0 {
 			l.log.Error("there is no frame in the current channel")
-			return errors.New("there is no frame in the current channel")
+			return false, errors.New("there is no frame in the current channel")
 		}
+		var txsData [][]byte
+		for _, v := range l.state.pendingTransactions {
+			txsData = append(txsData, v.Bytes())
+		}
+		err := l.disperseStoreData(txsData)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
 	}
-	return err
+	return false, err
 }
 
 func (l *BatchSubmitter) disperseStoreData(txsData [][]byte) error {
@@ -145,8 +148,7 @@ func (l *BatchSubmitter) disperseStoreData(txsData [][]byte) error {
 		//cache params
 		l.state.params = params
 	}
-
-	return ErrUploadDataFinished
+	return nil
 }
 
 func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*types.Receipt, error) {
