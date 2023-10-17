@@ -9,15 +9,16 @@ const deployFn: DeployFunction = async (hre) => {
   await sleep(deploySleepTime)
   await deploy({
     hre,
-    name: 'Proxy__BVM_L1StandardBridge',
-    contract: 'L1ChugSplashProxy',
-    args: [deployer],
+    name: 'Lib_AddressManager',
+    contract: 'AddressManager',
+    args: [],
     postDeployAction: async (contract) => {
-      await assertContractVariable(contract, 'getOwner', deployer)
+      // Owner is temporarily set to the deployer.
+      await assertContractVariable(contract, 'owner', deployer)
     },
   })
 }
 
-deployFn.tags = ['L1StandardBridgeProxy', 'setup', 'l1']
+deployFn.tags = ['AddressManager', 'setup', 'l1']
 
 export default deployFn

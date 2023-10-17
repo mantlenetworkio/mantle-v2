@@ -2,7 +2,7 @@ import assert from 'assert'
 
 import { ethers } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@eth-optimism/core-utils'
+import {awaitCondition, sleep} from '@eth-optimism/core-utils'
 import '@eth-optimism/hardhat-deploy-config'
 import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
@@ -16,7 +16,7 @@ import {
   printCastCommand,
   liveDeployer,
   doPhase,
-  isStartOfPhase,
+  isStartOfPhase, deploySleepTime,
 } from '../src/deploy-utils'
 
 const deployFn: DeployFunction = async (hre) => {
@@ -50,15 +50,15 @@ const deployFn: DeployFunction = async (hre) => {
       signerOrProvider: deployer,
     },
     {
-      name: 'Proxy__OVM_L1CrossDomainMessenger',
+      name: 'Proxy__BVM_L1CrossDomainMessenger',
       iface: 'L1CrossDomainMessenger',
       signerOrProvider: deployer,
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
       iface: 'L1StandardBridge',
       signerOrProvider: deployer,
     },
@@ -95,6 +95,89 @@ const deployFn: DeployFunction = async (hre) => {
     disabled: process.env.DISABLE_LIVE_DEPLOYER,
   })
 
+  // Make sure the dynamic system configuration has been set.
+  if (
+    (await isStartOfPhase(SystemDictator, 2)) &&
+    !(await SystemDictator.dynamicConfigSet())
+  ) {
+    console.log(`
+      You must now set the dynamic L2OutputOracle configuration by calling the function
+      updateL2OutputOracleDynamicConfig. You will need to provide the
+      l2OutputOracleStartingBlockNumber and the l2OutputOracleStartingTimestamp which can both be
+      found by querying the last finalized block in the L2 node.
+    `)
+
+    if (isLiveDeployer) {
+      console.log(`Updating dynamic oracle config...`)
+
+      // Use default starting time if not provided
+      let deployL2StartingTimestamp =
+        hre.deployConfig.l2OutputOracleStartingTimestamp
+      if (deployL2StartingTimestamp < 0) {
+        const l1StartingBlock = await hre.ethers.provider.getBlock(
+          hre.deployConfig.l1StartingBlockTag
+        )
+        if (l1StartingBlock === null) {
+          throw new Error(
+            `Cannot fetch block tag ${hre.deployConfig.l1StartingBlockTag}`
+          )
+        }
+        deployL2StartingTimestamp = l1StartingBlock.timestamp
+      }
+      console.log("Set l2OutputOracleStartingBlockNumber to "+hre.deployConfig.l2OutputOracleStartingBlockNumber.toString())
+      console.log("Set L2StartingTimestamp to "+deployL2StartingTimestamp.toString())
+
+      await SystemDictator.updateDynamicConfig(
+        {
+          l2OutputOracleStartingBlockNumber:
+            hre.deployConfig.l2OutputOracleStartingBlockNumber,
+          l2OutputOracleStartingTimestamp: deployL2StartingTimestamp,
+        },
+        false // do not pause the the OptimismPortal when initializing
+      )
+    } else {
+      // pause the OptimismPortal when initializing
+      const optimismPortalPaused = true
+      const tx = await SystemDictator.populateTransaction.updateDynamicConfig(
+        {
+          l2OutputOracleStartingBlockNumber:
+            hre.deployConfig.l2OutputOracleStartingBlockNumber,
+          l2OutputOracleStartingTimestamp:
+            hre.deployConfig.l2OutputOracleStartingTimestamp,
+        },
+        optimismPortalPaused
+      )
+      console.log(`Please update dynamic oracle config...`)
+      console.log(
+        JSON.stringify(
+          {
+            l2OutputOracleStartingBlockNumber:
+              hre.deployConfig.l2OutputOracleStartingBlockNumber,
+            l2OutputOracleStartingTimestamp:
+              hre.deployConfig.l2OutputOracleStartingTimestamp,
+            optimismPortalPaused,
+          },
+          null,
+          2
+        )
+      )
+      console.log(`MSD address: ${SystemDictator.address}`)
+      printJsonTransaction(tx)
+      printCastCommand(tx)
+      await printTenderlySimulationLink(SystemDictator.provider, tx)
+    }
+
+    await awaitCondition(
+      async () => {
+        return SystemDictator.dynamicConfigSet()
+      },
+      5000,
+      1000
+    )
+  }
+
+  await sleep(deploySleepTime)
+
   await doPhase({
     isLiveDeployer,
     SystemDictator,
@@ -118,22 +201,22 @@ const deployFn: DeployFunction = async (hre) => {
     checks: async () => {
       // Step 3 checks
       const deads = [
-        'OVM_CanonicalTransactionChain',
-        'OVM_L2CrossDomainMessenger',
-        'OVM_DecompressionPrecompileAddress',
-        'OVM_Sequencer',
-        'OVM_Proposer',
-        'OVM_ChainStorageContainer-CTC-batches',
-        'OVM_ChainStorageContainer-CTC-queue',
-        'OVM_CanonicalTransactionChain',
-        'OVM_StateCommitmentChain',
-        'OVM_BondManager',
-        'OVM_ExecutionManager',
-        'OVM_FraudVerifier',
-        'OVM_StateManagerFactory',
-        'OVM_StateTransitionerFactory',
-        'OVM_SafetyChecker',
-        'OVM_L1MultiMessageRelayer',
+        'BVM_CanonicalTransactionChain',
+        'BVM_L2CrossDomainMessenger',
+        'BVM_DecompressionPrecompileAddress',
+        'BVM_Sequencer',
+        'BVM_Proposer',
+        'BVM_ChainStorageContainer-CTC-batches',
+        'BVM_ChainStorageContainer-CTC-queue',
+        'BVM_CanonicalTransactionChain',
+        'BVM_StateCommitmentChain',
+        'BVM_BondManager',
+        'BVM_ExecutionManager',
+        'BVM_FraudVerifier',
+        'BVM_StateManagerFactory',
+        'BVM_StateTransitionerFactory',
+        'BVM_SafetyChecker',
+        'BVM_L1MultiMessageRelayer',
         'BondManager',
       ]
       for (const dead of deads) {
@@ -150,12 +233,11 @@ const deployFn: DeployFunction = async (hre) => {
         })) === ProxyAdmin.address
       )
 
-      // todo： tmp ignored， but need to fixed
-      // assert(
-      //   (await L1ERC721BridgeProxy.callStatic.admin({
-      //     from: ProxyAdmin.address,
-      //   })) === ProxyAdmin.address
-      // )
+      assert(
+        (await L1ERC721BridgeProxy.callStatic.admin({
+          from: ProxyAdmin.address,
+        })) === ProxyAdmin.address
+      )
 
       // Step 5 checks
       // Check L2OutputOracle was initialized properly.

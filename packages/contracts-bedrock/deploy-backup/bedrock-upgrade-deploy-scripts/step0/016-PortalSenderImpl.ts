@@ -1,6 +1,5 @@
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 
-import { predeploys } from '../src'
 import {
   assertContractVariable,
   deploy, deploySleepTime,
@@ -9,26 +8,26 @@ import {
 import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
-  const L1CrossDomainMessengerProxy = await getContractFromArtifact(
+  const OptimismPortalProxy = await getContractFromArtifact(
     hre,
-    'Proxy__BVM_L1CrossDomainMessenger'
+    'OptimismPortalProxy'
   )
 
   await sleep(deploySleepTime)
   await deploy({
     hre,
-    name: 'L1ERC721Bridge',
-    args: [L1CrossDomainMessengerProxy.address, predeploys.L2ERC721Bridge],
+    name: 'PortalSender',
+    args: [OptimismPortalProxy.address],
     postDeployAction: async (contract) => {
       await assertContractVariable(
         contract,
-        'MESSENGER',
-        L1CrossDomainMessengerProxy.address
+        'PORTAL',
+        OptimismPortalProxy.address
       )
     },
   })
 }
 
-deployFn.tags = ['L1ERC721BridgeImpl', 'setup', 'l1']
+deployFn.tags = ['PortalSenderImpl', 'setup', 'l1']
 
 export default deployFn

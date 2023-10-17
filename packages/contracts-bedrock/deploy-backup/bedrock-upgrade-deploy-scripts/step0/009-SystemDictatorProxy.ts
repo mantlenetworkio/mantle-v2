@@ -9,15 +9,15 @@ const deployFn: DeployFunction = async (hre) => {
   await sleep(deploySleepTime)
   await deploy({
     hre,
-    name: 'Proxy__BVM_L1StandardBridge',
-    contract: 'L1ChugSplashProxy',
+    name: 'SystemDictatorProxy',
+    contract: 'Proxy',
     args: [deployer],
     postDeployAction: async (contract) => {
-      await assertContractVariable(contract, 'getOwner', deployer)
+      await assertContractVariable(contract, 'admin', deployer)
     },
   })
 }
 
-deployFn.tags = ['L1StandardBridgeProxy', 'setup', 'l1']
+deployFn.tags = ['SystemDictatorProxy', 'setup', 'l1']
 
 export default deployFn

@@ -49,9 +49,9 @@ const config: HardhatUserConfig = {
         'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       ],
     },
-    'devnetL1-mantle': {
+    'devnetL1-mantle-bedrock-upgrade': {
       live: false,
-      url: 'http://localhost:9545',
+      url: 'http://localhost:8545',
       accounts: [
         'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       ],

@@ -17,7 +17,7 @@ import {
   liveDeployer,
   doPhase,
   isStartOfPhase,
-} from '../src/deploy-utils'
+} from '../../src/deploy-utils'
 
 const deployFn: DeployFunction = async (hre) => {
   const { deployer } = await hre.getNamedAccounts()
@@ -50,15 +50,15 @@ const deployFn: DeployFunction = async (hre) => {
       signerOrProvider: deployer,
     },
     {
-      name: 'Proxy__OVM_L1CrossDomainMessenger',
+      name: 'Proxy__BVM_L1CrossDomainMessenger',
       iface: 'L1CrossDomainMessenger',
       signerOrProvider: deployer,
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
       iface: 'L1StandardBridge',
       signerOrProvider: deployer,
     },

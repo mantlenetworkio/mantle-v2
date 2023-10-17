@@ -9,15 +9,16 @@ const deployFn: DeployFunction = async (hre) => {
   await sleep(deploySleepTime)
   await deploy({
     hre,
-    name: 'Proxy__BVM_L1StandardBridge',
-    contract: 'L1ChugSplashProxy',
+    name: 'ProxyAdmin',
     args: [deployer],
     postDeployAction: async (contract) => {
-      await assertContractVariable(contract, 'getOwner', deployer)
+      // Owner is temporarily set to the deployer. We transfer ownership of the ProxyAdmin to the
+      // SystemDictator before we trigger the dictator steps.
+      await assertContractVariable(contract, 'owner', deployer)
     },
   })
 }
 
-deployFn.tags = ['L1StandardBridgeProxy', 'setup', 'l1']
+deployFn.tags = ['ProxyAdmin', 'setup', 'l1']
 
 export default deployFn
