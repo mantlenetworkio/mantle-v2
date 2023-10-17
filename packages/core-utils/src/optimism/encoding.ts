@@ -72,7 +72,8 @@ export const encodeCrossDomainMessageV0 = (
  * @param nonce     The cross domain message nonce
  * @param sender    The sender of the cross domain message
  * @param target    The target of the cross domain message
- * @param value     The value being sent with the cross domain message
+ * @param mntValue  The MNT value being sent with the cross domain message
+ * @param ethValue  The ETH value being sent with the cross domain message
  * @param gasLimit  The gas limit of the cross domain execution
  * @param data      The data passed along with the cross domain message
  */
@@ -80,13 +81,14 @@ export const encodeCrossDomainMessageV1 = (
   nonce: BigNumber,
   sender: string,
   target: string,
-  value: BigNumberish,
+  mntValue: BigNumberish,
+  ethValue: BigNumberish,
   gasLimit: BigNumberish,
   data: string
 ) => {
   return iface.encodeFunctionData(
-    'relayMessage(uint256,address,address,uint256,uint256,bytes)',
-    [nonce, sender, target, value, gasLimit, data]
+    'relayMessage(uint256,address,address,uint256,uint256,uint256,bytes)',
+    [nonce, sender, target, mntValue, ethValue, gasLimit, data]
   )
 }
 
@@ -97,7 +99,8 @@ export const encodeCrossDomainMessageV1 = (
  * @param nonce     The cross domain message nonce
  * @param sender    The sender of the cross domain message
  * @param target    The target of the cross domain message
- * @param value     The value being sent with the cross domain message
+ * @param mntValue  The MNT value being sent with the cross domain message
+ * @param ethValue  The ETH value being sent with the cross domain message
  * @param gasLimit  The gas limit of the cross domain execution
  * @param data      The data passed along with the cross domain message
  */
@@ -105,7 +108,8 @@ export const encodeCrossDomainMessage = (
   nonce: BigNumber,
   sender: string,
   target: string,
-  value: BigNumber,
+  mntValue: BigNumber,
+  ethValue: BigNumber,
   gasLimit: BigNumber,
   data: string
 ) => {
@@ -117,7 +121,8 @@ export const encodeCrossDomainMessage = (
       nonce,
       sender,
       target,
-      value,
+      mntValue,
+      ethValue,
       gasLimit,
       data
     )

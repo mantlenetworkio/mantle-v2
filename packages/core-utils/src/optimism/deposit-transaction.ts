@@ -61,6 +61,7 @@ interface DepositTxOpts {
   to: string | null
   mint: BigNumberish
   value: BigNumberish
+  ethValue: BigNumberish
   gas: BigNumberish
   isSystemTransaction: boolean
   data: string
@@ -85,6 +86,7 @@ export class DepositTx {
   public to: string | null
   public mint: BigNumberish
   public value: BigNumberish
+  public ethValue: BigNumberish
   public gas: BigNumberish
   public isSystemTransaction: boolean
   public data: BigNumberish
@@ -100,6 +102,7 @@ export class DepositTx {
     this.to = opts.to!
     this.mint = opts.mint!
     this.value = opts.value!
+    this.ethValue = opts.ethValue!
     this.gas = opts.gas!
     this.isSystemTransaction = opts.isSystemTransaction || false
     this.data = opts.data!
@@ -172,9 +175,10 @@ export class DepositTx {
     this.to = handleAddress(transaction[2])
     this.mint = handleNumber(transaction[3])
     this.value = handleNumber(transaction[4])
-    this.gas = handleNumber(transaction[5])
-    this.isSystemTransaction = handleBoolean(transaction[6])
-    this.data = transaction[7]
+    this.ethValue = handleNumber(transaction[5])
+    this.gas = handleNumber(transaction[6])
+    this.isSystemTransaction = handleBoolean(transaction[7])
+    this.data = transaction[8]
 
     if ('l1BlockHash' in extra) {
       this.l1BlockHash = extra.l1BlockHash
@@ -235,7 +239,7 @@ export class DepositTx {
     }
 
     const opaqueData = event.args.opaqueData
-    if (opaqueData.length < 32 + 32 + 8 + 1) {
+    if (opaqueData.length < 32 + 32 + 32 + 8 + 1) {
       throw new Error(`invalid opaqueData size: ${opaqueData.length}`)
     }
 
@@ -243,6 +247,8 @@ export class DepositTx {
     this.mint = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 32))
     offset += 32
     this.value = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 32))
+    offset += 32
+    this.ethValue = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 32))
     offset += 32
     this.gas = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 8))
     offset += 8

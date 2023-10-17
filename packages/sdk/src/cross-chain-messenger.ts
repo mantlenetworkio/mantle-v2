@@ -295,7 +295,9 @@ export class CrossChainMessenger {
       .map((log) => {
         // Try to pull out the value field, but only if the very next log is a SentMessageExtension1
         // event which was introduced in the Bedrock upgrade.
-        let value = ethers.BigNumber.from(0)
+        let _mntValue = ethers.BigNumber.from(0)
+        let _ethValue = ethers.BigNumber.from(0)
+
         const next = receipt.logs.find((l) => {
           return (
             l.logIndex === log.logIndex + 1 && l.address === messenger.address
@@ -304,7 +306,8 @@ export class CrossChainMessenger {
         if (next) {
           const nextParsed = messenger.interface.parseLog(next)
           if (nextParsed.name === 'SentMessageExtension1') {
-            value = nextParsed.args.value
+            _mntValue = nextParsed.args.mntValue
+            _ethValue = nextParsed.args.ethValue
           }
         }
 
@@ -316,7 +319,8 @@ export class CrossChainMessenger {
           sender: parsed.args.sender,
           message: parsed.args.message,
           messageNonce: parsed.args.messageNonce,
-          value,
+          mntValue: _mntValue,
+          ethValue: _ethValue,
           minGasLimit: parsed.args.gasLimit,
           logIndex: log.logIndex,
           blockNumber: log.blockNumber,
@@ -342,14 +346,17 @@ export class CrossChainMessenger {
       return resolved
     }
 
-    let value = BigNumber.from(0)
+    let mntValue = BigNumber.from(0)
+    let ethValue = BigNumber.from(0)
+    mntValue = resolved.mntValue
+    ethValue = resolved.ethValue
     if (
       resolved.direction === MessageDirection.L2_TO_L1 &&
       resolved.sender === this.contracts.l2.L2StandardBridge.address &&
       resolved.target === this.contracts.l1.L1StandardBridge.address
     ) {
       try {
-        ;[, , value] =
+        ;[, , ethValue] =
           this.contracts.l1.L1StandardBridge.interface.decodeFunctionData(
             'finalizeETHWithdrawal',
             resolved.message
@@ -361,7 +368,8 @@ export class CrossChainMessenger {
 
     return {
       ...resolved,
-      value,
+      mntValue,
+      ethValue,
       minGasLimit: BigNumber.from(0),
       messageNonce: encodeVersionedNonce(
         BigNumber.from(0),
@@ -399,7 +407,8 @@ export class CrossChainMessenger {
       updated.messageNonce,
       updated.sender,
       updated.target,
-      updated.value,
+      updated.mntValue,
+      updated.ethValue,
       updated.minGasLimit,
       updated.message
     )
@@ -448,7 +457,8 @@ export class CrossChainMessenger {
       messageNonce,
       sender: this.contracts.l2.L2CrossDomainMessenger.address,
       target: this.contracts.l1.L1CrossDomainMessenger.address,
-      value: updated.value,
+      mntValue: updated.mntValue,
+      ethValue: updated.ethValue,
       minGasLimit: gasLimit,
       message: encoded,
     }
@@ -725,7 +735,8 @@ export class CrossChainMessenger {
       resolved.messageNonce,
       resolved.sender,
       resolved.target,
-      resolved.value,
+      resolved.mntValue,
+      resolved.ethValue,
       resolved.minGasLimit,
       resolved.message
     )
@@ -1782,7 +1793,8 @@ export class CrossChainMessenger {
           withdrawal.messageNonce,
           withdrawal.sender,
           withdrawal.target,
-          withdrawal.value,
+          withdrawal.mntValue,
+          withdrawal.ethValue,
           withdrawal.minGasLimit,
           withdrawal.message,
         ],
@@ -1830,7 +1842,8 @@ export class CrossChainMessenger {
             withdrawal.messageNonce,
             withdrawal.sender,
             withdrawal.target,
-            withdrawal.value,
+            withdrawal.mntValue,
+            withdrawal.ethValue,
             withdrawal.minGasLimit,
             withdrawal.message,
           ],

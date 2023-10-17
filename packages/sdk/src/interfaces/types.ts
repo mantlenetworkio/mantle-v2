@@ -187,7 +187,8 @@ export interface CoreCrossChainMessage {
   target: string
   message: string
   messageNonce: BigNumber
-  value: BigNumber
+  mntValue: BigNumber
+  ethValue: BigNumber
   minGasLimit: BigNumber
 }
 

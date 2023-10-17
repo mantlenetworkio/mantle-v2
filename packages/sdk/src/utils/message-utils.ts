@@ -25,7 +25,8 @@ export const hashLowLevelMessage = (message: LowLevelMessage): string => {
     message.messageNonce,
     message.sender,
     message.target,
-    message.value,
+    message.mntValue,
+    message.ethValue,
     message.minGasLimit,
     message.message
   )
