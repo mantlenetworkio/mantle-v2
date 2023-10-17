@@ -14,4 +14,6 @@ test-case-generator/fuzz
 .resource-metering.csv
 scripts/differential-testing/differential-testing
 
-deployments/devnetL1-mantle-bedrock-upgrade
+deployments/mantle-devnet
+deployments/mantle-testnet
+deployments/mantle-mainnet

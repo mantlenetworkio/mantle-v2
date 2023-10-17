@@ -1,55 +1,64 @@
 #!/bin/bash
 
-a=$1
+network=$1
+step=$2
 
-if [ $a -eq 0 ]
+if [ $network != "devnet" ] &&
+  [ $network != "testnet" ] &&
+  [ $network != "mainnet" ]
+then
+  echo "invalid network, expected network: testnet, testnet and mainnet"
+  exit 0
+fi
+
+if [ $step -eq 0 ]
 then
   echo "------------------------------------"
   echo "Deploy bedrock l1 contracts"
   echo "------------------------------------"
   rm deploy/*
   cp deploy-backup/bedrock-upgrade-deploy-scripts/step0/* deploy
-  rm -rf deployments/devnetL1-mantle-bedrock-upgrade
-  cp -r deployments/devnetL1-mantle-bedrock-upgrade-bak deployments/devnetL1-mantle-bedrock-upgrade
-  yarn deploy --network devnetL1-mantle-bedrock-upgrade
+  rm -rf deployments/mantle-devnet
+  cp -r deployments/mantle-${network}-bak deployments/mantle-${network}
+  yarn deploy --network mantle-${network}
 fi
 
 
-if [ $a -eq 1 ]
+if [ $step -eq 1 ]
 then
   echo "------------------------------------"
   echo "Do systemIndicator phase 1"
   echo "------------------------------------"
   rm deploy/*
   cp deploy-backup/bedrock-upgrade-deploy-scripts/step1/* deploy
-  yarn deploy --network devnetL1-mantle-bedrock-upgrade
+  yarn deploy --network mantle-${network}
 fi
 
 
-if [ $a -eq 2 ]
+if [ $step -eq 2 ]
 then
   echo "------------------------------------"
   echo "update L2OutputOracleDynamicConfig in systemIndicator"
   echo "------------------------------------"
   rm deploy/*
   cp deploy-backup/bedrock-upgrade-deploy-scripts/step2/* deploy
-  yarn deploy --network devnetL1-mantle-bedrock-upgrade
+  yarn deploy --network mantle-${network}
 fi
 
 
-if [ $a -eq 3 ]
+if [ $step -eq 3 ]
 then
   echo "------------------------------------"
   echo "Do systemIndicator phase 2"
   echo "------------------------------------"
   rm deploy/*
   cp deploy-backup/bedrock-upgrade-deploy-scripts/step3/* deploy
-  yarn deploy --network devnetL1-mantle-bedrock-upgrade
+  yarn deploy --network mantle-${network}
 fi
 
 
 
-if [ $a -eq 4 ]
+if [ $step -eq 4 ]
 then
   echo "------------------------------------"
   echo "restore all deploy scripts"
