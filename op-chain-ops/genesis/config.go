@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -232,7 +233,55 @@ func (d *DeployConfig) Check() error {
 // required for the L2 genesis creation. Legacy systems use the `Proxy__` prefix
 // while modern systems use the `Proxy` suffix. First check for the legacy
 // deployments so that this works with upgrading a system.
-func (d *DeployConfig) GetDeployedAddresses(l1SystemContracts *crossdomain.L1SystemContracts) error {
+func (d *DeployConfig) GetDeployedAddresses(hh *hardhat.Hardhat, l1SystemContracts *crossdomain.L1SystemContracts) error {
+	if hh != nil {
+		if d.L1StandardBridgeProxy == (common.Address{}) {
+			l1StandardBridgeProxyDeployment, err := hh.GetDeployment("Proxy__BVM_L1StandardBridge")
+			if errors.Is(err, hardhat.ErrCannotFindDeployment) {
+				l1StandardBridgeProxyDeployment, err = hh.GetDeployment("L1StandardBridgeProxy")
+				if err != nil {
+					return err
+				}
+			}
+			d.L1StandardBridgeProxy = l1StandardBridgeProxyDeployment.Address
+		}
+
+		if d.L1CrossDomainMessengerProxy == (common.Address{}) {
+			l1CrossDomainMessengerProxyDeployment, err := hh.GetDeployment("Proxy__OVM_L1CrossDomainMessenger")
+			if errors.Is(err, hardhat.ErrCannotFindDeployment) {
+				l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
+				if err != nil {
+					return err
+				}
+			}
+			d.L1CrossDomainMessengerProxy = l1CrossDomainMessengerProxyDeployment.Address
+		}
+
+		if d.L1ERC721BridgeProxy == (common.Address{}) {
+			l1ERC721BridgeProxyDeployment, err := hh.GetDeployment("L1ERC721BridgeProxy")
+			if err != nil {
+				return err
+			}
+			d.L1ERC721BridgeProxy = l1ERC721BridgeProxyDeployment.Address
+		}
+
+		if d.SystemConfigProxy == (common.Address{}) {
+			systemConfigProxyDeployment, err := hh.GetDeployment("SystemConfigProxy")
+			if err != nil {
+				return err
+			}
+			d.SystemConfigProxy = systemConfigProxyDeployment.Address
+		}
+
+		if d.OptimismPortalProxy == (common.Address{}) {
+			optimismPortalProxyDeployment, err := hh.GetDeployment("OptimismPortalProxy")
+			if err != nil {
+				return err
+			}
+			d.OptimismPortalProxy = optimismPortalProxyDeployment.Address
+		}
+		return nil
+	}
 	if d.L1StandardBridgeProxy == (common.Address{}) {
 		if l1SystemContracts.L1StandardBridgeProxy == (common.Address{}) {
 			return fmt.Errorf("L1StandardBridgeProxy is zero address")

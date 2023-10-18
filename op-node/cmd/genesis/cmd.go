@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 
+	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 )
 
@@ -93,8 +94,8 @@ var Subcommands = cli.Commands{
 				Usage: "Path to hardhat deploy config file",
 			},
 			cli.StringFlag{
-				Name:     "l1-system-contracts",
-				Usage:    "Path to l1-system-contracts json file",
+				Name:     "deployment-dir",
+				Usage:    "Path to deployment directory",
 				Required: true,
 			},
 			cli.StringFlag{
@@ -113,13 +114,13 @@ var Subcommands = cli.Commands{
 				return err
 			}
 
-			l1SystemContracts, err := crossdomain.NewL1SystemContracts(ctx.String("l1-system-contracts"))
+			depPath, network := filepath.Split(ctx.String("deployment-dir"))
+			hh, err := hardhat.New(network, nil, []string{depPath})
 			if err != nil {
 				return err
 			}
-
 			// Read the appropriate deployment addresses from disk
-			if err := config.GetDeployedAddresses(l1SystemContracts); err != nil {
+			if err := config.GetDeployedAddresses(hh, nil); err != nil {
 				return err
 			}
 			// Sanity check the config

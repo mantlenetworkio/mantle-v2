@@ -153,7 +153,7 @@ func main() {
 			dbHandles := ctx.Int("db-handles")
 
 			// Read the required deployment addresses from disk if required
-			if err := config.GetDeployedAddresses(l1SystemContracts); err != nil {
+			if err := config.GetDeployedAddresses(nil, l1SystemContracts); err != nil {
 				return err
 			}
 
