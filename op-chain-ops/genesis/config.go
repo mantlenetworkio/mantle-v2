@@ -8,13 +8,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/immutables"
@@ -247,7 +247,7 @@ func (d *DeployConfig) GetDeployedAddresses(hh *hardhat.Hardhat, l1SystemContrac
 		}
 
 		if d.L1CrossDomainMessengerProxy == (common.Address{}) {
-			l1CrossDomainMessengerProxyDeployment, err := hh.GetDeployment("Proxy__OVM_L1CrossDomainMessenger")
+			l1CrossDomainMessengerProxyDeployment, err := hh.GetDeployment("Proxy__BVM_L1CrossDomainMessenger")
 			if errors.Is(err, hardhat.ErrCannotFindDeployment) {
 				l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
 				if err != nil {
