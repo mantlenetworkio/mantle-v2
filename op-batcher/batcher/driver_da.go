@@ -110,6 +110,10 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) (bool, error)
 
 	// Collect next transaction data
 	_, err = l.state.TxData(l1tip.ID())
+	if err != io.EOF {
+		l.log.Error("unable to get tx data", "err", err)
+		return false, err
+	}
 
 	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && !l.state.pendingChannel.HasFrame() {
 		if len(l.state.pendingTransactions) == 0 {
@@ -130,8 +134,7 @@ func (l *BatchSubmitter) publishTxsToMantleDA(ctx context.Context) (bool, error)
 }
 
 func (l *BatchSubmitter) disperseStoreData(txsData [][]byte) error {
-
-	//if txsData has been successfully upload to MantleDA, we don't need to re-upload.
+	//If txsData has already been successfully uploaded to MantleDA, we don't need to re-upload.
 	if l.state.params == nil {
 		txnBufBytes, err := rlp.EncodeToBytes(txsData)
 		if err != nil {
@@ -152,7 +155,7 @@ func (l *BatchSubmitter) disperseStoreData(txsData [][]byte) error {
 }
 
 func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*types.Receipt, error) {
-	//if initStoreData transaction has been successfully executed.We don't need to re-execute .
+	//If initStoreData transaction has already been successfully executed, we don't need to re-execute .
 	if l.state.initStoreDataReceipt != nil {
 		l.log.Info("init store data transaction has been published successfully, skip to send transaction again")
 		return l.state.initStoreDataReceipt, nil
