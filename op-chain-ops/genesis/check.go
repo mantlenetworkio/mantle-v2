@@ -33,13 +33,13 @@ const (
 	// in the future.
 	MaxPredeploySlotChecks = 1000
 
-	// MaxOVMETHSlotChecks is the maximum number of OVM ETH storage slots to check
-	// when validating the OVM ETH migration.
-	MaxOVMETHSlotChecks = 5000
+	// MaxBVMMNTSlotChecks is the maximum number of BVM MNT storage slots to check
+	// when validating the BVM MNT migration.
+	MaxBVMMNTSlotChecks = 5000
 
-	// OVMETHSampleLikelihood is the probability that a storage slot will be checked
-	// when validating the OVM ETH migration.
-	OVMETHSampleLikelihood = 0.1
+	// BVMMNTSampleLikelihood is the probability that a storage slot will be checked
+	// when validating the BVM MNT migration.
+	BVMMNTSampleLikelihood = 0.1
 )
 
 type StorageCheckMap = map[common.Hash]common.Hash
@@ -377,6 +377,7 @@ func PostCheckPredeployStorage(db *state.StateDB, finalSystemOwner common.Addres
 	return nil
 }
 
+// PostCheckBVMETH will ensure all BVM_ETH storage is unchanged.
 func PostCheckBVMETH(udb state.Database, currDB *state.StateDB, prevRoot common.Hash) error {
 	prevDB, err := state.New(prevRoot, udb, nil)
 	if err != nil {
@@ -419,7 +420,7 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	}
 
 	for _, addr := range migrationData.Addresses() {
-		addresses[ether.CalcBVMETHStorageKey(addr)] = addr
+		addresses[ether.CalcBVMMNTStorageKey(addr)] = addr
 	}
 
 	log.Info("checking legacy mnt fixed storage slots")
@@ -431,7 +432,7 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	}
 
 	var count int
-	threshold := 100 - int(100*OVMETHSampleLikelihood)
+	threshold := 100 - int(100*BVMMNTSampleLikelihood)
 	progress := util.ProgressLogger(100, "checking legacy mnt balance slots")
 	var innerErr error
 	err := prevDB.ForEachStorage(predeploys.LegacyERC20MNTAddr, func(key, value common.Hash) bool {
@@ -459,22 +460,22 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 			return false
 		}
 
-		// Pull out the pre-migration OVM ETH balance, and the state balance.
-		ovmETHBalance := value.Big()
-		ovmETHStateBalance := prevDB.GetBalance(addr)
+		// Pull out the pre-migration BVM MNT balance, and the state balance.
+		bvmMNTBalance := value.Big()
+		bvmMNTStateBalance := prevDB.GetBalance(addr)
 		// Pre-migration state balance should be zero.
-		if ovmETHStateBalance.Cmp(common.Big0) != 0 {
-			innerErr = fmt.Errorf("expected BVM_MNT pre-migration state balance for %s to be 0, but got %s", addr, ovmETHStateBalance)
+		if bvmMNTStateBalance.Cmp(common.Big0) != 0 {
+			innerErr = fmt.Errorf("expected BVM_MNT pre-migration state balance for %s to be 0, but got %s", addr, bvmMNTStateBalance)
 			return false
 		}
 
-		// Migrated state balance should equal the OVM ETH balance.
+		// Migrated state balance should equal the BVM MNT balance.
 		migratedStateBalance := migratedDB.GetBalance(addr)
-		if migratedStateBalance.Cmp(ovmETHBalance) != 0 {
-			innerErr = fmt.Errorf("expected BVM_MNT post-migration state balance for %s to be %s, but got %s", addr, ovmETHStateBalance, migratedStateBalance)
+		if migratedStateBalance.Cmp(bvmMNTBalance) != 0 {
+			innerErr = fmt.Errorf("expected BVM_MNT post-migration state balance for %s to be %s, but got %s", addr, bvmMNTStateBalance, migratedStateBalance)
 			return false
 		}
-		// Migrated OVM ETH balance should be zero, since we wipe the slots.
+		// Migrated BVM MNT balance should be zero, since we wipe the slots.
 		migratedBalance := migratedDB.GetState(predeploys.LegacyERC20MNTAddr, key)
 		if migratedBalance.Big().Cmp(common.Big0) != 0 {
 			innerErr = fmt.Errorf("expected BVM_MNT post-migration ERC20 balance for %s to be 0, but got %s", addr, migratedBalance)
@@ -485,7 +486,7 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		count++
 
 		// Stop iterating if we've checked enough slots.
-		return count < MaxOVMETHSlotChecks
+		return count < MaxBVMMNTSlotChecks
 	})
 	if err != nil {
 		return fmt.Errorf("error iterating over BVM_MNT storage: %w", err)

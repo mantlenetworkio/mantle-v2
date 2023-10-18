@@ -76,7 +76,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 	// Mint events are instrumented as regular ETH events in the witness data, so we no longer
 	// need to iterate over mint events during the migration.
 	for _, addr := range addresses {
-		sk := CalcBVMETHStorageKey(addr)
+		sk := CalcBVMMNTStorageKey(addr)
 		slotsAddrs[sk] = addr
 		slotsInp[sk] = BalanceSlot
 	}
@@ -90,7 +90,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 
 	// Add the old SequencerEntrypoint because someone sent it ETH a long time ago and it has a
 	// balance but none of our instrumentation could easily find it. Special case.
-	entrySK := CalcBVMETHStorageKey(sequencerEntrypointAddr)
+	entrySK := CalcBVMMNTStorageKey(sequencerEntrypointAddr)
 	slotsAddrs[entrySK] = sequencerEntrypointAddr
 	slotsInp[entrySK] = BalanceSlot
 

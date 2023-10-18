@@ -209,7 +209,7 @@ func makeLegacyETH(t *testing.T, totalSupply *big.Int, balances map[common.Addre
 		db.SetState(OVMETHAddress, slot, common.Hash{31: 0xff})
 	}
 	for addr, balance := range balances {
-		db.SetState(OVMETHAddress, CalcBVMETHStorageKey(addr), common.BigToHash(balance))
+		db.SetState(OVMETHAddress, CalcBVMMNTStorageKey(addr), common.BigToHash(balance))
 	}
 	for from, to := range allowances {
 		db.SetState(OVMETHAddress, CalcAllowanceStorageKey(from, to), common.BigToHash(big.NewInt(1)))

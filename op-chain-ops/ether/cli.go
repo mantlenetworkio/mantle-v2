@@ -28,5 +28,5 @@ func GetBVMMNTTotalSupplySlot() common.Hash {
 // GetBVMMNTBalance gets a user's OVM ETH balance from state by querying the
 // appropriate storage slot directly.
 func GetBVMMNTBalance(db *state.StateDB, addr common.Address) *big.Int {
-	return db.GetState(OVMETHAddress, CalcBVMETHStorageKey(addr)).Big()
+	return db.GetState(OVMETHAddress, CalcBVMMNTStorageKey(addr)).Big()
 }

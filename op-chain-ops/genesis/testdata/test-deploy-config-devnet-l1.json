@@ -1,7 +1,7 @@
 {
   "l1StartingBlockTag": "earliest",
-  "l1ChainID": 900,
-  "l2ChainID": 901,
+  "l1ChainID": 31337,
+  "l2ChainID": 17,
   "l2BlockTime": 2,
 
   "maxSequencerDrift": 100,

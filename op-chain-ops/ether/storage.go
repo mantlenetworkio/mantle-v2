@@ -17,8 +17,8 @@ func CalcAllowanceStorageKey(owner common.Address, spender common.Address) commo
 	return CalcStorageKey(spender, inner)
 }
 
-// CalcBVMETHStorageKey calculates the storage key of an OVM ETH balance.
-func CalcBVMETHStorageKey(addr common.Address) common.Hash {
+// CalcBVMMNTStorageKey calculates the storage key of an OVM ETH balance.
+func CalcBVMMNTStorageKey(addr common.Address) common.Hash {
 	return CalcStorageKey(addr, common.Big0)
 }
 
