@@ -45,9 +45,7 @@ const (
 type StorageCheckMap = map[common.Hash]common.Hash
 
 var (
-	L2XDMOwnerSlot      = common.Hash{31: 0x33}
 	ProxyAdminOwnerSlot = common.Hash{}
-	//TODO replace ETH slot to MNT slot
 	LegacyMNTCheckSlots = map[common.Hash]common.Hash{
 		// Bridge
 		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
@@ -161,7 +159,10 @@ func PostCheckMigratedDB(
 	}
 	log.Info("checked L1Block")
 
-	if err := PostCheckLegacyETH(prevDB, db, migrationData); err != nil {
+	if err := PostCheckLegacyMNT(prevDB, db, migrationData); err != nil {
+		return err
+	}
+	if err := PostCheckBVMETH(underlyingDB, db, prevHeader.Root); err != nil {
 		return err
 	}
 	log.Info("checked legacy eth")
@@ -261,13 +262,13 @@ func PostCheckPredeploys(prevDB, currDB *state.StateDB) error {
 		// There must be an admin
 		admin := currDB.GetState(addr, AdminSlot)
 		adminAddr := common.BytesToAddress(admin.Bytes())
-		if addr != predeploys.ProxyAdminAddr && addr != predeploys.GovernanceTokenAddr && adminAddr != predeploys.ProxyAdminAddr {
+		if addr != predeploys.ProxyAdminAddr && adminAddr != predeploys.ProxyAdminAddr {
 			return fmt.Errorf("expected admin for %s to be %s but got %s", addr, predeploys.ProxyAdminAddr, adminAddr)
 		}
 
 		// Balances and nonces should match legacy
 		oldNonce := prevDB.GetNonce(addr)
-		oldBalance := ether.GetOVMETHBalance(prevDB, addr)
+		oldBalance := ether.GetBVMMNTBalance(prevDB, addr)
 		newNonce := currDB.GetNonce(addr)
 		newBalance := currDB.GetBalance(addr)
 		if oldNonce != newNonce {
@@ -376,10 +377,38 @@ func PostCheckPredeployStorage(db *state.StateDB, finalSystemOwner common.Addres
 	return nil
 }
 
-// PostCheckLegacyETH checks that the legacy eth migration was successful.
+func PostCheckBVMETH(udb state.Database, currDB *state.StateDB, prevRoot common.Hash) error {
+	prevDB, err := state.New(prevRoot, udb, nil)
+	if err != nil {
+		return fmt.Errorf("cannot open StateDB: %w", err)
+	}
+
+	// Sample storage slots to ensure that they are not modified.
+	var count int
+	expSlots := make(map[common.Hash]common.Hash)
+	if err := prevDB.ForEachStorage(predeploys.BVM_ETHAddr, func(key, value common.Hash) bool {
+		count++
+		expSlots[key] = value
+		return count < MaxPredeploySlotChecks
+	}); err != nil {
+		return fmt.Errorf("error iterating over storage: %w", err)
+	}
+
+	for expKey, expValue := range expSlots {
+		actValue := currDB.GetState(predeploys.BVM_ETHAddr, expKey)
+		if actValue != expValue {
+			return fmt.Errorf("expected slot %s on %s to be %s, but got %s", expKey, predeploys.BVM_ETHAddr.String(), expValue, actValue)
+		}
+	}
+
+	log.Info("checked storage", "address", predeploys.BVM_ETHAddr.String(), "count", count)
+	return nil
+}
+
+// PostCheckLegacyMNT checks that the legacy eth migration was successful.
 // It checks that the total supply was set to 0, and randomly samples storage
 // slots pre- and post-migration to ensure that balances were correctly migrated.
-func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdomain.MigrationData) error {
+func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdomain.MigrationData) error {
 	allowanceSlots := make(map[common.Hash]bool)
 	addresses := make(map[common.Hash]common.Address)
 
@@ -390,7 +419,7 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	}
 
 	for _, addr := range migrationData.Addresses() {
-		addresses[ether.CalcOVMETHStorageKey(addr)] = addr
+		addresses[ether.CalcBVMETHStorageKey(addr)] = addr
 	}
 
 	log.Info("checking legacy mnt fixed storage slots")
@@ -426,7 +455,7 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		// Grab the address, and bail if we can't find it.
 		addr, ok := addresses[key]
 		if !ok {
-			innerErr = fmt.Errorf("unknown OVM_ETH storage slot %s", key)
+			innerErr = fmt.Errorf("unknown BVM_MNT storage slot %s", key)
 			return false
 		}
 
@@ -435,14 +464,14 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		ovmETHStateBalance := prevDB.GetBalance(addr)
 		// Pre-migration state balance should be zero.
 		if ovmETHStateBalance.Cmp(common.Big0) != 0 {
-			innerErr = fmt.Errorf("expected OVM_ETH pre-migration state balance for %s to be 0, but got %s", addr, ovmETHStateBalance)
+			innerErr = fmt.Errorf("expected BVM_MNT pre-migration state balance for %s to be 0, but got %s", addr, ovmETHStateBalance)
 			return false
 		}
 
 		// Migrated state balance should equal the OVM ETH balance.
 		migratedStateBalance := migratedDB.GetBalance(addr)
 		if migratedStateBalance.Cmp(ovmETHBalance) != 0 {
-			innerErr = fmt.Errorf("expected OVM_ETH post-migration state balance for %s to be %s, but got %s", addr, ovmETHStateBalance, migratedStateBalance)
+			innerErr = fmt.Errorf("expected BVM_MNT post-migration state balance for %s to be %s, but got %s", addr, ovmETHStateBalance, migratedStateBalance)
 			return false
 		}
 		// Migrated OVM ETH balance should be zero, since we wipe the slots.
@@ -459,7 +488,7 @@ func PostCheckLegacyETH(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		return count < MaxOVMETHSlotChecks
 	})
 	if err != nil {
-		return fmt.Errorf("error iterating over OVM_ETH storage: %w", err)
+		return fmt.Errorf("error iterating over BVM_MNT storage: %w", err)
 	}
 	if innerErr != nil {
 		return innerErr

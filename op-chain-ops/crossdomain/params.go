@@ -14,10 +14,13 @@ type Params struct {
 }
 
 var ParamsByChainID = map[int]*Params{
-	1: {
+	1: { // mainnet
 		new(big.Int).SetUint64(0),
 	},
-	31337: {
+	5: { // testmain
+		new(big.Int).SetUint64(0),
+	},
+	31337: { //devnet
 		new(big.Int).Mul(new(big.Int).SetInt64(1e18), new(big.Int).SetInt64(-600000)),
 	},
 }

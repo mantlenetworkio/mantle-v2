@@ -8,25 +8,25 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 )
 
-// getOVMETHTotalSupply returns OVM ETH's total supply by reading
+// getBVMMNTTotalSupply returns BVM MNT's total supply by reading
 // the appropriate storage slot.
-func getOVMETHTotalSupply(db *state.StateDB) *big.Int {
-	key := getOVMETHTotalSupplySlot()
+func getBVMMNTTotalSupply(db *state.StateDB) *big.Int {
+	key := getBVMMNTTotalSupplySlot()
 	return db.GetState(OVMETHAddress, key).Big()
 }
 
-func getOVMETHTotalSupplySlot() common.Hash {
+func getBVMMNTTotalSupplySlot() common.Hash {
 	position := common.Big2
 	key := common.BytesToHash(common.LeftPadBytes(position.Bytes(), 32))
 	return key
 }
 
-func GetOVMETHTotalSupplySlot() common.Hash {
-	return getOVMETHTotalSupplySlot()
+func GetBVMMNTTotalSupplySlot() common.Hash {
+	return getBVMMNTTotalSupplySlot()
 }
 
-// GetOVMETHBalance gets a user's OVM ETH balance from state by querying the
+// GetBVMMNTBalance gets a user's OVM ETH balance from state by querying the
 // appropriate storage slot directly.
-func GetOVMETHBalance(db *state.StateDB, addr common.Address) *big.Int {
-	return db.GetState(OVMETHAddress, CalcOVMETHStorageKey(addr)).Big()
+func GetBVMMNTBalance(db *state.StateDB, addr common.Address) *big.Int {
+	return db.GetState(OVMETHAddress, CalcBVMETHStorageKey(addr)).Big()
 }

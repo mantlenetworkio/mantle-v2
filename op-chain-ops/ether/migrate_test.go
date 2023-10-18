@@ -53,7 +53,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big2, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetBVMMNTTotalSupplySlot()))
 			},
 		},
 		{
@@ -71,7 +71,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big0, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetBVMMNTTotalSupplySlot()))
 			},
 		},
 		{
@@ -102,7 +102,7 @@ func TestMigrateBalances(t *testing.T) {
 				require.NoError(t, err)
 				require.EqualValues(t, common.Big1, db.GetBalance(common.HexToAddress("0x123")))
 				require.EqualValues(t, common.Big0, db.GetBalance(common.HexToAddress("0x456")))
-				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetOVMETHTotalSupplySlot()))
+				require.EqualValues(t, common.Hash{}, db.GetState(predeploys.LegacyERC20MNTAddr, GetBVMMNTTotalSupplySlot()))
 			},
 		},
 		{
@@ -200,16 +200,16 @@ func makeLegacyETH(t *testing.T, totalSupply *big.Int, balances map[common.Addre
 	require.NoError(t, err)
 
 	db.CreateAccount(OVMETHAddress)
-	db.SetState(OVMETHAddress, getOVMETHTotalSupplySlot(), common.BigToHash(totalSupply))
+	db.SetState(OVMETHAddress, getBVMMNTTotalSupplySlot(), common.BigToHash(totalSupply))
 
 	for slot := range ignoredSlots {
-		if slot == getOVMETHTotalSupplySlot() {
+		if slot == getBVMMNTTotalSupplySlot() {
 			continue
 		}
 		db.SetState(OVMETHAddress, slot, common.Hash{31: 0xff})
 	}
 	for addr, balance := range balances {
-		db.SetState(OVMETHAddress, CalcOVMETHStorageKey(addr), common.BigToHash(balance))
+		db.SetState(OVMETHAddress, CalcBVMETHStorageKey(addr), common.BigToHash(balance))
 	}
 	for from, to := range allowances {
 		db.SetState(OVMETHAddress, CalcAllowanceStorageKey(from, to), common.BigToHash(big.NewInt(1)))

@@ -460,7 +460,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	}
 	storage["BVM_ETH"] = state.StorageValues{
 		"_name":   "Ether",
-		"_symbol": "ETH",
+		"_symbol": "WETH",
 	}
 	return storage, nil
 }
