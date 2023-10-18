@@ -234,7 +234,7 @@ func findCrossDomainMessage(receipt *types.Receipt) (*crossdomain.CrossDomainMes
 		// Parse the new extension event
 		if event.Name == "SentMessageExtension1" {
 			e, _ := l2xdm.ParseSentMessageExtension1(*log)
-			msg.Value = e.Value
+			msg.EthValue = e.EthValue
 		}
 	}
 	if seen {
@@ -345,7 +345,7 @@ func toWithdrawal(t *testing.T, msgSender common.Address, c *crossdomain.CrossDo
 	version := c.Version()
 	switch version {
 	case 0:
-		if c.Value != nil && c.Value.Cmp(common.Big0) != 0 {
+		if c.MntValue != nil && c.MntValue.Cmp(common.Big0) != 0 {
 			t.Fatalf("version 0 messages must have 0 value")
 		}
 		w := &crossdomain.LegacyWithdrawal{

@@ -231,7 +231,7 @@ func TestMigration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, deployCfg.GetDeployedAddresses(hh))
+	require.NoError(t, deployCfg.GetDeployedAddresses(hh, nil))
 
 	go makeBlocks(ctx, forkedL1RPC, lgr)
 
