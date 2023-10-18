@@ -54,9 +54,9 @@
     "isomorphic-fetch": "^3.0.0"
   },
   "dependencies": {
-    "@eth-optimism/contracts": "0.5.40",
-    "@eth-optimism/core-utils": "0.12.0",
-    "@eth-optimism/contracts-bedrock": "0.13.2",
+    "@eth-optimism/contracts": "file:../contracts/dist",
+    "@eth-optimism/core-utils": "file:../core-utils/dist",
+    "@eth-optimism/contracts-bedrock": "file:../contracts-bedrock/dist",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.2.27",
     "rlp": "^2.2.7"

@@ -13,7 +13,7 @@ task('bedrock-finalize-withdrawal', 'Finalize a withdrawal')
   .addParam(
     'transactionHash',
     'L2 Transaction hash to finalize',
-    '0x7cccd7c3a9e8b95988a118da8d261a244db1111d6ab943aa454fc176f707e3a9',
+    '0x414a8ffc5fb69943ee5fa5cc745e365ba5501a498eef9d73e15cda7184232219',
     types.string
   )
   .addParam('l2Url', 'L2 HTTP URL', 'http://localhost:9545', types.string)
@@ -32,7 +32,7 @@ task('bedrock-finalize-withdrawal', 'Finalize a withdrawal')
     console.log(`Using signer: ${address}`)
 
     const l2Provider = new providers.StaticJsonRpcProvider(args.l2Url)
-    const l2Signer = new Wallet(hre.network.config.accounts[0], l2Provider)
+    const l2Signer = new Wallet("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291", l2Provider)
 
     let Deployment__L1StandardBridgeProxy = await hre.deployments.getOrNull(
       'L1StandardBridgeProxy'
