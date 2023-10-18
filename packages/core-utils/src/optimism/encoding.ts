@@ -3,7 +3,7 @@ import { Interface } from '@ethersproject/abi'
 
 const iface = new Interface([
   'function relayMessage(address,address,bytes,uint256)',
-  'function relayMessage(uint256,address,address,uint256,uint256,bytes)',
+  'function relayMessage(uint256,address,address,uint256,uint256,uint256,bytes)',
 ])
 
 const nonceMask = BigNumber.from(
