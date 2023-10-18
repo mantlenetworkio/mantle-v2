@@ -58,14 +58,14 @@ const config: HardhatUserConfig = {
     },
     'mantle-testnet': {
       live: false,
-      url: 'https://goerli.infura.io/v3/c0628ccd5a1041a583b5d7816b2dffc7\n',
+      url: 'https://goerli.infura.io/v3/c0628ccd5a1041a583b5d7816b2dffc7',
       accounts: [
         'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       ],
     },
     'mantle-mainnet': {
       live: false,
-      url: 'https://mainnet.infura.io/v3/c0628ccd5a1041a583b5d7816b2dffc7\n',
+      url: 'https://mainnet.infura.io/v3/c0628ccd5a1041a583b5d7816b2dffc7',
       accounts: [
         'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       ],

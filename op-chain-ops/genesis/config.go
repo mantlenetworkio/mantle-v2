@@ -234,25 +234,15 @@ func (d *DeployConfig) Check() error {
 // deployments so that this works with upgrading a system.
 func (d *DeployConfig) GetDeployedAddresses(l1SystemContracts *crossdomain.L1SystemContracts) error {
 	if d.L1StandardBridgeProxy == (common.Address{}) {
-		var l1StandardBridgeProxyDeployment *hardhat.Deployment
-		l1StandardBridgeProxyDeployment, err = hh.GetDeployment("Proxy__BVM_L1StandardBridge")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1StandardBridgeProxyDeployment, err = hh.GetDeployment("L1StandardBridgeProxy")
-			if err != nil {
-				return err
-			}
+		if l1SystemContracts.L1StandardBridgeProxy == (common.Address{}) {
+			return fmt.Errorf("L1StandardBridgeProxy is zero address")
 		}
 		d.L1StandardBridgeProxy = l1SystemContracts.L1StandardBridgeProxy
 	}
 
 	if d.L1CrossDomainMessengerProxy == (common.Address{}) {
-		var l1CrossDomainMessengerProxyDeployment *hardhat.Deployment
-		l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("Proxy__BVM_L1CrossDomainMessenger")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
-			if err != nil {
-				return err
-			}
+		if l1SystemContracts.L1CrossDomainMessengerProxy == (common.Address{}) {
+			return fmt.Errorf("L1CrossDomainMessengerProxy is zero address")
 		}
 		d.L1CrossDomainMessengerProxy = l1SystemContracts.L1CrossDomainMessengerProxy
 	}
