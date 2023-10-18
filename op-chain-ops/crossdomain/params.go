@@ -14,14 +14,13 @@ type Params struct {
 }
 
 var ParamsByChainID = map[int]*Params{
-	1: {
-		// Regenesis 4 (Nov 11 2021) contained a supply bug such that the total OVM ETH
-		// supply was 1.628470012 ETH greater than the sum balance of every account migrated
-		// / during the regenesis. A further 0.0012 ETH was incorrectly not removed from the
-		// total supply by accidental invocations of the Saurik bug (https://www.saurik.com/optimism.html).
-		new(big.Int).SetUint64(1627270011999999992),
+	1: { // mainnet
+		new(big.Int).SetUint64(0),
 	},
-	5: {
-		new(big.Int),
+	5: { // testmain
+		new(big.Int).SetUint64(0),
+	},
+	31337: { //devnet
+		new(big.Int).Mul(new(big.Int).SetInt64(1e18), new(big.Int).SetInt64(-600000)),
 	},
 }

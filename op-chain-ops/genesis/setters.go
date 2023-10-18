@@ -22,26 +22,19 @@ var (
 	// UntouchablePredeploys are addresses in the predeploy namespace
 	// that should not be touched by the migration process.
 	UntouchablePredeploys = map[common.Address]bool{
-		predeploys.GovernanceTokenAddr: true,
-		predeploys.WETH9Addr:           true,
-		predeploys.BVM_ETHAddr:         true,
+		predeploys.WETH9Addr: true,
 	}
 
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
 	// that should not be touched by the migration process.
 	UntouchableCodeHashes = map[common.Address]ChainHashMap{
-		predeploys.GovernanceTokenAddr: {
-			1: common.HexToHash("0x8551d935f4e67ad3c98609f0d9f0f234740c4c4599f82674633b55204393e07f"),
-			5: common.HexToHash("0xc4a213cf5f06418533e5168d8d82f7ccbcc97f27ab90197c2c051af6a4941cf9"),
-		},
 		predeploys.WETH9Addr: {
-			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			// keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/mainnet/genesis.json#L110C22-L110C3550
+			1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			// keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/goerli/genesis.json#L116C22-L116C4106
 			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
-		},
-		// TODO the hash need to be set correctly.
-		predeploys.BVM_ETHAddr: {
-			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
-			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			// keccak256 code: https://github.com/mantlenetworkio/mantle/blob/5cda5f811f73d9f331e6168617f87d3e19e6db6b/packages/contracts/genesis/state-dump.latest.json#L110
+			31337: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
 		},
 	}
 
@@ -154,6 +147,15 @@ func SetLegacyMNT(db vm.StateDB, storage state.StorageConfig, immutable immutabl
 	}
 
 	return setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
+}
+
+func SetLegacyBVMETH(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
+	deployResults, err := immutables.BuildOptimism(immutable)
+	if err != nil {
+		return err
+	}
+
+	return setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.BVM_ETHAddr, predeploys.BVM_ETHAddr)
 }
 
 // SetImplementations will set the implementations of the contracts in the state
