@@ -25,7 +25,6 @@ import (
 
 const RollupMaxSize = 1024 * 1024 * 300
 
-var ErrUploadDataFinished = errors.New("data has been upload to MantleDA nodes")
 var ErrInitDataStore = errors.New("init data store transaction failed")
 
 func (l *BatchSubmitter) mantleDALoop() {

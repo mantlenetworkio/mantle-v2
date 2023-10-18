@@ -2,13 +2,13 @@ package da
 
 import (
 	"context"
-	"google.golang.org/grpc/credentials/insecure"
 	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
