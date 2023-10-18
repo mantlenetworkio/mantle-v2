@@ -6,9 +6,11 @@ import (
 	"io"
 	"math"
 
+	bcommon "github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -22,7 +24,7 @@ var ErrReorg = errors.New("block does not extend existing chain")
 // For simplicity, it only creates a single pending channel at a time & waits for
 // the channel to either successfully be submitted or timeout before creating a new
 // channel.
-// Functions on channelManager are not safe for concurrent access.
+// Functions on channelManager are not safe for concurrent access.ErrReorg
 type channelManager struct {
 	log  log.Logger
 	metr metrics.Metricer
@@ -42,6 +44,10 @@ type channelManager struct {
 	// Set of confirmed txID -> inclusion block. For determining if the channel is timed out
 	confirmedTransactions map[txID]eth.BlockID
 
+	// params of initStoreData on MantleDA
+	params *bcommon.StoreParams
+	//receipt of initStoreData transaction on L1
+	initStoreDataReceipt *types.Receipt
 	// if set to true, prevents production of any new channel frames
 	closed bool
 }
@@ -127,6 +133,11 @@ func (s *channelManager) clearPendingChannel() {
 	s.pendingChannel = nil
 	s.pendingTransactions = make(map[txID]txData)
 	s.confirmedTransactions = make(map[txID]eth.BlockID)
+}
+
+func (s *channelManager) clearMantleDAStatus() {
+	s.params = nil
+	s.initStoreDataReceipt = nil
 }
 
 // pendingChannelIsTimedOut returns true if submitted channel has timed out.

@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 )
@@ -33,12 +34,13 @@ type OpNode struct {
 	l1Source  *sources.L1Client     // L1 Client to fetch data from
 	l2Driver  *driver.Driver        // L2 Engine to Sync
 	l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
-	rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
-	server    *rpcServer            // RPC server hosting the rollup-node API
-	p2pNode   *p2p.NodeP2P          // P2P node functionality
-	p2pSigner p2p.Signer            // p2p gogssip application messages will be signed with this signer
-	tracer    Tracer                // tracer to get events for testing/debugging
-	runCfg    *RuntimeConfig        // runtime configurables
+	daSyncer  *da.MantleDataStore
+	rpcSync   *sources.SyncClient // Alt-sync RPC client, optional (may be nil)
+	server    *rpcServer          // RPC server hosting the rollup-node API
+	p2pNode   *p2p.NodeP2P        // P2P node functionality
+	p2pSigner p2p.Signer          // p2p gogssip application messages will be signed with this signer
+	tracer    Tracer              // tracer to get events for testing/debugging
+	runCfg    *RuntimeConfig      // runtime configurables
 
 	// some resources cannot be stopped directly, like the p2p gossipsub router (not our design),
 	// and depend on this ctx to be closed.
@@ -199,7 +201,12 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		return err
 	}
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n, n, n.log, snapshotLog, n.metrics)
+	n.daSyncer, err = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
+	if err != nil {
+		return err
+	}
+
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.daSyncer, n, n, n.log, snapshotLog, n.metrics)
 
 	return nil
 }

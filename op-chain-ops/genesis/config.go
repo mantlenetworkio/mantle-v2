@@ -95,6 +95,7 @@ type DeployConfig struct {
 	SystemConfigProxy common.Address `json:"systemConfigProxy"`
 	// OptimismPortal proxy address on L1
 	OptimismPortalProxy common.Address `json:"optimismPortalProxy"`
+
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
@@ -112,6 +113,15 @@ type DeployConfig struct {
 	EIP1559Denominator uint64 `json:"eip1559Denominator"`
 
 	FundDevAccounts bool `json:"fundDevAccounts"`
+
+	// The switch of open rollup mantleDA or not,
+	// If true, rollup tx data to MantleDA;
+	// If false, rollup tx data to EOA address
+	MantleDaSwitch bool `json:"mantleDaSwitch"`
+
+	// Contract Address of DataLayrServiceManager, call initDataStore and confirmDataStore
+	// Submit transaction meta info to MantleDA contracts
+	DataLayrServiceManagerAddr string `json:"dataLayrServiceManagerAddr"`
 }
 
 // Check will ensure that the config is sane and return an error when it is not
@@ -367,16 +377,18 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
 			},
 		},
-		BlockTime:              d.L2BlockTime,
-		MaxSequencerDrift:      d.MaxSequencerDrift,
-		SeqWindowSize:          d.SequencerWindowSize,
-		ChannelTimeout:         d.ChannelTimeout,
-		L1ChainID:              new(big.Int).SetUint64(d.L1ChainID),
-		L2ChainID:              new(big.Int).SetUint64(d.L2ChainID),
-		BatchInboxAddress:      d.BatchInboxAddress,
-		DepositContractAddress: d.OptimismPortalProxy,
-		L1SystemConfigAddress:  d.SystemConfigProxy,
-		RegolithTime:           d.RegolithTime(l1StartBlock.Time()),
+		BlockTime:                  d.L2BlockTime,
+		MaxSequencerDrift:          d.MaxSequencerDrift,
+		SeqWindowSize:              d.SequencerWindowSize,
+		ChannelTimeout:             d.ChannelTimeout,
+		L1ChainID:                  new(big.Int).SetUint64(d.L1ChainID),
+		L2ChainID:                  new(big.Int).SetUint64(d.L2ChainID),
+		BatchInboxAddress:          d.BatchInboxAddress,
+		DepositContractAddress:     d.OptimismPortalProxy,
+		L1SystemConfigAddress:      d.SystemConfigProxy,
+		RegolithTime:               d.RegolithTime(l1StartBlock.Time()),
+		MantleDaSwitch:             d.MantleDaSwitch,
+		DataLayrServiceManagerAddr: d.DataLayrServiceManagerAddr,
 	}, nil
 }
 

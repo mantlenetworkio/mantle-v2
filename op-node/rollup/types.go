@@ -84,6 +84,11 @@ type Config struct {
 	DepositContractAddress common.Address `json:"deposit_contract_address"`
 	// L1 System Config Address
 	L1SystemConfigAddress common.Address `json:"l1_system_config_address"`
+	// MANTLE DA MODIFY //
+	// Use Da from MantleDA(EigenDA)
+	MantleDaSwitch bool `json:"mantle_da_switch"`
+	// MantleDA(EigenDA) DataLayrServiceManage contract address
+	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.

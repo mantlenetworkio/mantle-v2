@@ -58,6 +58,30 @@ var (
 		Usage:  "Enable the admin API (experimental)",
 		EnvVar: prefixEnvVar("RPC_ENABLE_ADMIN"),
 	}
+	RetrieverSocketFlag = cli.StringFlag{
+		Name:     "da.retriever-socket",
+		Usage:    "Socket address of the da retriever",
+		Required: false,
+		EnvVar:   prefixEnvVar("RETRIEVER_SOCKET"),
+	}
+	RetrieverTimeoutFlag = cli.DurationFlag{
+		Name:   "da.retriever-timeout",
+		Usage:  "retriever timeout",
+		Value:  50 * time.Millisecond,
+		EnvVar: prefixEnvVar("RETRIEVER_TIMEOUT"),
+	}
+	GraphProviderFlag = cli.StringFlag{
+		Name:     "da.graph-provider",
+		Usage:    "Graphql endpoint for graph node",
+		Required: false,
+		EnvVar:   prefixEnvVar("GRAPH_PROVIDER"),
+	}
+	DataStorePollingDurationFlag = cli.DurationFlag{
+		Name:   "da.datastore-polling-duration",
+		Usage:  "retriever timeout",
+		Value:  120 * time.Second,
+		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
+	}
 
 	/* Optional Flags */
 	L1TrustRPC = cli.BoolFlag{
@@ -231,7 +255,10 @@ var optionalFlags = []cli.Flag{
 	SequencerMaxSafeLagFlag,
 	SequencerL1Confs,
 	L1EpochPollIntervalFlag,
-	RPCEnableAdmin,
+	RetrieverSocketFlag,
+	RetrieverTimeoutFlag,
+	GraphProviderFlag,
+	DataStorePollingDurationFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
 	MetricsPortFlag,

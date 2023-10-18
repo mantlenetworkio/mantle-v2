@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 )
@@ -32,6 +33,8 @@ type Config struct {
 	Metrics MetricsConfig
 
 	Pprof oppprof.CLIConfig
+
+	DatastoreConfig da.MantleDataStoreConfig
 
 	// Used to poll the L1 for new finalized or safe blocks
 	L1EpochPollInterval time.Duration
