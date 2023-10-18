@@ -241,3 +241,27 @@ func (m *MigrationData) Addresses() []common.Address {
 	}
 	return addresses
 }
+
+// L1SystemContracts represents a sets of system contracts on L1
+type L1SystemContracts struct {
+	L1StandardBridgeProxy       common.Address `json:"l1_standard_bridge_proxy"`
+	L1CrossDomainMessengerProxy common.Address `json:"l1_cross_domain_messenger_proxy"`
+	L1ERC721BridgeProxy         common.Address `json:"l1_erc721_bridge_proxy"`
+	SystemConfigProxy           common.Address `json:"system_config_proxy"`
+	OptimismPortalProxy         common.Address `json:"optimism_portal_proxy"`
+}
+
+// NewL1SystemContracts will read the l1-system-contracts.json from the file system.
+func NewL1SystemContracts(path string) (*L1SystemContracts, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find l1-system-contracts json at %s: %w", path, err)
+	}
+
+	var l1SystemContracts L1SystemContracts
+	if err := json.Unmarshal(file, &l1SystemContracts); err != nil {
+		return nil, err
+	}
+
+	return &l1SystemContracts, nil
+}
