@@ -13,3 +13,7 @@ deploy-config/mainnet-forked.json
 test-case-generator/fuzz
 .resource-metering.csv
 scripts/differential-testing/differential-testing
+
+deployments/mantle-devnet
+deployments/mantle-testnet
+deployments/mantle-mainnet

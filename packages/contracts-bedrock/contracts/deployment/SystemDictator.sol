@@ -228,7 +228,7 @@ contract SystemDictator is OwnableUpgradeable {
         // Set the implementation name for the L1CrossDomainMessenger.
         config.globalConfig.proxyAdmin.setImplementationName(
             config.proxyAddressConfig.l1CrossDomainMessengerProxy,
-            "OVM_L1CrossDomainMessenger"
+            "BVM_L1CrossDomainMessenger"
         );
 
         // Set the L1StandardBridge to the CHUGSPLASH proxy type.
@@ -264,13 +264,13 @@ contract SystemDictator is OwnableUpgradeable {
         // Store the address of the old L1CrossDomainMessenger implementation. We will need this
         // address in the case that we have to exit early.
         oldL1CrossDomainMessenger = config.globalConfig.addressManager.getAddress(
-            "OVM_L1CrossDomainMessenger"
+            "BVM_L1CrossDomainMessenger"
         );
 
         // Temporarily brick the L1CrossDomainMessenger by setting its implementation address to
         // address(0) which will cause the ResolvedDelegateProxy to revert. Better than pausing
         // the L1CrossDomainMessenger via pause() because it can be easily reverted.
-        config.globalConfig.addressManager.setAddress("OVM_L1CrossDomainMessenger", address(0));
+        config.globalConfig.addressManager.setAddress("BVM_L1CrossDomainMessenger", address(0));
 
         // Set the DTL shutoff block, which will tell the DTL to stop syncing new deposits from the
         // CanonicalTransactionChain. We do this by setting an address in the AddressManager
@@ -288,22 +288,22 @@ contract SystemDictator is OwnableUpgradeable {
     function step3() public onlyOwner step(EXIT_1_NO_RETURN_STEP) {
         // Remove all deprecated addresses from the AddressManager
         string[17] memory deprecated = [
-            "OVM_CanonicalTransactionChain",
-            "OVM_L2CrossDomainMessenger",
-            "OVM_DecompressionPrecompileAddress",
-            "OVM_Sequencer",
-            "OVM_Proposer",
-            "OVM_ChainStorageContainer-CTC-batches",
-            "OVM_ChainStorageContainer-CTC-queue",
-            "OVM_CanonicalTransactionChain",
-            "OVM_StateCommitmentChain",
-            "OVM_BondManager",
-            "OVM_ExecutionManager",
-            "OVM_FraudVerifier",
-            "OVM_StateManagerFactory",
-            "OVM_StateTransitionerFactory",
-            "OVM_SafetyChecker",
-            "OVM_L1MultiMessageRelayer",
+            "BVM_CanonicalTransactionChain",
+            "BVM_L2CrossDomainMessenger",
+            "BVM_DecompressionPrecompileAddress",
+            "BVM_Sequencer",
+            "BVM_Proposer",
+            "BVM_ChainStorageContainer-CTC-batches",
+            "BVM_ChainStorageContainer-CTC-queue",
+            "BVM_CanonicalTransactionChain",
+            "BVM_StateCommitmentChain",
+            "BVM_BondManager",
+            "BVM_ExecutionManager",
+            "BVM_FraudVerifier",
+            "BVM_StateManagerFactory",
+            "BVM_StateTransitionerFactory",
+            "BVM_SafetyChecker",
+            "BVM_L1MultiMessageRelayer",
             "BondManager"
         ];
 
@@ -469,7 +469,7 @@ contract SystemDictator is OwnableUpgradeable {
 
         // Reset the L1CrossDomainMessenger to the old implementation.
         config.globalConfig.addressManager.setAddress(
-            "OVM_L1CrossDomainMessenger",
+            "BVM_L1CrossDomainMessenger",
             oldL1CrossDomainMessenger
         );
 

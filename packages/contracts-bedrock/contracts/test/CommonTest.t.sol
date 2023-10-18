@@ -303,10 +303,10 @@ contract Messenger_Initializer is Portal_Initializer {
 
         // Setup the address manager and proxy
         vm.prank(multisig);
-        addressManager.setAddress("OVM_L1CrossDomainMessenger", address(L1MessengerImpl));
+        addressManager.setAddress("BVM_L1CrossDomainMessenger", address(L1MessengerImpl));
         ResolvedDelegateProxy proxy = new ResolvedDelegateProxy(
             addressManager,
-            "OVM_L1CrossDomainMessenger"
+            "BVM_L1CrossDomainMessenger"
         );
         L1Messenger = L1CrossDomainMessenger(address(proxy));
         L1Messenger.initialize();
