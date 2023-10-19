@@ -212,6 +212,9 @@ func (d *DeployConfig) Check() error {
 	if d.OptimismPortalProxy == (common.Address{}) {
 		return fmt.Errorf("%w: OptimismPortalProxy cannot be address(0)", ErrInvalidDeployConfig)
 	}
+	if d.L1MantleToken == (common.Address{}) {
+		return fmt.Errorf("%w: L1MantleToken cannot be address(0)", ErrInvalidDeployConfig)
+	}
 	if d.EIP1559Denominator == 0 {
 		return fmt.Errorf("%w: EIP1559Denominator cannot be 0", ErrInvalidDeployConfig)
 	}
