@@ -86,7 +86,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			Name: "L2StandardBridge",
 			Args: []interface{}{
 				immutable["L2StandardBridge"]["otherBridge"],
-				predeploys.DevL1MNTAddr,
+				immutable["L2StandardBridge"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -139,7 +139,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 		{
 			Name: "LegacyERC20MNT",
 			Args: []interface{}{
-				predeploys.DevL1MNTAddr,
+				immutable["LegacyERC20MNT"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{

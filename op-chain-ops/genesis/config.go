@@ -95,6 +95,8 @@ type DeployConfig struct {
 	SystemConfigProxy common.Address `json:"systemConfigProxy"`
 	// OptimismPortal proxy address on L1
 	OptimismPortalProxy common.Address `json:"optimismPortalProxy"`
+	// Mantle Token address on L1
+	L1MantleToken common.Address `json:"l1MantleToken"`
 
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
@@ -445,7 +447,8 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 	}
 
 	immutable["L2StandardBridge"] = immutables.ImmutableValues{
-		"otherBridge": config.L1StandardBridgeProxy,
+		"otherBridge":    config.L1StandardBridgeProxy,
+		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 	immutable["L2CrossDomainMessenger"] = immutables.ImmutableValues{
 		"otherMessenger": config.L1CrossDomainMessengerProxy,
@@ -466,6 +469,9 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 	}
 	immutable["BaseFeeVault"] = immutables.ImmutableValues{
 		"recipient": config.BaseFeeVaultRecipient,
+	}
+	immutable["LegacyERC20MNT"] = immutables.ImmutableValues{
+		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 
 	return immutable, nil
