@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Contract } from 'ethers'
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import { hexStringEquals } from 'tianwei-qa-test'
 
 import { AddressLike } from '../interfaces'
 import { toAddress } from '../utils'

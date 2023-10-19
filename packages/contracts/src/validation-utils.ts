@@ -1,6 +1,6 @@
 import { createInterface } from 'readline'
 
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import { hexStringEquals } from 'tianwei-qa-test'
 
 export const getInput = (query) => {
   const rl = createInterface({

@@ -8,8 +8,8 @@ import { Event, Contract, Wallet, providers, utils } from 'ethers'
 import {
   predeploys,
   getContractDefinition,
-} from '@eth-optimism/contracts-bedrock'
-import { sleep } from '@eth-optimism/core-utils'
+} from 'tianwei-qa-test-contracts'
+import { sleep } from 'tianwei-qa-test'
 
 import {
   CrossChainMessenger,

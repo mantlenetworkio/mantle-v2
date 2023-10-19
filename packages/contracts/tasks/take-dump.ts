@@ -6,7 +6,7 @@ import { promisify } from 'util'
 import * as mkdirp from 'mkdirp'
 import { ethers } from 'ethers'
 import { task } from 'hardhat/config'
-import { remove0x } from '@eth-optimism/core-utils'
+import { remove0x } from 'tianwei-qa-test'
 import '@eth-optimism/hardhat-deploy-config'
 
 import { predeploys } from '../src/predeploys'

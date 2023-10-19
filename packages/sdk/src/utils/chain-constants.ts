@@ -1,8 +1,8 @@
 import {
   predeploys,
   getDeployedContractDefinition,
-} from '@eth-optimism/contracts'
-import { predeploys as bedrockPredeploys } from '@eth-optimism/contracts-bedrock'
+} from 'tianwei-qa-contracts'
+import { predeploys as bedrockPredeploys } from 'tianwei-qa-test-contracts'
 
 import {
   L1ChainID,

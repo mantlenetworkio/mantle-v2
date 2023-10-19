@@ -27,8 +27,8 @@ import {
   decodeVersionedNonce,
   encodeVersionedNonce,
   getChainId,
-} from '@eth-optimism/core-utils'
-import { getContractInterface, predeploys } from '@eth-optimism/contracts'
+} from 'tianwei-qa-test'
+import { getContractInterface, predeploys } from 'tianwei-qa-contracts'
 import * as rlp from 'rlp'
 
 import {

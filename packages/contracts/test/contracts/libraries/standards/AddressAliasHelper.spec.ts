@@ -1,5 +1,5 @@
 import { Contract } from 'ethers'
-import { applyL1ToL2Alias, undoL1ToL2Alias } from '@eth-optimism/core-utils'
+import { applyL1ToL2Alias, undoL1ToL2Alias } from 'tianwei-qa-test'
 
 import { expect } from '../../../setup'
 import { deploy } from '../../../helpers'

@@ -8,7 +8,7 @@ import { providers, utils, Wallet, Event } from 'ethers'
 import dotenv from 'dotenv'
 import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
-import { DepositTx } from '@eth-optimism/core-utils'
+import { DepositTx } from 'tianwei-qa-test'
 
 dotenv.config()
 

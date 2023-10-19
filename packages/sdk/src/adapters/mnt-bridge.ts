@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import {l1DevPredeploys, predeploys} from '@eth-optimism/contracts'
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import {l1DevPredeploys, predeploys} from 'tianwei-qa-contracts'
+import { hexStringEquals } from 'tianwei-qa-test'
 
 import {
   NumberLike,
@@ -12,7 +12,7 @@ import {
 } from '../interfaces'
 import { toAddress, omit } from '../utils'
 import { StandardBridgeAdapter } from './standard-bridge'
-import { getContractInterface } from '@eth-optimism/contracts-bedrock'
+import { getContractInterface } from 'tianwei-qa-test-contracts'
 
 /**
  * Bridge adapter for the ETH bridge.

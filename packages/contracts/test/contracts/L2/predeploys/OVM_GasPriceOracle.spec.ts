@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
-import { calculateL1GasUsed, calculateL1Fee } from '@eth-optimism/core-utils'
+import { calculateL1GasUsed, calculateL1Fee } from 'tianwei-qa-test'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 import { expect } from '../../../setup'

@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
-import { applyL1ToL2Alias } from '@eth-optimism/core-utils'
+import { applyL1ToL2Alias } from 'tianwei-qa-test'
 import { smock, FakeContract, MockContract } from '@defi-wonderland/smock'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 

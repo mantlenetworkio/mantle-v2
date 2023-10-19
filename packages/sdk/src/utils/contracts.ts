@@ -1,5 +1,5 @@
-import { getContractInterface, predeploys } from '@eth-optimism/contracts'
-import { getContractInterface as getContractInterfaceBedrock } from '@eth-optimism/contracts-bedrock'
+import { getContractInterface, predeploys } from 'tianwei-qa-contracts'
+import { getContractInterface as getContractInterfaceBedrock } from 'tianwei-qa-test-contracts'
 import { ethers, Contract } from 'ethers'
 
 import { toAddress } from './coercion'

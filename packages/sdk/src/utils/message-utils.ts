@@ -1,4 +1,4 @@
-import { hashWithdrawal } from '@eth-optimism/core-utils'
+import { hashWithdrawal } from 'tianwei-qa-test'
 import { BigNumber, utils, ethers } from 'ethers'
 
 import { LowLevelMessage } from '../interfaces'

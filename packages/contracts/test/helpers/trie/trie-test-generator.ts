@@ -2,7 +2,7 @@
 import * as rlp from 'rlp'
 import { default as seedbytes } from 'random-bytes-seed'
 import { SecureTrie, BaseTrie } from 'merkle-patricia-tree'
-import { fromHexString, toHexString } from '@eth-optimism/core-utils'
+import { fromHexString, toHexString } from 'tianwei-qa-test'
 import { ethers } from 'ethers'
 
 interface TrieNode {

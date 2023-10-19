@@ -1,6 +1,6 @@
 {
-  "name": "@eth-optimism/contracts-bedrock",
-  "version": "0.13.2",
+  "name": "tianwei-qa-test-contracts",
+  "version": "0.13.4",
   "description": "Contracts for Optimism Specs",
   "main": "dist/index",
   "types": "dist/index",
@@ -53,7 +53,7 @@
     "echidna:metering": "echidna-test --contract EchidnaFuzzResourceMetering --config ./echidna.yaml ."
   },
   "dependencies": {
-    "@eth-optimism/core-utils": "^0.12.0",
+    "tianwei-qa-test": "^0.12.2",
     "@openzeppelin/contracts": "4.7.3",
     "@openzeppelin/contracts-upgradeable": "4.7.3",
     "ethers": "^5.7.0"

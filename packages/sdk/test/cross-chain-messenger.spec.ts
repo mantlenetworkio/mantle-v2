@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { expectApprox, hashCrossDomainMessage } from '@eth-optimism/core-utils'
-import { predeploys } from '@eth-optimism/contracts'
+import { expectApprox, hashCrossDomainMessage } from 'tianwei-qa-test'
+import { predeploys } from 'tianwei-qa-contracts'
 import { Contract } from 'ethers'
 import { ethers } from 'hardhat'
 

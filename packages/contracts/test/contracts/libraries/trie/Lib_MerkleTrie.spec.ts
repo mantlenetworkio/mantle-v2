@@ -1,7 +1,7 @@
 import * as rlp from 'rlp'
 import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
-import { toHexString } from '@eth-optimism/core-utils'
+import { toHexString } from 'tianwei-qa-test'
 
 import { expect } from '../../../setup'
 import { deploy, TrieTestGenerator } from '../../../helpers'
