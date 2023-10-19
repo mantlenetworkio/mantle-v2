@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ethers, Overrides, BigNumber } from 'ethers'
+import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
 import { predeploys } from 'tianwei-qa-contracts'
 import { hexStringEquals } from 'tianwei-qa-test'
@@ -22,8 +22,20 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
     l2Token: AddressLike,
     signer: ethers.Signer
   ): Promise<BigNumber> {
-    throw new Error(`approval not necessary for ETH bridge`)
+    if (!(await this.supportsTokenPair(l1Token, l2Token))) {
+      throw new Error(`token pair not supported by bridge`)
+    }
+
+    const token = new Contract(
+      toAddress(l2Token),
+      getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+      this.messenger.l2Provider
+    )
+
+    return token.allowance(await signer.getAddress(), this.l2Bridge.address)
   }
+
+
 
   public async getDepositsByAddress(
     address: AddressLike,
