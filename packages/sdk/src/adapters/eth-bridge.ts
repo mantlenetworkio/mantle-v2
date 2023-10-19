@@ -132,8 +132,22 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
       opts?: {
         overrides?: Overrides
       }
-    ): Promise<never> => {
-      throw new Error(`approvals not necessary for ETH bridge`)
+    ): Promise<TransactionRequest> => {
+      if (!(await this.supportsTokenPair(l1Token, l2Token))) {
+        throw new Error(`token pair not supported by bridge`)
+      }
+
+      const token = new Contract(
+        toAddress(l2Token),
+        getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+        this.messenger.l2Provider
+      )
+
+      return token.populateTransaction.approve(
+        this.l2Bridge.address,
+        amount,
+        opts?.overrides || {}
+      )
     },
 
     deposit: async (
