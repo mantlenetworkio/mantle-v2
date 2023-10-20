@@ -167,7 +167,6 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
           '0x', // No data.
-          opts?.overrides || {}
         )
       } else {
         return this.l1Bridge.populateTransaction.depositMNTTo(
@@ -175,7 +174,6 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
           '0x', // No data.
-          opts?.overrides || {}
         )
       }
     },

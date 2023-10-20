@@ -2012,9 +2012,9 @@ export class CrossChainMessenger {
         overrides?: Overrides
       }
     ): Promise<TransactionRequest> => {
-      return this.bridges.ETH.populateTransaction.withdraw(
-        ethers.constants.AddressZero,
+      return this.bridges.MNT.populateTransaction.withdraw(
         l1DevPredeploys.L1_MNT,
+        ethers.constants.AddressZero,
         amount,
         opts
       )
