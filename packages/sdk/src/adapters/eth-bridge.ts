@@ -32,7 +32,6 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
       getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
       this.messenger.l2Provider
     )
-
     return token.allowance(await signer.getAddress(), this.l2Bridge.address)
   }
 

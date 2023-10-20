@@ -164,17 +164,13 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
 
       if (opts?.recipient === undefined) {
         return this.l1Bridge.populateTransaction.depositMNT(
-          toAddress(l1Token),
-          toAddress(l2Token),
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
           '0x', // No data.
           opts?.overrides || {}
         )
       } else {
-        return this.l1Bridge.populateTransaction.depositERC20To(
-          toAddress(l1Token),
-          toAddress(l2Token),
+        return this.l1Bridge.populateTransaction.depositMNTTo(
           toAddress(opts.recipient),
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
