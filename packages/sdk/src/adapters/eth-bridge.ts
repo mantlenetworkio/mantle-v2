@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { predeploys } from 'tianwei-qa-contracts'
+import {getContractInterface, predeploys} from 'tianwei-qa-contracts'
 import { hexStringEquals } from 'tianwei-qa-test'
 
 import {

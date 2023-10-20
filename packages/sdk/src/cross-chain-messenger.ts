@@ -28,7 +28,7 @@ import {
   encodeVersionedNonce,
   getChainId,
 } from 'tianwei-qa-test'
-import { getContractInterface, predeploys } from 'tianwei-qa-contracts'
+import {getContractInterface, l1DevPredeploys, predeploys} from 'tianwei-qa-contracts'
 import * as rlp from 'rlp'
 
 import {
@@ -776,8 +776,8 @@ export class CrossChainMessenger {
       return {
         receiptStatus: MessageReceiptStatus.RELAYED_FAILED,
         transactionReceipt: await failedRelayedMessageEvents[
-          failedRelayedMessageEvents.length - 1
-        ].getTransactionReceipt(),
+        failedRelayedMessageEvents.length - 1
+          ].getTransactionReceipt(),
       }
     }
 
@@ -1038,12 +1038,12 @@ export class CrossChainMessenger {
       oracleVersion === '1.0.0'
         ? // The ABI in the SDK does not contain FINALIZATION_PERIOD_SECONDS
           // in OptimismPortal, so making an explicit call instead.
-          BigNumber.from(
-            await this.contracts.l1.OptimismPortal.provider.call({
-              to: this.contracts.l1.OptimismPortal.address,
-              data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
-            })
-          )
+        BigNumber.from(
+          await this.contracts.l1.OptimismPortal.provider.call({
+            to: this.contracts.l1.OptimismPortal.address,
+            data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
+          })
+        )
         : await this.contracts.l1.L2OutputOracle.FINALIZATION_PERIOD_SECONDS()
     return challengePeriod.toNumber()
   }
@@ -1556,6 +1556,56 @@ export class CrossChainMessenger {
     )
   }
 
+
+
+  /**
+   * Deposits some MNT into the L2 chain.
+   *
+   * @param amount Amount of MNT to deposit (in wei).
+   * @param opts Additional options.
+   * @param opts.signer Optional signer to use to send the transaction.
+   * @param opts.recipient Optional address to receive the funds on L2. Defaults to sender.
+   * @param opts.l2GasLimit Optional gas limit to use for the transaction on L2.
+   * @param opts.overrides Optional transaction overrides.
+   * @returns Transaction response for the deposit transaction.
+   */
+  public async depositMNT(
+    amount: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      l2GasLimit?: NumberLike
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l1Signer).sendTransaction(
+      await this.populateTransaction.depositMNT(amount, opts)
+    )
+  }
+
+  /**
+   * Withdraws some MNT back to the L1 chain.
+   *
+   * @param amount Amount of MNT to withdraw.
+   * @param opts Additional options.
+   * @param opts.signer Optional signer to use to send the transaction.
+   * @param opts.recipient Optional address to receive the funds on L1. Defaults to sender.
+   * @param opts.overrides Optional transaction overrides.
+   * @returns Transaction response for the withdraw transaction.
+   */
+  public async withdrawMNT(
+    amount: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l2Signer).sendTransaction(
+      await this.populateTransaction.withdrawMNT(amount, opts)
+    )
+  }
+
   /**
    * Queries the account's approval amount for a given L1 token.
    *
@@ -1919,6 +1969,57 @@ export class CrossChainMessenger {
         opts
       )
     },
+
+    /**
+     * Generates a transaction for depositing some MNT into the L2 chain.
+     *
+     * @param amount Amount of MNT to deposit.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L2. Defaults to sender.
+     * @param opts.l2GasLimit Optional gas limit to use for the transaction on L2.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to deposit the MNT.
+     */
+    depositMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        l2GasLimit?: NumberLike
+        overrides?: PayableOverrides
+      }
+    ): Promise<TransactionRequest> => {
+      return this.bridges.MNT.populateTransaction.deposit(
+        l1DevPredeploys.L1_MNT,
+        ethers.constants.AddressZero,
+        amount,
+        opts
+      )
+    },
+
+    /**
+     * Generates a transaction for withdrawing some MNT back to the L1 chain.
+     *
+     * @param amount Amount of MNT to withdraw.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L1. Defaults to sender.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to withdraw the MNT.
+     */
+    withdrawMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        overrides?: Overrides
+      }
+    ): Promise<TransactionRequest> => {
+      return this.bridges.ETH.populateTransaction.withdraw(
+        ethers.constants.AddressZero,
+        l1DevPredeploys.L1_MNT,
+        amount,
+        opts
+      )
+    },
+
 
     /**
      * Generates a transaction for approving some tokens to deposit into the L2 chain.
