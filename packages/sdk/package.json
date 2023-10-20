@@ -1,6 +1,6 @@
 {
   "name": "tianwei-qa-test-sdk",
-  "version": "v2.1.1",
+  "version": "v2.1.2",
   "description": "[Optimism] Tools for working with Optimism",
   "main": "dist/index",
   "types": "dist/index",

@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import {getContractInterface, predeploys} from 'tianwei-qa-contracts'
+import { predeploys } from 'tianwei-qa-contracts'
 import { hexStringEquals } from 'tianwei-qa-test'
+import { getContractInterface } from 'tianwei-qa-test-contracts'
 
 import {
   NumberLike,
@@ -131,8 +132,22 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
       opts?: {
         overrides?: Overrides
       }
-    ): Promise<never> => {
-      throw new Error(`approvals not necessary for ETH bridge`)
+    ): Promise<TransactionRequest> => {
+      if (!(await this.supportsTokenPair(l1Token, l2Token))) {
+        throw new Error(`token pair not supported by bridge`)
+      }
+
+      const token = new Contract(
+        toAddress(l2Token),
+        getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+        this.messenger.l2Provider
+      )
+
+      return token.populateTransaction.approve(
+        this.l2Bridge.address,
+        amount,
+        opts?.overrides || {}
+      )
     },
 
     deposit: async (
