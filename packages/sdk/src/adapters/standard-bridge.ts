@@ -170,7 +170,6 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
 
       // Don't support MNT deposits or withdrawals via this bridge.
       if (
-        hexStringEquals(toAddress(l1Token), l1DevPredeploys.L1_MNT) ||
         hexStringEquals(toAddress(l2Token), ethers.constants.AddressZero)
       ) {
         return false
