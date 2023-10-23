@@ -1985,11 +1985,12 @@ export class CrossChainMessenger {
       opts?: {
         recipient?: AddressLike
         l2GasLimit?: NumberLike
+        l1MNTAddr?: AddressLike
         overrides?: PayableOverrides
       }
     ): Promise<TransactionRequest> => {
       return this.bridges.MNT.populateTransaction.deposit(
-        l1DevPredeploys.L1_MNT,
+        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : l1DevPredeploys.L1_MNT,
         ethers.constants.AddressZero,
         amount,
         opts
@@ -2009,11 +2010,12 @@ export class CrossChainMessenger {
       amount: NumberLike,
       opts?: {
         recipient?: AddressLike
+        l1MNTAddr?: AddressLike
         overrides?: Overrides
       }
     ): Promise<TransactionRequest> => {
       return this.bridges.MNT.populateTransaction.withdraw(
-        l1DevPredeploys.L1_MNT,
+        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : l1DevPredeploys.L1_MNT,
         ethers.constants.AddressZero,
         amount,
         opts
