@@ -347,6 +347,17 @@ contract L2StandardBridge_BridgeERC20_Test is PreBridgeERC20 {
         assertEq(L2Token.balanceOf(alice), 0);
     }
 
+    function test_burnLegacyERC20_succeeds() external {
+        assertEq(0, LegacyL2Token.balanceOf(alice));
+        vm.prank(address(L2Bridge));
+        LegacyL2Token.mint(alice, 100);
+        assertEq(100, LegacyL2Token.balanceOf(alice));
+        vm.prank(address(L2Bridge));
+        LegacyL2Token.burn(alice, 100);
+        assertEq(0, LegacyL2Token.balanceOf(alice));
+
+    }
+
     function test_withdrawLegacyERC20_succeeds() external {
         _preBridgeERC20({ _isLegacy: true, _l2Token: address(LegacyL2Token) });
         L2Bridge.withdraw(address(LegacyL2Token), 100, 1000, hex"");
