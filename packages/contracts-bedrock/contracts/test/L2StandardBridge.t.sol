@@ -178,8 +178,6 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         assertTrue(alice.balance >= 100);
         assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 0);
 
-        vm.prank(alice, alice);
-
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit WithdrawalInitiated({
             l1Token: address(l1MNT),
@@ -190,8 +188,8 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             data: hex""
         });
 
-//        vm.expectEmit(true, true, true, true, address(L2Bridge));
-//        emit MNTBridgeInitiated({ from: alice, to: alice, amount: 100, data: hex"" });
+        vm.expectEmit(true, true, true, true, address(L2Bridge));
+        emit MNTBridgeInitiated({ from: alice, to: alice, amount: 100, extraData: hex"" });
 
         vm.prank(alice, alice);
         L2Bridge.withdraw{ value: 100 }({
@@ -201,7 +199,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             _extraData: hex""
         });
 
-        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 0);
+        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 100);
     }
 }
 
@@ -647,8 +645,7 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         );
         vm.deal(address(L2Messenger),100);
         vm.prank(address(L2Messenger));
-        vm.prank(address(L2Messenger));
-        vm.expectRevert("ERC20: insufficient allowance");
+        vm.expectRevert("StandardBridge: amount sent does not match amount required");
         L2Bridge.finalizeBridgeMNT{ value: 50 }(alice, alice, 100, hex"");
     }
 
@@ -677,16 +674,6 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
     }
 
 
-
-
-
-
-
-
-
-
-
-
 }
 
 contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
@@ -697,40 +684,39 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
             abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
             abi.encode(address(L2Bridge.OTHER_BRIDGE()))
         );
-        deal(address(l2ETH),messenger, 100);
+        deal(address(l2ETH), messenger, 100);
 //        vm.deal(messenger, 100);
         vm.prank(messenger);
         l2ETH.approve(address(L2Bridge), 100);
 
-        vm.prank(messenger);
         vm.expectEmit(true, true, true, true);
         emit DepositFinalized(address(0), Predeploys.BVM_ETH, alice, alice, 100, hex"");
 
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeFinalized(alice, alice, 100, hex"");
+        vm.prank(messenger);
         L2Bridge.finalizeBridgeETH{ value: 0 }(alice, alice, 100, hex"");
     }
 }
 
 
 contract L2StandardBridge_FinalizeBridgeMNT_Test is Bridge_Initializer {
-    function test_finalizeBridgeETH_succeeds() external {
+    function test_finalizeBridgeMNT_succeeds() external {
         address messenger = address(L2Bridge.messenger());
         vm.mockCall(
             messenger,
             abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
             abi.encode(address(L2Bridge.OTHER_BRIDGE()))
         );
-        deal(address(l2ETH),messenger, 100);
-//        vm.deal(messenger, 100);
-        vm.prank(messenger);
-        vm.deal(address(L2Bridge), 100);
-        vm.prank(messenger);
+        vm.deal(messenger, 100);
+
         vm.expectEmit(true, true, true, true);
         emit DepositFinalized(address(l1MNT), address(0), alice, alice, 100, hex"");
 
         vm.expectEmit(true, true, true, true);
         emit MNTBridgeFinalized(alice, alice, 100, hex"");
+
+        vm.prank(messenger);
         L2Bridge.finalizeBridgeMNT{ value: 100 }(alice, alice, 100, hex"");
     }
 }
