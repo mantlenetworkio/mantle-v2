@@ -59,7 +59,7 @@ func WaitForFinalizationPeriod(ctx context.Context, client *ethclient.Client, po
 		l2BlockNumber = l2BlockNumber.Add(l2BlockNumber, common.Big1)
 	}
 	l2BlockNumber = l2BlockNumber.Mul(l2BlockNumber, submissionInterval)
-
+	l2BlockNumber = l2BlockNumber.Add(l2BlockNumber, startingBlockNumber)
 	finalizationPeriod, err := l2OO.FINALIZATIONPERIODSECONDS(opts)
 	if err != nil {
 		return 0, err
