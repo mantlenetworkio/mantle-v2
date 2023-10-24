@@ -130,6 +130,54 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         );
     }
 
+
+    // relayMessage: should send a successful call to the target contract
+    function test_relayMessage_with_mnt_value_succeeds() external {
+        address target = address(0xabcd);
+        address sender = Predeploys.L2_CROSS_DOMAIN_MESSENGER;
+
+        dealL1MNT(address(L1Messenger), 100);
+
+
+
+        vm.expectCall(target, hex"1111");
+
+        // set the value of op.l2Sender() to be the L2 Cross Domain Messenger.
+        vm.store(address(op), bytes32(senderSlotIndex), bytes32(abi.encode(sender)));
+        vm.prank(address(op));
+
+        vm.expectEmit(true, true, true, true);
+
+        bytes32 hash = Hashing.hashCrossDomainMessage(
+            Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }),
+            sender,
+            target,
+            100,
+            0,
+            0,
+            hex"1111"
+        );
+
+        emit RelayedMessage(hash);
+
+        L1Messenger.relayMessage(
+            Encoding.encodeVersionedNonce({ _nonce: 0, _version: 1 }), // nonce
+            sender,
+            target,
+            100,  // mnt value
+            0,  // eth value
+            0,
+            hex"1111"
+        );
+
+        // the message hash is in the successfulMessages mapping
+        assert(L1Messenger.successfulMessages(hash));
+        // it is not in the received messages mapping
+        assertEq(L1Messenger.failedMessages(hash), false);
+    }
+
+
+
     // relayMessage: should send a successful call to the target contract
     function test_relayMessage_succeeds() external {
         address target = address(0xabcd);

@@ -55,6 +55,14 @@ contract GasPriceOracle_Test is CommonTest {
         assertEq(gasOracle.l1BaseFee(), basefee);
     }
 
+    function test_getL1GasUsed_succeeds() external {
+        assertEq(gasOracle.getL1GasUsed("dead"), 1462);
+    }
+
+    function test_getL1Fee_succeeds() external {
+        assertEq(gasOracle.getL1Fee("dead"), 1);
+    }
+
     function test_gasPrice_succeeds() external {
         vm.fee(100);
         uint256 gasPrice = gasOracle.gasPrice();

@@ -168,7 +168,44 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         assertEq(l2ETH.balanceOf(Predeploys.L2_TO_L1_MESSAGE_PASSER), 0);
     }
+
+    /**
+    * @notice Use the legacy `withdraw` interface on the L2StandardBridge to
+     *         withdraw mnt from L2 to L1.
+     */
+    function test_withdraw_mnt_succeeds() external {
+        vm.deal(alice,100);
+        assertTrue(alice.balance >= 100);
+        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 0);
+
+        vm.expectEmit(true, true, true, true, address(L2Bridge));
+        emit WithdrawalInitiated({
+            l1Token: address(l1MNT),
+            l2Token: address(0),
+            from: alice,
+            to: alice,
+            amount: 100,
+            data: hex""
+        });
+
+        vm.expectEmit(true, true, true, true, address(L2Bridge));
+        emit MNTBridgeInitiated({ from: alice, to: alice, amount: 100, extraData: hex"" });
+
+        vm.prank(alice, alice);
+        L2Bridge.withdraw{ value: 100 }({
+            _l2Token: address(0),
+            _amount: 100,
+            _minGasLimit: 1000,
+            _extraData: hex""
+        });
+
+        assertEq(Predeploys.L2_TO_L1_MESSAGE_PASSER.balance, 100);
+    }
 }
+
+
+
+
 
 contract PreBridgeERC20 is Bridge_Initializer {
     // withdraw and BridgeERC20 should behave the same when transferring ERC20 tokens
@@ -308,6 +345,17 @@ contract L2StandardBridge_BridgeERC20_Test is PreBridgeERC20 {
         L2Bridge.bridgeERC20(address(L2Token), address(L1Token), 100, 1000, hex"");
 
         assertEq(L2Token.balanceOf(alice), 0);
+    }
+
+    function test_burnLegacyERC20_succeeds() external {
+        assertEq(0, LegacyL2Token.balanceOf(alice));
+        vm.prank(address(L2Bridge));
+        LegacyL2Token.mint(alice, 100);
+        assertEq(100, LegacyL2Token.balanceOf(alice));
+        vm.prank(address(L2Bridge));
+        LegacyL2Token.burn(alice, 100);
+        assertEq(0, LegacyL2Token.balanceOf(alice));
+
     }
 
     function test_withdrawLegacyERC20_succeeds() external {
@@ -570,6 +618,73 @@ contract L2StandardBridge_Bridge_Test is Bridge_Initializer {
         vm.expectRevert("StandardBridge: cannot send to messenger");
         L2Bridge.finalizeBridgeETH{ value: 100 }(alice, address(L2Messenger), 100, hex"");
     }
+
+
+
+
+
+    function test_finalizeDeposit_depositingMNT_succeeds() external {
+        vm.mockCall(
+            address(L2Bridge.messenger()),
+            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encode(address(L2Bridge.OTHER_BRIDGE()))
+        );
+
+        // Should emit both the bedrock and legacy events
+        vm.expectEmit(true, true, true, true, address(L2Bridge));
+        emit DepositFinalized(address(L1Token), address(L2Token), alice, alice, 100, hex"");
+
+        vm.expectEmit(true, true, true, true, address(L2Bridge));
+        emit ERC20BridgeFinalized(
+            address(L2Token), // localToken
+            address(L1Token), // remoteToken
+            alice,
+            alice,
+            100,
+            hex""
+        );
+
+        vm.prank(address(L2Messenger));
+        L2Bridge.finalizeDeposit(address(L1Token), address(L2Token), alice, alice, 100, hex"");
+    }
+
+    function test_finalizeBridgeMNT_incorrectValue_reverts() external {
+        vm.mockCall(
+            address(L2Bridge.messenger()),
+            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encode(address(L2Bridge.OTHER_BRIDGE()))
+        );
+        vm.deal(address(L2Messenger),100);
+        vm.prank(address(L2Messenger));
+        vm.expectRevert("StandardBridge: amount sent does not match amount required");
+        L2Bridge.finalizeBridgeMNT{ value: 50 }(alice, alice, 100, hex"");
+    }
+
+    function test_finalizeBridgeMNT_sendToSelf_reverts() external {
+        vm.mockCall(
+            address(L2Bridge.messenger()),
+            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encode(address(L2Bridge.OTHER_BRIDGE()))
+        );
+        vm.deal(address(L2Messenger), 100);
+        vm.prank(address(L2Messenger));
+        vm.expectRevert("StandardBridge: cannot send to self");
+        L2Bridge.finalizeBridgeMNT{ value: 100 }(alice, address(L2Bridge), 100, hex"");
+    }
+
+    function test_finalizeBridgeMNT_sendToMessenger_reverts() external {
+        vm.mockCall(
+            address(L2Bridge.messenger()),
+            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encode(address(L2Bridge.OTHER_BRIDGE()))
+        );
+        vm.deal(address(L2Messenger), 100);
+        vm.prank(address(L2Messenger));
+        vm.expectRevert("StandardBridge: cannot send to messenger");
+        L2Bridge.finalizeBridgeMNT{ value: 100 }(alice, address(L2Messenger), 100, hex"");
+    }
+
+
 }
 
 contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
@@ -580,17 +695,39 @@ contract L2StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
             abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
             abi.encode(address(L2Bridge.OTHER_BRIDGE()))
         );
-        deal(address(l2ETH),messenger, 100);
+        deal(address(l2ETH), messenger, 100);
 //        vm.deal(messenger, 100);
         vm.prank(messenger);
         l2ETH.approve(address(L2Bridge), 100);
 
-        vm.prank(messenger);
         vm.expectEmit(true, true, true, true);
         emit DepositFinalized(address(0), Predeploys.BVM_ETH, alice, alice, 100, hex"");
 
         vm.expectEmit(true, true, true, true);
         emit ETHBridgeFinalized(alice, alice, 100, hex"");
+        vm.prank(messenger);
         L2Bridge.finalizeBridgeETH{ value: 0 }(alice, alice, 100, hex"");
+    }
+}
+
+
+contract L2StandardBridge_FinalizeBridgeMNT_Test is Bridge_Initializer {
+    function test_finalizeBridgeMNT_succeeds() external {
+        address messenger = address(L2Bridge.messenger());
+        vm.mockCall(
+            messenger,
+            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encode(address(L2Bridge.OTHER_BRIDGE()))
+        );
+        vm.deal(messenger, 100);
+
+        vm.expectEmit(true, true, true, true);
+        emit DepositFinalized(address(l1MNT), address(0), alice, alice, 100, hex"");
+
+        vm.expectEmit(true, true, true, true);
+        emit MNTBridgeFinalized(alice, alice, 100, hex"");
+
+        vm.prank(messenger);
+        L2Bridge.finalizeBridgeMNT{ value: 100 }(alice, alice, 100, hex"");
     }
 }
