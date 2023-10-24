@@ -172,16 +172,26 @@ contract MNTToken_Initializer is L2OutputOracle_Initializer {
     function setUp() public virtual override {
         super.setUp();
 
-        l1MNTImpl = new L1MantleToken();
-        Proxy proxy = new Proxy(multisig);
+
         vm.prank(multisig);
-        proxy.upgradeToAndCall(
-            address(l1MNTImpl),
-            abi.encodeWithSelector(L1MantleToken.initialize.selector, 10e50, multisig)
-        );
-        l1MNT = L1MantleToken(payable(address(proxy)));
+        l1MNTImpl = new L1MantleToken();
+//        Proxy proxy = new Proxy(multisig);
+//        vm.prank(multisig);
+//        proxy.upgradeToAndCall(
+//            address(l1MNTImpl),
+//            abi.encodeWithSelector(L1MantleToken.initialize.selector, 1000000 * 10 ** 18, multisig)
+//        );
+
+        l1MNT = L1MantleToken(address(l1MNTImpl));
         vm.label(address(l1MNT), "L1MantleToken");
     }
+
+    function dealL1MNT(address _target,uint256 _amount) public {
+        deal(address(l1MNT), _target, _amount, true);
+        vm.store(address(l1MNT), bytes32(uint256(0x2)), bytes32(uint256(_amount))); //set total supply
+    }
+
+
 }
 
 contract BVMETH_Initializer is MNTToken_Initializer {
@@ -198,6 +208,8 @@ contract BVMETH_Initializer is MNTToken_Initializer {
         l2ETH = BVM_ETH(payable(Predeploys.BVM_ETH));
         vm.label(address(l2ETH), "BVM_ETH");
     }
+
+
 }
 
 
@@ -349,6 +361,15 @@ contract Bridge_Initializer is Messenger_Initializer {
 
     event ETHDepositInitiated(address indexed from, address indexed to, uint256 amount, bytes data);
 
+    event MNTDepositInitiated(address indexed from, address indexed to, uint256 amount, bytes data);
+
+    event MNTWithdrawalFinalized(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
     event ETHWithdrawalFinalized(
         address indexed from,
         address indexed to,
@@ -400,6 +421,10 @@ contract Bridge_Initializer is Messenger_Initializer {
         uint256 amount,
         bytes data
     );
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     event ETHBridgeInitiated(address indexed from, address indexed to, uint256 amount, bytes data);
 

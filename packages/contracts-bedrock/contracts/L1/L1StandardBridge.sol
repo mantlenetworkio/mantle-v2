@@ -574,8 +574,8 @@ contract L1StandardBridge is StandardBridge, Semver {
      *                     to identify the transaction.
      */
     function bridgeMNTTo(
-        uint256 _amount,
         address _to,
+        uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable {
@@ -732,6 +732,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
+        require(_to != address(this), "StandardBridge: cannot send to self");
+        require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
+
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(address(MESSENGER), _to, _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
