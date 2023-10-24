@@ -566,8 +566,8 @@ contract L1StandardBridge is StandardBridge, Semver {
     /**
      * @notice Sends MNT to the sender's address on the other chain.
      *
-     * @param _amount      Amount of the MNT.
      * @param _to          Address of the receiver.
+     * @param _amount      Amount of the MNT.
      * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
      * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
      *                     not be triggered with this data, but it will be emitted and can be used
