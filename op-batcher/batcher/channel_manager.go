@@ -43,7 +43,10 @@ type channelManager struct {
 	pendingTransactions map[txID]txData
 	// Set of confirmed txID -> inclusion block. For determining if the channel is timed out
 	confirmedTransactions map[txID]eth.BlockID
-
+	// Set of txID -> frame data. For rollup to MantleDa
+	daPendingTxData map[txID]txData
+	//Set of unconfirmed txID
+	daUnConfirmedTxID []*txID
 	// params of initStoreData on MantleDA
 	params *bcommon.StoreParams
 	//receipt of initStoreData transaction on L1
@@ -71,6 +74,7 @@ func (s *channelManager) Clear() {
 	s.tip = common.Hash{}
 	s.closed = false
 	s.clearPendingChannel()
+	s.clearMantleDAStatus()
 }
 
 // TxFailed records a transaction as failed. It will attempt to resubmit the data
@@ -138,6 +142,7 @@ func (s *channelManager) clearPendingChannel() {
 func (s *channelManager) clearMantleDAStatus() {
 	s.params = nil
 	s.initStoreDataReceipt = nil
+	s.daUnConfirmedTxID = s.daUnConfirmedTxID[:0]
 }
 
 // pendingChannelIsTimedOut returns true if submitted channel has timed out.

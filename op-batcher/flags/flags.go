@@ -42,12 +42,12 @@ var (
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_SOCKET"),
 	}
 	DataStoreDurationFlag = cli.Uint64Flag{
-		Name:   "duration",
+		Name:   "datastore-duration",
 		Usage:  "Duration to store blob",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DATA_STORE_DURATION"),
 	}
 	DisperserTimeoutFlag = cli.DurationFlag{
-		Name:   "timeout",
+		Name:   "disperser-timeout",
 		Usage:  "disperser timeout",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_TIMEOUT"),
 	}
@@ -61,6 +61,18 @@ var (
 		Name:   "graph-node-provider",
 		Usage:  "graph node url of MantleDA graph node",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_PROVIDER"),
+	}
+	RollUpMaxSizeFlag = cli.Uint64Flag{
+		Name:   "rollup-max-size",
+		Usage:  "Rollup transaction max size data for MantleDA",
+		Value:  31600, // ktz for order is 3000
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
+	}
+	MantleDaNodeFlag = cli.IntFlag{
+		Name:   "mantle-da-node",
+		Usage:  "The number of nodes in MantleDA",
+		Value:  4,
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "MANTLE_DA_NODE"),
 	}
 	SubSafetyMarginFlag = cli.Uint64Flag{
 		Name: "sub-safety-margin",
