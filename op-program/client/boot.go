@@ -3,13 +3,14 @@ package client
 import (
 	"encoding/binary"
 	"encoding/json"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-program/preimage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
+	"github.com/ethereum-optimism/optimism/op-program/preimage"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 	L2ChainConfigLocalIndex
 	RollupConfigLocalIndex
 	RetrieverTimeout         = 60 * time.Second
-	DataStorePollingDuration = 1
+	DataStorePollingDuration = 1 * time.Second
 	RetrieverSocket          = ""
 	GraphProvider            = ""
 )
