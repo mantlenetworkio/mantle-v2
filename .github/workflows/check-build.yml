@@ -37,7 +37,7 @@ jobs:
       - name: Checking Make Build
         run: |
           unset NVM_DIR
-          apt update
-          apt install -y build-essential  coreutils libuv1 libudev-dev libusb-1.0-0-dev
+          sudo apt update
+          sudo apt install -y build-essential  coreutils libuv1 libudev-dev libusb-1.0-0-dev
           make build
 
