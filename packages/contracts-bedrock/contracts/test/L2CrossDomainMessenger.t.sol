@@ -22,6 +22,10 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
         assertEq(version, L2Messenger.MESSAGE_VERSION());
     }
 
+    function test_l1CrossDomainMessenger_succeeds() external {
+        assertEq(address(L1Messenger), L2Messenger.l1CrossDomainMessenger());
+    }
+
     function test_sendMessage_succeeds() external {
         bytes memory xDomainCallData = Encoding.encodeCrossDomainMessage(
             L2Messenger.messageNonce(),
@@ -69,6 +73,119 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
         vm.prank(alice);
         L2Messenger.sendMessage(0, recipient, hex"ff", uint32(100));
     }
+
+
+    function test_sendMessage_with_eth_value_succeeds() external {
+
+        deal(address(l2ETH), alice, 100);
+        vm.store(address(l2ETH), bytes32(uint256(0x2)), bytes32(uint256(100))); //set total supply
+
+        vm.prank(alice);
+        l2ETH.approve(address(messagePasser), 100);
+        vm.prank(alice);
+        l2ETH.approve(address(L2Messenger), 100);
+
+
+    bytes memory xDomainCallData = Encoding.encodeCrossDomainMessage(
+            L2Messenger.messageNonce(),
+            alice,
+            recipient,
+            0,
+            100,
+            100,
+            hex"ff"
+        );
+        vm.expectCall(
+            address(messagePasser),
+            abi.encodeWithSelector(
+                L2ToL1MessagePasser.initiateWithdrawal.selector,
+                100,
+                address(L1Messenger),
+                L2Messenger.baseGas(hex"ff", 100),
+                xDomainCallData
+            )
+        );
+
+        // MessagePassed event
+        vm.expectEmit(true, true, true, true);
+        emit MessagePassed(
+            messagePasser.messageNonce(),
+            address(L2Messenger),
+            address(L1Messenger),
+            0,
+            100,
+            L2Messenger.baseGas(hex"ff", 100),
+            xDomainCallData,
+            Hashing.hashWithdrawal(
+                Types.WithdrawalTransaction({
+                    nonce: messagePasser.messageNonce(),
+                    sender: address(L2Messenger),
+                    target: address(L1Messenger),
+                    mntValue: 0,
+                    ethValue: 100,
+                    gasLimit: L2Messenger.baseGas(hex"ff", 100),
+                    data: xDomainCallData
+                })
+            )
+        );
+
+        vm.prank(alice);
+        L2Messenger.sendMessage(100, recipient, hex"ff", uint32(100));
+    }
+
+
+    function test_sendMessage_with_mnt_value_succeeds() external {
+        vm.deal(alice,100);
+        bytes memory xDomainCallData = Encoding.encodeCrossDomainMessage(
+            L2Messenger.messageNonce(),
+            alice,
+            recipient,
+            100,
+            0,
+            100,
+            hex"ff"
+        );
+        vm.expectCall(
+            address(messagePasser),
+            100,
+            abi.encodeWithSelector(
+                L2ToL1MessagePasser.initiateWithdrawal.selector,
+                0,
+                address(L1Messenger),
+                L2Messenger.baseGas(hex"ff", 100),
+                xDomainCallData
+            )
+        );
+
+        // MessagePassed event
+        vm.expectEmit(true, true, true, true);
+        emit MessagePassed(
+            messagePasser.messageNonce(),
+            address(L2Messenger),
+            address(L1Messenger),
+            100,
+            0,
+            L2Messenger.baseGas(hex"ff", 100),
+            xDomainCallData,
+            Hashing.hashWithdrawal(
+                Types.WithdrawalTransaction({
+                    nonce: messagePasser.messageNonce(),
+                    sender: address(L2Messenger),
+                    target: address(L1Messenger),
+                    mntValue: 100,
+                    ethValue: 0,
+                    gasLimit: L2Messenger.baseGas(hex"ff", 100),
+                    data: xDomainCallData
+                })
+            )
+        );
+
+        vm.prank(alice);
+        L2Messenger.sendMessage{ value:100 }(0, recipient, hex"ff", uint32(100));
+    }
+
+
+
 
     function test_sendMessage_twice_succeeds() external {
         uint256 nonce = L2Messenger.messageNonce();
@@ -135,6 +252,49 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             target,
             0, // value
             0,
+            0,
+            hex"1111"
+        );
+
+        // the message hash is in the successfulMessages mapping
+        assert(L2Messenger.successfulMessages(hash));
+        // it is not in the received messages mapping
+        assertEq(L2Messenger.failedMessages(hash), false);
+    }
+
+    function test_relayMessage_with_eth_value_succeeds() external {
+        address target = address(0xabcd);
+        address sender = address(L1Messenger);
+        address caller = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
+
+
+        deal(address(l2ETH), address(L2Messenger), 100);
+        vm.store(address(l2ETH), bytes32(uint256(0x2)), bytes32(uint256(100))); //set total supply
+
+        vm.expectCall(target, hex"1111");
+
+        vm.prank(caller);
+
+        vm.expectEmit(true, true, true, true);
+
+        bytes32 hash = Hashing.hashCrossDomainMessage(
+            Encoding.encodeVersionedNonce(0, 1),
+            sender,
+            target,
+            0,
+            100,
+            0,
+            hex"1111"
+        );
+
+        emit RelayedMessage(hash);
+
+        L2Messenger.relayMessage(
+            Encoding.encodeVersionedNonce(0, 1), // nonce
+            sender,
+            target,
+            0, // value
+            100,
             0,
             hex"1111"
         );
