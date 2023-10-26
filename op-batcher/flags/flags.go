@@ -134,6 +134,8 @@ var optionalFlags = []cli.Flag{
 	DataStoreDurationFlag,
 	GraphPollingDurationFlag,
 	GraphProviderFlag,
+	RollUpMaxSizeFlag,
+	MantleDaNodeFlag,
 }
 
 func init() {

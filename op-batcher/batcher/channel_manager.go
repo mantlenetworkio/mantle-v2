@@ -63,6 +63,7 @@ func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig)
 
 		pendingTransactions:   make(map[txID]txData),
 		confirmedTransactions: make(map[txID]eth.BlockID),
+		daPendingTxData:       make(map[txID]txData),
 	}
 }
 

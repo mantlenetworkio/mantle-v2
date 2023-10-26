@@ -197,7 +197,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 			return nil, err
 		}
 		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
-			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "rollup transactionByte size", len(transactionByte))
+			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "rollup transactionByte size", len(transactionByte))
 			break
 		}
 		transactionByte = txnBufBytes
