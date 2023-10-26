@@ -22,8 +22,10 @@ const (
 	RollupConfigLocalIndex
 	RetrieverTimeout         = 60 * time.Second
 	DataStorePollingDuration = 1 * time.Second
-	RetrieverSocket          = ""
-	GraphProvider            = ""
+	// RetrieverSocket It will be modified into a configuration item when fraud proof was migrated later.,
+	RetrieverSocket = ""
+	// GraphProvider It will be modified into a configuration item when fraud proof was migrated later.,
+	GraphProvider = ""
 )
 
 type BootInfo struct {
