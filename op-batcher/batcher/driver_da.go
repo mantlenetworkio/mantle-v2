@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -68,7 +69,7 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 	for {
 		isFull, err := l.isChannelFull(l.killCtx)
 
-		if err != nil {
+		if err != nil && err != io.EOF {
 			l.log.Error("failed to  get next tx data", "err", err)
 			return
 		}
@@ -83,6 +84,9 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 			if done {
 				return
 			}
+		}
+		if err == io.EOF {
+			return
 		}
 
 	}
@@ -110,16 +114,16 @@ func (l *BatchSubmitter) isChannelFull(ctx context.Context) (bool, error) {
 	}
 
 	if l.state.pendingChannel != nil && l.state.pendingChannel.IsFull() && !l.state.pendingChannel.HasFrame() {
-		return true, nil
+		return true, err
 	}
-	return false, nil
+	return false, err
 }
 
 // When the channel is full, it starts fetching data from the channel's cache(pendingTransactions) and rollup to MantleDA.
 // A rollup consists of two transactions, InitDataStore and confirmStoredData, both of which are successful, meaning that the rollup is successful.
 // A rollup has a RollupMaxSize limit, if a channel's corresponding txData is larger than this limit, you need to commit it in several times.
 func (l *BatchSubmitter) loopRollupDa() (bool, error) {
-	var retry = 0
+	var retry int32
 	for {
 		//it means that all the txData has been rollup
 		if len(l.state.daPendingTxData) == 0 {
@@ -130,16 +134,16 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		if l.state.params == nil {
 			transactionData, err := l.txAggregator()
 			if err != nil {
-				l.log.Error("loopRollupDa txAggregator err,need to try again ", "err", err)
-				if isRetry(retry) {
+				l.log.Error("loopRollupDa txAggregator err,need to try again ", "retry time", retry, "err", err)
+				if isRetry(&retry) {
 					continue
 				}
 				return false, err
 			}
 			err = l.disperseStoreData(transactionData)
 			if err != nil {
-				l.log.Error("loopRollupDa disperseStoreData err,need to try again ", "err", err)
-				if isRetry(retry) {
+				l.log.Error("loopRollupDa disperseStoreData err,need to try again ", "retry time", retry, "err", err, "retry time", retry)
+				if isRetry(&retry) {
 					continue
 				}
 				return false, err
@@ -149,27 +153,27 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		cCtx, cancel := context.WithTimeout(l.killCtx, 2*time.Minute)
 		r, err := l.sendInitDataStoreTransaction(cCtx)
 		if err != nil {
-			l.log.Error("failed to send init datastore transaction,need to try again", "err", err)
+			l.log.Error("failed to send init datastore transaction,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(retry) {
+			if isRetry(&retry) {
 				continue
 			}
 			return false, err
 		}
 		receipt, err := l.handleInitDataStoreReceipt(r, cCtx)
 		if err != nil {
-			l.log.Error("failed to send confirm data transaction,need to try again", "err", err)
+			l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(retry) {
+			if isRetry(&retry) {
 				continue
 			}
 			return false, err
 		}
 		err = l.handleConfirmDataStoreReceipt(receipt)
 		if err != nil {
-			l.log.Error("failed to handle confirm data transaction receipt,need to try again", "err", err)
+			l.log.Error("failed to handle confirm data transaction receipt,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(retry) {
+			if isRetry(&retry) {
 				continue
 			}
 			return false, err
@@ -177,9 +181,9 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 	}
 }
 
-func isRetry(retry int) bool {
-	retry = retry + 1
-	if retry > DaLoopRetryNum {
+func isRetry(retry *int32) bool {
+	atomic.AddInt32(retry, 1)
+	if *retry > DaLoopRetryNum {
 		return false
 	}
 	time.Sleep(1 * time.Second)
@@ -201,7 +205,8 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 			break
 		}
 		transactionByte = txnBufBytes
-		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, &k)
+		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, k)
+		l.log.Info("added frame to daUnConfirmedTxID", "id", k.String())
 	}
 	nodesNumber, err := l.getMantleDANodesNumber()
 	if err != nil {
@@ -439,9 +444,9 @@ func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r *types.Receipt) error {
 func (l *BatchSubmitter) recordConfirmedEigenDATx(receipt *types.Receipt) {
 	l1block := eth.BlockID{Number: receipt.BlockNumber.Uint64(), Hash: receipt.BlockHash}
 
-	for k, _ := range l.state.daPendingTxData {
-		l.state.TxConfirmed(k, l1block)
-		l.daTxDataConfirmed(k)
+	for _, id := range l.state.daUnConfirmedTxID {
+		l.state.TxConfirmed(id, l1block)
+		l.daTxDataConfirmed(id)
 	}
 	l.state.clearMantleDAStatus()
 }
@@ -457,7 +462,7 @@ func (l *BatchSubmitter) getMantleDANodesNumber() (int, error) {
 
 func (l *BatchSubmitter) daTxDataConfirmed(id txID) {
 	if _, ok := l.state.daPendingTxData[id]; !ok {
-		l.log.Warn("unknown txID of txData  marked as confirmed", "id", id)
+		l.log.Warn("daConfirmed, unknown txID of txData  marked as confirmed", "id", id)
 		return
 	}
 	delete(l.state.daPendingTxData, id)

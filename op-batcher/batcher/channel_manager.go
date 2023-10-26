@@ -46,7 +46,7 @@ type channelManager struct {
 	// Set of txID -> frame data. For rollup to MantleDa
 	daPendingTxData map[txID]txData
 	//Set of unconfirmed txID
-	daUnConfirmedTxID []*txID
+	daUnConfirmedTxID []txID
 	// params of initStoreData on MantleDA
 	params *bcommon.StoreParams
 	//receipt of initStoreData transaction on L1
