@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ethereum/go-ethereum/log"
+
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -27,6 +28,10 @@ type L2Source interface {
 	L2OutputRoot() (eth.Bytes32, error)
 }
 
+type DaSource interface {
+	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+}
+
 type Driver struct {
 	logger         log.Logger
 	pipeline       Derivation
@@ -34,8 +39,8 @@ type Driver struct {
 	targetBlockNum uint64
 }
 
-func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, targetBlockNum uint64) *Driver {
-	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, l2Source, metrics.NoopMetrics)
+func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, daSyncer DaSource, targetBlockNum uint64) *Driver {
+	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, l2Source, daSyncer, metrics.NoopMetrics)
 	pipeline.Reset()
 	return &Driver{
 		logger:         logger,

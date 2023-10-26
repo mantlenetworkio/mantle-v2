@@ -3,6 +3,8 @@ package client
 import (
 	"encoding/binary"
 	"encoding/json"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
+	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-program/preimage"
@@ -17,6 +19,10 @@ const (
 	L2ClaimBlockNumberLocalIndex
 	L2ChainConfigLocalIndex
 	RollupConfigLocalIndex
+	RetrieverTimeout         = 60 * time.Second
+	DataStorePollingDuration = 1
+	RetrieverSocket          = ""
+	GraphProvider            = ""
 )
 
 type BootInfo struct {
@@ -26,6 +32,7 @@ type BootInfo struct {
 	L2ClaimBlockNumber uint64
 	L2ChainConfig      *params.ChainConfig
 	RollupConfig       *rollup.Config
+	DatastoreConfig    *da.MantleDataStoreConfig
 }
 
 type oracleClient interface {
@@ -55,7 +62,12 @@ func (br *BootstrapClient) BootInfo() *BootInfo {
 	if err != nil {
 		panic("failed to bootstrap rollup config")
 	}
-
+	daCfg := &da.MantleDataStoreConfig{
+		RetrieverSocket:          RetrieverSocket,
+		GraphProvider:            GraphProvider,
+		RetrieverTimeout:         RetrieverTimeout,
+		DataStorePollingDuration: DataStorePollingDuration,
+	}
 	return &BootInfo{
 		L1Head:             l1Head,
 		L2Head:             l2Head,
@@ -63,5 +75,6 @@ func (br *BootstrapClient) BootInfo() *BootInfo {
 		L2ClaimBlockNumber: l2ClaimBlockNumber,
 		L2ChainConfig:      l2ChainConfig,
 		RollupConfig:       rollupConfig,
+		DatastoreConfig:    daCfg,
 	}
 }
