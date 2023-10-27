@@ -199,7 +199,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) external payable onlyEOA {
+    ) external onlyEOA {
         _initiateMNTDeposit(msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
 
@@ -861,6 +861,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
+        require(msg.value==0, "L1StandardBridge: deposit MNT should not include ETH value.");
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(_from, address(this), _amount);
         bool success = IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
         require(success, "L1StandardBridge: approve for L1 MNT failed.");
