@@ -182,6 +182,14 @@ abstract contract CrossDomainMessenger is
      */
     address internal xDomainMsgSender;
 
+
+    /**
+     * @custom:legacy
+     * @custom:spacer pauseOwner
+     * @notice Spacer for backwards compatibility.
+     */
+    address internal pauseOwner_spacer;
+
     /**
      * @notice Nonce for the next message to be sent, without the message version applied. Use the
      *         messageNonce getter which will insert the message version into the nonce to give you
