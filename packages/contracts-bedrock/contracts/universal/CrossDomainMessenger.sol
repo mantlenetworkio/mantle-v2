@@ -209,7 +209,7 @@ abstract contract CrossDomainMessenger is
      *         A gap size of 41 was chosen here, so that the first slot used in a child contract
      *         would be a multiple of 50.
      */
-    uint256[42] private __gap;
+    uint256[41] private __gap;
 
     /**
      * @notice Emitted whenever a message is sent to the other chain.
