@@ -144,6 +144,7 @@ func (s *channelManager) clearMantleDAStatus() {
 	s.params = nil
 	s.initStoreDataReceipt = nil
 	s.daUnConfirmedTxID = s.daUnConfirmedTxID[:0]
+	s.metr.RecordRollupRetry(0)
 }
 
 // pendingChannelIsTimedOut returns true if submitted channel has timed out.
