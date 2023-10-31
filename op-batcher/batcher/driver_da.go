@@ -26,6 +26,7 @@ import (
 
 const EigenRollupMaxSize = 1024 * 1024 * 300
 const DaLoopRetryNum = 10
+const BytesPerCoefficient = 31
 
 var ErrInitDataStore = errors.New("init data store transaction failed")
 
@@ -78,7 +79,7 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 			if err != nil {
 				l.log.Error("failed to rollup da to mantle da", "err", err)
 				l.log.Warn("reset state in channel manager")
-				l.reSet()
+				l.reset()
 				return
 			}
 			if done {
@@ -160,7 +161,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 			}
 			return false, err
 		}
-		receipt, err := l.handleInitDataStoreReceipt(r, cCtx)
+		receipt, err := l.handleInitDataStoreReceipt(cCtx, r)
 		if err != nil {
 			l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
 			cancel()
@@ -201,7 +202,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 			return nil, err
 		}
 		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
-			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "rollup transactionByte size", len(transactionByte))
+			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
 			break
 		}
 		transactionByte = txnBufBytes
@@ -213,9 +214,9 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 		l.log.Warn("op-batcher get nodes number failed", "err", err)
 		nodesNumber = l.MantleDaNodes
 	}
-	l.log.Info("op-batcher transactionByte ", "size", len(transactionByte))
-	if len(transactionByte) <= 31*nodesNumber {
-		paddingBytes := make([]byte, (31*nodesNumber)-len(transactionByte))
+	l.log.Info("op-batcher transactionByte", "size", len(transactionByte))
+	if len(transactionByte) <= BytesPerCoefficient*nodesNumber {
+		paddingBytes := make([]byte, (BytesPerCoefficient*nodesNumber)-len(transactionByte))
 		transactionByte = append(transactionByte, paddingBytes...)
 	}
 	return transactionByte, nil
@@ -414,12 +415,12 @@ func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, search
 		searchData)
 }
 
-func (l *BatchSubmitter) handleInitDataStoreReceipt(txReceiptIn *types.Receipt, ctx context.Context) (*types.Receipt, error) {
+func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txReceiptIn *types.Receipt) (*types.Receipt, error) {
 	if txReceiptIn.Status == types.ReceiptStatusFailed {
-		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", txReceiptIn.TxHash)
+		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", txReceiptIn.TxHash.String())
 		return nil, ErrInitDataStore
 	}
-	l.log.Info("initDataStore tx successfully published", "tx_hash", txReceiptIn.TxHash)
+	l.log.Info("initDataStore tx successfully published", "tx_hash", txReceiptIn.TxHash.String())
 	l.state.initStoreDataReceipt = txReceiptIn
 	// start to confirmData
 	txReceiptOut, err := l.confirmStoredData(txReceiptIn.TxHash.Bytes(), ctx)
@@ -433,10 +434,10 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(txReceiptIn *types.Receipt, 
 
 func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r *types.Receipt) error {
 	if r.Status == types.ReceiptStatusFailed {
-		l.log.Error("unable to publish confirm data store tx", "tx_hash", r.TxHash)
+		l.log.Error("unable to publish confirm data store tx", "tx_hash", r.TxHash.String())
 		return errors.New("unable to publish confirm data store tx")
 	}
-	l.log.Info("Transaction confirmed", "tx_hash", r.TxHash, "status", r.Status, "block_hash", r.BlockHash, "block_number", r.BlockNumber)
+	l.log.Info("Transaction confirmed", "tx_hash", r.TxHash.String(), "status", r.Status, "block_hash", r.BlockHash.String(), "block_number", r.BlockNumber)
 	l.recordConfirmedEigenDATx(r)
 	return nil
 }
@@ -462,13 +463,13 @@ func (l *BatchSubmitter) getMantleDANodesNumber() (int, error) {
 
 func (l *BatchSubmitter) daTxDataConfirmed(id txID) {
 	if _, ok := l.state.daPendingTxData[id]; !ok {
-		l.log.Warn("daConfirmed, unknown txID of txData  marked as confirmed", "id", id)
+		l.log.Warn("daConfirmed, unknown txID of txData  marked as confirmed", "id", id.String())
 		return
 	}
 	delete(l.state.daPendingTxData, id)
 }
 
-func (l *BatchSubmitter) reSet() {
+func (l *BatchSubmitter) reset() {
 	l.state.clearPendingChannel()
 	l.state.clearMantleDAStatus()
 	l.lastStoredBlock = eth.BlockID{}

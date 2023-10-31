@@ -64,7 +64,7 @@ var (
 	}
 	RollUpMaxSizeFlag = cli.Uint64Flag{
 		Name:   "rollup-max-size",
-		Usage:  "Rollup transaction max size data for MantleDA",
+		Usage:  "Each rollup data to MantleDa maximum limit, rollup data can not be greater than the value, otherwise the rollup failure",
 		Value:  31600, // ktz for order is 3000
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
 	}
