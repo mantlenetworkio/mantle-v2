@@ -127,6 +127,7 @@ func (l *BatchSubmitter) isChannelFull(ctx context.Context) (bool, error) {
 // A rollup has a RollupMaxSize limit, if a channel's corresponding txData is larger than this limit, you need to commit it in several times.
 func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 	var retry int32
+	l.metr.RecordRollupRetry(0)
 	for {
 		//it means that all the txData has been rollup
 		if len(l.state.daPendingTxData) == 0 {
@@ -138,7 +139,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 			transactionData, err := l.txAggregator()
 			if err != nil {
 				l.log.Error("loopRollupDa txAggregator err,need to try again ", "retry time", retry, "err", err)
-				if isRetry(&retry) {
+				if l.isRetry(&retry) {
 					continue
 				}
 				return false, err
@@ -146,7 +147,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 			err = l.disperseStoreData(transactionData)
 			if err != nil {
 				l.log.Error("loopRollupDa disperseStoreData err,need to try again ", "retry time", retry, "err", err, "retry time", retry)
-				if isRetry(&retry) {
+				if l.isRetry(&retry) {
 					continue
 				}
 				return false, err
@@ -158,7 +159,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		if err != nil {
 			l.log.Error("failed to send init datastore transaction,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(&retry) {
+			if l.isRetry(&retry) {
 				continue
 			}
 			return false, err
@@ -167,7 +168,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		if err != nil {
 			l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(&retry) {
+			if l.isRetry(&retry) {
 				continue
 			}
 			return false, err
@@ -176,7 +177,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		if err != nil {
 			l.log.Error("failed to handle confirm data transaction receipt,need to try again", "retry time", retry, "err", err)
 			cancel()
-			if isRetry(&retry) {
+			if l.isRetry(&retry) {
 				continue
 			}
 			return false, err
@@ -184,8 +185,9 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 	}
 }
 
-func isRetry(retry *int32) bool {
+func (l *BatchSubmitter) isRetry(retry *int32) bool {
 	atomic.AddInt32(retry, 1)
+	l.metr.RecordRollupRetry(*retry)
 	if *retry > DaLoopRetryNum {
 		return false
 	}
@@ -205,6 +207,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 		}
 		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
 			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
+			l.metr.RecordTxOverMaxLimit()
 			break
 		}
 		transactionByte = txnBufBytes
@@ -263,6 +266,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 	if err != nil {
 		return nil, err
 	}
+	l.metr.RecordBatchTxInitDataSubmitted()
 
 	return receipt, nil
 }
@@ -420,8 +424,10 @@ func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, search
 func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txReceiptIn *types.Receipt) (*types.Receipt, error) {
 	if txReceiptIn.Status == types.ReceiptStatusFailed {
 		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", txReceiptIn.TxHash.String())
+		l.metr.RecordBatchTxInitDataFailed()
 		return nil, ErrInitDataStore
 	}
+	l.metr.RecordBatchTxInitDataSuccess()
 	l.log.Info("initDataStore tx successfully published", "tx_hash", txReceiptIn.TxHash.String())
 	l.state.initStoreDataReceipt = txReceiptIn
 	// start to confirmData
@@ -430,6 +436,7 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txRecei
 		l.log.Error("failed to confirm data", "err", err)
 		return nil, err
 	}
+	l.metr.RecordBatchTxConfirmDataSubmitted()
 	return txReceiptOut, nil
 
 }
@@ -437,9 +444,11 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txRecei
 func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r *types.Receipt) error {
 	if r.Status == types.ReceiptStatusFailed {
 		l.log.Error("unable to publish confirm data store tx", "tx_hash", r.TxHash.String())
+		l.metr.RecordBatchTxConfirmDataFailed()
 		return errors.New("unable to publish confirm data store tx")
 	}
 	l.log.Info("Transaction confirmed", "tx_hash", r.TxHash.String(), "status", r.Status, "block_hash", r.BlockHash.String(), "block_number", r.BlockNumber)
+	l.metr.RecordBatchTxConfirmDataSuccess()
 	l.recordConfirmedEigenDATx(r)
 	return nil
 }
