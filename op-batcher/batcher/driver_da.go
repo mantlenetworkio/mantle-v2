@@ -24,9 +24,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
-const EigenRollupMaxSize = 1024 * 1024 * 300
-const DaLoopRetryNum = 10
-const BytesPerCoefficient = 31
+const (
+	EigenRollupMaxSize  = 1024 * 1024 * 300
+	DaLoopRetryNum      = 10
+	BytesPerCoefficient = 31
+)
 
 var ErrInitDataStore = errors.New("init data store transaction failed")
 
