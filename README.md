@@ -39,9 +39,9 @@ Mantle V2 is an upgrade of [Mantle V1](https://github.com/mantlenetworkio/mantle
 
 Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has realized significant enhancements, including support for reduced gas fees, shorter deposit times, optimized node performance, and improved Ethereum compatibility, among other benefits. For more detailed information, please refer to this [documentation](https://community.optimism.io/docs/developers/bedrock/differences/).
 
-Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, such as:
+Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, for example, Mantle Network will introduce a new DA scheme implemented using EigenDA technology called **MantleDA**.
 
-- **MantleDA** - a simplified DA module implemented using EigenDA technology.
+Another significant enhancement involves the adoption of `$MNT` as the native token for Mantle Network, departing from the more common choice of `$ETH` in OP Stack implementations. This adjustment aligns the design more closely with Ethereum's native architecture, leading to reduced development and maintenance costs.
 
 > We encourage you to check out the [**Mantle tech docs**](https://docs.mantle.xyz) to learn more about the inner workings of Mantle.
 
