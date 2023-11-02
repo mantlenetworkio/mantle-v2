@@ -42,8 +42,6 @@ Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has re
 Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, such as:
 
 - **MantleDA** - a simplified DA module implemented using EigenDA technology.
-- **Threshold Signature Scheme** - enhancing decentralization further.
-- **Improved Fraud Proof** - Mantle Network's Fraud Proof module, built upon the Specular Network.
 
 > We encourage you to check out the [**Mantle tech docs**](https://docs.mantle.xyz) to learn more about the inner workings of Mantle.
 
