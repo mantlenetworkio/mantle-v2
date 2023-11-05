@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
+	"github.com/ethereum-optimism/optimism/op-node/tokenratio"
 )
 
 type EthClientConfig struct {
@@ -62,6 +63,12 @@ type EthClientConfig struct {
 	// till we re-attempt the user-preferred methods.
 	// If this is 0 then the client does not fall back to less optimal but available methods.
 	MethodResetDuration time.Duration
+
+	// token ratio configs
+	PriceBackendURL                  string
+	PriceBackendUniswapURL           string
+	tokenPricerUpdateFrequencySecond uint64
+	tokenRatioMode                   uint64
 }
 
 func (c *EthClientConfig) Check() error {
@@ -132,6 +139,9 @@ type EthClient struct {
 
 	// methodResetDuration defines how long we take till we reset lastMethodsReset
 	methodResetDuration time.Duration
+
+	// token ratio client
+	tokenRatioClient *tokenratio.Client
 }
 
 func (s *EthClient) PickReceiptsMethod(txCount uint64) ReceiptsFetchingMethod {
@@ -165,6 +175,14 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 		return nil, fmt.Errorf("bad config, cannot create L1 source: %w", err)
 	}
 	client = LimitRPC(client, config.MaxConcurrentRequests)
+
+	// tokenRatio
+	tokenRatio := tokenratio.NewClient(config.PriceBackendURL, config.PriceBackendUniswapURL,
+		config.tokenPricerUpdateFrequencySecond, config.tokenRatioMode)
+	if tokenRatio == nil {
+		return nil, fmt.Errorf("bad config, cannot create, cannot create token ratio client")
+	}
+
 	return &EthClient{
 		client:                  client,
 		maxBatchSize:            config.MaxRequestsPerBatch,
@@ -179,6 +197,7 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 		availableReceiptMethods: AvailableReceiptsFetchingMethods(config.RPCProviderKind),
 		lastMethodsReset:        time.Now(),
 		methodResetDuration:     config.MethodResetDuration,
+		tokenRatioClient:        tokenRatio,
 	}, nil
 }
 
@@ -228,6 +247,14 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if header == nil {
 		return nil, ethereum.NotFound
 	}
+	//
+	//// token ratio
+	//tokenRatio, err := s.tokenRatioClient.PriceRatioWithMode()
+	//if err != nil {
+	//	tokenRatio = tokenratio.DefaultTokenRatio
+	//}
+	//header.BaseFee = (*hexutil.Big)(new(big.Int).Mul(header.BaseFee.ToInt(), big.NewInt(int64(tokenRatio))))
+
 	info, err := header.Info(s.trustRPC, s.mustBePostMerge)
 	if err != nil {
 		return nil, err
@@ -295,6 +322,14 @@ func (s *EthClient) InfoByHash(ctx context.Context, hash common.Hash) (eth.Block
 		return header.(eth.BlockInfo), nil
 	}
 	return s.headerCall(ctx, "eth_getBlockByHash", hashID(hash))
+}
+
+func (s *EthClient) TokenRatio(ctx context.Context) float64 {
+	tokenRatio, err := s.tokenRatioClient.PriceRatioWithMode()
+	if err != nil {
+		return tokenratio.DefaultTokenRatio
+	}
+	return tokenRatio
 }
 
 func (s *EthClient) InfoByNumber(ctx context.Context, number uint64) (eth.BlockInfo, error) {

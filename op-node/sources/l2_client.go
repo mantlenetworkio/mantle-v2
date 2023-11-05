@@ -52,6 +52,11 @@ func L2ClientDefaultConfig(config *rollup.Config, trustRPC bool) *L2ClientConfig
 			MustBePostMerge:       true,
 			RPCProviderKind:       RPCKindBasic,
 			MethodResetDuration:   time.Minute,
+			
+			PriceBackendURL:                  "https://api.bybit.com",
+			PriceBackendUniswapURL:           "https://eth-mainnet.g.alchemy.com/v2/C1HA_ubz9iHEBkGZi-LxwHijrRHzRhUe",
+			tokenPricerUpdateFrequencySecond: 5,
+			tokenRatioMode:                   0,
 		},
 		// Not bounded by span, to cover find-sync-start range fully for speedy recovery after errors.
 		L2BlockRefsCacheSize: fullSpan,

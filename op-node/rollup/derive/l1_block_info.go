@@ -165,15 +165,16 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 	// Set a very large gas limit with `IsSystemTransaction` to ensure
 	// that the L1 Attributes Transaction does not run out of gas.
 	out := &types.DepositTx{
-		SourceHash:          source.SourceHash(),
-		From:                L1InfoDepositerAddress,
-		To:                  &L1BlockAddress,
-		Mint:                nil,
-		EthValue:            nil,
-		Value:               big.NewInt(0),
-		Gas:                 150_000_000,
-		IsSystemTransaction: true,
-		Data:                data,
+		SourceHash:             source.SourceHash(),
+		From:                   L1InfoDepositerAddress,
+		To:                     &L1BlockAddress,
+		Mint:                   nil,
+		EthValue:               nil,
+		Value:                  big.NewInt(0),
+		Gas:                    150_000_000,
+		IsSystemTransaction:    true,
+		IsBroadcastTransaction: false,
+		Data:                   data,
 	}
 	// With the regolith fork we disable the IsSystemTx functionality, and allocate real gas
 	if regolith {

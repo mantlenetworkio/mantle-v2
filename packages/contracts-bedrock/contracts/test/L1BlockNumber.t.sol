@@ -28,6 +28,9 @@ contract L1BlockNumberTest is Test {
             _l1FeeOverhead: 2,
             _l1FeeScalar: 3
         });
+        lb.setTokenRatio({
+            _tokenRatio: 4000
+        });
     }
 
     function test_getL1BlockNumber_succeeds() external {

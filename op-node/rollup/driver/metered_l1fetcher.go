@@ -47,6 +47,11 @@ func (m *MeteredL1Fetcher) InfoByHash(ctx context.Context, hash common.Hash) (et
 	return m.inner.InfoByHash(ctx, hash)
 }
 
+func (m *MeteredL1Fetcher) TokenRatio(ctx context.Context) float64 {
+	defer m.recordTime("TokenRatio")()
+	return m.inner.TokenRatio(ctx)
+}
+
 func (m *MeteredL1Fetcher) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error) {
 	defer m.recordTime("InfoAndTxsByHash")()
 	return m.inner.InfoAndTxsByHash(ctx, hash)

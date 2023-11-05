@@ -134,7 +134,15 @@ func CheckBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1BlockRef, l
 			return BatchDrop
 		}
 		if txBytes[0] == types.DepositTxType {
-			log.Warn("sequencers may not embed any deposits into batch data, but found tx that has one", "tx_index", i)
+			var tx types.Transaction
+			if err := tx.UnmarshalBinary(txBytes); err != nil {
+				log.Warn("failed to parse a deposit tx", "tx_index", i)
+				return BatchDrop
+			}
+			if tx.IsBroadcastTx() {
+				return BatchAccept
+			}
+			log.Warn("sequencers may not embed any deposits(without enabling broadcast) into batch data, but found tx that has one", "tx_index", i)
 			return BatchDrop
 		}
 	}

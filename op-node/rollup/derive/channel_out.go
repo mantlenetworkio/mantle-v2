@@ -217,7 +217,7 @@ func (co *ChannelOut) OutputFrame(w *bytes.Buffer, maxSize uint64) (uint16, erro
 func BlockToBatch(block *types.Block) (*BatchData, L1BlockInfo, error) {
 	opaqueTxs := make([]hexutil.Bytes, 0, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
-		if tx.Type() == types.DepositTxType {
+		if tx.Type() == types.DepositTxType && !tx.IsBroadcastTx() {
 			continue
 		}
 		otx, err := tx.MarshalBinary()

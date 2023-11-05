@@ -24,6 +24,9 @@ contract L1BlockTest is CommonTest {
             _l1FeeOverhead: 2,
             _l1FeeScalar: 3
         });
+        lb.setTokenRatio({
+            _tokenRatio: 4000
+        });
     }
 
     function testFuzz_updatesValues_succeeds(
@@ -34,10 +37,12 @@ contract L1BlockTest is CommonTest {
         uint64 s,
         bytes32 bt,
         uint256 fo,
-        uint256 fs
+        uint256 fs,
+        uint256 tr
     ) external {
         vm.prank(depositor);
         lb.setL1BlockValues(n, t, b, h, s, bt, fo, fs);
+        lb.setTokenRatio(tr);
         assertEq(lb.number(), n);
         assertEq(lb.timestamp(), t);
         assertEq(lb.basefee(), b);
@@ -46,6 +51,7 @@ contract L1BlockTest is CommonTest {
         assertEq(lb.batcherHash(), bt);
         assertEq(lb.l1FeeOverhead(), fo);
         assertEq(lb.l1FeeScalar(), fs);
+        assertEq(lb.tokenRatio(), tr);
     }
 
     function test_number_succeeds() external {
@@ -79,6 +85,9 @@ contract L1BlockTest is CommonTest {
             _batcherHash: bytes32(type(uint256).max),
             _l1FeeOverhead: type(uint256).max,
             _l1FeeScalar: type(uint256).max
+        });
+        lb.setTokenRatio({
+            _tokenRatio: type(uint256).max
         });
     }
 }

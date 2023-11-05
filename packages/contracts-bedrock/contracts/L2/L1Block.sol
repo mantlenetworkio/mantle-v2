@@ -60,6 +60,11 @@ contract L1Block is Semver {
     uint256 public l1FeeScalar;
 
     /**
+     * @notice The token ratio is ETH_price/MNT_Price, used to calculate and collect transaction fee.
+     */
+    uint256 public tokenRatio;
+
+    /**
      * @custom:semver 1.0.0
      */
     constructor() Semver(1, 0, 0) {}
@@ -99,5 +104,21 @@ contract L1Block is Semver {
         batcherHash = _batcherHash;
         l1FeeOverhead = _l1FeeOverhead;
         l1FeeScalar = _l1FeeScalar;
+    }
+
+    /**
+ * @notice Updates the L1 token ratio.
+     *
+     * @param _tokenRatio     Token ratio.
+     */
+    function setTokenRatio(
+        uint256 _tokenRatio
+    ) external {
+        require(
+            msg.sender == DEPOSITOR_ACCOUNT,
+            "L1Block: only the depositor account can set L1 block values"
+        );
+
+        tokenRatio = _tokenRatio;
     }
 }
