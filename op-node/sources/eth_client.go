@@ -65,10 +65,9 @@ type EthClientConfig struct {
 	MethodResetDuration time.Duration
 
 	// token ratio configs
-	PriceBackendURL                  string
-	PriceBackendUniswapURL           string
-	tokenPricerUpdateFrequencySecond uint64
-	tokenRatioMode                   uint64
+	TokenRatioCexURL          string
+	TokenRatioDexURL          string
+	TokenRatioUpdateFrequency uint64
 }
 
 func (c *EthClientConfig) Check() error {
@@ -170,20 +169,13 @@ func (s *EthClient) OnReceiptsMethodErr(m ReceiptsFetchingMethod, err error) {
 
 // NewEthClient returns an [EthClient], wrapping an RPC with bindings to fetch ethereum data with added error logging,
 // metric tracking, and caching. The [EthClient] uses a [LimitRPC] wrapper to limit the number of concurrent RPC requests.
-func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, config *EthClientConfig) (*EthClient, error) {
+func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, config *EthClientConfig, needTokenRatio bool) (*EthClient, error) {
 	if err := config.Check(); err != nil {
 		return nil, fmt.Errorf("bad config, cannot create L1 source: %w", err)
 	}
 	client = LimitRPC(client, config.MaxConcurrentRequests)
 
-	// tokenRatio
-	tokenRatio := tokenratio.NewClient(config.PriceBackendURL, config.PriceBackendUniswapURL,
-		config.tokenPricerUpdateFrequencySecond, config.tokenRatioMode)
-	if tokenRatio == nil {
-		return nil, fmt.Errorf("bad config, cannot create, cannot create token ratio client")
-	}
-
-	return &EthClient{
+	ethClient := &EthClient{
 		client:                  client,
 		maxBatchSize:            config.MaxRequestsPerBatch,
 		trustRPC:                config.TrustRPC,
@@ -197,8 +189,20 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 		availableReceiptMethods: AvailableReceiptsFetchingMethods(config.RPCProviderKind),
 		lastMethodsReset:        time.Now(),
 		methodResetDuration:     config.MethodResetDuration,
-		tokenRatioClient:        tokenRatio,
-	}, nil
+	}
+
+	// tokenRatio client, only used for sequencer and L1
+	if needTokenRatio {
+		log.Info("tokenratio.NewClient")
+		tokenRatio := tokenratio.NewClient(config.TokenRatioCexURL, config.TokenRatioDexURL,
+			config.TokenRatioUpdateFrequency)
+		if tokenRatio == nil {
+			return nil, fmt.Errorf("bad config, cannot create, cannot create token ratio client")
+		}
+		ethClient.tokenRatioClient = tokenRatio
+	}
+
+	return ethClient, nil
 }
 
 // SubscribeNewHead subscribes to notifications about the current blockchain head on the given channel.
@@ -247,14 +251,6 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if header == nil {
 		return nil, ethereum.NotFound
 	}
-	//
-	//// token ratio
-	//tokenRatio, err := s.tokenRatioClient.PriceRatioWithMode()
-	//if err != nil {
-	//	tokenRatio = tokenratio.DefaultTokenRatio
-	//}
-	//header.BaseFee = (*hexutil.Big)(new(big.Int).Mul(header.BaseFee.ToInt(), big.NewInt(int64(tokenRatio))))
-
 	info, err := header.Info(s.trustRPC, s.mustBePostMerge)
 	if err != nil {
 		return nil, err
@@ -325,11 +321,7 @@ func (s *EthClient) InfoByHash(ctx context.Context, hash common.Hash) (eth.Block
 }
 
 func (s *EthClient) TokenRatio(ctx context.Context) float64 {
-	tokenRatio, err := s.tokenRatioClient.PriceRatioWithMode()
-	if err != nil {
-		return tokenratio.DefaultTokenRatio
-	}
-	return tokenRatio
+	return s.tokenRatioClient.TokenRatio()
 }
 
 func (s *EthClient) InfoByNumber(ctx context.Context, number uint64) (eth.BlockInfo, error) {

@@ -11,19 +11,17 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type TokenRatioMode uint64
-
 // Client is an HTTP based TokenPriceClient
 type Client struct {
-	client               *resty.Client
-	uniswapQuoterClient  *uniswapClient
-	frequency            time.Duration
-	lastRatio            float64
-	lastEthPrice         float64
-	lastMntPrice         float64
-	lastUpdate           time.Time
-	tokenRatioMode       TokenRatioMode
-	tokenPairForMNTPrice string
+	client              *resty.Client
+	uniswapQuoterClient *uniswapClient
+
+	frequency time.Duration
+
+	lastEthPrice float64
+	lastMntPrice float64
+	lastRatio    float64
+	latestRatio  float64
 }
 
 var (
@@ -31,10 +29,10 @@ var (
 
 	// DefaultTokenRatio is eth_price / mnt_price, 4000 = $1800/$0.45
 	DefaultTokenRatio = float64(4000)
-	// TokenRatioMax token_ratio upper bounds
-	TokenRatioMax = float64(100000)
-	// TokenRatioMin token_ratio lower bounds
-	TokenRatioMin = float64(100)
+	// MaxTokenRatio token_ratio upper bounds
+	MaxTokenRatio = float64(100000)
+	// MinTokenRatio token_ratio lower bounds
+	MinTokenRatio = float64(100)
 
 	// DefaultETHPrice is default eth_price
 	// If SwitchOneDollarTokenRatio valid, use DefaultETHPrice to set token_ratio to make mnt_price is 1$
@@ -50,23 +48,14 @@ var (
 	// MNTPriceMin mnt_price lower bounds
 	MNTPriceMin = 0.01
 
-	// RealTokenRatioMode use eth_price / mnt_price to set token_ratio
-	RealTokenRatioMode = TokenRatioMode(0)
-	// OneDollarTokenRatioMode use eth_price to set token_ratio, so mnt price is 1$
-	OneDollarTokenRatioMode = TokenRatioMode(1)
-	// DefaultTokenRatioMode use DefaultTokenRatio to set token_ratio
-	DefaultTokenRatioMode = TokenRatioMode(2)
-
-	// token pairs, used to query token pairs price
 	// ETHUSDT used to query eth/usdt price
 	ETHUSDT = "ETHUSDT"
 	// MNTUSDT used to query mnt/usdt price
 	MNTUSDT = "MNTUSDT"
 )
 
-// NewClient create a new Client given a remote HTTP url, update frequency and different mode_switch for token ratio
-// tokenPairMNTMode(true/false) to choose if mnt_price is in production
-func NewClient(url, uniswapURL string, frequency uint64, tokenRatioMode uint64) *Client {
+// NewClient create a new Client given a remote HTTP url, update frequency for token ratio
+func NewClient(url, uniswapURL string, frequency uint64) *Client {
 	client := resty.New()
 	client.SetHostURL(url)
 	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
@@ -84,23 +73,41 @@ func NewClient(url, uniswapURL string, frequency uint64, tokenRatioMode uint64) 
 		return nil
 	}
 
-	return &Client{
-		client:               client,
-		uniswapQuoterClient:  uniswapQuoterClient,
-		frequency:            time.Duration(frequency) * time.Second,
-		lastRatio:            DefaultTokenRatio,
-		lastEthPrice:         DefaultETHPrice,
-		lastMntPrice:         DefaultMNTPrice,
-		tokenRatioMode:       TokenRatioMode(tokenRatioMode),
-		tokenPairForMNTPrice: MNTUSDT,
+	tokenRatioClient := &Client{
+		client:              client,
+		uniswapQuoterClient: uniswapQuoterClient,
+		frequency:           time.Duration(frequency) * time.Second,
+		lastRatio:           DefaultTokenRatio,
+		latestRatio:         DefaultTokenRatio,
+		lastEthPrice:        DefaultETHPrice,
+		lastMntPrice:        DefaultMNTPrice,
+	}
+
+	go tokenRatioClient.loop()
+
+	return tokenRatioClient
+}
+
+func (c *Client) loop() {
+	for {
+		tokenRatio, err := c.tokenRatio()
+		if err != nil {
+			log.Error("token ratio", "tokenRatio", err)
+			time.Sleep(c.frequency)
+		}
+		c.lastRatio = c.latestRatio
+		c.latestRatio = tokenRatio
+		log.Info("token ratio", "last token ratio", c.lastRatio, "latest token ratio", c.latestRatio)
+
+		time.Sleep(c.frequency)
 	}
 }
 
-func (c *Client) PriceRatioWithMode() (float64, error) {
-	if time.Now().Sub(c.lastUpdate) < c.frequency {
-		return c.lastRatio, nil
-	}
+func (c *Client) TokenRatio() float64 {
+	return c.latestRatio
+}
 
+func (c *Client) tokenRatio() (float64, error) {
 	// Todo query token prices concurrent
 	var mntPrices, ethPrices []float64
 	// get token price from oracle1(dex)
@@ -134,20 +141,6 @@ func (c *Client) PriceRatioWithMode() (float64, error) {
 	// calculate ratio
 	ratio := c.determineTokenRatio(mntPrice, ethPrice)
 
-	switch c.tokenRatioMode {
-	case DefaultTokenRatioMode:
-		// use default eth/mnt price to set token ratio
-		ratio = DefaultTokenRatio
-	case OneDollarTokenRatioMode:
-		// supposing that mnt is 1 USD, so token_ratio is equals to eth_price
-		ratio = ethPrice
-	default:
-		// default mode is RealTokenRatioMode which uses eth_price / mnt_price to set token_ratio
-	}
-
-	log.Info("token ratio", "token ratio", ratio)
-
-	c.lastUpdate = time.Now()
 	c.lastRatio = ratio
 	c.lastEthPrice = ethPrice
 	c.lastMntPrice = mntPrice
@@ -161,7 +154,7 @@ func (c *Client) getTokenPricesFromCex() (float64, float64) {
 		log.Warn("get token prices", "query eth price error", err)
 		return 0, 0
 	}
-	mntPrice, err := c.queryV5(c.tokenPairForMNTPrice)
+	mntPrice, err := c.queryV5(MNTUSDT)
 	if err != nil {
 		log.Warn("get token prices", "query mnt price error", err)
 		return 0, ethPrice
@@ -188,8 +181,8 @@ func (c *Client) determineETHPrice(price float64) float64 {
 
 func (c *Client) determineTokenRatio(mntPrice, ethPrice float64) float64 {
 	// calculate [tokenRatioMin, tokenRatioMax]
-	tokenRatioMin := getMax(c.lastRatio*0.95, TokenRatioMin)
-	tokenRatioMax := getMin(c.lastRatio*1.05, TokenRatioMax)
+	tokenRatioMin := getMax(c.lastRatio*0.95, MinTokenRatio)
+	tokenRatioMax := getMin(c.lastRatio*1.05, MaxTokenRatio)
 
 	ratio := ethPrice / mntPrice
 	if ratio <= tokenRatioMin {

@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
-// L1ReceiptsFetcher fetches L1 header info and receipts for the payload attributes derivation (the info tx and deposits)
+// L1ReceiptsFetcher fetches L1 header info, receipts and token Ratio for the payload attributes derivation (the info tx and deposits)
 type L1ReceiptsFetcher interface {
 	InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error)
 	FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error)

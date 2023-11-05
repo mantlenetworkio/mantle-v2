@@ -52,11 +52,6 @@ func L2ClientDefaultConfig(config *rollup.Config, trustRPC bool) *L2ClientConfig
 			MustBePostMerge:       true,
 			RPCProviderKind:       RPCKindBasic,
 			MethodResetDuration:   time.Minute,
-			
-			PriceBackendURL:                  "https://api.bybit.com",
-			PriceBackendUniswapURL:           "https://eth-mainnet.g.alchemy.com/v2/C1HA_ubz9iHEBkGZi-LxwHijrRHzRhUe",
-			tokenPricerUpdateFrequencySecond: 5,
-			tokenRatioMode:                   0,
 		},
 		// Not bounded by span, to cover find-sync-start range fully for speedy recovery after errors.
 		L2BlockRefsCacheSize: fullSpan,
@@ -83,7 +78,7 @@ type L2Client struct {
 // for fetching and caching eth.L2BlockRef values. This includes fetching an L2BlockRef by block number, label, or hash.
 // See: [L2BlockRefByLabel], [L2BlockRefByNumber], [L2BlockRefByHash]
 func NewL2Client(client client.RPC, log log.Logger, metrics caching.Metrics, config *L2ClientConfig) (*L2Client, error) {
-	ethClient, err := NewEthClient(client, log, metrics, &config.EthClientConfig)
+	ethClient, err := NewEthClient(client, log, metrics, &config.EthClientConfig, false)
 	if err != nil {
 		return nil, err
 	}

@@ -102,12 +102,15 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 func NewL1EndpointConfig(ctx *cli.Context) *node.L1EndpointConfig {
 	return &node.L1EndpointConfig{
-		L1NodeAddr:       ctx.GlobalString(flags.L1NodeAddr.Name),
-		L1TrustRPC:       ctx.GlobalBool(flags.L1TrustRPC.Name),
-		L1RPCKind:        sources.RPCProviderKind(strings.ToLower(ctx.GlobalString(flags.L1RPCProviderKind.Name))),
-		RateLimit:        ctx.GlobalFloat64(flags.L1RPCRateLimit.Name),
-		BatchSize:        ctx.GlobalInt(flags.L1RPCMaxBatchSize.Name),
-		HttpPollInterval: ctx.Duration(flags.L1HTTPPollInterval.Name),
+		L1NodeAddr:                ctx.GlobalString(flags.L1NodeAddr.Name),
+		L1TrustRPC:                ctx.GlobalBool(flags.L1TrustRPC.Name),
+		L1RPCKind:                 sources.RPCProviderKind(strings.ToLower(ctx.GlobalString(flags.L1RPCProviderKind.Name))),
+		RateLimit:                 ctx.GlobalFloat64(flags.L1RPCRateLimit.Name),
+		BatchSize:                 ctx.GlobalInt(flags.L1RPCMaxBatchSize.Name),
+		HttpPollInterval:          ctx.Duration(flags.L1HTTPPollInterval.Name),
+		TokenRatioCexURL:          ctx.GlobalString(flags.TokenRatioCexURLFlag.Name),
+		TokenRatioDexURL:          ctx.GlobalString(flags.TokenRatioDexURLFlag.Name),
+		TokenRatioUpdateFrequency: ctx.GlobalUint64(flags.TokenRatioUpdateFrequencyFlag.Name),
 	}
 }
 

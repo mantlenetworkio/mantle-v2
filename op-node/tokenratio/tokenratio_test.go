@@ -7,7 +7,7 @@ import (
 )
 
 func TestGetTokenPrice(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 	ethPrice, err := tokenPricer.query("ETHUSDT")
 	require.NoError(t, err)
 	t.Logf("ETH price:%v", ethPrice)
@@ -32,49 +32,49 @@ func TestGetTokenPrice(t *testing.T) {
 }
 
 func TestGetTokenPriceWithRealTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithOneDollarTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 1)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
 	ethPrice, err := tokenPricer.query("ETHUSDT")
 	require.NoError(t, err)
 	t.Logf("ETH price:%v", ethPrice)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithOneDollarTokenRatioMode2(t *testing.T) {
-	tokenPricer := NewClient("", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 1)
+	tokenPricer := NewClient("", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
 	_, ethPrice := tokenPricer.getTokenPricesFromUniswap()
 	t.Logf("ETH price:%v", ethPrice)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithOneDollarTokenRatioMode3(t *testing.T) {
-	tokenPricer := NewClient("", "https://mainnet.infura.io/v3", 3, 1)
+	tokenPricer := NewClient("", "https://mainnet.infura.io/v3", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	require.Equal(t, DefaultETHPrice, ratio)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithDefaultTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 2)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	require.Equal(t, DefaultTokenRatio, ratio)
 	t.Logf("ratio:%v", ratio)
@@ -82,9 +82,9 @@ func TestGetTokenPriceWithDefaultTokenRatioMode(t *testing.T) {
 
 func TestGetTokenPriceWithNoSource(t *testing.T) {
 	// source url are both invalid, so can not access correct prices
-	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	require.Equal(t, DefaultTokenRatio, ratio)
 	t.Logf("ratio:%v", ratio)
@@ -92,27 +92,27 @@ func TestGetTokenPriceWithNoSource(t *testing.T) {
 
 func TestGetTokenPriceWithOnlySource1(t *testing.T) {
 	// uniswapURL is invalid, so can not access correct prices
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithOnlySource2(t *testing.T) {
 	// only uniswapURL is valid
-	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }
 
 func TestGetTokenPriceWithMNT(t *testing.T) {
 	// only uniswapURL is valid
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3, 0)
+	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
-	ratio, err := tokenPricer.PriceRatioWithMode()
+	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
 	t.Logf("ratio:%v", ratio)
 }

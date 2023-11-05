@@ -152,6 +152,14 @@ type L1EndpointConfig struct {
 	// It is recommended to use websockets or IPC for efficient following of the changing block.
 	// Setting this to 0 disables polling.
 	HttpPollInterval time.Duration
+
+	// Token ratio config
+	// TokenRatioCexURL Cex API URL. Obtaining the token ratio value through a cex
+	TokenRatioCexURL string
+	// TokenRatioDexURL Dex URL. Obtaining the token ratio value through a dex
+	TokenRatioDexURL string
+	// TokenRatioUpdateFrequency The update frequency of token ratio, for example, updating every 3 seconds
+	TokenRatioUpdateFrequency uint64
 }
 
 var _ L1EndpointSetup = (*L1EndpointConfig)(nil)
@@ -181,6 +189,9 @@ func (cfg *L1EndpointConfig) Setup(ctx context.Context, log log.Logger, rollupCf
 	}
 	rpcCfg := sources.L1ClientDefaultConfig(rollupCfg, cfg.L1TrustRPC, cfg.L1RPCKind)
 	rpcCfg.MaxRequestsPerBatch = cfg.BatchSize
+	rpcCfg.TokenRatioCexURL = cfg.TokenRatioCexURL
+	rpcCfg.TokenRatioDexURL = cfg.TokenRatioCexURL
+	rpcCfg.TokenRatioUpdateFrequency = cfg.TokenRatioUpdateFrequency
 	return l1Node, rpcCfg, nil
 }
 

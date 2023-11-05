@@ -124,7 +124,7 @@ func (n *OpNode) initL1(ctx context.Context, cfg *Config) error {
 	}
 
 	n.l1Source, err = sources.NewL1Client(
-		client.NewInstrumentedRPC(l1Node, n.metrics), n.log, n.metrics.L1SourceCache, rpcCfg)
+		client.NewInstrumentedRPC(l1Node, n.metrics), n.log, n.metrics.L1SourceCache, rpcCfg, cfg.Driver.SequencerEnabled)
 	if err != nil {
 		return fmt.Errorf("failed to create L1 source: %w", err)
 	}

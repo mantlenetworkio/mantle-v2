@@ -156,6 +156,25 @@ var (
 		Required: false,
 		Value:    4,
 	}
+	TokenRatioCexURLFlag = cli.StringFlag{
+		Name:     "tokenratio.cex-url",
+		Usage:    "Cex API URL. Obtaining the token ratio value through a cex.",
+		EnvVar:   prefixEnvVar("TOKENRATIO_CEX_URL"),
+		Required: false,
+	}
+	TokenRatioDexURLFlag = cli.StringFlag{
+		Name:     "tokenratio.dex-url",
+		Usage:    "Dex URL. Obtaining the token ratio value through a dex.",
+		EnvVar:   prefixEnvVar("TOKENRATIO_DEX_URL"),
+		Required: false,
+	}
+	TokenRatioUpdateFrequencyFlag = cli.Uint64Flag{
+		Name:     "tokenratio.update-frequency",
+		Usage:    "The update frequency of token ratio, for example, updating every 3 seconds",
+		EnvVar:   prefixEnvVar("TOKENRATIO_UPDATE_FREQUENCY"),
+		Required: false,
+		Value:    15,
+	}
 	L1EpochPollIntervalFlag = cli.DurationFlag{
 		Name:     "l1.epoch-poll-interval",
 		Usage:    "Poll interval for retrieving new L1 epoch updates such as safe and finalized block changes. Disabled if 0 or negative.",
@@ -254,6 +273,9 @@ var optionalFlags = []cli.Flag{
 	SequencerStoppedFlag,
 	SequencerMaxSafeLagFlag,
 	SequencerL1Confs,
+	TokenRatioCexURLFlag,
+	TokenRatioDexURLFlag,
+	TokenRatioUpdateFrequencyFlag,
 	L1EpochPollIntervalFlag,
 	RetrieverSocketFlag,
 	RetrieverTimeoutFlag,

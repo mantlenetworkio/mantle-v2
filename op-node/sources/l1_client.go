@@ -42,11 +42,6 @@ func L1ClientDefaultConfig(config *rollup.Config, trustRPC bool, kind RPCProvide
 			MustBePostMerge:       false,
 			RPCProviderKind:       kind,
 			MethodResetDuration:   time.Minute,
-
-			PriceBackendURL:                  "https://api.bybit.com",
-			PriceBackendUniswapURL:           "https://eth-mainnet.g.alchemy.com/v2/C1HA_ubz9iHEBkGZi-LxwHijrRHzRhUe",
-			tokenPricerUpdateFrequencySecond: 5,
-			tokenRatioMode:                   0,
 		},
 		// Not bounded by span, to cover find-sync-start range fully for speedy recovery after errors.
 		L1BlockRefsCacheSize: fullSpan,
@@ -65,8 +60,8 @@ type L1Client struct {
 }
 
 // NewL1Client wraps a RPC with bindings to fetch L1 data, while logging errors, tracking metrics (optional), and caching.
-func NewL1Client(client client.RPC, log log.Logger, metrics caching.Metrics, config *L1ClientConfig) (*L1Client, error) {
-	ethClient, err := NewEthClient(client, log, metrics, &config.EthClientConfig)
+func NewL1Client(client client.RPC, log log.Logger, metrics caching.Metrics, config *L1ClientConfig, isSequencer bool) (*L1Client, error) {
+	ethClient, err := NewEthClient(client, log, metrics, &config.EthClientConfig, isSequencer)
 	if err != nil {
 		return nil, err
 	}
