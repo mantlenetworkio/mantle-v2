@@ -34,7 +34,7 @@ const config: DeployConfig = {
   governanceTokenSymbol: 'OP',
   governanceTokenOwner: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
 
-  l2GenesisBlockGasLimit: '0x17D7840',
+  l2GenesisBlockGasLimit: '0x4000000000000',
   l2GenesisBlockCoinbase: '0x4200000000000000000000000000000000000011',
   l2GenesisBlockBaseFeePerGas: '0x3b9aca00',
 

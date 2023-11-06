@@ -122,15 +122,12 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		txs = append(txs, tokenRatioTx)
 	}
 
-	gasLimit := uint64(1125899906842624)
-
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
 		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),
 		SuggestedFeeRecipient: predeploys.SequencerFeeVaultAddr,
 		Transactions:          txs,
 		NoTxPool:              true,
-		//GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),
-		GasLimit: (*eth.Uint64Quantity)(&gasLimit),
+		GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),
 	}, nil
 }

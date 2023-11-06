@@ -94,6 +94,7 @@ func (c *Client) loop() {
 		if err != nil {
 			log.Error("token ratio", "tokenRatio", err)
 			time.Sleep(c.frequency)
+			continue
 		}
 		c.lastRatio = c.latestRatio
 		c.latestRatio = tokenRatio
