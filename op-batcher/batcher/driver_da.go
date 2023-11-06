@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"math/big"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -186,7 +185,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 }
 
 func (l *BatchSubmitter) isRetry(retry *int32) bool {
-	atomic.AddInt32(retry, 1)
+	*retry = *retry + 1
 	l.metr.RecordRollupRetry(*retry)
 	if *retry > DaLoopRetryNum {
 		return false

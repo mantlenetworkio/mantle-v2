@@ -348,8 +348,8 @@ func (m *Metrics) RecordBatchTxConfirmDataFailed() {
 	m.batcherTxEvs.Record(TxConfirmDataFailed)
 }
 
-func (m *Metrics) RecordRollupRetry(time int32) {
-	m.rollupRetryCount.Set(float64(time))
+func (m *Metrics) RecordRollupRetry(retryCount int32) {
+	m.rollupRetryCount.Set(float64(retryCount))
 }
 
 func (m *Metrics) RecordTxOverMaxLimit() {
