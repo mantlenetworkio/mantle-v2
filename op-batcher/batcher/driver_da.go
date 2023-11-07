@@ -48,7 +48,7 @@ func (l *BatchSubmitter) mantleDALoop() {
 				l.state.Clear()
 				continue
 			} else if err != nil {
-				l.log.Error("load block into state err,", "err", err)
+				l.log.Error("load block into state err", "err", err)
 				continue
 			}
 			l.publishStateToMantleDA()
@@ -100,7 +100,7 @@ func (l *BatchSubmitter) isChannelFull(ctx context.Context) (bool, error) {
 	// send all available transactions
 	l1tip, err := l.l1Tip(ctx)
 	if err != nil {
-		l.log.Error("Failed to query L1 tip", "error", err)
+		l.log.Error("failed to query L1 tip", "error", err)
 		return false, err
 	}
 	l.recordL1Tip(l1tip)
@@ -137,7 +137,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 		if l.state.params == nil {
 			transactionData, err := l.txAggregator()
 			if err != nil {
-				l.log.Error("loopRollupDa txAggregator err,need to try again ", "retry time", retry, "err", err)
+				l.log.Error("loopRollupDa txAggregator err,need to try again", "retry time", retry, "err", err)
 				if l.isRetry(&retry) {
 					continue
 				}
@@ -145,7 +145,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 			}
 			err = l.disperseStoreData(transactionData)
 			if err != nil {
-				l.log.Error("loopRollupDa disperseStoreData err,need to try again ", "retry time", retry, "err", err, "retry time", retry)
+				l.log.Error("loopRollupDa disperseStoreData err,need to try again", "retry time", retry, "err", err, "retry time", retry)
 				if l.isRetry(&retry) {
 					continue
 				}
@@ -205,7 +205,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 			return nil, err
 		}
 		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
-			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "RollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
+			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "rollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
 			l.metr.RecordTxOverMaxLimit()
 			break
 		}
@@ -232,7 +232,7 @@ func (l *BatchSubmitter) disperseStoreData(txsData []byte) error {
 	if err != nil {
 		return err
 	}
-	l.log.Info("Operator Info", "NumSys", params.NumSys, "NumPar", params.NumPar, "TotalOperatorsIndex", params.TotalOperatorsIndex, "NumTotal", params.NumTotal)
+	l.log.Info("operator info", "numSys", params.NumSys, "numPar", params.NumPar, "totalOperatorsIndex", params.TotalOperatorsIndex, "numTotal", params.NumTotal)
 	//cache params
 	l.state.params = params
 
@@ -273,7 +273,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 func (l *BatchSubmitter) callEncode(data []byte) (*common.StoreParams, error) {
 	conn, err := grpc.Dial(l.DisperserSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		l.log.Error("op-batcher disperser cannot connect to", "DisperserSocket", l.DisperserSocket)
+		l.log.Error("op-batcher disperser cannot connect to", "disperserSocket", l.DisperserSocket)
 		return nil, err
 	}
 	defer conn.Close()
@@ -286,7 +286,7 @@ func (l *BatchSubmitter) callEncode(data []byte) (*common.StoreParams, error) {
 	}
 	opt := grpc.MaxCallSendMsgSize(EigenRollupMaxSize)
 	reply, err := c.EncodeStore(ctx, request, opt)
-	l.log.Info("op-batcher get store", "reply", reply)
+	l.log.Info("op-batcher get store", "reply", reply.String())
 	if err != nil {
 		l.log.Error("op-batcher get store err", err)
 		return nil, err
@@ -331,7 +331,7 @@ func (l *BatchSubmitter) dataStoreTxData(abi *abi.ABI, uploadHeader []byte, dura
 func (l *BatchSubmitter) callDisperse(headerHash []byte, messageHash []byte) (*common.DisperseMeta, error) {
 	conn, err := grpc.Dial(l.DisperserSocket, grpc.WithInsecure())
 	if err != nil {
-		l.log.Error("op-batcher Dial DisperserSocket", "err", err)
+		l.log.Error("op-batcher dial disperserSocket", "err", err)
 		return nil, err
 	}
 	defer conn.Close()
@@ -371,13 +371,13 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 		l.log.Error("op-batcher could not get initDataStore", "ok", ok)
 		return nil, errors.New("op-batcher could not get initDataStore")
 	}
-	l.log.Info("PollingInitDataStore", "MsgHash", event.MsgHash, "StoreNumber", event.StoreNumber)
+	l.log.Info("PollingInitDataStore", "storeNumber", event.StoreNumber)
 	meta, err := l.callDisperse(
 		l.state.params.HeaderHash,
 		event.MsgHash[:],
 	)
 	if err != nil {
-		l.log.Error("op-batcher call Disperse fail", "err", err)
+		l.log.Error("op-batcher call disperse fail", "err", err)
 		return nil, err
 	}
 	callData, err := common.MakeCalldata(l.state.params, *meta, event.StoreNumber, event.MsgHash)
@@ -422,12 +422,12 @@ func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, search
 
 func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txReceiptIn *types.Receipt) (*types.Receipt, error) {
 	if txReceiptIn.Status == types.ReceiptStatusFailed {
-		l.log.Error("init datastore tx successfully published but reverted", "tx_hash", txReceiptIn.TxHash.String())
+		l.log.Error("init datastore tx successfully published but reverted", "txHash", txReceiptIn.TxHash.String())
 		l.metr.RecordBatchTxInitDataFailed()
 		return nil, ErrInitDataStore
 	}
 	l.metr.RecordBatchTxInitDataSuccess()
-	l.log.Info("initDataStore tx successfully published", "tx_hash", txReceiptIn.TxHash.String())
+	l.log.Info("init datastore tx successfully published", "txHash", txReceiptIn.TxHash.String())
 	l.state.initStoreDataReceipt = txReceiptIn
 	// start to confirmData
 	txReceiptOut, err := l.confirmStoredData(txReceiptIn.TxHash.Bytes(), ctx)
@@ -442,11 +442,11 @@ func (l *BatchSubmitter) handleInitDataStoreReceipt(ctx context.Context, txRecei
 
 func (l *BatchSubmitter) handleConfirmDataStoreReceipt(r *types.Receipt) error {
 	if r.Status == types.ReceiptStatusFailed {
-		l.log.Error("unable to publish confirm data store tx", "tx_hash", r.TxHash.String())
+		l.log.Error("unable to publish confirm data store tx", "txHash", r.TxHash.String())
 		l.metr.RecordBatchTxConfirmDataFailed()
 		return errors.New("unable to publish confirm data store tx")
 	}
-	l.log.Info("Transaction confirmed", "tx_hash", r.TxHash.String(), "status", r.Status, "block_hash", r.BlockHash.String(), "block_number", r.BlockNumber)
+	l.log.Info("transaction confirmed", "txHash", r.TxHash.String(), "status", r.Status, "blockHash", r.BlockHash.String(), "blockNumber", r.BlockNumber)
 	l.metr.RecordBatchTxConfirmDataSuccess()
 	l.recordConfirmedEigenDATx(r)
 	return nil
@@ -465,7 +465,7 @@ func (l *BatchSubmitter) recordConfirmedEigenDATx(receipt *types.Receipt) {
 func (l *BatchSubmitter) getMantleDANodesNumber() (int, error) {
 	operators, err := l.GraphClient.QueryOperatorsByStatus()
 	if err != nil {
-		l.log.Error("op-batcher query mantle-da operators fail", "err", err)
+		l.log.Error("op-batcher query mantle da operators fail", "err", err)
 		return 0, err
 	}
 	return len(operators), nil
