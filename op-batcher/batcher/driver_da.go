@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sort"
 	"time"
 
 	"google.golang.org/grpc"
@@ -197,8 +198,16 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	var txsData [][]byte
 	var transactionByte []byte
-	for k, v := range l.state.daPendingTxData {
-		txsData = append(txsData, v.Bytes())
+	var sortTxIds []txID
+	for k, _ := range l.state.daPendingTxData {
+		sortTxIds = append(sortTxIds, k)
+	}
+	sort.Slice(sortTxIds, func(i, j int) bool {
+		return sortTxIds[i].frameNumber < sortTxIds[j].frameNumber
+	})
+	for _, v := range sortTxIds {
+		txData, _ := l.state.daPendingTxData[v]
+		txsData = append(txsData, txData.Bytes())
 		txnBufBytes, err := rlp.EncodeToBytes(txsData)
 		if err != nil {
 			l.log.Error("op-batcher unable to encode txn", "err", err)
@@ -210,8 +219,8 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 			break
 		}
 		transactionByte = txnBufBytes
-		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, k)
-		l.log.Info("added frame to daUnConfirmedTxID", "id", k.String())
+		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, v)
+		l.log.Info("added frame to daUnConfirmedTxID", "id", v.String())
 	}
 	nodesNumber, err := l.getMantleDANodesNumber()
 	if err != nil {
