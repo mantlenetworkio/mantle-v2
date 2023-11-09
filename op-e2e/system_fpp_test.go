@@ -168,7 +168,7 @@ func testVerifyL2OutputRoot(t *testing.T, detached bool) {
 	opts, err := bind.NewKeyedTransactorWithChainID(aliceKey, cfg.L1ChainIDBig())
 	require.Nil(t, err)
 	SendDepositTx(t, cfg, l1Client, l2Seq, opts, func(l2Opts *DepositTxOpts) {
-		l2Opts.Value = big.NewInt(100_000_000)
+		l2Opts.ETHValue = big.NewInt(100_000_000)
 	})
 	SendL2Tx(t, cfg, l2Seq, aliceKey, func(opts *TxOpts) {
 		opts.ToAddr = &cfg.Secrets.Addresses().Bob
@@ -176,7 +176,7 @@ func testVerifyL2OutputRoot(t *testing.T, detached bool) {
 		opts.Nonce = 1
 	})
 	SendWithdrawal(t, cfg, l2Seq, aliceKey, func(opts *WithdrawalTxOpts) {
-		opts.Value = big.NewInt(500)
+		opts.MNTValue = big.NewInt(500)
 		opts.Nonce = 2
 	})
 
@@ -187,14 +187,14 @@ func testVerifyL2OutputRoot(t *testing.T, detached bool) {
 
 	t.Log("Sending transactions to modify existing state, within challenged period")
 	SendDepositTx(t, cfg, l1Client, l2Seq, opts, func(l2Opts *DepositTxOpts) {
-		l2Opts.Value = big.NewInt(5_000)
+		l2Opts.ETHValue = big.NewInt(5_000)
 	})
 	SendL2Tx(t, cfg, l2Seq, cfg.Secrets.Bob, func(opts *TxOpts) {
 		opts.ToAddr = &cfg.Secrets.Addresses().Alice
 		opts.Value = big.NewInt(100)
 	})
 	SendWithdrawal(t, cfg, l2Seq, aliceKey, func(opts *WithdrawalTxOpts) {
-		opts.Value = big.NewInt(100)
+		opts.MNTValue = big.NewInt(100)
 		opts.Nonce = 4
 	})
 
