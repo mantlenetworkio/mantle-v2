@@ -31,8 +31,8 @@ func SendWithdrawal(t *testing.T, cfg SystemConfig, l2Client *ethclient.Client, 
 	// Initiate Withdrawal
 	l2opts, err := bind.NewKeyedTransactorWithChainID(privKey, cfg.L2ChainIDBig())
 	require.Nil(t, err)
-	l2opts.Value = opts.Value
-	tx, err := l2withdrawer.InitiateWithdrawal(l2opts, l2opts.Value, l2opts.From, big.NewInt(int64(opts.Gas)), opts.Data)
+	l2opts.Value = opts.MNTValue
+	tx, err := l2withdrawer.InitiateWithdrawal(l2opts, opts.ETHValue, l2opts.From, big.NewInt(int64(opts.Gas)), opts.Data)
 	require.Nil(t, err, "sending initiate withdraw tx")
 
 	receipt, err := waitForTransaction(tx.Hash(), l2Client, 10*time.Duration(cfg.DeployConfig.L1BlockTime)*time.Second)
@@ -53,7 +53,8 @@ type WithdrawalTxOptsFn func(opts *WithdrawalTxOpts)
 type WithdrawalTxOpts struct {
 	ToAddr         *common.Address
 	Nonce          uint64
-	Value          *big.Int
+	ETHValue       *big.Int
+	MNTValue       *big.Int
 	Gas            uint64
 	Data           []byte
 	ExpectedStatus uint64
@@ -70,7 +71,8 @@ func defaultWithdrawalTxOpts() *WithdrawalTxOpts {
 	return &WithdrawalTxOpts{
 		ToAddr:         nil,
 		Nonce:          0,
-		Value:          common.Big0,
+		MNTValue:       common.Big0,
+		ETHValue:       common.Big0,
 		Gas:            21_000,
 		Data:           nil,
 		ExpectedStatus: types.ReceiptStatusSuccessful,
