@@ -41,6 +41,17 @@ type Metricer interface {
 	RecordBatchTxSuccess()
 	RecordBatchTxFailed()
 
+	RecordBatchTxInitDataSubmitted()
+	RecordBatchTxInitDataSuccess()
+	RecordBatchTxInitDataFailed()
+
+	RecordBatchTxConfirmDataSubmitted()
+	RecordBatchTxConfirmDataSuccess()
+	RecordBatchTxConfirmDataFailed()
+	RecordTxOverMaxLimit()
+
+	RecordRollupRetry(time int32)
+
 	Document() []opmetrics.DocumentedMetric
 }
 
@@ -72,7 +83,11 @@ type Metrics struct {
 	channelInputBytesTotal  prometheus.Counter
 	channelOutputBytesTotal prometheus.Counter
 
+	rollupRetryCount prometheus.Gauge
+
 	batcherTxEvs opmetrics.EventVec
+
+	batcherTxOverMaxLimitEvent opmetrics.Event
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -172,7 +187,14 @@ func NewMetrics(procName string) *Metrics {
 			Help:      "Total number of compressed output bytes from a channel.",
 		}),
 
-		batcherTxEvs: opmetrics.NewEventVec(factory, ns, "", "batcher_tx", "BatcherTx", []string{"stage"}),
+		rollupRetryCount: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "rollup_retry_count",
+			Help:      "Number of retries after rollup failure.",
+		}),
+
+		batcherTxEvs:               opmetrics.NewEventVec(factory, ns, "", "batcher_tx", "BatcherTx", []string{"stage"}),
+		batcherTxOverMaxLimitEvent: opmetrics.NewEvent(factory, ns, "da_rollup", "over_max", "OverMax"),
 	}
 }
 
@@ -212,6 +234,13 @@ const (
 	TxStageSubmitted = "submitted"
 	TxStageSuccess   = "success"
 	TxStageFailed    = "failed"
+
+	TxInitDataSubmitted    = "init_data_submitted"
+	TxConfirmDataSubmiited = "confirm_data_submitted"
+	TxInitDataSuccess      = "init_data_success"
+	TxConfirmDataSuccess   = "confirm_data_success"
+	TxInitDataFailed       = "init_data_failed"
+	TxConfirmDataFailed    = "confirm_data_failed"
 )
 
 func (m *Metrics) RecordLatestL1Block(l1ref eth.L1BlockRef) {
@@ -293,6 +322,38 @@ func (m *Metrics) RecordBatchTxSuccess() {
 
 func (m *Metrics) RecordBatchTxFailed() {
 	m.batcherTxEvs.Record(TxStageFailed)
+}
+
+func (m *Metrics) RecordBatchTxInitDataSubmitted() {
+	m.batcherTxEvs.Record(TxInitDataSubmitted)
+}
+
+func (m *Metrics) RecordBatchTxInitDataSuccess() {
+	m.batcherTxEvs.Record(TxInitDataSuccess)
+}
+
+func (m *Metrics) RecordBatchTxInitDataFailed() {
+	m.batcherTxEvs.Record(TxInitDataFailed)
+}
+
+func (m *Metrics) RecordBatchTxConfirmDataSubmitted() {
+	m.batcherTxEvs.Record(TxConfirmDataSubmiited)
+}
+
+func (m *Metrics) RecordBatchTxConfirmDataSuccess() {
+	m.batcherTxEvs.Record(TxConfirmDataSuccess)
+}
+
+func (m *Metrics) RecordBatchTxConfirmDataFailed() {
+	m.batcherTxEvs.Record(TxConfirmDataFailed)
+}
+
+func (m *Metrics) RecordRollupRetry(retryCount int32) {
+	m.rollupRetryCount.Set(float64(retryCount))
+}
+
+func (m *Metrics) RecordTxOverMaxLimit() {
+	m.batcherTxOverMaxLimitEvent.Record()
 }
 
 // estimateBatchSize estimates the size of the batch
