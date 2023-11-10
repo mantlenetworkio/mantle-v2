@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { predeploys } from '@eth-optimism/contracts'
-import { hexStringEquals } from '@eth-optimism/core-utils'
-import { getContractInterface } from '@eth-optimism/contracts-bedrock'
+import { predeploys } from '@ethan-bedrock/contracts'
+import { hexStringEquals } from '@ethan-bedrock/core-utils'
+import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
 
 import {
   NumberLike,

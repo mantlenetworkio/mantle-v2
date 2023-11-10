@@ -1,7 +1,7 @@
 {
-  "name": "@eth-optimism/contracts",
-  "version": "0.5.40",
-  "description": "[Optimism] L1 and L2 smart contracts for Optimism",
+  "name": "@ethan-bedrock/contracts",
+  "version": "0.1.0",
+  "description": "[Mantle] L1 and L2 smart contracts for Mantle",
   "main": "dist/index",
   "types": "dist/index",
   "files": [
@@ -58,14 +58,14 @@
     "url": "https://github.com/ethereum-optimism/optimism.git"
   },
   "dependencies": {
-    "@eth-optimism/core-utils": "file:../core-utils/dist",
+    "@ethan-bedrock/core-utils": "0.1.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/abstract-signer": "^5.7.0"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.11",
     "@defi-wonderland/smock": "^2.0.2",
-    "@eth-optimism/hardhat-deploy-config": "file:../hardhat-deploy-config/dist",
+    "@ethan-bedrock/hardhat-deploy-config": "0.1.0",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/hardware-wallets": "^5.7.0",

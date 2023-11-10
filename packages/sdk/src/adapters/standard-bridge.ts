@@ -12,9 +12,9 @@ import {
   TransactionResponse,
   BlockTag,
 } from '@ethersproject/abstract-provider'
-import {l1DevPredeploys, predeploys} from '@eth-optimism/contracts'
-import { getContractInterface } from '@eth-optimism/contracts-bedrock'
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import {l1DevPredeploys, predeploys} from '@ethan-bedrock/contracts'
+import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
+import { hexStringEquals } from '@ethan-bedrock/core-utils'
 
 import { CrossChainMessenger } from '../cross-chain-messenger'
 import {

@@ -3,7 +3,7 @@ import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
 import {ethers, Wallet} from "ethers";
 import {CONTRACT_ADDRESSES,L1ChainID,L2ChainID} from "../src";
-import {sleep} from "@eth-optimism/core-utils";
+import {sleep} from "@ethan-bedrock/core-utils";
 
 import {
   CrossChainMessenger,

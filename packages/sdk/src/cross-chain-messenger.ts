@@ -27,8 +27,8 @@ import {
   decodeVersionedNonce,
   encodeVersionedNonce,
   getChainId,
-} from '@eth-optimism/core-utils'
-import {getContractInterface, l1DevPredeploys, predeploys} from '@eth-optimism/contracts'
+} from '@ethan-bedrock/core-utils'
+import {getContractInterface, l1DevPredeploys, predeploys} from '@ethan-bedrock/contracts'
 import * as rlp from 'rlp'
 
 import {
