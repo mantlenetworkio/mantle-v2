@@ -153,36 +153,36 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 				return false, err
 			}
 		}
-		//start to publish transaction
-		cCtx, cancel := context.WithTimeout(l.killCtx, 2*time.Minute)
-		r, err := l.sendInitDataStoreTransaction(cCtx)
+
+		sendTx := func() error {
+			//start to publish transaction
+			cCtx, cancel := context.WithTimeout(l.killCtx, 2*time.Minute)
+			defer cancel()
+			r, err := l.sendInitDataStoreTransaction(cCtx)
+			if err != nil {
+				l.log.Error("failed to send init datastore transaction,need to try again", "retry time", retry, "err", err)
+				return err
+			}
+			receipt, err := l.handleInitDataStoreReceipt(cCtx, r)
+			if err != nil {
+				l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
+				return err
+			}
+			err = l.handleConfirmDataStoreReceipt(receipt)
+			if err != nil {
+				l.log.Error("failed to handle confirm data transaction receipt,need to try again", "retry time", retry, "err", err)
+				return err
+			}
+			return nil
+		}
+		err := sendTx()
 		if err != nil {
-			l.log.Error("failed to send init datastore transaction,need to try again", "retry time", retry, "err", err)
-			cancel()
 			if l.isRetry(&retry) {
 				continue
 			}
 			return false, err
 		}
-		receipt, err := l.handleInitDataStoreReceipt(cCtx, r)
-		if err != nil {
-			l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
-			cancel()
-			if l.isRetry(&retry) {
-				continue
-			}
-			return false, err
-		}
-		err = l.handleConfirmDataStoreReceipt(receipt)
-		if err != nil {
-			l.log.Error("failed to handle confirm data transaction receipt,need to try again", "retry time", retry, "err", err)
-			cancel()
-			if l.isRetry(&retry) {
-				continue
-			}
-			return false, err
-		}
-		cancel()
+
 	}
 }
 
