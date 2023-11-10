@@ -2,7 +2,6 @@ package chaincfg
 
 import (
 	"fmt"
-	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"math/big"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 )
 
 var Mainnet = rollup.Config{
