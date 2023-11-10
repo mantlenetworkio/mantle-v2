@@ -93,6 +93,8 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		DisperserTimeout:       cfg.DisperserTimeout,
 		DataStoreDuration:      cfg.DataStoreDuration,
 		GraphPollingDuration:   cfg.GraphPollingDuration,
+		RollupMaxSize:          cfg.RollupMaxSize,
+		MantleDaNodes:          cfg.MantleDaNodes,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -113,6 +115,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
 		}
 		dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
+
 		if len(cfg.GraphProvider) == 0 {
 			return nil, fmt.Errorf("graph node provider url is empty")
 		}
