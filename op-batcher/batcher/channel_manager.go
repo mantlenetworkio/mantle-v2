@@ -290,6 +290,7 @@ func (s *channelManager) processBlocks() error {
 		blocksAdded += 1
 		latestL2ref = l2BlockRefFromBlockAndL1Info(block, l1info)
 		s.metr.RecordL2BlockInChannel(block)
+		s.log.Info("add block to channel", "channel id", s.pendingChannel.ID(), "block number", block.Number())
 		// current block got added but channel is now full
 		if s.pendingChannel.IsFull() {
 			break

@@ -70,7 +70,7 @@ func (l *BatchSubmitter) mantleDALoop() {
 func (l *BatchSubmitter) publishStateToMantleDA() {
 
 	for {
-		isFull, err := l.isChannelFull(l.killCtx)
+		isFull, err := l.appendNextRollupData(l.killCtx)
 
 		if err != nil && err != io.EOF {
 			l.log.Error("failed to  get next tx data", "err", err)
@@ -96,8 +96,8 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 
 }
 
-// isChannelFull get next txData and cache the data in pendingTransactions, and determine whether the channel is full
-func (l *BatchSubmitter) isChannelFull(ctx context.Context) (bool, error) {
+// appendNextRollupData get next txData and cache the data in pendingTransactions, and determine whether the channel is full
+func (l *BatchSubmitter) appendNextRollupData(ctx context.Context) (bool, error) {
 	// send all available transactions
 	l1tip, err := l.l1Tip(ctx)
 	if err != nil {
@@ -182,6 +182,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 			}
 			return false, err
 		}
+		cancel()
 	}
 }
 
@@ -198,7 +199,8 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	var txsData [][]byte
 	var transactionByte []byte
-	var sortTxIds []txID
+	sortTxIds := make([]txID, 0, len(l.state.daUnConfirmedTxID))
+	l.state.daUnConfirmedTxID = l.state.daUnConfirmedTxID[:0]
 	for k, _ := range l.state.daPendingTxData {
 		sortTxIds = append(sortTxIds, k)
 	}
@@ -297,7 +299,7 @@ func (l *BatchSubmitter) callEncode(data []byte) (*common.StoreParams, error) {
 	reply, err := c.EncodeStore(ctx, request, opt)
 	l.log.Info("op-batcher get store", "reply", reply.String())
 	if err != nil {
-		l.log.Error("op-batcher get store err", err)
+		l.log.Error("op-batcher get store", "err", err)
 		return nil, err
 	}
 	l.log.Info("op-batcher get store end")
