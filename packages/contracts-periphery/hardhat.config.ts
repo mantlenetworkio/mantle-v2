@@ -2,7 +2,7 @@ import assert from 'assert'
 
 import { HardhatUserConfig, subtask } from 'hardhat/config'
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from 'hardhat/builtin-tasks/task-names'
-import { getenv } from '@eth-optimism/core-utils'
+import { getenv } from '@ethan-bedrock/core-utils'
 import * as dotenv from 'dotenv'
 
 import { configSpec } from './src/config/deploy'

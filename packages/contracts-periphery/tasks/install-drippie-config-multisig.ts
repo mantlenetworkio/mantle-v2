@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 import { task } from 'hardhat/config'
-import { getChainId } from '@eth-optimism/core-utils'
+import { getChainId } from '@ethan-bedrock/core-utils'
 
 import { isSameConfig, getDrippieConfig, addChecksum } from '../src'
 

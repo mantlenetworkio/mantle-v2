@@ -1,5 +1,5 @@
 /* Imports: External */
-import { BaseService, Logger, LegacyMetrics } from '@eth-optimism/common-ts'
+import { BaseService, Logger, LegacyMetrics } from '@ethan-bedrock/common-ts'
 import express, { Request, Response } from 'express'
 import promBundle from 'express-prom-bundle'
 import cors from 'cors'

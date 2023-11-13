@@ -2,7 +2,7 @@ import fs from 'fs'
 
 import { Command } from 'commander'
 import { ethers } from 'ethers'
-import { getContractInterface } from '@eth-optimism/contracts'
+import { getContractInterface } from '@ethan-bedrock/contracts'
 
 import { version } from '../package.json'
 import { advancedQueryFilter } from '../src/advanced-query'

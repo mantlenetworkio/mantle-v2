@@ -1,12 +1,12 @@
 /* Imports: External */
 import { Wallet, providers, BigNumber, utils } from 'ethers'
-import { predeploys } from '@eth-optimism/contracts'
-import { remove0x } from '@eth-optimism/core-utils'
+import { predeploys } from '@ethan-bedrock/contracts'
+import { remove0x } from '@ethan-bedrock/core-utils'
 import {
   CrossChainMessenger,
   NumberLike,
   asL2Provider,
-} from '@eth-optimism/sdk'
+} from '@ethan-bedrock/sdk'
 import { cleanEnv, str, num, bool, makeValidator } from 'envalid'
 import dotenv from 'dotenv'
 dotenv.config()

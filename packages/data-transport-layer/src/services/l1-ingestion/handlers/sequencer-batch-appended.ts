@@ -1,14 +1,14 @@
 /* Imports: External */
 import { BigNumber, ethers, constants } from 'ethers'
 import { serialize, Transaction } from '@ethersproject/transactions'
-import { getContractFactory } from '@eth-optimism/contracts'
+import { getContractFactory } from '@ethan-bedrock/contracts'
 import {
   toHexString,
   toRpcHexString,
   BatchType,
   SequencerBatch,
-} from '@eth-optimism/core-utils'
-import { SequencerBatchAppendedEvent } from '@eth-optimism/contracts/dist/types/contracts/L1/rollup/CanonicalTransactionChain'
+} from '@ethan-bedrock/core-utils'
+import { SequencerBatchAppendedEvent } from '@ethan-bedrock/contracts/dist/types/contracts/L1/rollup/CanonicalTransactionChain'
 
 /* Imports: Internal */
 import { MissingElementError } from './errors'

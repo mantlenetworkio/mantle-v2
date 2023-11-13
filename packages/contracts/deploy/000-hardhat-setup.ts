@@ -1,7 +1,7 @@
 /* eslint @typescript-eslint/no-var-requires: "off" */
 import { ethers } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@eth-optimism/core-utils'
+import { awaitCondition } from '@ethan-bedrock/core-utils'
 
 import {
   getContractFromArtifact,

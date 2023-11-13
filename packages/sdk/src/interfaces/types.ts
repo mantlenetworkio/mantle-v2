@@ -23,10 +23,12 @@ export enum L1ChainID {
  * L2 network chain IDs
  */
 export enum L2ChainID {
-  OPTIMISM = 10,
-  OPTIMISM_GOERLI = 420,
-  OPTIMISM_HARDHAT_LOCAL = 900,
-  OPTIMISM_HARDHAT_DEVNET = 17,
+  MANTLE = 5000,
+  MANTLE_TESTNET = 5001,
+  MANTLE_GOERLIQA = 1705003,
+  MANTLE_KOVAN = 69,
+  MANTLE_HARDHAT_LOCAL = 31337,
+  MANTLE_HARDHAT_DEVNET = 17,
   OPTIMISM_BEDROCK_LOCAL_DEVNET = 901,
   OPTIMISM_BEDROCK_ALPHA_TESTNET = 28528,
   BASE_GOERLI = 84531,
@@ -62,6 +64,7 @@ export interface OEL2Contracts {
   OVM_SequencerFeeVault: Contract
   WETH: Contract
   BedrockMessagePasser: Contract
+  BVM_MANTLE:Contract
 }
 
 /**
@@ -267,6 +270,7 @@ export interface StateRootBatchHeader {
   batchRoot: string
   batchSize: BigNumber
   prevTotalElements: BigNumber
+  signature: string
   extraData: string
 }
 

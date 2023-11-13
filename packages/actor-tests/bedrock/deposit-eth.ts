@@ -3,9 +3,9 @@ import {
   CrossChainMessenger,
   ETHBridgeAdapter,
   StandardBridgeAdapter,
-} from '@eth-optimism/sdk'
-import { predeploys } from '@eth-optimism/contracts-bedrock'
-import { sleep } from '@eth-optimism/core-utils'
+} from '@ethan-bedrock/sdk'
+import { predeploys } from '@ethan-bedrock/contracts-bedrock'
+import { sleep } from '@ethan-bedrock/core-utils'
 
 import { actor, setupActor, run, setupRun } from '../lib/convenience'
 import { l1Provider, l2Provider } from './utils'

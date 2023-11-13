@@ -1,7 +1,7 @@
 /* Imports: External */
 import { LevelUp } from 'levelup'
 import { BigNumber } from 'ethers'
-import { BatchType } from '@eth-optimism/core-utils'
+import { BatchType } from '@ethan-bedrock/core-utils'
 
 /* Imports: Internal */
 import { SimpleDB } from './simple-db'

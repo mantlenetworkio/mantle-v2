@@ -1,7 +1,7 @@
 import { task, types } from 'hardhat/config'
 import '@nomiclabs/hardhat-ethers'
 import 'hardhat-deploy'
-import { OpNodeProvider, sleep } from '@eth-optimism/core-utils'
+import { OpNodeProvider, sleep } from '@ethan-bedrock/core-utils'
 
 import { predeploys } from '../src'
 

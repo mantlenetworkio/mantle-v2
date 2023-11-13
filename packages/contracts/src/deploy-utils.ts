@@ -1,7 +1,7 @@
 import { ethers, Contract } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { sleep, awaitCondition, getChainId } from '@eth-optimism/core-utils'
+import { sleep, awaitCondition, getChainId } from '@ethan-bedrock/core-utils'
 import { HttpNetworkConfig } from 'hardhat/types'
 
 /**

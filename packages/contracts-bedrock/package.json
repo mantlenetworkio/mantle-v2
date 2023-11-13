@@ -1,6 +1,6 @@
 {
   "name": "@ethan-bedrock/contracts-bedrock",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Contracts for Mantle V2 Specs",
   "main": "dist/index",
   "types": "dist/index",
@@ -53,13 +53,13 @@
     "echidna:metering": "echidna-test --contract EchidnaFuzzResourceMetering --config ./echidna.yaml ."
   },
   "dependencies": {
-    "@ethan-bedrock/core-utils": "0.1.0",
+    "@ethan-bedrock/core-utils": "0.2.0",
     "@openzeppelin/contracts": "4.7.3",
     "@openzeppelin/contracts-upgradeable": "4.7.3",
     "ethers": "^5.7.0"
   },
   "devDependencies": {
-    "@ethan-bedrock/hardhat-deploy-config": "0.1.0",
+    "@ethan-bedrock/hardhat-deploy-config": "0.2.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/abstract-signer": "^5.7.0",
     "ethereumjs-wallet": "^1.0.2",

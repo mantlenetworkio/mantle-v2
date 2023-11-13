@@ -2,7 +2,7 @@ import assert from 'assert'
 
 import { ethers } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@eth-optimism/core-utils'
+import { awaitCondition } from '@ethan-bedrock/core-utils'
 import '@eth-optimism/hardhat-deploy-config'
 import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'

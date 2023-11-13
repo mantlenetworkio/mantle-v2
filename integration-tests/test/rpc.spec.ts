@@ -1,5 +1,5 @@
 /* Imports: External */
-import { expectApprox, getChainId, sleep } from '@eth-optimism/core-utils'
+import { expectApprox, getChainId, sleep } from '@ethan-bedrock/core-utils'
 import { Wallet, BigNumber, Contract, ContractFactory, constants } from 'ethers'
 import { serialize } from '@ethersproject/transactions'
 import { ethers } from 'hardhat'

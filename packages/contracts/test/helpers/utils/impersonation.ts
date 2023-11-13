@@ -1,4 +1,4 @@
-import { toRpcHexString } from '@eth-optimism/core-utils'
+import { toRpcHexString } from '@ethan-bedrock/core-utils'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber } from 'ethers'
 import hre from 'hardhat'

@@ -5,15 +5,15 @@ import {
   Gauge,
   validators,
   waitForProvider,
-} from '@eth-optimism/common-ts'
-import { getChainId, sleep, toRpcHexString } from '@eth-optimism/core-utils'
+} from '@ethan-bedrock/common-ts'
+import { getChainId, sleep, toRpcHexString } from '@ethan-bedrock/core-utils'
 import {
   CONTRACT_ADDRESSES,
   CrossChainMessenger,
   getOEContract,
   L2ChainID,
   OEL1ContractsLike,
-} from '@eth-optimism/sdk'
+} from '@ethan-bedrock/sdk'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ethers, Transaction } from 'ethers'
 import dateformat from 'dateformat'

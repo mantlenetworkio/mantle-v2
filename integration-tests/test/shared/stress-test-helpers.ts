@@ -1,6 +1,6 @@
 /* Imports: External */
 import { ethers } from 'ethers'
-import { sleep } from '@eth-optimism/core-utils'
+import { sleep } from '@ethan-bedrock/core-utils'
 
 /* Imports: Internal */
 import { OptimismEnv } from './env'

@@ -1,7 +1,7 @@
 import { performance } from 'perf_hooks'
 
 import { Mutex } from 'async-mutex'
-import { sleep } from '@eth-optimism/core-utils'
+import { sleep } from '@ethan-bedrock/core-utils'
 
 import {
   sanitizeForMetrics,

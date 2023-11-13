@@ -3,7 +3,7 @@
 Typescript sdk for interacting with the ATST based on [@wagmi/core](https://wagmi.sh/core/getting-started)
 
 
-## Table of content 
+## Table of content
 
 - [Installation](#installation)
 - [Basic usage](#basic-usage)
@@ -48,7 +48,7 @@ yarn add @eth-optimism/atst @wagmi/core ethers@5.7.0
 
 ### Setup
 
-atst uses `@wagmi/core` under the hood. 
+atst uses `@wagmi/core` under the hood.
 [See their documentation for more information](https://wagmi.sh/core/getting-started).
 
 ```javascript
@@ -74,14 +74,14 @@ wagmiCore.createClient({
 Here is an example of reading an attestation used by the optimist nft
 
 ```javascript
-import { readAttestation } from '@eth-optimism/atst'
+import { readAttestation } from '@ethan-bedrock/atst'
 
 const creator = '0x60c5C9c98bcBd0b0F2fD89B24c16e533BaA8CdA3'
 const about = '0x2335022c740d17c2837f9C884Bfe4fFdbf0A95D5'
 const key = 'optimist.base-uri'
 
 const str = await readAttestationString(creator, about, key)
-console.log(attestation) 
+console.log(attestation)
 // https://assets.optimism.io/4a609661-6774-441f-9fdb-453fdbb89931-bucket/optimist-nft/attributes
 ```
 
@@ -91,11 +91,11 @@ If reading more than one attestation you can use [`readAttestations`](#readattes
 
 ### Writing an attestation
 
-To write to an attestation you must [connect](https://wagmi.sh/core/connectors/metaMask) your wagmi client if not already connected. 
+To write to an attestation you must [connect](https://wagmi.sh/core/connectors/metaMask) your wagmi client if not already connected.
 If using Node.js use the [mock connector](https://wagmi.sh/core/connectors/mock).
 
 ```typescript
-import { prepareWriteAttestation, writeAttestation } from '@eth-optimism/atst'
+import { prepareWriteAttestation, writeAttestation } from '@ethan-bedrock/atst'
 
 const preparedTx = await prepareWriteAttestation(about, key, 'hello world')
 console.log(preparedTx.gasLimit)
@@ -112,7 +112,7 @@ For a more detailed explanation, [see the tutorial](https://github.com/ethereum-
 
 #### `getEvents`
 
-Use `getEvents` to get attestation events using a provider and filters. 
+Use `getEvents` to get attestation events using a provider and filters.
 
 ```typescript
 const events = await getEvents({
@@ -159,7 +159,7 @@ If there is no such attestation the result is zero, `false`, or an empty string.
 
 #### `readAttestations`
 
-Similar to `readAttestation` but reads multiple attestations at once. 
+Similar to `readAttestation` but reads multiple attestations at once.
 Pass in a variadic amount of attestations to read.
 The parameters are all the same structure type, the one shown below.
 
@@ -196,7 +196,7 @@ These definitions allow you to communicate with AttestationStation, but are not 
 The deployment address for AttestationStation currently deployed with create2 on Optimism and Optimism Goerli `0xEE36eaaD94d1Cc1d0eccaDb55C38bFfB6Be06C77`.
 
 ```typescript
-import { ATTESTATION_STATION_ADDRESS } from '@eth-optimism/atst'
+import { ATTESTATION_STATION_ADDRESS } from '@ethan-bedrock/atst'
 ```
 
 #### `abi`
@@ -204,7 +204,7 @@ import { ATTESTATION_STATION_ADDRESS } from '@eth-optimism/atst'
 The abi of the AttestationStation contract
 
 ```typescript
-import { abi } from '@eth-optimism/atst'
+import { abi } from '@ethan-bedrock/atst'
 ```
 
 #### `createKey`
@@ -286,5 +286,5 @@ For convenience we also [export the hooks here](../src/react.ts):
 ## Tutorial
 
 - [General atst tutorial](https://github.com/ethereum-optimism/optimism-tutorial/tree/main/ecosystem/attestation-station).
-- [React atst starter](https://github.com/ethereum-optimism/optimism-starter). 
+- [React atst starter](https://github.com/ethereum-optimism/optimism-starter).
 

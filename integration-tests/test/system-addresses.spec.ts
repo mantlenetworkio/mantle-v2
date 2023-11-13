@@ -1,8 +1,8 @@
 /* Imports: External */
 import { BigNumber, Contract, ContractFactory, utils, Wallet } from 'ethers'
 import { ethers } from 'hardhat'
-import { futurePredeploys } from '@eth-optimism/contracts'
-import { sleep } from '@eth-optimism/core-utils'
+import { futurePredeploys } from '@ethan-bedrock/contracts'
+import { sleep } from '@ethan-bedrock/core-utils'
 
 /* Imports: Internal */
 import { expect } from './shared/setup'

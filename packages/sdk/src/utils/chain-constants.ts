@@ -21,11 +21,11 @@ import {
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [ChainID in L2ChainID]: number
 } = {
-  [L2ChainID.OPTIMISM]: 50 as const,
-  [L2ChainID.OPTIMISM_GOERLI]: 12 as const,
-  [L2ChainID.OPTIMISM_HARDHAT_LOCAL]: 2 as const,
-  [L2ChainID.OPTIMISM_HARDHAT_DEVNET]: 2 as const,
-  [L2ChainID.OPTIMISM_BEDROCK_LOCAL_DEVNET]: 901 as const,
+  [L2ChainID.MANTLE]: 50 as const,
+  [L2ChainID.MANTLE_GOERLIQA]: 12 as const,
+  [L2ChainID.MANTLE_HARDHAT_LOCAL]: 2 as const,
+  [L2ChainID.MANTLE_HARDHAT_DEVNET]: 2 as const,
+  [L2ChainID.OPTIMISM_BEDROCK_LOCAL_DEVNET]: 2 as const,
   [L2ChainID.OPTIMISM_BEDROCK_ALPHA_TESTNET]: 12 as const,
   [L2ChainID.BASE_GOERLI]: 12 as const,
 }
@@ -90,15 +90,15 @@ const getL1ContractsByNetworkName = (network: string): OEL1ContractsLike => {
 export const CONTRACT_ADDRESSES: {
   [ChainID in L2ChainID]: OEContractsLike
 } = {
-  [L2ChainID.OPTIMISM]: {
+  [L2ChainID.MANTLE]: {
     l1: getL1ContractsByNetworkName('mainnet'),
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
-  [L2ChainID.OPTIMISM_GOERLI]: {
+  [L2ChainID.MANTLE_TESTNET]: {
     l1: getL1ContractsByNetworkName('goerli'),
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
-  [L2ChainID.OPTIMISM_HARDHAT_LOCAL]: {
+  [L2ChainID.MANTLE_HARDHAT_LOCAL]: {
     l1: {
       AddressManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3' as const,
       L1CrossDomainMessenger:
@@ -114,7 +114,7 @@ export const CONTRACT_ADDRESSES: {
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
-  [L2ChainID.OPTIMISM_HARDHAT_DEVNET]: {
+  [L2ChainID.MANTLE_HARDHAT_DEVNET]: {
     l1: {
       AddressManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3' as const,
       L1CrossDomainMessenger:
@@ -186,7 +186,7 @@ export const CONTRACT_ADDRESSES: {
 export const BRIDGE_ADAPTER_DATA: {
   [ChainID in L2ChainID]?: BridgeAdapterData
 } = {
-  [L2ChainID.OPTIMISM]: {
+  [L2ChainID.MANTLE]: {
     wstETH: {
       Adapter: DAIBridgeAdapter,
       l1Bridge: '0x76943C0D61395d8F2edF9060e1533529cAe05dE6' as const,
@@ -203,7 +203,7 @@ export const BRIDGE_ADAPTER_DATA: {
       l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
     },
   },
-  [L2ChainID.OPTIMISM_GOERLI]: {
+  [L2ChainID.MANTLE_TESTNET]: {
     DAI: {
       Adapter: DAIBridgeAdapter,
       l1Bridge: '0x05a388Db09C2D44ec0b00Ee188cD42365c42Df23' as const,

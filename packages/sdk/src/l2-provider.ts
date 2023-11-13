@@ -1,7 +1,7 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { serialize } from '@ethersproject/transactions'
 import { Contract, BigNumber } from 'ethers'
-import { predeploys, getContractInterface } from '@eth-optimism/contracts'
+import { predeploys, getContractInterface } from '@ethan-bedrock/contracts'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { assert } from './utils/assert'

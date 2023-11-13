@@ -1,6 +1,6 @@
 {
   "name": "@ethan-bedrock/sdk",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "[Mantle] Tools for working with Mantle",
   "main": "dist/index",
   "types": "dist/index",
@@ -23,16 +23,16 @@
     "autogen:docs": "typedoc --out docs src/index.ts"
   },
   "keywords": [
-    "optimism",
+    "mantle",
     "ethereum",
     "sdk"
   ],
-  "homepage": "https://github.com/ethereum-optimism/optimism/tree/develop/packages/sdk#readme",
+  "homepage": "https://github.com/mantlenetworkio/mantle-v2/tree/develop/packages/sdk#readme",
   "license": "MIT",
-  "author": "Optimism PBC",
+  "author": "Mantle PBC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ethereum-optimism/optimism.git"
+    "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "devDependencies": {
     "@ethersproject/abstract-provider": "^5.7.0",
@@ -54,9 +54,9 @@
     "isomorphic-fetch": "^3.0.0"
   },
   "dependencies": {
-    "@ethan-bedrock/contracts": "0.1.0",
-    "@ethan-bedrock/core-utils": "0.1.0",
-    "@ethan-bedrock/contracts-bedrock": "0.1.1",
+    "@ethan-bedrock/contracts": "0.2.0",
+    "@ethan-bedrock/core-utils": "0.2.0",
+    "@ethan-bedrock/contracts-bedrock": "0.2.0",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.2.27",
     "rlp": "^2.2.7"

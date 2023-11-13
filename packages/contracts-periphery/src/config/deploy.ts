@@ -1,4 +1,4 @@
-import { DeployConfigSpec } from '@eth-optimism/hardhat-deploy-config/dist/src/types'
+import { DeployConfigSpec } from '@ethan-bedrock/hardhat-deploy-config/dist/src/types'
 
 /**
  * Defines the configuration for a deployment.

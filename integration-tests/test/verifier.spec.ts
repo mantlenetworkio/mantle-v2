@@ -1,6 +1,6 @@
 /* Imports: External */
 import { TransactionReceipt } from '@ethersproject/abstract-provider'
-import { sleep } from '@eth-optimism/core-utils'
+import { sleep } from '@ethan-bedrock/core-utils'
 
 /* Imports: Internal */
 import { expect } from './shared/setup'

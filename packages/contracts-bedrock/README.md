@@ -45,7 +45,7 @@ You can find detailed specifications for the contracts contained within this pac
 We export contract ABIs, contract source code, and contract deployment information for this package via `npm`:
 
 ```shell
-npm install @eth-optimism/contracts-bedrock
+npm install @ethan-bedrock/contracts-bedrock
 ```
 
 ## Development

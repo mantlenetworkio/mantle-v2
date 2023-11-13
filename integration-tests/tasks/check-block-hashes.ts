@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config'
 import { providers } from 'ethers'
-import { getChainId } from '@eth-optimism/core-utils'
+import { getChainId } from '@ethan-bedrock/core-utils'
 
 import { die, logStderr } from '../test/shared/utils'
 

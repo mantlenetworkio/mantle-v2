@@ -1,13 +1,13 @@
 /* Imports: External */
 import { Signer } from 'ethers'
-import { getChainId, sleep } from '@eth-optimism/core-utils'
+import { getChainId, sleep } from '@ethan-bedrock/core-utils'
 import {
   BaseServiceV2,
   validators,
   Gauge,
   Counter,
-} from '@eth-optimism/common-ts'
-import { CrossChainMessenger, MessageStatus } from '@eth-optimism/sdk'
+} from '@ethan-bedrock/common-ts'
+import { CrossChainMessenger, MessageStatus } from '@ethan-bedrock/sdk'
 import { Provider } from '@ethersproject/abstract-provider'
 
 import { version } from '../package.json'

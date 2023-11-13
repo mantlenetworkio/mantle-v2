@@ -1,5 +1,5 @@
 ---
-'@eth-optimism/contracts-bedrock': minor
+'@ethan-bedrock/contracts-bedrock': minor
 ---
 
 Bump XDM semver after #5444

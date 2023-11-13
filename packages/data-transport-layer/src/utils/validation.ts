@@ -1,6 +1,6 @@
 import * as url from 'url'
 
-import { fromHexString } from '@eth-optimism/core-utils'
+import { fromHexString } from '@ethan-bedrock/core-utils'
 
 export const validators = {
   isBoolean: (val: any): boolean => {

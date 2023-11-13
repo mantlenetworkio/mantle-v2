@@ -1,14 +1,14 @@
 
-# @eth-optimism/sdk
+# @ethan-bedrock/sdk
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/master/graph/badge.svg?token=0VTG7PG7YR&flag=sdk-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 
-The `@eth-optimism/sdk` package provides a set of tools for interacting with Optimism.
+The `@ethan-bedrock/sdk` package provides a set of tools for interacting with Optimism.
 
 ## Installation
 
 ```
-npm install @eth-optimism/sdk
+npm install @ethan-bedrock/sdk
 ```
 
 ## Docs

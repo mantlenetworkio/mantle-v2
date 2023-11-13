@@ -914,6 +914,29 @@
     minimatch "^3.1.2"
     strip-json-comments "^3.1.1"
 
+"@eth-optimism/common-ts@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@eth-optimism/common-ts/-/common-ts-0.8.1.tgz#eb6ec774e3ee6bfec6eb3de7aae43865eaf5fe1d"
+  integrity sha512-aTgC7a2wAuFa52fj0O6HYvaX2znZHWKPQEchUtbgs6OYu0uVNKEWuAz4yo0LOIPpDlXh7Fq2txnpYyHwVTKEQw==
+  dependencies:
+    "@eth-optimism/core-utils" "0.12.0"
+    "@sentry/node" "^6.3.1"
+    bcfg "^0.1.7"
+    body-parser "^1.20.0"
+    commander "^9.0.0"
+    dotenv "^16.0.0"
+    envalid "^7.2.2"
+    ethers "^5.7.0"
+    express "^4.17.1"
+    express-prom-bundle "^6.4.1"
+    lodash "^4.17.21"
+    morgan "^1.10.0"
+    pino "^6.11.3"
+    pino-multi-stream "^5.3.0"
+    pino-sentry "^0.7.0"
+    prom-client "^13.1.0"
+    qs "^6.10.5"
+
 "@eth-optimism/contracts-bedrock@0.13.2":
   version "0.13.2"
   resolved "https://registry.yarnpkg.com/@eth-optimism/contracts-bedrock/-/contracts-bedrock-0.13.2.tgz#4cdd4bfe7d905fa237719efdadab6bc228f49b0f"
@@ -925,32 +948,10 @@
     ethers "^5.7.0"
     hardhat "^2.9.6"
 
-"@eth-optimism/contracts-bedrock@0.14.0":
-  version "0.14.0"
-  resolved "https://registry.yarnpkg.com/@eth-optimism/contracts-bedrock/-/contracts-bedrock-0.14.0.tgz#f93006416c8b114fb78d2e477dccd525aa651458"
-  integrity sha512-mvbSE2q2cyHUwg1jtHwR4JOQJcwdCVRAkmBdXCKUP0XsP48NT1J92bYileRdiUM5nLIESgNNmPA8L2J87mr62g==
-  dependencies:
-    "@eth-optimism/core-utils" "^0.12.0"
-    "@openzeppelin/contracts" "4.7.3"
-    "@openzeppelin/contracts-upgradeable" "4.7.3"
-    ethers "^5.7.0"
-
-"@eth-optimism/contracts-bedrock@file:packages/contracts-bedrock/dist":
-  version "0.0.0"
-
-"@eth-optimism/contracts@0.5.40", "@eth-optimism/contracts@^0.5.40":
+"@eth-optimism/contracts@0.5.40":
   version "0.5.40"
   resolved "https://registry.yarnpkg.com/@eth-optimism/contracts/-/contracts-0.5.40.tgz#d13a04a15ea947a69055e6fc74d87e215d4c936a"
   integrity sha512-MrzV0nvsymfO/fursTB7m/KunkPsCndltVgfdHaT1Aj5Vi6R/doKIGGkOofHX+8B6VMZpuZosKCMQ5lQuqjt8w==
-  dependencies:
-    "@eth-optimism/core-utils" "0.12.0"
-    "@ethersproject/abstract-provider" "^5.7.0"
-    "@ethersproject/abstract-signer" "^5.7.0"
-
-"@eth-optimism/contracts@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@eth-optimism/contracts/-/contracts-0.6.0.tgz#15ae76222a9b4d958a550cafb1960923af613a31"
-  integrity sha512-vQ04wfG9kMf1Fwy3FEMqH2QZbgS0gldKhcBeBUPfO8zu68L61VI97UDXmsMQXzTsEAxK8HnokW3/gosl4/NW3w==
   dependencies:
     "@eth-optimism/core-utils" "0.12.0"
     "@ethersproject/abstract-provider" "^5.7.0"
@@ -1007,12 +1008,6 @@
     ethers "^5.4.5"
     lodash "^4.17.21"
 
-"@eth-optimism/core-utils@file:packages/core-utils/dist":
-  version "0.0.0"
-
-"@eth-optimism/hardhat-deploy-config@file:packages/hardhat-deploy-config/dist":
-  version "0.0.0"
-
 "@eth-optimism/old-contracts@npm:@eth-optimism/contracts@0.4.10":
   version "0.4.10"
   resolved "https://registry.yarnpkg.com/@eth-optimism/contracts/-/contracts-0.4.10.tgz#536055ae8ad5c74ea3490245a217d1029ba51699"
@@ -1037,14 +1032,93 @@
     merkletreejs "^0.2.27"
     rlp "^2.2.7"
 
-"@eth-optimism/sdk@^2.0.2":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@eth-optimism/sdk/-/sdk-2.1.0.tgz#8c679ddcf84144415746b73ed6e4eaaf07fb6350"
-  integrity sha512-XfRMsPNZRzdlNGARx3UIX88xaCBTJRzsZuKrRz2j8aqYkTpDOvdz87zYsmj+6Nl2tdOlgcxlhZPFCqdRtbiCaQ==
+"@ethan-bedrock/contracts-bedrock@0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts-bedrock/-/contracts-bedrock-0.1.1.tgz#6eb3315902d96591cbcfe560e6e446a1af3f95a6"
+  integrity sha512-u50r2Dw874jsJV4zbCjvALYoKUYqQBNnfgy395f14u3R3PGy5zg0q9V19SLnYqlRaO6e5don+O2aZaqcBmbKzg==
   dependencies:
-    "@eth-optimism/contracts" "0.6.0"
-    "@eth-optimism/contracts-bedrock" "0.14.0"
-    "@eth-optimism/core-utils" "0.12.0"
+    "@ethan-bedrock/core-utils" "0.1.0"
+    "@openzeppelin/contracts" "4.7.3"
+    "@openzeppelin/contracts-upgradeable" "4.7.3"
+    ethers "^5.7.0"
+
+"@ethan-bedrock/contracts-bedrock@0.1.2":
+  version "0.2.0"
+  dependencies:
+    "@ethan-bedrock/core-utils" "0.2.0"
+    "@openzeppelin/contracts" "4.7.3"
+    "@openzeppelin/contracts-upgradeable" "4.7.3"
+    ethers "^5.7.0"
+
+"@ethan-bedrock/contracts@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts/-/contracts-0.1.0.tgz#5037066aeceb3d5f40d69fec93a2e6a4b1945ebe"
+  integrity sha512-MSJXZaR/m5VMtG69o3aq8apTnl9WEkecQ6FV2lbgogjTWUkhGxY6x8Jqt05NdAxCr7SVmO7rlXZFI3lH9NmdZw==
+  dependencies:
+    "@ethan-bedrock/core-utils" "0.1.0"
+    "@ethersproject/abstract-provider" "^5.7.0"
+    "@ethersproject/abstract-signer" "^5.7.0"
+
+"@ethan-bedrock/core-utils@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/core-utils/-/core-utils-0.1.0.tgz#d22e59f8b8b17bbd907944a1875f836e0c28185d"
+  integrity sha512-e35LCJajdqKzuxM00ZKM0jIVPlmIbcrwlbDGESRMahjVBt9y+5MXgP7oGjtZxOl/5opLF8yMqCMFtHL4VYOQyQ==
+  dependencies:
+    "@ethersproject/abi" "^5.7.0"
+    "@ethersproject/abstract-provider" "^5.7.0"
+    "@ethersproject/address" "^5.7.0"
+    "@ethersproject/bignumber" "^5.7.0"
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/constants" "^5.7.0"
+    "@ethersproject/contracts" "^5.7.0"
+    "@ethersproject/hash" "^5.7.0"
+    "@ethersproject/keccak256" "^5.7.0"
+    "@ethersproject/properties" "^5.7.0"
+    "@ethersproject/providers" "^5.7.0"
+    "@ethersproject/rlp" "^5.7.0"
+    "@ethersproject/transactions" "^5.7.0"
+    "@ethersproject/web" "^5.7.0"
+    bufio "^1.0.7"
+    chai "^4.3.4"
+
+"@ethan-bedrock/core-utils@^0.12.0":
+  version "0.2.0"
+  dependencies:
+    "@ethersproject/abi" "^5.7.0"
+    "@ethersproject/abstract-provider" "^5.7.0"
+    "@ethersproject/address" "^5.7.0"
+    "@ethersproject/bignumber" "^5.7.0"
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/constants" "^5.7.0"
+    "@ethersproject/contracts" "^5.7.0"
+    "@ethersproject/hash" "^5.7.0"
+    "@ethersproject/keccak256" "^5.7.0"
+    "@ethersproject/properties" "^5.7.0"
+    "@ethersproject/providers" "^5.7.0"
+    "@ethersproject/rlp" "^5.7.0"
+    "@ethersproject/transactions" "^5.7.0"
+    "@ethersproject/web" "^5.7.0"
+    bufio "^1.0.7"
+    chai "^4.3.4"
+
+"@ethan-bedrock/sdk@0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/sdk/-/sdk-0.1.1.tgz#f1e721fb8e905738f04d6ea3453d2886543ec206"
+  integrity sha512-hbM2TzhXcNzXVNJf4Inwn4DCXSWhUpuCn2M15eDSN65S8kMmYBxT5/deEKXs42gIjJYyfO7N/iv9KwzQuo1Bbw==
+  dependencies:
+    "@ethan-bedrock/contracts" "0.1.0"
+    "@ethan-bedrock/contracts-bedrock" "0.1.1"
+    "@ethan-bedrock/core-utils" "0.1.0"
+    lodash "^4.17.21"
+    merkletreejs "^0.2.27"
+    rlp "^2.2.7"
+
+"@ethan-bedrock/sdk@0.1.2":
+  version "0.2.0"
+  dependencies:
+    "@ethan-bedrock/contracts" "0.2.0"
+    "@ethan-bedrock/contracts-bedrock" "0.2.0"
+    "@ethan-bedrock/core-utils" "0.2.0"
     lodash "^4.17.21"
     merkletreejs "^0.2.27"
     rlp "^2.2.7"
@@ -18048,6 +18122,13 @@ qs@^6.10.3, qs@^6.9.4:
   version "6.11.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.11.0.tgz#fd0d963446f7a65e1367e01abd85429453f0c37a"
   integrity sha512-MvjoMCJwEarSbUYk5O+nmoSzSutSsTwF85zcHPQ9OrlFoZOYIjaqBAJIqIXjptyD5vThxGq52Xu/MaJzRkIk4Q==
+  dependencies:
+    side-channel "^1.0.4"
+
+qs@^6.10.5:
+  version "6.11.2"
+  resolved "https://registry.yarnpkg.com/qs/-/qs-6.11.2.tgz#64bea51f12c1f5da1bc01496f48ffcff7c69d7d9"
+  integrity sha512-tDNIz22aBzCDxLtVH++VnTfzxlfeK5CbqohpSqpJgj1Wg/cQbStNAz3NuqCs5vV+pjBsK4x4pN9HlVh7rcYRiA==
   dependencies:
     side-channel "^1.0.4"
 

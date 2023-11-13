@@ -1,5 +1,5 @@
 /* Imports: External */
-import { BaseService, LegacyMetrics } from '@eth-optimism/common-ts'
+import { BaseService, LegacyMetrics } from '@ethan-bedrock/common-ts'
 import { LevelUp } from 'levelup'
 import level from 'level6'
 import { Counter } from 'prom-client'

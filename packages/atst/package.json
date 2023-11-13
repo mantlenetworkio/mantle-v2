@@ -1,5 +1,5 @@
 {
-  "name": "@eth-optimism/atst",
+  "name": "@ethan-bedrock/atst",
   "version": "0.2.0",
   "type": "module",
   "main": "dist/index.cjs",
@@ -67,7 +67,7 @@
     "ethereum",
     "dapps",
     "web3",
-    "optimism",
+    "mantle",
     "attestation"
   ]
 }

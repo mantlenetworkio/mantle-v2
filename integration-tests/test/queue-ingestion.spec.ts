@@ -1,8 +1,8 @@
 /* Imports: Internal */
 import { providers } from 'ethers'
-import { applyL1ToL2Alias } from '@eth-optimism/core-utils'
-import { asL2Provider } from '@eth-optimism/sdk'
-import { getContractInterface } from '@eth-optimism/contracts'
+import { applyL1ToL2Alias } from '@ethan-bedrock/core-utils'
+import { asL2Provider } from '@ethan-bedrock/sdk'
+import { getContractInterface } from '@ethan-bedrock/contracts'
 
 /* Imports: External */
 import { expect } from './shared/setup'
