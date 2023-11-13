@@ -1,6 +1,6 @@
 {
-	"name": "@eth-optimism/batch-submitter-service",
-	"version": "0.1.16",
+	"name": "@ethan-bedrock/batch-submitter-service",
+	"version": "0.2.0",
 	"private": true,
 	"devDependencies": {}
 }
