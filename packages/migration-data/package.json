@@ -24,12 +24,12 @@
     "migration",
     "bedrock"
   ],
-  "homepage": "https://github.com/github.com/mantlenetworkio/mantle-v2/tree/develop/packages/migration-data#readme",
+  "homepage": "https://github.com/mantlenetworkio/mantle-v2/tree/develop/packages/migration-data#readme",
   "license": "MIT",
   "author": "Mantle PBC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/github.com/mantlenetworkio/mantle-v2.git"
+    "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "devDependencies": {
     "commander": "^9.0.0",

@@ -17,17 +17,19 @@ import {
   DAIBridgeAdapter,
   ECOBridgeAdapter,
 } from '../adapters'
+import pre from "@changesets/cli/dist/declarations/src/commands/pre";
 
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [ChainID in L2ChainID]: number
 } = {
   [L2ChainID.MANTLE]: 50 as const,
+  [L2ChainID.MANTLE_TESTNET]: 50 as const,
   [L2ChainID.MANTLE_GOERLIQA]: 12 as const,
+  [L2ChainID.MANTLE_KOVAN]: 12 as const,
   [L2ChainID.MANTLE_HARDHAT_LOCAL]: 2 as const,
   [L2ChainID.MANTLE_HARDHAT_DEVNET]: 2 as const,
-  [L2ChainID.OPTIMISM_BEDROCK_LOCAL_DEVNET]: 2 as const,
-  [L2ChainID.OPTIMISM_BEDROCK_ALPHA_TESTNET]: 12 as const,
-  [L2ChainID.BASE_GOERLI]: 12 as const,
+  [L2ChainID.MANTLE_V2_LOCAL_DEVNET]: 2 as const,
+
 }
 
 export const CHAIN_BLOCK_TIMES: {
@@ -55,6 +57,7 @@ export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
   OVM_SequencerFeeVault: predeploys.OVM_SequencerFeeVault,
   WETH: predeploys.WETH9,
   BedrockMessagePasser: bedrockPredeploys.L2ToL1MessagePasser,
+  BVM_MANTLE: predeploys.BVM_MANTLE
 }
 
 /**

@@ -33,7 +33,7 @@
   "author": "Mantle PBC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/github.com/mantlenetworkio/mantle-v2.git"
+    "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "dependencies": {
     "@ethan-bedrock/common-ts": "0.2.0",
