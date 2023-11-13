@@ -3,7 +3,7 @@ import assert from 'assert'
 
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import '@eth-optimism/hardhat-deploy-config'
+import '@ethan-bedrock/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 import 'hardhat-deploy'
 import { assertContractVariable } from '@ethan-bedrock/contracts-bedrock/src/deploy-utils'

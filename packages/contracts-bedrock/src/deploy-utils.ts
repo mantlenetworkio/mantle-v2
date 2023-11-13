@@ -8,7 +8,7 @@ import { awaitCondition, sleep } from '@ethan-bedrock/core-utils'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { Deployment, DeployResult } from 'hardhat-deploy/dist/types'
 import 'hardhat-deploy'
-import '@eth-optimism/hardhat-deploy-config'
+import '@ethan-bedrock/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
 /**

@@ -7,7 +7,7 @@ import * as mkdirp from 'mkdirp'
 import { ethers } from 'ethers'
 import { task } from 'hardhat/config'
 import { remove0x } from '@ethan-bedrock/core-utils'
-import '@eth-optimism/hardhat-deploy-config'
+import '@ethan-bedrock/hardhat-deploy-config'
 
 import { predeploys } from '../src/predeploys'
 import { getContractFromArtifact } from '../src/deploy-utils'
