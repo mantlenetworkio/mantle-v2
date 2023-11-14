@@ -40,4 +40,11 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential  coreutils libuv1 libudev-dev libusb-1.0-0-dev
           make build
+      - name: UNITEST
+        run: |
+          cd packages/contracts-bedrock/
+          yarn build
+          yarn build:differential
+          yarn build:fuzz
+          forge test
 
