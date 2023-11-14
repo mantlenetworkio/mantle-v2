@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { type } from 'os'
 
 /**
  * Defines the configuration for a deployment.
@@ -55,39 +56,79 @@ export interface DeployConfig {
   sccSequencerPublishWindowSeconds: number
 
   /**
+   * blockStaleMeasure block stale measure.
+   */
+  blockStaleMeasure: number
+
+  /**
+   * daFraudProofPeriod da fraud proof period.
+   */
+  daFraudProofPeriod: number
+
+  /**
+   * l2SubmittedBlockNumber l2 submitted block number.
+   */
+  l2SubmittedBlockNumber: number
+
+  /**
    * Address of the Sequencer (publishes to CTC).
    */
-  ovmSequencerAddress: string
+  bvmSequencerAddress: string
 
   /**
    * Address of the Proposer (publishes to SCC).
    */
-  ovmProposerAddress: string
+  bvmProposerAddress: string
+
+  /**
+   * Address of the Rolluper (publishes to Rollup).
+   */
+  bvmRolluperAddress: string
 
   /**
    * Address of the account that will sign blocks.
    */
-  ovmBlockSignerAddress: string
+  bvmBlockSignerAddress: string
 
   /**
    * Address that will receive fees on L1.
    */
-  ovmFeeWalletAddress: string
+  bvmFeeWalletAddress: string
 
   /**
    * Address of the owner of the AddressManager contract on L1.
    */
-  ovmAddressManagerOwner: string
+  bvmAddressManagerOwner: string
 
   /**
    * Address of the owner of the GasPriceOracle contract on L2.
    */
-  ovmGasPriceOracleOwner: string
+  bvmFeeWalletOwner: string
+
+  /**
+   * Address of the owner of the GasPriceOracle contract on L2.
+   */
+  bvmGasPriceOracleOwner: string
 
   /**
    * Optional whitelist owner address.
    */
-  ovmWhitelistOwner?: string
+  bvmWhitelistOwner?: string
+
+  /**
+   * Address of data manager.
+   */
+  dataManagerAddress: string
+
+  /**
+   * Address of data eigenda sequencer.
+   */
+  bvmEigenSequencerAddress: string
+
+  /**
+   * Address of scc contract.
+   */
+  sccAddress: string
 
   /**
    * Optional initial overhead value for GPO (default: 2750).
@@ -105,6 +146,16 @@ export interface DeployConfig {
   gasPriceOracleDecimals?: number
 
   /**
+   * Optional initial isBurning for GPO (default: false).
+   */
+  gasPriceOracleIsBurning?: number
+
+  /**
+   * Optional initial charge for GPO (default: false).
+   */
+  gasPriceOracleCharge?: number
+
+  /**
    * Optional initial L1 base fee for GPO (default: 1).
    */
   gasPriceOracleL1BaseFee?: number
@@ -118,6 +169,38 @@ export interface DeployConfig {
    * Optional block number to enable the Berlin hardfork (default: 0).
    */
   hfBerlinBlock?: number
+
+  /**
+   * deployer privete key
+   */
+  contractsDeployerKey: string
+
+  /**
+   * deployer rpc url
+   */
+  contractsRpcUrl: string
+
+  /**
+   * Optional initial sendAmountPerYear for TssReward contract
+   */
+  tssRewardSendAmountPerYear?: number
+
+  /**
+   * Optional initial waitingTime for TssReward contract
+   */
+  tssRewardWaitingTime?: number
+
+  /**
+   * Optional initial minStakeAmount for TssDelegationManager contract
+   */
+  tssDelegationManagerMinStakeAmount: string
+
+
+  /**
+   * Address of tss manager.
+   */
+  tssManagerAddress: string
+
 }
 
 /**
@@ -162,27 +245,51 @@ const configSpec: {
   sccSequencerPublishWindowSeconds: {
     type: 'number',
   },
-  ovmSequencerAddress: {
+  blockStaleMeasure: {
+    type: 'number',
+  },
+  daFraudProofPeriod: {
+    type: 'number',
+  },
+  l2SubmittedBlockNumber: {
+    type: 'number',
+  },
+  bvmSequencerAddress: {
     type: 'address',
   },
-  ovmProposerAddress: {
+  bvmProposerAddress: {
     type: 'address',
   },
-  ovmBlockSignerAddress: {
+  bvmRolluperAddress: {
     type: 'address',
   },
-  ovmFeeWalletAddress: {
+  bvmBlockSignerAddress: {
     type: 'address',
   },
-  ovmAddressManagerOwner: {
+  bvmFeeWalletAddress: {
     type: 'address',
   },
-  ovmGasPriceOracleOwner: {
+  bvmAddressManagerOwner: {
     type: 'address',
   },
-  ovmWhitelistOwner: {
+  bvmGasPriceOracleOwner: {
+    type: 'address',
+  },
+  bvmFeeWalletOwner: {
+    type: 'address',
+  },
+  bvmWhitelistOwner: {
     type: 'address',
     default: ethers.constants.AddressZero,
+  },
+  dataManagerAddress: {
+    type: 'address',
+  },
+  bvmEigenSequencerAddress: {
+    type: 'address',
+  },
+  sccAddress: {
+    type: 'address',
   },
   gasPriceOracleOverhead: {
     type: 'number',
@@ -196,17 +303,43 @@ const configSpec: {
     type: 'number',
     default: 6,
   },
+  gasPriceOracleIsBurning: {
+    type: 'number',
+    default: 0,
+  },
+  gasPriceOracleCharge: {
+    type: 'number',
+    default: 1,
+  },
   gasPriceOracleL1BaseFee: {
     type: 'number',
     default: 1,
   },
   gasPriceOracleL2GasPrice: {
     type: 'number',
-    default: 1,
+    default: 50_000_000,
   },
   hfBerlinBlock: {
     type: 'number',
     default: 0,
+  },
+  contractsDeployerKey: {
+    type: 'string',
+  },
+  contractsRpcUrl: {
+    type: 'string',
+  },
+  tssRewardSendAmountPerYear: {
+    type: 'number',
+  },
+  tssRewardWaitingTime: {
+    type: 'number',
+  },
+  tssDelegationManagerMinStakeAmount: {
+    type: 'string',
+  },
+  tssManagerAddress: {
+    type: 'string',
   },
 }
 

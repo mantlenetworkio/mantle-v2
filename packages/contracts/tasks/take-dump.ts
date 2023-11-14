@@ -41,34 +41,52 @@ task('take-dump').setAction(async ({}, hre) => {
   }
 
   const variables = {
-    OVM_DeployerWhitelist: {
-      owner: hre.deployConfig.ovmWhitelistOwner,
-    },
-    OVM_GasPriceOracle: {
-      _owner: hre.deployConfig.ovmGasPriceOracleOwner,
+    BVM_GasPriceOracle: {
+      _owner: hre.deployConfig.bvmGasPriceOracleOwner,
       gasPrice: hre.deployConfig.gasPriceOracleL2GasPrice,
       l1BaseFee: hre.deployConfig.gasPriceOracleL1BaseFee,
       overhead: hre.deployConfig.gasPriceOracleOverhead,
       scalar: hre.deployConfig.gasPriceOracleScalar,
       decimals: hre.deployConfig.gasPriceOracleDecimals,
+      isBurning: hre.deployConfig.gasPriceOracleIsBurning,
+      charge: hre.deployConfig.gasPriceOracleCharge,
+      sccAddress: (
+        await getContractFromArtifact(
+          hre,
+          names.managed.contracts.StateCommitmentChain
+        )
+      ).address,
     },
     L2StandardBridge: {
       l1TokenBridge: (
         await getContractFromArtifact(
           hre,
-          names.managed.contracts.Proxy__OVM_L1StandardBridge
+          names.managed.contracts.Proxy__BVM_L1StandardBridge
         )
       ).address,
       messenger: predeploys.L2CrossDomainMessenger,
     },
-    OVM_SequencerFeeVault: {
-      l1FeeWallet: hre.deployConfig.ovmFeeWalletAddress,
+    BVM_SequencerFeeVault: {
+      _owner: hre.deployConfig.bvmFeeWalletOwner,
+      l1FeeWallet: hre.deployConfig.bvmFeeWalletAddress,
+      bvmGasPriceOracleAddress: predeploys.BVM_GasPriceOracle,
+      burner: hre.deployConfig.bvmFeeWalletAddress,
+      minWithdrawalAmount: 0,
     },
-    OVM_ETH: {
+    BVM_ETH: {
       l2Bridge: predeploys.L2StandardBridge,
       l1Token: ethers.constants.AddressZero,
       _name: 'Ether',
-      _symbol: 'ETH',
+      _symbol: 'WETH',
+      decimal: 18,
+    },
+    BVM_MANTLE: {
+      l2Bridge: predeploys.L2StandardBridge,
+      // l1Token: hre.deployConfig.l1MantleAddress,
+      l1Token: '0x3c3a81e81dc49A522A592e7622A7E711c06bf354',
+      _name: 'Mantle',
+      _symbol: 'MNT',
+      decimal: 18,
     },
     L2CrossDomainMessenger: {
       // We default the xDomainMsgSender to this value to save gas.
@@ -77,16 +95,29 @@ task('take-dump').setAction(async ({}, hre) => {
       l1CrossDomainMessenger: (
         await getContractFromArtifact(
           hre,
-          names.managed.contracts.Proxy__OVM_L1CrossDomainMessenger
+          names.managed.contracts.Proxy__BVM_L1CrossDomainMessenger
         )
       ).address,
       // Set the messageNonce to a high value to avoid overwriting old sent messages.
       messageNonce: 100000,
     },
-    WETH9: {
-      name: 'Wrapped Ether',
-      symbol: 'WETH',
-      decimals: 18,
+    TssRewardContract: {
+      _owner: hre.deployConfig.bvmTssRewardContractOwner,
+      sendAmountPerYear: hre.deployConfig.tssRewardSendAmountPerYear,
+      messenger: predeploys.L2CrossDomainMessenger,
+      sccAddress: (
+        await getContractFromArtifact(
+          hre,
+          names.managed.contracts.StateCommitmentChain
+        )
+      ).address,
+      waitingTime: hre.deployConfig.tssRewardWaitingTime,
+      stakeSlashAddress: (
+        await getContractFromArtifact(
+          hre,
+          names.managed.contracts.Proxy__TSS_StakingSlashing
+        )
+      ).address,
     },
   }
 
@@ -98,8 +129,8 @@ task('take-dump').setAction(async ({}, hre) => {
       storage: {},
     }
 
-    if (predeployName === 'OVM_L1BlockNumber') {
-      // OVM_L1BlockNumber is a special case where we just inject a specific bytecode string.
+    if (predeployName === 'BVM_L1BlockNumber') {
+      // BVM_L1BlockNumber is a special case where we just inject a specific bytecode string.
       // We do this because it uses the custom L1BLOCKNUMBER opcode (0x4B) which cannot be
       // directly used in Solidity (yet). This bytecode string simply executes the 0x4B opcode
       // and returns the address given by that opcode.
@@ -129,33 +160,67 @@ task('take-dump').setAction(async ({}, hre) => {
     commit = '0000000000000000000000000000000000000000'
   }
 
-  const genesis = {
-    commit,
-    config: {
-      chainId: hre.deployConfig.l2ChainId,
-      homesteadBlock: 0,
-      eip150Block: 0,
-      eip155Block: 0,
-      eip158Block: 0,
-      byzantiumBlock: 0,
-      constantinopleBlock: 0,
-      petersburgBlock: 0,
-      istanbulBlock: 0,
-      muirGlacierBlock: 0,
-      berlinBlock: hre.deployConfig.hfBerlinBlock,
-      clique: {
-        period: 0,
-        epoch: 30000,
+  let genesis;
+  //if hre.deployConfig.l2ChainId === 5000, it is mainnet
+  //we needn't import it
+  if (hre.deployConfig.l2ChainId === 5000) {
+    genesis = {
+      commit,
+      config: {
+        chainId: hre.deployConfig.l2ChainId,
+        homesteadBlock: 0,
+        eip150Block: 0,
+        eip155Block: 0,
+        eip158Block: 0,
+        byzantiumBlock: 0,
+        constantinopleBlock: 0,
+        petersburgBlock: 0,
+        istanbulBlock: 0,
+        muirGlacierBlock: 0,
+        berlinBlock: hre.deployConfig.hfBerlinBlock,
+        clique: {
+          period: 0,
+          epoch: 30000,
+        },
       },
-    },
-    difficulty: '1',
-    gasLimit: hre.deployConfig.l2BlockGasLimit.toString(10),
-    extradata:
-      '0x' +
-      '00'.repeat(32) +
-      remove0x(hre.deployConfig.ovmBlockSignerAddress) +
-      '00'.repeat(65),
-    alloc: dump,
+      difficulty: '1',
+      gasLimit: hre.deployConfig.l2BlockGasLimit.toString(10),
+      extradata:
+        '0x' +
+        '00'.repeat(32) +
+        remove0x(hre.deployConfig.bvmBlockSignerAddress) +
+        '00'.repeat(65),
+      alloc: dump,
+    }
+  }else{
+    genesis = {
+      commit,
+      config: {
+        chainId: hre.deployConfig.l2ChainId,
+        homesteadBlock: 0,
+        eip150Block: 0,
+        eip155Block: 0,
+        eip158Block: 0,
+        byzantiumBlock: 0,
+        constantinopleBlock: 0,
+        petersburgBlock: 0,
+        istanbulBlock: 0,
+        muirGlacierBlock: 0,
+        berlinBlock: hre.deployConfig.hfBerlinBlock,
+        clique: {
+          period: 0,
+          epoch: 30000,
+        },
+      },
+      difficulty: '1',
+      gasLimit: hre.deployConfig.l2BlockGasLimit.toString(10),
+      extradata:
+        '0x' +
+        '00'.repeat(32) +
+        remove0x(hre.deployConfig.bvmBlockSignerAddress) +
+        '00'.repeat(65),
+      alloc: dump,
+    }
   }
 
   // Make sure the output location exists

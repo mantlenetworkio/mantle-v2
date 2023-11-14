@@ -262,7 +262,7 @@ Ensure that the ${pair.name} at\n${getEtherscanUrl(
       }
     )
     await getInput(c.yellow('OK? Hit enter to continue.'))
-  } else if (pair.name === names.managed.contracts.OVM_L1CrossDomainMessenger) {
+  } else if (pair.name === names.managed.contracts.BVM_L1CrossDomainMessenger) {
     const messengerManager = await getContractFactory('L1CrossDomainMessenger')
       .attach(pair.addr)
       .connect(provider)

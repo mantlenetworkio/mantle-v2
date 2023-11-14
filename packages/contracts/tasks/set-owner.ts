@@ -37,7 +37,7 @@ task('set-owner')
   .addOptionalParam(
     'contractAddress',
     'Address of Ownable contract',
-    predeploys.OVM_GasPriceOracle,
+    predeploys.BVM_GasPriceOracle,
     types.string
   )
   .setAction(async (args) => {

@@ -1,8 +1,8 @@
-import { ethers, Contract } from 'ethers'
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { sleep, awaitCondition, getChainId } from '@ethan-bedrock/core-utils'
-import { HttpNetworkConfig } from 'hardhat/types'
+import {Contract, ethers} from 'ethers'
+import {Provider} from '@ethersproject/abstract-provider'
+import {Signer} from '@ethersproject/abstract-signer'
+import {awaitCondition, getChainId, sleep} from '@mantleio/core-utils'
+import {HttpNetworkConfig} from 'hardhat/types'
 
 /**
  * @param  {Any} hre Hardhat runtime environment
@@ -266,3 +266,11 @@ export const isHardhatNode = async (hre) => {
 
 // Large balance to fund accounts with.
 export const BIG_BALANCE = ethers.BigNumber.from(`0xFFFFFFFFFFFFFFFFFFFF`)
+
+export const HexToBytes = async (hex: string) => {
+  const bytes = []
+  for (let c = 0; c < hex.length; c += 2) {
+    bytes.push(parseInt(hex.substr(c, 2), 16))
+  }
+  return bytes
+}
