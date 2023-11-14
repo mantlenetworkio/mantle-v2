@@ -54,7 +54,7 @@
     "isomorphic-fetch": "^3.0.0"
   },
   "dependencies": {
-    "@ethan-bedrock/contracts": "0.2.0",
+    "@mantleio/contracts": "0.2.1",
     "@ethan-bedrock/core-utils": "0.2.0",
     "@ethan-bedrock/contracts-bedrock": "0.2.0",
     "lodash": "^4.17.21",
