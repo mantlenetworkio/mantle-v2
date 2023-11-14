@@ -41,10 +41,18 @@ jobs:
           sudo apt install -y build-essential  coreutils libuv1 libudev-dev libusb-1.0-0-dev
           make build
       - name: UNITEST
+        id: unitest
         run: |
           cd packages/contracts-bedrock/
           yarn build
           yarn build:differential
           yarn build:fuzz
-          forge test
+          forge test |tee /tmp/1.txt
+          result=$(tail -n1 /tmp/1.txt)
+          echo "::set-output name=result::$result"
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ${{ steps.unitest.outputs.result }}
 
