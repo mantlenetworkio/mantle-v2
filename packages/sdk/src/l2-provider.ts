@@ -1,7 +1,7 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { serialize } from '@ethersproject/transactions'
 import { Contract, BigNumber } from 'ethers'
-import { predeploys, getContractInterface } from '@ethan-bedrock/contracts'
+import { predeploys, getContractInterface } from '@mantleio/contracts'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { assert } from './utils/assert'
@@ -39,7 +39,7 @@ const getNonceForTx = async (
  */
 const connectGasPriceOracle = (provider: ProviderLike): Contract => {
   return new Contract(
-    predeploys.OVM_GasPriceOracle,
+    predeploys.BVM_GasPriceOracle,
     getContractInterface('OVM_GasPriceOracle'),
     toProvider(provider)
   )

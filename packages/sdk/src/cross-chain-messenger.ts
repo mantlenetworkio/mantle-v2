@@ -28,7 +28,7 @@ import {
   encodeVersionedNonce,
   getChainId,
 } from '@ethan-bedrock/core-utils'
-import {getContractInterface, l1DevPredeploys, predeploys} from '@ethan-bedrock/contracts'
+import {getContractInterface, predeploys} from '@mantleio/contracts'
 import * as rlp from 'rlp'
 
 import {
@@ -1940,7 +1940,7 @@ export class CrossChainMessenger {
     ): Promise<TransactionRequest> => {
       return this.bridges.ETH.populateTransaction.deposit(
         ethers.constants.AddressZero,
-        predeploys.OVM_ETH,
+        predeploys.BVM_ETH,
         amount,
         opts
       )
@@ -1964,7 +1964,7 @@ export class CrossChainMessenger {
     ): Promise<TransactionRequest> => {
       return this.bridges.ETH.populateTransaction.withdraw(
         ethers.constants.AddressZero,
-        predeploys.OVM_ETH,
+        predeploys.BVM_ETH,
         amount,
         opts
       )
@@ -2015,7 +2015,7 @@ export class CrossChainMessenger {
       }
     ): Promise<TransactionRequest> => {
       return this.bridges.MNT.populateTransaction.withdraw(
-        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : l1DevPredeploys.L1_MNT,
+        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : L1_MNT,
         ethers.constants.AddressZero,
         amount,
         opts

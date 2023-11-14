@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { predeploys } from '@ethan-bedrock/contracts'
+import { predeploys } from '@mantleio/contracts'
 import { hexStringEquals } from '@ethan-bedrock/core-utils'
 import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
 
@@ -57,7 +57,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
           from: event.args.from,
           to: event.args.to,
           l1Token: ethers.constants.AddressZero,
-          l2Token: predeploys.OVM_ETH,
+          l2Token: predeploys.BVM_ETH,
           amount: event.args.amount,
           data: event.args.extraData,
           logIndex: event.logIndex,
@@ -89,7 +89,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
         // Only find ETH withdrawals.
         return (
           hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
+          hexStringEquals(event.args.l2Token, predeploys.BVM_ETH)
         )
       })
       .map((event) => {
@@ -119,7 +119,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
     // Only support ETH deposits and withdrawals.
     return (
       hexStringEquals(toAddress(l1Token), ethers.constants.AddressZero) &&
-      hexStringEquals(toAddress(l2Token), predeploys.OVM_ETH)
+      hexStringEquals(toAddress(l2Token), predeploys.BVM_ETH)
     )
   }
 

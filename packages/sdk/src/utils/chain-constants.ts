@@ -17,7 +17,6 @@ import {
   DAIBridgeAdapter,
   ECOBridgeAdapter,
 } from '../adapters'
-import pre from "@changesets/cli/dist/declarations/src/commands/pre";
 
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [ChainID in L2ChainID]: number
