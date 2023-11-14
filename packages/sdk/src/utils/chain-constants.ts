@@ -1,5 +1,5 @@
 import {
-  predeploys,
+  predeploys as v1Predeploys,
   getDeployedContractDefinition,
 } from '@ethan-bedrock/contracts'
 import { predeploys as bedrockPredeploys } from '@ethan-bedrock/contracts-bedrock'
@@ -45,18 +45,20 @@ export const CHAIN_BLOCK_TIMES: {
  * TODO(tynes): migrate to predeploys from contracts-bedrock
  */
 export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
-  L2CrossDomainMessenger: predeploys.L2CrossDomainMessenger,
-  L2ToL1MessagePasser: predeploys.BVM_L2ToL1MessagePasser,
-  L2StandardBridge: predeploys.L2StandardBridge,
-  OVM_L1BlockNumber: predeploys.BVM_L1BlockNumber,
-  OVM_L2ToL1MessagePasser: predeploys.BVM_L2ToL1MessagePasser,
-  OVM_DeployerWhitelist: predeploys.BVM_DeployerWhitelist,
-  OVM_ETH: predeploys.BVM_ETH,
-  OVM_GasPriceOracle: predeploys.BVM_GasPriceOracle,
-  OVM_SequencerFeeVault: predeploys.BVM_SequencerFeeVault,
-  WETH: predeploys.WETH9,
+  L2CrossDomainMessenger: v1Predeploys.L2CrossDomainMessenger,
+  L2ToL1MessagePasser: v1Predeploys.BVM_L2ToL1MessagePasser,
+  L2StandardBridge: v1Predeploys.L2StandardBridge,
+  OVM_L1BlockNumber: v1Predeploys.BVM_L1BlockNumber,
+  OVM_L2ToL1MessagePasser: v1Predeploys.BVM_L2ToL1MessagePasser,
+  OVM_DeployerWhitelist: v1Predeploys.BVM_DeployerWhitelist,
+  OVM_ETH: v1Predeploys.BVM_ETH,
+  OVM_GasPriceOracle: v1Predeploys.BVM_GasPriceOracle,
+  OVM_SequencerFeeVault: v1Predeploys.BVM_SequencerFeeVault,
+  WETH: v1Predeploys.WETH9,
   BedrockMessagePasser: bedrockPredeploys.L2ToL1MessagePasser,
-  BVM_MANTLE: predeploys.BVM_ETH
+  BVM_MANTLE: v1Predeploys.LegacyERC20Mantle,
+  TssRewardContract: v1Predeploys.TssRewardContract,
+
 }
 
 /**
@@ -81,6 +83,8 @@ const getL1ContractsByNetworkName = (network: string): OEL1ContractsLike => {
     BondManager: getDeployedAddress('BondManager'),
     OptimismPortal: '0x5b47E1A08Ea6d985D6649300584e6722Ec4B1383' as const,
     L2OutputOracle: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const,
+    //TODO : unknown rollup address
+    Rollup: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const
   }
 }
 
@@ -132,7 +136,7 @@ export const CONTRACT_ADDRESSES: {
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
-  [L2ChainID.OPTIMISM_BEDROCK_LOCAL_DEVNET]: {
+  [L2ChainID.MANTLE_V2_LOCAL_DEVNET]: {
     l1: {
       AddressManager: '0x6900000000000000000000000000000000000005' as const,
       L1CrossDomainMessenger:
@@ -145,10 +149,12 @@ export const CONTRACT_ADDRESSES: {
       BondManager: '0x0000000000000000000000000000000000000000' as const,
       OptimismPortal: '0x6900000000000000000000000000000000000001' as const,
       L2OutputOracle: '0x6900000000000000000000000000000000000000' as const,
+      //TODO : Rollup contracts
+      Rollup: '0xD1328C9167e0693B689b5aa5a024379d4e437858' as const
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
-  [L2ChainID.OPTIMISM_BEDROCK_ALPHA_TESTNET]: {
+  [L2ChainID.]: {
     l1: {
       AddressManager: '0xb4e08DcE1F323608229265c9d4125E22a4B9dbAF' as const,
       L1CrossDomainMessenger:
@@ -189,32 +195,37 @@ export const BRIDGE_ADAPTER_DATA: {
   [ChainID in L2ChainID]?: BridgeAdapterData
 } = {
   [L2ChainID.MANTLE]: {
-    wstETH: {
-      Adapter: DAIBridgeAdapter,
-      l1Bridge: '0x76943C0D61395d8F2edF9060e1533529cAe05dE6' as const,
-      l2Bridge: '0x8E01013243a96601a86eb3153F0d9Fa4fbFb6957' as const,
-    },
     BitBTC: {
       Adapter: StandardBridgeAdapter,
       l1Bridge: '0xaBA2c5F108F7E820C049D5Af70B16ac266c8f128' as const,
       l2Bridge: '0x158F513096923fF2d3aab2BcF4478536de6725e2' as const,
     },
     DAI: {
-      Adapter: DAIBridgeAdapter,
+      Adapter: StandardBridgeAdapter,
       l1Bridge: '0x10E6593CDda8c58a1d0f14C5164B376352a55f2F' as const,
       l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
     },
   },
-  [L2ChainID.MANTLE_TESTNET]: {
-    DAI: {
-      Adapter: DAIBridgeAdapter,
-      l1Bridge: '0x05a388Db09C2D44ec0b00Ee188cD42365c42Df23' as const,
-      l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
+  [L2ChainID.MANTLE_KOVAN]: {
+    wstETH: {
+      Adapter: StandardBridgeAdapter,
+      l1Bridge: '0xa88751C0a08623E11ff38c6B70F2BbEe7865C17c' as const,
+      l2Bridge: '0xF9C842dE4381a70eB265d10CF8D43DceFF5bA935' as const,
     },
-    ECO: {
-      Adapter: ECOBridgeAdapter,
-      l1Bridge: '0x7a01E277B8fDb8CDB2A2258508514716359f44A0' as const,
-      l2Bridge: '0x7a01E277B8fDb8CDB2A2258508514716359f44A0' as const,
+    BitBTC: {
+      Adapter: StandardBridgeAdapter,
+      l1Bridge: '0x0b651A42F32069d62d5ECf4f2a7e5Bd3E9438746' as const,
+      l2Bridge: '0x0CFb46528a7002a7D8877a5F7a69b9AaF1A9058e' as const,
+    },
+    USX: {
+      Adapter: StandardBridgeAdapter,
+      l1Bridge: '0x40E862341b2416345F02c41Ac70df08525150dC7' as const,
+      l2Bridge: '0xB4d37826b14Cd3CB7257A2A5094507d701fe715f' as const,
+    },
+    DAI: {
+      Adapter: StandardBridgeAdapter,
+      l1Bridge: '0xb415e822C4983ecD6B1c1596e8a5f976cf6CD9e3' as const,
+      l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
     },
   },
 }

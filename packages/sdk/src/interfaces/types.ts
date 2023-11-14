@@ -43,6 +43,9 @@ export interface OEL1Contracts {
   StateCommitmentChain: Contract
   CanonicalTransactionChain: Contract
   BondManager: Contract
+  // Mantle V1
+  Rollup: Contract
+
   // Bedrock
   OptimismPortal: Contract
   L2OutputOracle: Contract
@@ -62,8 +65,12 @@ export interface OEL2Contracts {
   OVM_GasPriceOracle: Contract
   OVM_SequencerFeeVault: Contract
   WETH: Contract
-  BedrockMessagePasser: Contract
+  //Mantle V1
   BVM_MANTLE:Contract
+  TssRewardContract:Contract
+  //Bedrock
+  BedrockMessagePasser: Contract
+
 }
 
 /**
