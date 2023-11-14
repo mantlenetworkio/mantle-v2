@@ -39,5 +39,7 @@ jobs:
           make build
           cd packages/contracts-bedrock/
           yarn build
-          yarn test
+          yarn build:differential
+          yarn build:fuzz
+          forge test
 
