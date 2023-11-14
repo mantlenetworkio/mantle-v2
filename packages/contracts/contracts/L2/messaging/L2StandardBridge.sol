@@ -103,9 +103,17 @@ contract L2StandardBridge is IL2ERC20Bridge, CrossDomainEnabled {
         address l1Token = IL2StandardERC20(_l2Token).l1Token();
         bytes memory message;
 
-        if (_l2Token == Lib_PredeployAddresses.OVM_ETH) {
+        if (_l2Token == Lib_PredeployAddresses.BVM_ETH) {
             message = abi.encodeWithSelector(
                 IL1StandardBridge.finalizeETHWithdrawal.selector,
+                _from,
+                _to,
+                _amount,
+                _data
+            );
+        } else if (_l2Token == Lib_PredeployAddresses.BVM_MANTLE) {
+            message = abi.encodeWithSelector(
+                IL1ERC20Bridge.finalizeMantleWithdrawal.selector,
                 _from,
                 _to,
                 _amount,

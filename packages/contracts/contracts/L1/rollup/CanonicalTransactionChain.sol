@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 /* Library Imports */
 import { AddressAliasHelper } from "../../standards/AddressAliasHelper.sol";
-import { Lib_OVMCodec } from "../../libraries/codec/Lib_OVMCodec.sol";
+import { Lib_BVMCodec } from "../../libraries/codec/Lib_BVMCodec.sol";
 import { Lib_AddressResolver } from "../../libraries/resolver/Lib_AddressResolver.sol";
 
 /* Interface Imports */
@@ -58,7 +58,7 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
      ***************/
 
     uint40 private _nextQueueIndex; // index of the first queue element not yet included
-    Lib_OVMCodec.QueueElement[] queueElements;
+    Lib_BVMCodec.QueueElement[] queueElements;
 
     /***************
      * Constructor *
@@ -96,8 +96,6 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
     /**
      * Allows the Burn Admin to update the parameters which determine the amount of gas to burn.
      * The value of enqueueL2GasPrepaid is immediately updated as well.
-     * @param _l2GasDiscountDivisor The ratio of the cost of L1 gas to the cost of L2 gas
-     * @param _enqueueGasCost The approximate cost of calling the enqueue function
      */
     function setGasParams(uint256 _l2GasDiscountDivisor, uint256 _enqueueGasCost)
         external
@@ -179,7 +177,7 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
     function getQueueElement(uint256 _index)
         public
         view
-        returns (Lib_OVMCodec.QueueElement memory _element)
+        returns (Lib_BVMCodec.QueueElement memory _element)
     {
         return queueElements[_index];
     }
@@ -267,7 +265,7 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
         bytes32 transactionHash = keccak256(abi.encode(sender, _target, _gasLimit, _data));
 
         queueElements.push(
-            Lib_OVMCodec.QueueElement({
+            Lib_BVMCodec.QueueElement({
                 transactionHash: transactionHash,
                 timestamp: uint40(block.timestamp),
                 blockNumber: uint40(block.number)
@@ -301,7 +299,7 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
         );
 
         require(
-            msg.sender == resolve("OVM_Sequencer"),
+            msg.sender == resolve("BVM_Sequencer"),
             "Function can only be called by the Sequencer."
         );
 
@@ -353,7 +351,7 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
             // curContext.numSubsequentQueueTransactions > 0 which means that we've processed at
             // least one queue element. We increment nextQueueIndex after processing each queue
             // element, so the index of the last element we processed is nextQueueIndex - 1.
-            Lib_OVMCodec.QueueElement memory lastElement = queueElements[nextQueueIndex - 1];
+            Lib_BVMCodec.QueueElement memory lastElement = queueElements[nextQueueIndex - 1];
 
             blockTimestamp = lastElement.timestamp;
             blockNumber = lastElement.blockNumber;
@@ -418,8 +416,6 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
      * Parses the batch context from the extra data.
      * @return Total number of elements submitted.
      * @return Index of the next queue element.
-     * @return Timestamp for the last transaction
-     * @return Block number for the last transaction.
      */
     function _getBatchExtraData()
         internal
@@ -507,11 +503,12 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
         IChainStorageContainer batchesRef = batches();
         (uint40 totalElements, uint40 nextQueueIndex, , ) = _getBatchExtraData();
 
-        Lib_OVMCodec.ChainBatchHeader memory header = Lib_OVMCodec.ChainBatchHeader({
+        Lib_BVMCodec.ChainBatchHeader memory header = Lib_BVMCodec.ChainBatchHeader({
             batchIndex: batchesRef.length(),
             batchRoot: _transactionRoot,
             batchSize: _batchSize,
             prevTotalElements: totalElements,
+            signature:  hex"",
             extraData: hex""
         });
 
@@ -520,10 +517,11 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
             header.batchRoot,
             header.batchSize,
             header.prevTotalElements,
+            header.signature,
             header.extraData
         );
 
-        bytes32 batchHeaderHash = Lib_OVMCodec.hashBatchHeader(header);
+        bytes32 batchHeaderHash = Lib_BVMCodec.hashBatchHeader(header);
         bytes27 latestBatchContext = _makeBatchExtraData(
             totalElements + uint40(header.batchSize),
             nextQueueIndex + uint40(_numQueuedTransactions),
@@ -534,4 +532,29 @@ contract CanonicalTransactionChain is ICanonicalTransactionChain, Lib_AddressRes
         // slither-disable-next-line reentrancy-no-eth, reentrancy-events
         batchesRef.push(batchHeaderHash, latestBatchContext);
     }
+
+    /**
+     * Reset the index when the ctc data is dirtyed
+     */
+    function resetIndex(uint256 _batchIndex, uint40 _totalElement, uint40 _batchSize,
+        uint40 _nextqIndex,uint40 _numQueuedTransactions ,
+        uint40 _timestamp, uint40 _blockNumber) external {
+        require(_batchIndex < batches().length(), "Invalid batch index.");
+
+        require(msg.sender == libAddressManager.owner(), "Only callable by the address manager owner.");
+
+        bytes27 latestBatchContext = _makeBatchExtraData(
+            _totalElement + _batchSize, _nextqIndex + _numQueuedTransactions,
+            _timestamp, _blockNumber
+        );
+
+        // slither-disable-next-line reentrancy-events
+        batches().deleteElementsAfterInclusive(_batchIndex,latestBatchContext);
+
+        _nextQueueIndex = _nextqIndex;
+
+        // slither-disable-next-line reentrancy-events
+        emit CTCBatchReset(_batchIndex,_nextqIndex,_totalElement,_batchSize,_numQueuedTransactions,_timestamp,_blockNumber);
+    }
+
 }

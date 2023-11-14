@@ -13,7 +13,7 @@
 ### appendStateBatch
 
 ```solidity
-function appendStateBatch(bytes32[] _batch, uint256 _shouldStartAtElement) external nonpayable
+function appendStateBatch(bytes32[] _batch, uint256 _shouldStartAtElement, bytes _signature) external nonpayable
 ```
 
 Appends a batch of state roots to the chain.
@@ -26,11 +26,12 @@ Appends a batch of state roots to the chain.
 |---|---|---|
 | _batch | bytes32[] | Batch of state roots.
 | _shouldStartAtElement | uint256 | Index of the element at which this batch should start.
+| _signature | bytes | tss group signature of state batches.
 
 ### deleteStateBatch
 
 ```solidity
-function deleteStateBatch(Lib_OVMCodec.ChainBatchHeader _batchHeader) external nonpayable
+function deleteStateBatch(Lib_BVMCodec.ChainBatchHeader _batchHeader) external nonpayable
 ```
 
 Deletes all state roots after (and including) a given batch.
@@ -41,7 +42,7 @@ Deletes all state roots after (and including) a given batch.
 
 | Name | Type | Description |
 |---|---|---|
-| _batchHeader | Lib_OVMCodec.ChainBatchHeader | Header of the batch to start deleting from.
+| _batchHeader | Lib_BVMCodec.ChainBatchHeader | Header of the batch to start deleting from.
 
 ### getLastSequencerTimestamp
 
@@ -97,7 +98,7 @@ Retrieves the total number of elements submitted.
 ### insideFraudProofWindow
 
 ```solidity
-function insideFraudProofWindow(Lib_OVMCodec.ChainBatchHeader _batchHeader) external view returns (bool _inside)
+function insideFraudProofWindow(Lib_BVMCodec.ChainBatchHeader _batchHeader) external view returns (bool _inside)
 ```
 
 Checks whether a given batch is still inside its fraud proof window.
@@ -108,7 +109,7 @@ Checks whether a given batch is still inside its fraud proof window.
 
 | Name | Type | Description |
 |---|---|---|
-| _batchHeader | Lib_OVMCodec.ChainBatchHeader | Header of the batch to check.
+| _batchHeader | Lib_BVMCodec.ChainBatchHeader | Header of the batch to check.
 
 #### Returns
 
@@ -116,10 +117,28 @@ Checks whether a given batch is still inside its fraud proof window.
 |---|---|---|
 | _inside | bool | Whether or not the batch is inside the fraud proof window.
 
+### rollBackL2Chain
+
+```solidity
+function rollBackL2Chain(uint256 _shouldRollBack, uint256 _shouldStartAtElement, bytes _signature) external nonpayable
+```
+
+Emit event to notify sequencers to roll back.
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _shouldRollBack | uint256 | roll back to should start .
+| _shouldStartAtElement | uint256 | Index of the element at which this batch should start
+| _signature | bytes | signature of rollback message
+
 ### verifyStateCommitment
 
 ```solidity
-function verifyStateCommitment(bytes32 _element, Lib_OVMCodec.ChainBatchHeader _batchHeader, Lib_OVMCodec.ChainInclusionProof _proof) external view returns (bool _verified)
+function verifyStateCommitment(bytes32 _element, Lib_BVMCodec.ChainBatchHeader _batchHeader, Lib_BVMCodec.ChainInclusionProof _proof) external view returns (bool _verified)
 ```
 
 Verifies a batch inclusion proof.
@@ -131,23 +150,58 @@ Verifies a batch inclusion proof.
 | Name | Type | Description |
 |---|---|---|
 | _element | bytes32 | Hash of the element to verify a proof for.
-| _batchHeader | Lib_OVMCodec.ChainBatchHeader | Header of the batch in which the element was included.
-| _proof | Lib_OVMCodec.ChainInclusionProof | Merkle inclusion proof for the element.
+| _batchHeader | Lib_BVMCodec.ChainBatchHeader | Header of the batch in which the element was included.
+| _proof | Lib_BVMCodec.ChainInclusionProof | Merkle inclusion proof for the element.
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _verified | bool | Whether or not the batch inclusion proof is verified.
+| _verified | bool | undefined
 
 
 
 ## Events
 
+### DistributeTssReward
+
+```solidity
+event DistributeTssReward(uint256 indexed _startBlockNumber, uint256 _length, uint256 indexed _batchTime, address[] _tssMembers)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _startBlockNumber `indexed` | uint256 | undefined |
+| _length  | uint256 | undefined |
+| _batchTime `indexed` | uint256 | undefined |
+| _tssMembers  | address[] | undefined |
+
+### RollBackL2Chain
+
+```solidity
+event RollBackL2Chain(uint256 indexed _startBlockNumber)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _startBlockNumber `indexed` | uint256 | undefined |
+
 ### StateBatchAppended
 
 ```solidity
-event StateBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, uint256 _batchSize, uint256 _prevTotalElements, bytes _extraData)
+event StateBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, uint256 _batchSize, uint256 _prevTotalElements, bytes _signature, bytes _extraData)
 ```
 
 
@@ -162,6 +216,7 @@ event StateBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, uint25
 | _batchRoot  | bytes32 | undefined |
 | _batchSize  | uint256 | undefined |
 | _prevTotalElements  | uint256 | undefined |
+| _signature  | bytes | undefined |
 | _extraData  | bytes | undefined |
 
 ### StateBatchDeleted

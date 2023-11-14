@@ -2,7 +2,7 @@
 pragma solidity >0.5.0 <0.9.0;
 
 /* Library Imports */
-import { Lib_OVMCodec } from "../../libraries/codec/Lib_OVMCodec.sol";
+import { Lib_BVMCodec } from "../../libraries/codec/Lib_BVMCodec.sol";
 
 /* Interface Imports */
 import { IChainStorageContainer } from "./IChainStorageContainer.sol";
@@ -47,7 +47,19 @@ interface ICanonicalTransactionChain {
         bytes32 _batchRoot,
         uint256 _batchSize,
         uint256 _prevTotalElements,
+        bytes _signature,
         bytes _extraData
+    );
+
+
+    event CTCBatchReset(
+        uint256 indexed _batchIndex,
+        uint40 _nextqIndex,
+        uint40 _totalElement,
+        uint40 _batchSize,
+        uint40 _numQueuedTransactions ,
+        uint40 _timestamp,
+        uint40 _blockNumber
     );
 
     /***********
@@ -107,7 +119,7 @@ interface ICanonicalTransactionChain {
     function getQueueElement(uint256 _index)
         external
         view
-        returns (Lib_OVMCodec.QueueElement memory _element);
+        returns (Lib_BVMCodec.QueueElement memory _element);
 
     /**
      * Returns the timestamp of the last transaction.
@@ -160,4 +172,8 @@ interface ICanonicalTransactionChain {
         // BatchContext[] _contexts,
         // bytes[] _transactionDataFields
     ) external;
+
+    function resetIndex(uint256 _batchIndex, uint40 _totalElement, uint40 _batchSize,
+        uint40 _nextqIndex,uint40 _numQueuedTransactions ,
+        uint40 _timestamp, uint40 _blockNumber) external;
 }

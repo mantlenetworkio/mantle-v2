@@ -2,14 +2,14 @@
 pragma solidity ^0.8.9;
 
 /* Library Imports */
-import { AddressAliasHelper } from "../../standards/AddressAliasHelper.sol";
-import { Lib_CrossDomainUtils } from "../../libraries/bridge/Lib_CrossDomainUtils.sol";
-import { Lib_DefaultValues } from "../../libraries/constants/Lib_DefaultValues.sol";
-import { Lib_PredeployAddresses } from "../../libraries/constants/Lib_PredeployAddresses.sol";
+import {AddressAliasHelper} from "../../standards/AddressAliasHelper.sol";
+import {Lib_CrossDomainUtils} from "../../libraries/bridge/Lib_CrossDomainUtils.sol";
+import {Lib_DefaultValues} from "../../libraries/constants/Lib_DefaultValues.sol";
+import {Lib_PredeployAddresses} from "../../libraries/constants/Lib_PredeployAddresses.sol";
 
 /* Interface Imports */
-import { IL2CrossDomainMessenger } from "./IL2CrossDomainMessenger.sol";
-import { iOVM_L2ToL1MessagePasser } from "../predeploys/iOVM_L2ToL1MessagePasser.sol";
+import {IL2CrossDomainMessenger} from "./IL2CrossDomainMessenger.sol";
+import {iBVM_L2ToL1MessagePasser} from "../predeploys/iBVM_L2ToL1MessagePasser.sol";
 
 /**
  * @title L2CrossDomainMessenger
@@ -76,7 +76,7 @@ contract L2CrossDomainMessenger is IL2CrossDomainMessenger {
 
         // Actually send the message.
         // slither-disable-next-line reentrancy-no-eth, reentrancy-events
-        iOVM_L2ToL1MessagePasser(Lib_PredeployAddresses.L2_TO_L1_MESSAGE_PASSER).passMessageToL1(
+        iBVM_L2ToL1MessagePasser(Lib_PredeployAddresses.L2_TO_L1_MESSAGE_PASSER).passMessageToL1(
             xDomainCalldata
         );
 
@@ -120,7 +120,7 @@ contract L2CrossDomainMessenger is IL2CrossDomainMessenger {
             "Provided message has already been received."
         );
 
-        // Prevent calls to OVM_L2ToL1MessagePasser, which would enable
+        // Prevent calls to BVM_L2ToL1MessagePasser, which would enable
         // an attacker to maliciously craft the _message to spoof
         // a call from any L2 account.
         if (_target == Lib_PredeployAddresses.L2_TO_L1_MESSAGE_PASSER) {
