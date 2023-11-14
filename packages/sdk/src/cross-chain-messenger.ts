@@ -28,7 +28,7 @@ import {
   encodeVersionedNonce,
   getChainId,
 } from '@ethan-bedrock/core-utils'
-import {getContractInterface, predeploys} from '@mantleio/contracts'
+import {getContractInterface, predeploys} from '@ethan-bedrock/contracts'
 import * as rlp from 'rlp'
 
 import {

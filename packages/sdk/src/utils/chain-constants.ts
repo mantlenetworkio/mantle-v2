@@ -46,17 +46,17 @@ export const CHAIN_BLOCK_TIMES: {
  */
 export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
   L2CrossDomainMessenger: predeploys.L2CrossDomainMessenger,
-  L2ToL1MessagePasser: predeploys.OVM_L2ToL1MessagePasser,
+  L2ToL1MessagePasser: predeploys.BVM_L2ToL1MessagePasser,
   L2StandardBridge: predeploys.L2StandardBridge,
-  OVM_L1BlockNumber: predeploys.OVM_L1BlockNumber,
-  OVM_L2ToL1MessagePasser: predeploys.OVM_L2ToL1MessagePasser,
-  OVM_DeployerWhitelist: predeploys.OVM_DeployerWhitelist,
-  OVM_ETH: predeploys.OVM_ETH,
-  OVM_GasPriceOracle: predeploys.OVM_GasPriceOracle,
-  OVM_SequencerFeeVault: predeploys.OVM_SequencerFeeVault,
+  OVM_L1BlockNumber: predeploys.BVM_L1BlockNumber,
+  OVM_L2ToL1MessagePasser: predeploys.BVM_L2ToL1MessagePasser,
+  OVM_DeployerWhitelist: predeploys.BVM_DeployerWhitelist,
+  OVM_ETH: predeploys.BVM_ETH,
+  OVM_GasPriceOracle: predeploys.BVM_GasPriceOracle,
+  OVM_SequencerFeeVault: predeploys.BVM_SequencerFeeVault,
   WETH: predeploys.WETH9,
   BedrockMessagePasser: bedrockPredeploys.L2ToL1MessagePasser,
-  BVM_MANTLE: predeploys.BVM_MANTLE
+  BVM_MANTLE: predeploys.BVM_ETH
 }
 
 /**
