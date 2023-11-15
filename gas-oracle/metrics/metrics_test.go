@@ -15,7 +15,7 @@ func TestInitAndRegisterStats(t *testing.T) {
 
 	GasOracleStats.TokenRatioGauge.Update(4000)
 	tokenRatio := GasOracleStats.TokenRatioGauge.Value()
-	require.Equal(t, int64(4000), tokenRatio)
+	require.Equal(t, float64(4000), tokenRatio)
 
 	GasOracleStats.FeeScalarGauge.Update(1500000)
 	feeScalar := GasOracleStats.FeeScalarGauge.Value()
