@@ -26,11 +26,66 @@ contract GasPriceOracle is Semver {
      * @notice Number of decimals used in the scalar.
      */
     uint256 public constant DECIMALS = 6;
+    uint256 public tokenRatio;
+    address public owner;
+    address public operator;
 
     /**
      * @custom:semver 1.0.0
      */
     constructor() Semver(1, 0, 0) {}
+
+    /**********
+    * Events *
+    **********/
+    event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
+
+    /**********
+    * Modifiers *
+    **********/
+    modifier onlyOwner() {
+        require(owner == msg.sender, "Caller is not the owner");
+        _;
+    }
+    modifier onlyOperator() {
+        require(operator == msg.sender, "Caller is not the operator");
+        _;
+    }
+
+    /**
+    * Allows the owner to modify the operator.
+    * @param _operator New operator
+     */
+    // slither-disable-next-line external-function
+    function setOperator(address _operator) public onlyOwner {
+        address previousOperator = operator;
+        operator = _operator;
+        emit OperatorUpdated(previousOperator, operator);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`_owner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address _owner) public virtual onlyOwner {
+        require(_owner != address(0), "new owner is the zero address");
+        address previousOwner = owner;
+        owner = _owner;
+        emit OwnershipTransferred(previousOwner, owner);
+    }
+
+    /**
+    * Allows the operator to modify the token ratio.
+    * @param _tokenRatio New tokenRatio
+     */
+    // slither-disable-next-line external-function
+    function setTokenRatio(uint256 _tokenRatio) public onlyOperator {
+        uint256 previousTokenRatio = _tokenRatio;
+        tokenRatio = _tokenRatio;
+        emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
+    }
 
     /**
      * @notice Computes the L1 portion of the fee based on the size of the rlp encoded input

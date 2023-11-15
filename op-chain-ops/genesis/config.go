@@ -501,6 +501,10 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"xDomainMsgSender": "0x000000000000000000000000000000000000dEaD",
 		"msgNonce":         0,
 	}
+	storage["GasPriceOracle"] = state.StorageValues{
+		"tokenRatio": new(big.Int).SetUint64(4123),
+		"owner":      common.HexToAddress("0x00000500e87ee83a1bfa233512af25a4003836c8"),
+	}
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
 		"timestamp":      block.Time(),

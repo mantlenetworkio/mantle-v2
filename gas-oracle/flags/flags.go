@@ -29,13 +29,13 @@ var (
 	}
 	GasPriceOracleAddressFlag = cli.StringFlag{
 		Name:   "gas-price-oracle-address",
-		Usage:  "Address of OVM_GasPriceOracle",
+		Usage:  "Address of BVM_GasPriceOracle",
 		Value:  "0x420000000000000000000000000000000000000F",
 		EnvVar: "GAS_PRICE_ORACLE_GAS_PRICE_ORACLE_ADDRESS",
 	}
 	PrivateKeyFlag = cli.StringFlag{
 		Name:   "private-key",
-		Usage:  "Private Key corresponding to OVM_GasPriceOracle Owner",
+		Usage:  "Private Key corresponding to BVM_GasPriceOracle Owner",
 		EnvVar: "GAS_PRICE_ORACLE_PRIVATE_KEY",
 	}
 	TransactionGasPriceFlag = cli.Uint64Flag{
@@ -43,69 +43,41 @@ var (
 		Usage:  "Hardcoded tx.gasPrice, not setting it uses gas estimation",
 		EnvVar: "GAS_PRICE_ORACLE_TRANSACTION_GAS_PRICE",
 	}
-	EnableL1BaseFeeFlag = cli.BoolFlag{
-		Name:   "enable-l1-base-fee",
-		Usage:  "Enable updating the L1 base fee",
-		EnvVar: "GAS_PRICE_ORACLE_ENABLE_L1_BASE_FEE",
-	}
-	EnableL2GasPriceFlag = cli.BoolFlag{
-		Name:   "enable-l2-gas-price",
-		Usage:  "Enable updating the L2 gas price",
-		EnvVar: "GAS_PRICE_ORACLE_ENABLE_L2_GAS_PRICE",
-	}
 	LogLevelFlag = cli.IntFlag{
 		Name:   "loglevel",
 		Value:  3,
 		Usage:  "log level to emit to the screen",
 		EnvVar: "GAS_PRICE_ORACLE_LOG_LEVEL",
 	}
-	FloorPriceFlag = cli.Uint64Flag{
-		Name:   "floor-price",
-		Value:  1,
-		Usage:  "gas price floor",
-		EnvVar: "GAS_PRICE_ORACLE_FLOOR_PRICE",
-	}
-	TargetGasPerSecondFlag = cli.Uint64Flag{
-		Name:   "target-gas-per-second",
-		Value:  11_000_000,
-		Usage:  "target gas per second",
-		EnvVar: "GAS_PRICE_ORACLE_TARGET_GAS_PER_SECOND",
-	}
-	MaxPercentChangePerEpochFlag = cli.Float64Flag{
-		Name:   "max-percent-change-per-epoch",
-		Value:  0.1,
-		Usage:  "max percent change of gas price per second",
-		EnvVar: "GAS_PRICE_ORACLE_MAX_PERCENT_CHANGE_PER_EPOCH",
-	}
-	AverageBlockGasLimitPerEpochFlag = cli.Uint64Flag{
-		Name:   "average-block-gas-limit-per-epoch",
-		Value:  11_000_000,
-		Usage:  "average block gas limit per epoch",
-		EnvVar: "GAS_PRICE_ORACLE_AVERAGE_BLOCK_GAS_LIMIT_PER_EPOCH",
-	}
-	EpochLengthSecondsFlag = cli.Uint64Flag{
-		Name:   "epoch-length-seconds",
-		Value:  10,
-		Usage:  "length of epochs in seconds",
-		EnvVar: "GAS_PRICE_ORACLE_EPOCH_LENGTH_SECONDS",
-	}
-	L1BaseFeeEpochLengthSecondsFlag = cli.Uint64Flag{
-		Name:   "l1-base-fee-epoch-length-seconds",
+	TokenRatioEpochLengthSecondsFlag = cli.Uint64Flag{
+		Name:   "token-ratio-epoch-length-seconds",
 		Value:  15,
-		Usage:  "polling time for updating the L1 base fee",
-		EnvVar: "GAS_PRICE_ORACLE_L1_BASE_FEE_EPOCH_LENGTH_SECONDS",
+		Usage:  "polling time for updating the token ratio",
+		EnvVar: "GAS_PRICE_ORACLE_TOKEN_RATIO_EPOCH_LENGTH_SECONDS",
 	}
-	L1BaseFeeSignificanceFactorFlag = cli.Float64Flag{
-		Name:   "l1-base-fee-significant-factor",
-		Value:  0.10,
-		Usage:  "only update when the L1 base fee changes by more than this factor",
-		EnvVar: "GAS_PRICE_ORACLE_L1_BASE_FEE_SIGNIFICANT_FACTOR",
-	}
-	L2GasPriceSignificanceFactorFlag = cli.Float64Flag{
-		Name:   "significant-factor",
+	TokenRatioSignificanceFactorFlag = cli.Float64Flag{
+		Name:   "token-ratio-significant-factor",
 		Value:  0.05,
-		Usage:  "only update when the gas price changes by more than this factor",
-		EnvVar: "GAS_PRICE_ORACLE_SIGNIFICANT_FACTOR",
+		Usage:  "only update when the token ratio changes by more than this factor",
+		EnvVar: "GAS_PRICE_ORACLE_TOKEN_RATIO_SIGNIFICANT_FACTOR",
+	}
+	TokenRatioCexURL = cli.StringFlag{
+		Name:     "token-ratio-cex-url",
+		Usage:    "token ratio cex url",
+		EnvVar:   "GAS_PRICE_TOKENRATIO_CEX_URL",
+		Required: true,
+	}
+	TokenRatioDexURL = cli.StringFlag{
+		Name:     "token-ratio-dex-url",
+		Usage:    "token ratio dex url",
+		EnvVar:   "GAS_PRICE_TOKENRATIO_DEX_URL",
+		Required: true,
+	}
+	TokenRatioUpdateFrequencySecond = cli.Uint64Flag{
+		Name:   "token-ratio-update-frequency-second",
+		Value:  3,
+		Usage:  "token ratio update frequency",
+		EnvVar: "GAS_PRICE_TOKENRATIO_UPDATE_FREQUENCY",
 	}
 	WaitForReceiptFlag = cli.BoolFlag{
 		Name:   "wait-for-receipt",
@@ -126,37 +98,28 @@ var (
 	MetricsPortFlag = cli.IntFlag{
 		Name:   "metrics.port",
 		Usage:  "Metrics HTTP server listening port",
-		Value:  6060,
+		Value:  9107,
 		EnvVar: "GAS_PRICE_ORACLE_METRICS_PORT",
 	}
-	MetricsEnableInfluxDBFlag = cli.BoolFlag{
-		Name:   "metrics.influxdb",
-		Usage:  "Enable metrics export/push to an external InfluxDB database",
-		EnvVar: "GAS_PRICE_ORACLE_METRICS_ENABLE_INFLUX_DB",
+	EnableHsmFlag = cli.BoolFlag{
+		Name:   "enable-hsm",
+		Usage:  "Enalbe the hsm",
+		EnvVar: "GAS_PRICE_ORACLE_ENABLE_HSM",
 	}
-	MetricsInfluxDBEndpointFlag = cli.StringFlag{
-		Name:   "metrics.influxdb.endpoint",
-		Usage:  "InfluxDB API endpoint to report metrics to",
-		Value:  "http://localhost:8086",
-		EnvVar: "GAS_PRICE_ORACLE_METRICS_INFLUX_DB_ENDPOINT",
+	HsmAPINameFlag = cli.StringFlag{
+		Name:   "hsm-api-name",
+		Usage:  "the api name of hsm",
+		EnvVar: "GAS_PRICE_ORACLE_HSM_API_NAME",
 	}
-	MetricsInfluxDBDatabaseFlag = cli.StringFlag{
-		Name:   "metrics.influxdb.database",
-		Usage:  "InfluxDB database name to push reported metrics to",
-		Value:  "gas-oracle",
-		EnvVar: "GAS_PRICE_ORACLE_METRICS_INFLUX_DB_DATABASE",
+	HsmAddressFlag = cli.StringFlag{
+		Name:   "hsm-address",
+		Usage:  "the address of hsm key",
+		EnvVar: "GAS_PRICE_ORACLE_HSM_ADDRESS",
 	}
-	MetricsInfluxDBUsernameFlag = cli.StringFlag{
-		Name:   "metrics.influxdb.username",
-		Usage:  "Username to authorize access to the database",
-		Value:  "test",
-		EnvVar: "GAS_PRICE_ORACLE_METRICS_INFLUX_DB_USERNAME",
-	}
-	MetricsInfluxDBPasswordFlag = cli.StringFlag{
-		Name:   "metrics.influxdb.password",
-		Usage:  "Password to authorize access to the database",
-		Value:  "test",
-		EnvVar: "GAS_PRICE_ORACLE_METRICS_INFLUX_DB_PASSWORD",
+	HsmCredenFlag = cli.StringFlag{
+		Name:   "hsm-creden",
+		Usage:  "the creden of hsm key",
+		EnvVar: "GAS_PRICE_ORACLE_HSM_CREDEN",
 	}
 )
 
@@ -165,27 +128,21 @@ var Flags = []cli.Flag{
 	LayerTwoHttpUrlFlag,
 	L1ChainIDFlag,
 	L2ChainIDFlag,
-	L1BaseFeeSignificanceFactorFlag,
 	GasPriceOracleAddressFlag,
 	PrivateKeyFlag,
 	TransactionGasPriceFlag,
 	LogLevelFlag,
-	FloorPriceFlag,
-	TargetGasPerSecondFlag,
-	MaxPercentChangePerEpochFlag,
-	AverageBlockGasLimitPerEpochFlag,
-	EpochLengthSecondsFlag,
-	L1BaseFeeEpochLengthSecondsFlag,
-	L2GasPriceSignificanceFactorFlag,
+	TokenRatioSignificanceFactorFlag,
+	TokenRatioEpochLengthSecondsFlag,
+	TokenRatioCexURL,
+	TokenRatioDexURL,
+	TokenRatioUpdateFrequencySecond,
 	WaitForReceiptFlag,
-	EnableL1BaseFeeFlag,
-	EnableL2GasPriceFlag,
+	EnableHsmFlag,
+	HsmAddressFlag,
+	HsmAPINameFlag,
+	HsmCredenFlag,
 	MetricsEnabledFlag,
 	MetricsHTTPFlag,
 	MetricsPortFlag,
-	MetricsEnableInfluxDBFlag,
-	MetricsInfluxDBEndpointFlag,
-	MetricsInfluxDBDatabaseFlag,
-	MetricsInfluxDBUsernameFlag,
-	MetricsInfluxDBPasswordFlag,
 }
