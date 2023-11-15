@@ -41,12 +41,12 @@ contract CrossDomainEnabled {
     modifier onlyFromCrossDomainAccount(address _sourceDomainAccount) {
         require(
             msg.sender == address(getCrossDomainMessenger()),
-            "OVM_XCHAIN: messenger contract unauthenticated"
+            "BVM_XCHAIN: messenger contract unauthenticated"
         );
 
         require(
             getCrossDomainMessenger().xDomainMessageSender() == _sourceDomainAccount,
-            "OVM_XCHAIN: wrong sender of cross-domain message"
+            "BVM_XCHAIN: wrong sender of cross-domain message"
         );
 
         _;

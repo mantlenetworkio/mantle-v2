@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 /* Library Imports */
-import { Lib_OVMCodec } from "../../libraries/codec/Lib_OVMCodec.sol";
+import { Lib_BVMCodec } from "../../libraries/codec/Lib_BVMCodec.sol";
 
 /* Interface Imports */
 import { ICrossDomainMessenger } from "../../libraries/bridge/ICrossDomainMessenger.sol";
@@ -17,8 +17,8 @@ interface IL1CrossDomainMessenger is ICrossDomainMessenger {
 
     struct L2MessageInclusionProof {
         bytes32 stateRoot;
-        Lib_OVMCodec.ChainBatchHeader stateRootBatchHeader;
-        Lib_OVMCodec.ChainInclusionProof stateRootProof;
+        Lib_BVMCodec.ChainBatchHeader stateRootBatchHeader;
+        Lib_BVMCodec.ChainInclusionProof stateRootProof;
         bytes stateTrieWitness;
         bytes storageTrieWitness;
     }

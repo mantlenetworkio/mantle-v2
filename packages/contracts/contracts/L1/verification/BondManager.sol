@@ -10,7 +10,7 @@ import { Lib_AddressResolver } from "../../libraries/resolver/Lib_AddressResolve
 /**
  * @title BondManager
  * @dev This contract is, for now, a stub of the "real" BondManager that does nothing but
- * allow the "OVM_Proposer" to submit state root batches.
+ * allow the "BVM_Proposer" to submit state root batches.
  *
  */
 contract BondManager is IBondManager, Lib_AddressResolver {
@@ -20,11 +20,14 @@ contract BondManager is IBondManager, Lib_AddressResolver {
     constructor(address _libAddressManager) Lib_AddressResolver(_libAddressManager) {}
 
     /**
-     * @inheritdoc IBondManager
+     * Checks whether a given address is properly collateralized and can perform actions within
+     * the system.
+     * @param _who Address to check.
+     * @return true if the address is properly collateralized, false otherwise.
      */
     // slither-disable-next-line external-function
     function isCollateralized(address _who) public view returns (bool) {
         // Only authenticate sequencer to submit state root batches.
-        return _who == resolve("OVM_Proposer");
+        return _who == resolve("BVM_Proposer");
     }
 }

@@ -6,7 +6,7 @@
 
 
 
-*This contract is, for now, a stub of the &quot;real&quot; BondManager that does nothing but allow the &quot;OVM_Proposer&quot; to submit state root batches.*
+*This contract is, for now, a stub of the &quot;real&quot; BondManager that does nothing but allow the &quot;BVM_Proposer&quot; to submit state root batches.*
 
 ## Methods
 

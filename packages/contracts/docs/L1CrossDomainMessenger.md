@@ -64,6 +64,23 @@ function blockedMessages(bytes32) external view returns (bool)
 |---|---|---|
 | _0 | bool | undefined
 
+### getPauseOwner
+
+```solidity
+function getPauseOwner() external view returns (address)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined
+
 ### initialize
 
 ```solidity
@@ -121,6 +138,17 @@ function pause() external nonpayable
 ```
 
 Pause relaying.
+
+
+
+
+### pauseByPOwner
+
+```solidity
+function pauseByPOwner() external nonpayable
+```
+
+
 
 
 
@@ -256,6 +284,22 @@ Sends a cross domain message to the target messenger.
 | _message | bytes | Message to send to the target.
 | _gasLimit | uint32 | Gas limit for the provided message.
 
+### setPauseOwner
+
+```solidity
+function setPauseOwner(address _pauseOwner) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _pauseOwner | address | undefined
+
 ### successfulMessages
 
 ```solidity
@@ -293,6 +337,17 @@ function transferOwnership(address newOwner) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | newOwner | address | undefined
+
+### unpause
+
+```solidity
+function unpause() external nonpayable
+```
+
+UnPause relaying.
+
+
+
 
 ### xDomainMessageSender
 

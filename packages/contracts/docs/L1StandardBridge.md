@@ -160,10 +160,29 @@ function finalizeETHWithdrawal(address _from, address _to, uint256 _amount, byte
 | _amount | uint256 | Amount of the ERC20 to deposit.
 | _data | bytes | Optional data to forward to L2. This data is provided        solely as a convenience for external contracts. Aside from enforcing a maximum        length, these contracts provide no guarantees about its content.
 
+### finalizeMantleWithdrawal
+
+```solidity
+function finalizeMantleWithdrawal(address _from, address _to, uint256 _amount, bytes _data) external nonpayable
+```
+
+
+
+*Complete a mantle withdrawal from L2 to L1, and credit funds to the recipient&#39;s balance of the L1 ERC20 token. This call will fail if the initialized withdrawal from L2 has not been finalized.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _from | address | L2 address initiating the transfer.
+| _to | address | L1 address to credit the withdrawal to.
+| _amount | uint256 | Amount of the ERC20 to deposit.
+| _data | bytes | Data provided by the sender on L2. This data is provided   solely as a convenience for external contracts. Aside from enforcing a maximum   length, these contracts provide no guarantees about its content.
+
 ### initialize
 
 ```solidity
-function initialize(address _l1messenger, address _l2TokenBridge) external nonpayable
+function initialize(address _l1messenger, address _l2TokenBridge, address _l1MantleAddress) external nonpayable
 ```
 
 
@@ -176,6 +195,24 @@ function initialize(address _l1messenger, address _l2TokenBridge) external nonpa
 |---|---|---|
 | _l1messenger | address | L1 Messenger address being used for cross-chain communications.
 | _l2TokenBridge | address | L2 standard bridge address.
+| _l1MantleAddress | address | initialize L1 mantle address
+
+### l1MantleAddress
+
+```solidity
+function l1MantleAddress() external view returns (address)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined
 
 ### l2TokenBridge
 

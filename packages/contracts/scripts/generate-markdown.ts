@@ -18,19 +18,26 @@ interface DeploymentInfo {
 const PUBLIC_DEPLOYMENTS: DeploymentInfo[] = [
   {
     folder: 'mainnet',
-    name: 'Optimism (mainnet)',
+    name: 'Mantle (mainnet)',
     chainid: 10,
-    rpc: 'https://mainnet.optimism.io',
+    rpc: 'https://mainnet.mantle.io',
     l1Explorer: 'https://etherscan.io',
-    l2Explorer: 'https://optimistic.etherscan.io',
+    l2Explorer: 'https://mantle.etherscan.io',
+  },
+  {
+    folder: 'kovan',
+    name: 'Mantle Kovan (public testnet)',
+    chainid: 69,
+    rpc: 'https://kovan.mantle.io',
+    l1Explorer: 'https://kovan.etherscan.io',
+    l2Explorer: 'https://kovan-mantle.etherscan.io',
   },
   {
     folder: 'goerli',
-    name: 'Optimism Goerli (public testnet)',
+    name: 'Mantle Goerli (internal devnet)',
     chainid: 420,
-    rpc: 'https://goerli.optimism.io',
+    notice: `Mantle Goerli is an internal Mantle development network. You're probably looking for [Mantle Kovan](../kovan#readme), the public Mantle testnet.`,
     l1Explorer: 'https://goerli.etherscan.io',
-    l2Explorer: 'https://goerli-optimism.etherscan.io/',
   },
 ]
 
@@ -41,8 +48,8 @@ const PUBLIC_DEPLOYMENTS: DeploymentInfo[] = [
 const HIDDEN_CONTRACTS = [
   // Used for being able to verify the ChugSplashProxy contract.
   'L1StandardBridge_for_verification_only',
-  // Implementation address for the Proxy__OVM_L1CrossDomainMessenger.
-  'OVM_L1CrossDomainMessenger',
+  // Implementation address for the Proxy__BVM_L1CrossDomainMessenger.
+  'BVM_L1CrossDomainMessenger',
   // Utility for modifying many records in the AddressManager at the same time.
   'AddressDictator',
   // Utility for modifying a ChugSplashProxy during an upgrade.
@@ -216,7 +223,7 @@ const main = async () => {
   }
 
   let primary = ``
-  primary = addline(primary, `# Optimism Deployments`)
+  primary = addline(primary, `# Mantle Deployments`)
   for (const deployment of PUBLIC_DEPLOYMENTS) {
     primary = addline(
       primary,
