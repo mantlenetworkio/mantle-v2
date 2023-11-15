@@ -64,20 +64,20 @@ var (
 	TokenRatioCexURL = cli.StringFlag{
 		Name:     "token-ratio-cex-url",
 		Usage:    "token ratio cex url",
-		EnvVar:   "GAS_PRICE_TOKENRATIO_CEX_URL",
+		EnvVar:   "GAS_PRICE_ORACLE_TOKEN_RATIO_CEX_URL",
 		Required: true,
 	}
 	TokenRatioDexURL = cli.StringFlag{
 		Name:     "token-ratio-dex-url",
 		Usage:    "token ratio dex url",
-		EnvVar:   "GAS_PRICE_TOKENRATIO_DEX_URL",
+		EnvVar:   "GAS_PRICE_ORACLE_TOKEN_RATIO_DEX_URL",
 		Required: true,
 	}
 	TokenRatioUpdateFrequencySecond = cli.Uint64Flag{
 		Name:   "token-ratio-update-frequency-second",
 		Value:  3,
 		Usage:  "token ratio update frequency",
-		EnvVar: "GAS_PRICE_TOKENRATIO_UPDATE_FREQUENCY",
+		EnvVar: "GAS_PRICE_ORACLE_TOKEN_RATIO_UPDATE_FREQUENCY",
 	}
 	WaitForReceiptFlag = cli.BoolFlag{
 		Name:   "wait-for-receipt",
