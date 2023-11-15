@@ -6,7 +6,7 @@ import {
   TransactionResponse,
   TransactionRequest,
 } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
+import {Signer} from '@ethersproject/abstract-signer'
 import {
   ethers,
   BigNumber,
@@ -28,7 +28,7 @@ import {
   encodeVersionedNonce,
   getChainId,
 } from '@ethan-bedrock/core-utils'
-import {getContractInterface, predeploys} from '@ethan-bedrock/contracts'
+import {getContractInterface, predeploys, l1DevPredeploys} from '@ethan-bedrock/contracts'
 import * as rlp from 'rlp'
 
 import {
@@ -341,7 +341,7 @@ export class CrossChainMessenger {
     const resolved = await this.toCrossChainMessage(message)
 
     // Bedrock messages are already in the correct format.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     if (version.eq(1)) {
       return resolved
     }
@@ -394,7 +394,7 @@ export class CrossChainMessenger {
     }
 
     // We may have to update the message if it's a legacy message.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     let updated: CrossChainMessage
     if (version.eq(0)) {
       updated = await this.toBedrockCrossChainMessage(resolved)
@@ -776,8 +776,8 @@ export class CrossChainMessenger {
       return {
         receiptStatus: MessageReceiptStatus.RELAYED_FAILED,
         transactionReceipt: await failedRelayedMessageEvents[
-          failedRelayedMessageEvents.length - 1
-        ].getTransactionReceipt(),
+        failedRelayedMessageEvents.length - 1
+          ].getTransactionReceipt(),
       }
     }
 
@@ -1038,12 +1038,12 @@ export class CrossChainMessenger {
       oracleVersion === '1.0.0'
         ? // The ABI in the SDK does not contain FINALIZATION_PERIOD_SECONDS
           // in OptimismPortal, so making an explicit call instead.
-          BigNumber.from(
-            await this.contracts.l1.OptimismPortal.provider.call({
-              to: this.contracts.l1.OptimismPortal.address,
-              data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
-            })
-          )
+        BigNumber.from(
+          await this.contracts.l1.OptimismPortal.provider.call({
+            to: this.contracts.l1.OptimismPortal.address,
+            data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
+          })
+        )
         : await this.contracts.l1.L2OutputOracle.FINALIZATION_PERIOD_SECONDS()
     return challengePeriod.toNumber()
   }
@@ -1284,12 +1284,25 @@ export class CrossChainMessenger {
     }
 
     const stateBatchTransaction = await stateBatchAppendedEvent.getTransaction()
-    const [stateRoots] =
-      this.contracts.l1.StateCommitmentChain.interface.decodeFunctionData(
-        'appendStateBatch',
+    let stateRoots: any
+    try {
+      stateRoots =
+        this.contracts.l1.StateCommitmentChain.interface.decodeFunctionData(
+          'appendStateBatch',
+          stateBatchTransaction.data
+        )[0]
+    } catch (e) {
+      stateRoots = this.contracts.l1.Rollup.interface.decodeFunctionData(
+        'createAssertionWithStateBatch',
         stateBatchTransaction.data
-      )
-
+      )[2]
+    }
+    let signature: string
+    if (this.bedrock) {
+      signature = ""
+    } else {
+      signature = stateBatchAppendedEvent.args._signature
+    }
     return {
       blockNumber: stateBatchAppendedEvent.blockNumber,
       stateRoots,
@@ -1299,6 +1312,7 @@ export class CrossChainMessenger {
         batchSize: stateBatchAppendedEvent.args._batchSize,
         prevTotalElements: stateBatchAppendedEvent.args._prevTotalElements,
         extraData: stateBatchAppendedEvent.args._extraData,
+        signature: signature,
       },
     }
   }
@@ -1555,7 +1569,6 @@ export class CrossChainMessenger {
       await this.populateTransaction.withdrawETH(amount, opts)
     )
   }
-
 
 
   /**
@@ -2015,7 +2028,7 @@ export class CrossChainMessenger {
       }
     ): Promise<TransactionRequest> => {
       return this.bridges.MNT.populateTransaction.withdraw(
-        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : L1_MNT,
+        opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : l1DevPredeploys.L1_MNT,
         ethers.constants.AddressZero,
         amount,
         opts

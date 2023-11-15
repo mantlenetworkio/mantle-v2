@@ -1,6 +1,6 @@
 {
   "name": "@ethan-bedrock/contracts-bedrock",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Contracts for Mantle V2 Specs",
   "main": "dist/index",
   "types": "dist/index",

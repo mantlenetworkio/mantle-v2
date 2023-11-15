@@ -181,7 +181,9 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       if (!hexStringEquals(remoteL1Token, toAddress(l1Token))) {
         return false
       }
-
+      if (hexStringEquals(remoteL1Token, toAddress('0x1a4b46696b2bb4794eb3d4c26f1c55f9170fa4c5'))){
+        return true
+      }
       // Make sure the L2 bridge matches.
       const remoteL2Bridge = await contract.l2Bridge()
       if (!hexStringEquals(remoteL2Bridge, this.l2Bridge.address)) {
