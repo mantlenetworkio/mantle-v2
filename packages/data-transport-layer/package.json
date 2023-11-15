@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@ethan-bedrock/common-ts": "0.2.0",
-    "@ethan-bedrock/contracts": "0.2.0",
+    "@ethan-bedrock/contracts": "0.3.0",
     "@ethan-bedrock/core-utils": "0.2.0",
     "@ethersproject/providers": "^5.7.0",
     "@ethersproject/transactions": "^5.7.0",

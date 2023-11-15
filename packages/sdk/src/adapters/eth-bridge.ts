@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { predeploys } from '@mantleio/contracts'
+import { predeploys } from '@ethan-bedrock/contracts'
 import { hexStringEquals } from '@ethan-bedrock/core-utils'
 import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
 

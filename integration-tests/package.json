@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.5.4",
-    "@ethan-bedrock/contracts": "0.2.0",
+    "@ethan-bedrock/contracts": "0.3.0",
     "@ethan-bedrock/contracts-bedrock": "0.2.0",
     "@ethan-bedrock/contracts-periphery": "0.2.0",
     "@ethan-bedrock/core-utils": "0.2.0",

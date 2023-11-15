@@ -12,7 +12,7 @@ import {
   TransactionResponse,
   BlockTag,
 } from '@ethersproject/abstract-provider'
-import {predeploys} from '@mantleio/contracts'
+import {predeploys} from '@ethan-bedrock/contracts'
 import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
 import { hexStringEquals } from '@ethan-bedrock/core-utils'
 
