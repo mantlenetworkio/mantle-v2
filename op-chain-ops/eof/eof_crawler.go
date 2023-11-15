@@ -94,10 +94,8 @@ func IndexEOFContracts(dbPath string, out string) error {
 		}
 
 		// Attempt to get the address of the account from the trie
-		addrBytes, err := st.Get(it.Key)
-		if err != nil {
-			return fmt.Errorf("load address for account: %w", err)
-		}
+		addrBytes := st.Get(it.Key)
+
 		if addrBytes == nil {
 			// Preimage missing! Cannot continue.
 			missingPreimages++
