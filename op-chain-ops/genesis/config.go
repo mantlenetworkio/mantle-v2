@@ -98,6 +98,10 @@ type DeployConfig struct {
 	// Mantle Token address on L1
 	L1MantleToken common.Address `json:"l1MantleToken"`
 
+	// The initial value of the gas price oracle owner
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
+	// The initial value of the gas price oracle token ratio
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
@@ -190,6 +194,12 @@ func (d *DeployConfig) Check() error {
 	}
 	if d.SequencerFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: SequencerFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleOwner == (common.Address{}) {
+		return fmt.Errorf("%w: GasPriceOracleOwner cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleTokenRatio == 0 {
+		log.Warn("GasPriceOracleTokenRatio is 0")
 	}
 	if d.GasPriceOracleOverhead == 0 {
 		log.Warn("GasPriceOracleOverhead is 0")
@@ -502,8 +512,8 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"msgNonce":         0,
 	}
 	storage["GasPriceOracle"] = state.StorageValues{
-		"tokenRatio": new(big.Int).SetUint64(4123),
-		"owner":      common.HexToAddress("0x00000500e87ee83a1bfa233512af25a4003836c8"),
+		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
+		"owner":      config.GasPriceOracleOwner,
 	}
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
