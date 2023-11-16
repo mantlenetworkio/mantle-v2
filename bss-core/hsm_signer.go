@@ -31,18 +31,7 @@ type ManagedKey struct {
 	Gclient *kms.KeyManagementClient
 }
 
-// NewManagedKey executes a fail-fast initialization.
-// Key names from the Google cloud are slash-separated paths.
-func NewManagedKey(address string, keyName string) (*ManagedKey, error) {
-	addr := common.HexToAddress(address)
-
-	return &ManagedKey{
-		KeyName:      keyName,
-		EthereumAddr: addr,
-	}, nil
-}
-
-// NewEthereumTransactor returns a KMS-backed instance. Ctx applies to the
+// NewEthereumTransactorWithChainID returns a KMS-backed instance. Ctx applies to the
 // entire lifespan of the bind.TransactOpts.
 func (mk *ManagedKey) NewEthereumTransactorWithChainID(ctx context.Context, chainID *big.Int) (*bind.TransactOpts, error) {
 	if chainID == nil {
