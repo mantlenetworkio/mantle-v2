@@ -33,7 +33,7 @@ type ManagedKey struct {
 
 // NewManagedKey executes a fail-fast initialization.
 // Key names from the Google cloud are slash-separated paths.
-func NewManagedKey(ctx context.Context, client *kms.KeyManagementClient, address string, keyName string) (*ManagedKey, error) {
+func NewManagedKey(address string, keyName string) (*ManagedKey, error) {
 	addr := common.HexToAddress(address)
 
 	return &ManagedKey{
@@ -44,7 +44,7 @@ func NewManagedKey(ctx context.Context, client *kms.KeyManagementClient, address
 
 // NewEthereumTransactor returns a KMS-backed instance. Ctx applies to the
 // entire lifespan of the bind.TransactOpts.
-func (mk *ManagedKey) NewEthereumTransactorrWithChainID(ctx context.Context, chainID *big.Int) (*bind.TransactOpts, error) {
+func (mk *ManagedKey) NewEthereumTransactorWithChainID(ctx context.Context, chainID *big.Int) (*bind.TransactOpts, error) {
 	if chainID == nil {
 		return nil, bind.ErrNoChainID
 	}
@@ -96,9 +96,6 @@ func (mk *ManagedKey) SignHash(ctx context.Context, hash common.Hash) ([]byte, e
 		},
 	}
 	resp, err := mk.Gclient.AsymmetricSign(ctx, &req)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, fmt.Errorf("Google KMS asymmetric sign operation: %w", err)
 	}
