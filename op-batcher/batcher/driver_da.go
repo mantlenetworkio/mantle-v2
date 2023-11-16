@@ -3,6 +3,7 @@ package batcher
 import (
 	"context"
 	"errors"
+	"github.com/ethereum-optimism/optimism/l2geth/log"
 	"io"
 	"math/big"
 	"sort"
@@ -277,7 +278,7 @@ func (l *BatchSubmitter) sendInitDataStoreTransaction(ctx context.Context) (*typ
 		return nil, err
 	}
 	l.metr.RecordBatchTxInitDataSubmitted()
-
+	l.metr.RecordInitReferenceBlockNumber(l.state.params.ReferenceBlockNumber)
 	return receipt, nil
 }
 
@@ -421,7 +422,14 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 		To:     &l.DataLayrServiceManagerAddr,
 		TxData: confirmTxData,
 	}
-	return l.txMgr.Send(ctx, candidate)
+
+	txReceipt, err := l.txMgr.Send(ctx, candidate)
+	if err != nil {
+		log.Error("Tx manager send transaction fail", "err", err)
+		return nil, err
+	}
+	l.metr.RecordConfirmedDataStoreId(event.StoreNumber)
+	return txReceipt, nil
 }
 
 func (l *BatchSubmitter) confirmDataTxData(abi *abi.ABI, callData []byte, searchData *bindings.IDataLayrServiceManagerDataStoreSearchData) ([]byte, error) {
