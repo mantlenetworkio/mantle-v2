@@ -52,6 +52,8 @@ type Config struct {
 	DisperserTimeout               time.Duration
 	DataStoreDuration              uint64
 	GraphPollingDuration           time.Duration
+	RollupMaxSize                  uint64
+	MantleDaNodes                  int
 	DataLayrServiceManagerAddr     common.Address
 	DataLayrServiceManagerContract *bindings.ContractDataLayrServiceManager
 	DataLayrServiceManagerABI      *abi.ABI
@@ -114,6 +116,12 @@ type CLIConfig struct {
 
 	//GraphProvider is graph node url of MantleDA
 	GraphProvider string
+
+	//RollupMaxSize is the maximum size of tx data that can be rollup to MantleDA at one time
+	RollupMaxSize uint64
+
+	//The number of MantleDA nodes
+	MantleDaNodes int
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -191,6 +199,8 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
 		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
 		GraphProvider:          ctx.GlobalString(flags.GraphProviderFlag.Name),
+		RollupMaxSize:          ctx.GlobalUint64(flags.RollUpMaxSizeFlag.Name),
+		MantleDaNodes:          ctx.GlobalInt(flags.MantleDaNodeFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),

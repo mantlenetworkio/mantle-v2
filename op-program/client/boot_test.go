@@ -20,6 +20,7 @@ func TestBootstrapClient(t *testing.T) {
 		L2ClaimBlockNumber: 1,
 		L2ChainConfig:      params.GoerliChainConfig,
 		RollupConfig:       &chaincfg.Goerli,
+		DatastoreConfig:    &chaincfg.MockDataStoreConfig,
 	}
 	mockOracle := &mockBoostrapOracle{bootInfo}
 	readBootInfo := NewBootstrapClient(mockOracle).BootInfo()
