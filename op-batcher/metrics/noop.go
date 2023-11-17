@@ -46,4 +46,7 @@ func (*noopMetrics) RecordBatchTxConfirmDataFailed()    {}
 
 func (*noopMetrics) RecordRollupRetry(time int32) {}
 
+func (m *noopMetrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {}
+func (m *noopMetrics) RecordConfirmedDataStoreId(dataStoreId uint32)     {}
+
 func (*noopMetrics) RecordTxOverMaxLimit() {}
