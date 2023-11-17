@@ -201,7 +201,7 @@ func NewMetrics(procName string) *Metrics {
 
 		recordReferenceBlockNumber: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
-			Name:      "init_data_store_id",
+			Name:      "reference_block_number",
 			Help:      "InitDataStoreId of MantleDA.",
 		}),
 
