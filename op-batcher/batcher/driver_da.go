@@ -3,6 +3,7 @@ package batcher
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
 	"math/big"
 	"sort"
@@ -417,6 +418,7 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 		return nil, err
 	}
 
+	l.log.Info("confirmData", "callData", hexutil.Encode(confirmTxData))
 	candidate := txmgr.TxCandidate{
 		To:     &l.DataLayrServiceManagerAddr,
 		TxData: confirmTxData,
