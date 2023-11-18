@@ -81,9 +81,9 @@ func (g *GasPriceOracle) Wait() {
 	<-g.stop
 }
 
-// ensure makes sure that the configured private key is the owner
-// of the `BVM_GasPriceOracle`. If it is not the owner, then it will
-// not be able to make updates to the L2 gas price.
+// ensure makes sure that the configured private key is the operator
+// of the `GasPriceOracle`. If it is not the operator, then it will
+// not be able to make updates to the token ratio.
 func (g *GasPriceOracle) ensure() error {
 	operator, err := g.contract.Operator(&bind.CallOpts{
 		Context: g.ctx,
