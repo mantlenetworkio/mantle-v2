@@ -3,12 +3,12 @@ package oracle
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 
 	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
 	"github.com/ethereum-optimism/optimism/gas-oracle/tokenratio"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type TokenRatioClient struct {

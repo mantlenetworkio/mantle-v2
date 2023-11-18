@@ -1,6 +1,7 @@
 package tokenratio
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -13,6 +14,8 @@ import (
 
 // Client is an HTTP based TokenPriceClient
 type Client struct {
+	ctx context.Context
+
 	client              *resty.Client
 	uniswapQuoterClient *uniswapClient
 
@@ -74,6 +77,7 @@ func NewClient(url, uniswapURL string, frequency uint64) *Client {
 	}
 
 	tokenRatioClient := &Client{
+		ctx:                 context.Background(),
 		client:              client,
 		uniswapQuoterClient: uniswapQuoterClient,
 		frequency:           time.Duration(frequency) * time.Second,
@@ -89,18 +93,24 @@ func NewClient(url, uniswapURL string, frequency uint64) *Client {
 }
 
 func (c *Client) loop() {
-	for {
-		tokenRatio, err := c.tokenRatio()
-		if err != nil {
-			log.Error("token ratio", "tokenRatio", err)
-			time.Sleep(c.frequency)
-			continue
-		}
-		c.lastRatio = c.latestRatio
-		c.latestRatio = tokenRatio
-		log.Info("token ratio", "last token ratio", c.lastRatio, "latest token ratio", c.latestRatio)
+	timer := time.NewTicker(c.frequency)
+	defer timer.Stop()
 
-		time.Sleep(c.frequency)
+	for {
+		select {
+		case <-timer.C:
+			tokenRatio, err := c.tokenRatio()
+			if err != nil {
+				log.Error("token ratio", "tokenRatio", err)
+				time.Sleep(c.frequency)
+				continue
+			}
+			c.lastRatio = c.latestRatio
+			c.latestRatio = tokenRatio
+			log.Info("token ratio", "lastTokenRatio", c.lastRatio, "latestTokenRatio", c.latestRatio)
+		case <-c.ctx.Done():
+			break
+		}
 	}
 }
 
@@ -115,20 +125,20 @@ func (c *Client) tokenRatio() (float64, error) {
 	mntPrice1, ethPrice1 := c.getTokenPricesFromUniswap()
 	mntPrices = append(mntPrices, mntPrice1)
 	ethPrices = append(ethPrices, ethPrice1)
-	log.Info("query prices from oracle1", "mnt_price", mntPrice1, "eth_price", ethPrice1)
+	log.Info("query prices from oracle1", "mntPrice", mntPrice1, "ethPrice", ethPrice1)
 
 	// get token price from oracle2(cex)
 	mntPrice2, ethPrice2 := c.getTokenPricesFromCex()
 	mntPrices = append(mntPrices, mntPrice2)
 	ethPrices = append(ethPrices, ethPrice2)
-	log.Info("query prices from oracle2", "mnt_price", mntPrice2, "eth_price", ethPrice2)
+	log.Info("query prices from oracle2", "mntPrice", mntPrice2, "ethPrice", ethPrice2)
 
 	// get token price from oracle3(cex)
 	// Todo add a third oracle to query prices
 	mntPrice3, ethPrice3 := c.getTokenPricesFromCex()
 	mntPrices = append(mntPrices, mntPrice3)
 	ethPrices = append(ethPrices, ethPrice3)
-	log.Info("query prices from oracle3", "mnt_price", mntPrice3, "eth_price", ethPrice3)
+	log.Info("query prices from oracle3", "mntPrice", mntPrice3, "ethPrice", ethPrice3)
 
 	// median price for eth & mnt
 	medianMNTPrice := getMedian(mntPrices)
@@ -137,7 +147,7 @@ func (c *Client) tokenRatio() (float64, error) {
 	// determine mnt_price, eth_price
 	mntPrice := c.determineMNTPrice(medianMNTPrice)
 	ethPrice := c.determineETHPrice(medianETHPrice)
-	log.Info("prices after determine", "mnt_price", mntPrice, "eth_price", ethPrice)
+	log.Info("prices after determine", "mntPrice", mntPrice, "ethPrice", ethPrice)
 
 	// calculate ratio
 	ratio := c.determineTokenRatio(mntPrice, ethPrice)
@@ -152,12 +162,12 @@ func (c *Client) tokenRatio() (float64, error) {
 func (c *Client) getTokenPricesFromCex() (float64, float64) {
 	ethPrice, err := c.queryV5(ETHUSDT)
 	if err != nil {
-		log.Warn("get token prices", "query eth price error", err)
+		log.Warn("get token prices", "query ethPrice error", err)
 		return 0, 0
 	}
 	mntPrice, err := c.queryV5(MNTUSDT)
 	if err != nil {
-		log.Warn("get token prices", "query mnt price error", err)
+		log.Warn("get token prices", "query mntPrice error", err)
 		return 0, ethPrice
 	}
 

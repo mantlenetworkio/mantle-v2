@@ -58,8 +58,8 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.HsmCreden = ctx.GlobalString(flags.HsmCredenFlag.Name)
 
 	if cfg.EnableHsm {
-		log.Info("gasoracle", "enable hsm", cfg.EnableHsm,
-			"hsm address", cfg.HsmAddress)
+		log.Info("gasoracle", "enableHsm", cfg.EnableHsm,
+			"hsmAddress", cfg.HsmAddress)
 	} else {
 		if ctx.GlobalIsSet(flags.PrivateKeyFlag.Name) {
 			hex := ctx.GlobalString(flags.PrivateKeyFlag.Name)

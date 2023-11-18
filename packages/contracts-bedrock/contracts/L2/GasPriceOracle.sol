@@ -69,7 +69,7 @@ contract GasPriceOracle is Semver {
      * @dev Transfers ownership of the contract to a new account (`_owner`).
      * Can only be called by the current owner.
      */
-    function transferOwnership(address _owner) public virtual onlyOwner {
+    function transferOwnership(address _owner) public onlyOwner {
         require(_owner != address(0), "new owner is the zero address");
         address previousOwner = owner;
         owner = _owner;
