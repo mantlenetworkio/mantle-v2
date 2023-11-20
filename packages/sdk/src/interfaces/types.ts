@@ -58,12 +58,12 @@ export interface OEL2Contracts {
   L2CrossDomainMessenger: Contract
   L2StandardBridge: Contract
   L2ToL1MessagePasser: Contract
-  OVM_L1BlockNumber: Contract
-  OVM_L2ToL1MessagePasser: Contract
-  OVM_DeployerWhitelist: Contract
-  OVM_ETH: Contract
-  OVM_GasPriceOracle: Contract
-  OVM_SequencerFeeVault: Contract
+  BVM_L1BlockNumber: Contract
+  BVM_L2ToL1MessagePasser: Contract
+  BVM_DeployerWhitelist: Contract
+  BVM_ETH: Contract
+  BVM_GasPriceOracle: Contract
+  BVM_SequencerFeeVault: Contract
   WETH: Contract
   //Mantle V1
   BVM_MANTLE:Contract

@@ -935,15 +935,27 @@
     "@ethersproject/hardware-wallets" "^5.4.0"
     glob "^7.1.6"
 
-"@ethan-bedrock/contracts-bedrock@0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts-bedrock/-/contracts-bedrock-0.1.1.tgz#6eb3315902d96591cbcfe560e6e446a1af3f95a6"
-  integrity sha512-u50r2Dw874jsJV4zbCjvALYoKUYqQBNnfgy395f14u3R3PGy5zg0q9V19SLnYqlRaO6e5don+O2aZaqcBmbKzg==
+"@ethan-bedrock/common-ts@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/common-ts/-/common-ts-0.2.0.tgz#011c811b315db02e7c1c4c43cd4532b0ad34e2c8"
+  integrity sha512-zm0+8eSdZLSjzrA71JiIV+xR38usqW6llPpqlKavOj/ZAdtTiIDaVWImRp2iXI/b2Bk5dvYgI4w2jJ8qts4dug==
   dependencies:
-    "@ethan-bedrock/core-utils" "0.1.0"
-    "@openzeppelin/contracts" "4.7.3"
-    "@openzeppelin/contracts-upgradeable" "4.7.3"
+    "@ethan-bedrock/core-utils" "0.2.0"
+    "@sentry/node" "^6.3.1"
+    bcfg "^0.1.7"
+    body-parser "^1.20.0"
+    commander "^9.0.0"
+    dotenv "^16.0.0"
+    envalid "^7.2.2"
     ethers "^5.7.0"
+    express "^4.17.1"
+    express-prom-bundle "^6.4.1"
+    lodash "^4.17.21"
+    morgan "^1.10.0"
+    pino "^6.11.3"
+    pino-multi-stream "^5.3.0"
+    pino-sentry "^0.7.0"
+    prom-client "^13.1.0"
 
 "@ethan-bedrock/contracts-bedrock@0.2.0":
   version "0.2.0"
@@ -955,15 +967,6 @@
     "@openzeppelin/contracts-upgradeable" "4.7.3"
     ethers "^5.7.0"
 
-"@ethan-bedrock/contracts@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts/-/contracts-0.1.0.tgz#5037066aeceb3d5f40d69fec93a2e6a4b1945ebe"
-  integrity sha512-MSJXZaR/m5VMtG69o3aq8apTnl9WEkecQ6FV2lbgogjTWUkhGxY6x8Jqt05NdAxCr7SVmO7rlXZFI3lH9NmdZw==
-  dependencies:
-    "@ethan-bedrock/core-utils" "0.1.0"
-    "@ethersproject/abstract-provider" "^5.7.0"
-    "@ethersproject/abstract-signer" "^5.7.0"
-
 "@ethan-bedrock/contracts@0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts/-/contracts-0.2.0.tgz#7aa30a41e1af45bc21c6cfd755353e0dd8c3555c"
@@ -973,19 +976,19 @@
     "@ethersproject/abstract-provider" "^5.7.0"
     "@ethersproject/abstract-signer" "^5.7.0"
 
-"@ethan-bedrock/contracts@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts/-/contracts-0.3.0.tgz#9921d831c208b1631242ece0c7018490eaa3c789"
-  integrity sha512-LxUtJVhUTghz9dIIezhrDb6C245aR+c5utZTz3ZerQHMOHIceJ3X5tZbXp1tqDg82fztYrQgrBwU1um4UdYc7g==
+"@ethan-bedrock/contracts@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/contracts/-/contracts-1.0.0.tgz#96788ac0bfc7576f4ae0d9ba158ad3c5ac56c65a"
+  integrity sha512-6ONsKcrsT5bQLkTbYXvHw7q6r2O8ttDGyuJak5FIQYkBEhQh3JFgUOdJbwpATdRZdZInyDIPb8vHPoln5mAY0g==
   dependencies:
     "@ethan-bedrock/core-utils" "0.2.0"
     "@ethersproject/abstract-provider" "^5.7.0"
     "@ethersproject/abstract-signer" "^5.7.0"
 
-"@ethan-bedrock/core-utils@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@ethan-bedrock/core-utils/-/core-utils-0.1.0.tgz#d22e59f8b8b17bbd907944a1875f836e0c28185d"
-  integrity sha512-e35LCJajdqKzuxM00ZKM0jIVPlmIbcrwlbDGESRMahjVBt9y+5MXgP7oGjtZxOl/5opLF8yMqCMFtHL4VYOQyQ==
+"@ethan-bedrock/core-utils@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/core-utils/-/core-utils-0.2.0.tgz#3744d451bc8aef6b62b8491295cee28be4e21dee"
+  integrity sha512-+hqBHS0CWmD8TyVAEG0fgrYyFw2soUoV1EioqkYYtiSekdRHnwKNue5e3w9Fztt/VK/pgZIJ4k3yOSVh6VWN8w==
   dependencies:
     "@ethersproject/abi" "^5.7.0"
     "@ethersproject/abstract-provider" "^5.7.0"
@@ -1004,17 +1007,10 @@
     bufio "^1.0.7"
     chai "^4.3.4"
 
-"@ethan-bedrock/sdk@0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@ethan-bedrock/sdk/-/sdk-0.1.1.tgz#f1e721fb8e905738f04d6ea3453d2886543ec206"
-  integrity sha512-hbM2TzhXcNzXVNJf4Inwn4DCXSWhUpuCn2M15eDSN65S8kMmYBxT5/deEKXs42gIjJYyfO7N/iv9KwzQuo1Bbw==
-  dependencies:
-    "@ethan-bedrock/contracts" "0.1.0"
-    "@ethan-bedrock/contracts-bedrock" "0.1.1"
-    "@ethan-bedrock/core-utils" "0.1.0"
-    lodash "^4.17.21"
-    merkletreejs "^0.2.27"
-    rlp "^2.2.7"
+"@ethan-bedrock/hardhat-deploy-config@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/hardhat-deploy-config/-/hardhat-deploy-config-0.2.0.tgz#9470f4a05b9e2978900b75aea43b6a209cd76415"
+  integrity sha512-3RjZfuTY7mBxDQwArTHtievqmtdRUlzc3ZHnUVs3X7mZQVlRqQRO8MPSjS2bZgqe0n5fKrK+yoVf34On1TpQjw==
 
 "@ethan-bedrock/sdk@0.2.0":
   version "0.2.0"
@@ -1024,6 +1020,18 @@
     "@ethan-bedrock/contracts" "0.2.0"
     "@ethan-bedrock/contracts-bedrock" "0.2.0"
     "@ethan-bedrock/core-utils" "0.2.0"
+    lodash "^4.17.21"
+    merkletreejs "^0.2.27"
+    rlp "^2.2.7"
+
+"@ethan-bedrock/sdk@1.5.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/sdk/-/sdk-1.5.0.tgz#9e6fe0130dc57836cfd5f16c709e2d7c41f38580"
+  integrity sha512-5aZxaiKN7aI5K83HZz0Rorm/IUQJvQ7VlfSoxa0yAwN6490otM/dopdTm/uWjZAJfryvMEWFgrvqBYDO0DtJUg==
+  dependencies:
+    "@ethan-bedrock/contracts" "1.5.0"
+    "@ethan-bedrock/contracts-bedrock" "1.5.0"
+    "@ethan-bedrock/core-utils" "1.5.0"
     lodash "^4.17.21"
     merkletreejs "^0.2.27"
     rlp "^2.2.7"

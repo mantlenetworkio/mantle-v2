@@ -1,6 +1,6 @@
 {
   "name": "@ethan-bedrock/sdk",
-  "version": "1.2.0",
+  "version": "1.6.0",
   "description": "[Mantle] Tools for working with Mantle",
   "main": "dist/index",
   "types": "dist/index",
@@ -54,9 +54,9 @@
     "isomorphic-fetch": "^3.0.0"
   },
   "dependencies": {
-    "@ethan-bedrock/contracts": "1.1.0",
-    "@ethan-bedrock/core-utils": "1.1.0",
-    "@ethan-bedrock/contracts-bedrock": "1.1.0",
+    "@ethan-bedrock/contracts": "1.5.0",
+    "@ethan-bedrock/core-utils": "1.5.0",
+    "@ethan-bedrock/contracts-bedrock": "1.5.0",
     "lodash": "^4.17.21",
     "merkletreejs": "^0.2.27",
     "rlp": "^2.2.7"
