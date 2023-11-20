@@ -41,7 +41,7 @@ task('finalize-withdrawal', 'Finalize a withdrawal')
     )
     if (Deployment__L1StandardBridgeProxy === undefined) {
       Deployment__L1StandardBridgeProxy = await hre.deployments.getOrNull(
-        'Proxy__OVM_L1StandardBridge'
+        'Proxy__BVM_L1StandardBridge'
       )
     }
 
@@ -49,7 +49,7 @@ task('finalize-withdrawal', 'Finalize a withdrawal')
       await hre.deployments.getOrNull('L1CrossDomainMessengerProxy')
     if (Deployment__L1CrossDomainMessengerProxy === undefined) {
       Deployment__L1CrossDomainMessengerProxy = await hre.deployments.getOrNull(
-        'Proxy__OVM_L1CrossDomainMessenger'
+        'Proxy__BVM_L1CrossDomainMessenger'
       )
     }
 

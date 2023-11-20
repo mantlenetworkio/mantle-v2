@@ -28,7 +28,7 @@ func NewLegacyAddresses(client bind.ContractBackend, addrMgrAddr common.Address)
 		return nil, err
 	}
 
-	l1SBAddr, err := mgr.GetAddress(nil, "Proxy__OVM_L1StandardBridge")
+	l1SBAddr, err := mgr.GetAddress(nil, "Proxy__BVM_L1StandardBridge")
 	if err != nil {
 		return nil, err
 	}

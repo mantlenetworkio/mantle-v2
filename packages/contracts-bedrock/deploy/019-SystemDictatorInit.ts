@@ -58,11 +58,11 @@ const deployFn: DeployFunction = async (hre) => {
       ),
       l1CrossDomainMessengerProxy: await getDeploymentAddress(
         hre,
-        'Proxy__OVM_L1CrossDomainMessenger'
+        'Proxy__BVM_L1CrossDomainMessenger'
       ),
       l1StandardBridgeProxy: await getDeploymentAddress(
         hre,
-        'Proxy__OVM_L1StandardBridge'
+        'Proxy__BVM_L1StandardBridge'
       ),
       optimismMintableERC20FactoryProxy: await getDeploymentAddress(
         hre,

@@ -10,7 +10,7 @@ const deployFn: DeployFunction = async (hre) => {
 
   await deployAndVerifyAndThen({
     hre,
-    name: names.managed.contracts.Proxy__OVM_L1StandardBridge,
+    name: names.managed.contracts.Proxy__BVM_L1StandardBridge,
     contract: 'L1ChugSplashProxy',
     iface: 'L1StandardBridge',
     args: [deployer],
@@ -18,6 +18,6 @@ const deployFn: DeployFunction = async (hre) => {
 }
 
 // This is kept during an upgrade. So no upgrade tag.
-deployFn.tags = ['Proxy__OVM_L1StandardBridge']
+deployFn.tags = ['Proxy__BVM_L1StandardBridge']
 
 export default deployFn

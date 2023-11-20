@@ -1,5 +1,5 @@
 ---
-'@eth-optimism/contracts-periphery': patch
+'@ethan-bedrock/contracts-periphery': patch
 ---
 
 Change type for auth id on Faucet contracts from bytes to bytes32

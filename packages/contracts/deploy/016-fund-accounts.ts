@@ -16,7 +16,7 @@ const deployFn: DeployFunction = async (hre) => {
   if (await isHardhatNode(hre)) {
     const L1StandardBridge = await getContractFromArtifact(
       hre,
-      names.managed.contracts.Proxy__OVM_L1StandardBridge,
+      names.managed.contracts.Proxy__BVM_L1StandardBridge,
       {
         iface: 'L1StandardBridge',
       }

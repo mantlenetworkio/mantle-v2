@@ -50,18 +50,18 @@ const deployFn: DeployFunction = async (hre) => {
   )
 
   // Get a reference to the L1StandardBridge contract.
-  const Proxy__OVM_L1StandardBridge = await getContractFromArtifact(
+  const Proxy__BVM_L1StandardBridge = await getContractFromArtifact(
     hre,
-    'Proxy__OVM_L1StandardBridge'
+    'Proxy__BVM_L1StandardBridge'
   )
 
   // Transfer ownership of the L1StandardBridge to the deployer.
   console.log(`Setting L1StandardBridge owner to ${deployer}`)
   await sendImpersonatedTx({
     hre,
-    contract: Proxy__OVM_L1StandardBridge,
+    contract: Proxy__BVM_L1StandardBridge,
     fn: 'setOwner',
-    from: await Proxy__OVM_L1StandardBridge.callStatic.getOwner({
+    from: await Proxy__BVM_L1StandardBridge.callStatic.getOwner({
       from: hre.ethers.constants.AddressZero,
     }),
     gas: ethers.BigNumber.from(2_000_000).toHexString(),
@@ -72,7 +72,7 @@ const deployFn: DeployFunction = async (hre) => {
   await awaitCondition(
     async () => {
       return (
-        (await Proxy__OVM_L1StandardBridge.callStatic.getOwner({
+        (await Proxy__BVM_L1StandardBridge.callStatic.getOwner({
           from: hre.ethers.constants.AddressZero,
         })) === deployer
       )

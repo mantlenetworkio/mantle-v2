@@ -7,7 +7,7 @@ const deployFn: DeployFunction = async (hre) => {
 
   await deploy({
     hre,
-    name: 'Proxy__OVM_L1CrossDomainMessenger',
+    name: 'Proxy__BVM_L1CrossDomainMessenger',
     contract: 'ResolvedDelegateProxy',
     args: [addressManager, 'OVM_L1CrossDomainMessenger'],
   })

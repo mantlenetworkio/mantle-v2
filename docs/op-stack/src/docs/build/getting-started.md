@@ -5,7 +5,7 @@ lang: en-US
 
 ## Overview
 
-Hello! This Getting Started guide is meant to help you kick off your OP Stack journey by taking you through the process of spinning up your very own OP Stack chain on the Ethereum Goerli testnet. You can use this chain to perform tests and prepare for the superchain, or you can modify it to adapt it to your own needs (which may make it incompatible with the superchain in the future). 
+Hello! This Getting Started guide is meant to help you kick off your OP Stack journey by taking you through the process of spinning up your very own OP Stack chain on the Ethereum Goerli testnet. You can use this chain to perform tests and prepare for the superchain, or you can modify it to adapt it to your own needs (which may make it incompatible with the superchain in the future).
 
 ## Know before you go
 
@@ -158,7 +158,7 @@ Recommended funding amounts are as follows:
 - `Proposer` — 5 ETH
 - `Batcher` — 10 ETH
 
-::: danger Not for production deployments 
+::: danger Not for production deployments
 
 The `rekey` tool is *not* designed for production deployments. If you are deploying an OP Stack based chain into production, you should likely be using a combination of hardware security modules and hardware wallets.
 
@@ -205,7 +205,7 @@ Once you’ve built both repositories, you’ll need head back to the Optimism M
 
 ## Deploy the L1 contracts
 
-Once you’ve configured your network, it’s time to deploy the L1 smart contracts necessary for the functionality of the chain. 
+Once you’ve configured your network, it’s time to deploy the L1 smart contracts necessary for the functionality of the chain.
 
 1. Inside of `contracts-bedrock`, copy `.env.example` to `.env`.
 
@@ -228,7 +228,7 @@ Contract deployment can take up to 15 minutes. Please wait for all smart contrac
 
 ## Generate the L2 config files
 
-We’ve set up the L1 side of things, but now we need to set up the L2 side of things. We do this by generating three important files, a `genesis.json` file, a `rollup.json` configuration file, and a `jwt.txt` [JSON Web Token](https://jwt.io/introduction) that allows the `op-node` and `op-geth` to communicate securely. 
+We’ve set up the L1 side of things, but now we need to set up the L2 side of things. We do this by generating three important files, a `genesis.json` file, a `rollup.json` configuration file, and a `jwt.txt` [JSON Web Token](https://jwt.io/introduction) that allows the `op-node` and `op-geth` to communicate securely.
 
 1. Head over to the `op-node` package:
 
@@ -314,7 +314,7 @@ The other two, `op-batcher` and `op-proposer`, run only in one place, the sequen
 Set these environment variables for the configuration
 
 | Variable       | Value |
-| -------------- | - 
+| -------------- | -
 | `SEQ_ADDR`     | Address of the `Sequencer` account
 | `SEQ_KEY`      | Private key of the `Sequencer` account
 | `BATCHER_KEY`  | Private key of the `Batcher` accounts, which should have at least 1 ETH
@@ -479,7 +479,7 @@ cd ~/optimism/op-batcher
 
 ::: tip Controlling batcher costs
 
-The `--max-channel-duration=n` setting tells the batcher to write all the data to L1 every `n` L1 blocks. 
+The `--max-channel-duration=n` setting tells the batcher to write all the data to L1 every `n` L1 blocks.
 When it is low, transactions are written to L1 frequently, withdrawals are quick, and other nodes can synchronize from L1 fast.
 When it is high, transactions are written to L1 less frequently, and the batcher spends less ETH.
 
@@ -504,7 +504,7 @@ cd ~/optimism/op-proposer
 <!--
 ::: warning Change before moving to production
 
-The `--allow-non-finalized` flag allows for faster tests on a test network. 
+The `--allow-non-finalized` flag allows for faster tests on a test network.
 However, in production you would probably want to only submit proposals on properly finalized blocks.
 
 :::
@@ -523,14 +523,14 @@ Once you’ve connected your wallet, you’ll probably notice that you don’t h
 1. Grab the address of the proxy to the L1 standard bridge contract:
 
     ```bash
-    cat deployments/getting-started/Proxy__OVM_L1StandardBridge.json |  jq -r .address
+    cat deployments/getting-started/Proxy__BVM_L1StandardBridge.json |  jq -r .address
     ```
 
 1. Grab the L1 bridge proxy contract address and, using the wallet that you want to have ETH on your Rollup, send that address a small amount of ETH on Goerli (0.1 or less is fine). It may take up to 5 minutes for that ETH to appear in your wallet on L2.
 
 ## Use your Rollup
 
-Congratulations, you made it! You now have a complete OP Stack based EVM Rollup. 
+Congratulations, you made it! You now have a complete OP Stack based EVM Rollup.
 
 To see your rollup in action, you can use the [Optimism Mainnet Getting Started tutorial](https://github.com/ethereum-optimism/optimism-tutorial/blob/main/getting-started). Follow these steps:
 
@@ -583,7 +583,7 @@ To use any other development stack, see the getting started tutorial, just repla
 
 #### Corrupt data directory
 
-If `op-geth` aborts (for example, because the computer it is running on crashes), you might get these errors on `op-node`: 
+If `op-geth` aborts (for example, because the computer it is running on crashes), you might get these errors on `op-node`:
 
 ```
 WARN [02-16|21:22:02.868] Derivation process temporary error       attempts=14 err="stage 0 failed resetting: temp: failed to find the L2 Heads to start from: failed to fetch L2 block by hash 0x0000000000000000000000000000000000000000000000000000000000000000: failed to determine block-hash of hash 0x0000000000000000000000000000000000000000000000000000000000000000, could not get payload: not found"

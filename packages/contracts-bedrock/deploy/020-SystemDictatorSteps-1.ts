@@ -46,10 +46,10 @@ const deployFn: DeployFunction = async (hre) => {
       signerOrProvider: deployer,
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
     },
     {
-      name: 'Proxy__OVM_L1StandardBridge',
+      name: 'Proxy__BVM_L1StandardBridge',
       signerOrProvider: deployer,
     },
     {
@@ -190,17 +190,17 @@ const deployFn: DeployFunction = async (hre) => {
       )
       assert(
         (await ProxyAdmin.implementationName(
-          getDeploymentAddress(hre, 'Proxy__OVM_L1CrossDomainMessenger')
+          getDeploymentAddress(hre, 'Proxy__BVM_L1CrossDomainMessenger')
         )) === 'OVM_L1CrossDomainMessenger'
       )
       assert(
         (await ProxyAdmin.proxyType(
-          getDeploymentAddress(hre, 'Proxy__OVM_L1CrossDomainMessenger')
+          getDeploymentAddress(hre, 'Proxy__BVM_L1CrossDomainMessenger')
         )) === 2
       )
       assert(
         (await ProxyAdmin.proxyType(
-          getDeploymentAddress(hre, 'Proxy__OVM_L1StandardBridge')
+          getDeploymentAddress(hre, 'Proxy__BVM_L1StandardBridge')
         )) === 1
       )
 

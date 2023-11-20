@@ -330,8 +330,8 @@ type OvmOwnersConfig struct {
 func OvmOwners(conf *OvmOwnersConfig) HeadFn {
 	return func(headState *state.StateDB) error {
 		var addressManager common.Address // Lib_AddressManager
-		var l1SBProxy common.Address      // Proxy__OVM_L1StandardBridge
-		var l1XDMProxy common.Address     // Proxy__OVM_L1CrossDomainMessenger
+		var l1SBProxy common.Address      // Proxy__BVM_L1StandardBridge
+		var l1XDMProxy common.Address     // Proxy__BVM_L1CrossDomainMessenger
 		var l1ERC721BridgeProxy common.Address
 		switch conf.Network {
 		case "mainnet":

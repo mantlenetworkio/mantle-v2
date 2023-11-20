@@ -13,9 +13,9 @@ const deployFn: DeployFunction = async (hre) => {
   // contract and require that the proxy be re-deployed. We will not have this risk once we move
   // entirely to chugsplash-style deployments. It's unlikely to happen and relatively easy to
   // recover from so let's just ignore it for now.
-  const Proxy__OVM_L1CrossDomainMessenger = await getContractFromArtifact(
+  const Proxy__BVM_L1CrossDomainMessenger = await getContractFromArtifact(
     hre,
-    names.managed.contracts.Proxy__OVM_L1CrossDomainMessenger,
+    names.managed.contracts.Proxy__BVM_L1CrossDomainMessenger,
     {
       iface: 'L1CrossDomainMessenger',
       signerOrProvider: deployer,
@@ -27,14 +27,14 @@ const deployFn: DeployFunction = async (hre) => {
     names.unmanaged.Lib_AddressManager
   )
 
-  console.log(`Initializing Proxy__OVM_L1CrossDomainMessenger...`)
-  await Proxy__OVM_L1CrossDomainMessenger.initialize(Lib_AddressManager.address)
+  console.log(`Initializing Proxy__BVM_L1CrossDomainMessenger...`)
+  await Proxy__BVM_L1CrossDomainMessenger.initialize(Lib_AddressManager.address)
 
   console.log(`Checking that contract was correctly initialized...`)
   await awaitCondition(
     async () => {
       return hexStringEquals(
-        await Proxy__OVM_L1CrossDomainMessenger.libAddressManager(),
+        await Proxy__BVM_L1CrossDomainMessenger.libAddressManager(),
         Lib_AddressManager.address
       )
     },
@@ -42,15 +42,15 @@ const deployFn: DeployFunction = async (hre) => {
     100
   )
 
-  console.log(`Setting Proxy__OVM_L1CrossDomainMessenger owner...`)
+  console.log(`Setting Proxy__BVM_L1CrossDomainMessenger owner...`)
   const owner = hre.deployConfig.ovmAddressManagerOwner
-  await Proxy__OVM_L1CrossDomainMessenger.transferOwnership(owner)
+  await Proxy__BVM_L1CrossDomainMessenger.transferOwnership(owner)
 
   console.log(`Checking that the contract owner was correctly set...`)
   await awaitCondition(
     async () => {
       return hexStringEquals(
-        await Proxy__OVM_L1CrossDomainMessenger.owner(),
+        await Proxy__BVM_L1CrossDomainMessenger.owner(),
         owner
       )
     },

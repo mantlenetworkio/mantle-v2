@@ -1,6 +1,5 @@
 import {
   predeploys as v1Predeploys,
-  getDeployedContractDefinition,
 } from '@ethan-bedrock/contracts'
 
 import { predeploys as bedrockPredeploys } from '@ethan-bedrock/contracts-bedrock'
@@ -9,7 +8,6 @@ import {
   L1ChainID,
   L2ChainID,
   OEContractsLike,
-  OEL1ContractsLike,
   OEL2ContractsLike,
   BridgeAdapterData,
 } from '../interfaces'
@@ -62,32 +60,32 @@ export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
 
 }
 
-/**
- * Loads the L1 contracts for a given network by the network name.
- *
- * @param network The name of the network to load the contracts for.
- * @returns The L1 contracts for the given network.
- */
-const getL1ContractsByNetworkName = (network: string): OEL1ContractsLike => {
-  const getDeployedAddress = (name: string) => {
-    return getDeployedContractDefinition(name, network).address
-  }
-
-  return {
-    AddressManager: getDeployedAddress('Lib_AddressManager'),
-    L1CrossDomainMessenger: getDeployedAddress(
-      'Proxy__OVM_L1CrossDomainMessenger'
-    ),
-    L1StandardBridge: getDeployedAddress('Proxy__OVM_L1StandardBridge'),
-    StateCommitmentChain: getDeployedAddress('StateCommitmentChain'),
-    CanonicalTransactionChain: getDeployedAddress('CanonicalTransactionChain'),
-    BondManager: getDeployedAddress('BondManager'),
-    OptimismPortal: '0x5b47E1A08Ea6d985D6649300584e6722Ec4B1383' as const,
-    L2OutputOracle: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const,
-    //TODO : unknown rollup address
-    Rollup: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const
-  }
-}
+// /**
+//  * Loads the L1 contracts for a given network by the network name.
+//  *
+//  * @param network The name of the network to load the contracts for.
+//  * @returns The L1 contracts for the given network.
+//  */
+// const getL1ContractsByNetworkName = (network: string): OEL1ContractsLike => {
+//   const getDeployedAddress = (name: string) => {
+//     return getDeployedContractDefinition(name, network).address
+//   }
+//
+//   return {
+//     AddressManager: getDeployedAddress('Lib_AddressManager'),
+//     L1CrossDomainMessenger: getDeployedAddress(
+//       'Proxy__BVM_L1CrossDomainMessenger'
+//     ),
+//     L1StandardBridge: getDeployedAddress('Proxy__BVM_L1StandardBridge'),
+//     StateCommitmentChain: getDeployedAddress('StateCommitmentChain'),
+//     CanonicalTransactionChain: getDeployedAddress('CanonicalTransactionChain'),
+//     BondManager: getDeployedAddress('BondManager'),
+//     OptimismPortal: '0x5b47E1A08Ea6d985D6649300584e6722Ec4B1383' as const,
+//     L2OutputOracle: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const,
+//     //TODO : unknown rollup address
+//     Rollup: '0xE6Dfba0953616Bacab0c9A8ecb3a9BBa77FC15c0' as const
+//   }
+// }
 
 /**
  * Mapping of L1 chain IDs to the appropriate contract addresses for the OE deployments to the
@@ -98,28 +96,68 @@ export const CONTRACT_ADDRESSES: {
   [ChainID in L2ChainID]: OEContractsLike
 } = {
   [L2ChainID.MANTLE]: {
-    l1: getL1ContractsByNetworkName('mainnet'),
+    l1: {
+      AddressManager: '0x6968f3F16C3e64003F02E121cf0D5CCBf5625a42' as const,
+      L1CrossDomainMessenger:
+        '0x676A795fe6E43C17c668de16730c3F690FEB7120' as const,
+      L1StandardBridge: '0x95fC37A27a2f68e3A647CDc081F0A89bb47c3012' as const,
+      StateCommitmentChain:
+        '0x89E9D387555AF0cDE22cb98833Bae40d640AD7fa' as const,
+      CanonicalTransactionChain:
+        '0x291dc3819b863e19b0a9b9809F8025d2EB4aaE93' as const,
+      BondManager: '0x31aBe1c466C2A8b95fd84258dD1471472979B650' as const,
+      Rollup:
+        process.env.Rollup ||
+        ('0xD1328C9167e0693B689b5aa5a024379d4e437858' as const),
+      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
+      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+    },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
   [L2ChainID.MANTLE_TESTNET]: {
-    l1: getL1ContractsByNetworkName('goerli'),
+    l1: {
+      AddressManager: '0xA647F5947C50248bc4b2eF773791c9C2bc01C65A' as const,
+      L1CrossDomainMessenger:
+        '0x7Bfe603647d5380ED3909F6f87580D0Af1B228B4' as const,
+      L1StandardBridge: '0xc92470D7Ffa21473611ab6c6e2FcFB8637c8f330' as const,
+      StateCommitmentChain:
+        '0x91A5D806BA73d0AA4bFA9B318126dDE60582e92a' as const,
+      CanonicalTransactionChain:
+        '0x654e6dF111F98374d9e5d908D7a5392C308aA18D' as const,
+      BondManager: '0xeBE3f28BbFa7bB8f2C066C1A792073203B985e27' as const,
+      Rollup:
+        process.env.Rollup ||
+        ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
+      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
+      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+    },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
   [L2ChainID.MANTLE_HARDHAT_LOCAL]: {
     l1: {
-      AddressManager: '0x5FbDB2315678afecb367f032d93F642f64180aa3' as const,
+      AddressManager:
+        process.env.ADDRESS_MANAGER_ADDRESS ||
+        ('0x92aBAD50368175785e4270ca9eFd169c949C4ce1' as const),
       L1CrossDomainMessenger:
-        '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318' as const,
-      L1StandardBridge: '0x610178dA211FEF7D417bC0e6FeD39F05609AD788' as const,
+        process.env.L1_CROSS_DOMAIN_MESSENGER_ADDRESS ||
+        ('0x7959CF3b8ffC87Faca8aD8a1B5D95c0f58C0BEf8' as const),
+      L1StandardBridge:
+        process.env.L1_STANDARD_BRIDGE_ADDRESS ||
+        ('0x8BAccFF561FDe61D6bC8B6f299fFBa561d2189B9' as const),
       StateCommitmentChain:
-        '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9' as const,
+        process.env.STATE_COMMITMENT_CHAIN_ADDRESS ||
+        ('0xd9e2F450525079e1e29fB23Bc7Caca6F61f8fD4a' as const),
       CanonicalTransactionChain:
-        '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9' as const,
-      BondManager: '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707' as const,
+        process.env.CANONICAL_TRANSACTION_CHAIN_ADDRESS ||
+        ('0x0090171f848B2aa86918E5Ef2406Ab3d424fdd83' as const),
+      BondManager:
+        process.env.BOND_MANAGER_ADDRESS ||
+        ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
+      Rollup:
+        process.env.Rollup ||
+        ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
       OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
       L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
-      Rollup: '0x0000000000000000000000000000000000000000' as const
-
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
