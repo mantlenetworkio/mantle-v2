@@ -193,7 +193,7 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 	if *retry > DaLoopRetryNum {
 		return false
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 	return true
 }
 
