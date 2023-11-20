@@ -52,6 +52,10 @@ type Metricer interface {
 
 	RecordRollupRetry(time int32)
 
+	RecordInitReferenceBlockNumber(dataStoreId uint32)
+
+	RecordConfirmedDataStoreId(dataStoreId uint32)
+
 	Document() []opmetrics.DocumentedMetric
 }
 
@@ -85,8 +89,10 @@ type Metrics struct {
 
 	rollupRetryCount prometheus.Gauge
 
-	batcherTxEvs opmetrics.EventVec
+	recordReferenceBlockNumber prometheus.Gauge
+	recordConfirmedDataStoreId prometheus.Gauge
 
+	batcherTxEvs               opmetrics.EventVec
 	batcherTxOverMaxLimitEvent opmetrics.Event
 }
 
@@ -191,6 +197,18 @@ func NewMetrics(procName string) *Metrics {
 			Namespace: ns,
 			Name:      "rollup_retry_count",
 			Help:      "Number of retries after rollup failure.",
+		}),
+
+		recordReferenceBlockNumber: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "reference_block_number",
+			Help:      "InitDataStoreId of MantleDA.",
+		}),
+
+		recordConfirmedDataStoreId: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "confirmed_data_store_id",
+			Help:      "ConfirmedDataStoreId of MantleDA.",
 		}),
 
 		batcherTxEvs:               opmetrics.NewEventVec(factory, ns, "", "batcher_tx", "BatcherTx", []string{"stage"}),
@@ -350,6 +368,14 @@ func (m *Metrics) RecordBatchTxConfirmDataFailed() {
 
 func (m *Metrics) RecordRollupRetry(retryCount int32) {
 	m.rollupRetryCount.Set(float64(retryCount))
+}
+
+func (m *Metrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {
+	m.recordReferenceBlockNumber.Set(float64(dataStoreId))
+}
+
+func (m *Metrics) RecordConfirmedDataStoreId(dataStoreId uint32) {
+	m.recordConfirmedDataStoreId.Set(float64(dataStoreId))
 }
 
 func (m *Metrics) RecordTxOverMaxLimit() {

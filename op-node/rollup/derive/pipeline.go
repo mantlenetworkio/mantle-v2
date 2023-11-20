@@ -15,6 +15,7 @@ type Metrics interface {
 	RecordL2Ref(name string, ref eth.L2BlockRef)
 	RecordUnsafePayloadsBuffer(length uint64, memSize uint64, next eth.BlockID)
 	RecordChannelInputBytes(inputCompresedBytes int)
+	RecordParseDataStoreId(dataStoreId uint32)
 }
 
 type L1Fetcher interface {
@@ -81,7 +82,7 @@ type DerivationPipeline struct {
 func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine, daSyncer DaSyncer, metrics Metrics) *DerivationPipeline {
 	// Pull stages
 	l1Traversal := NewL1Traversal(log, cfg, l1Fetcher)
-	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, daSyncer) // auxiliary stage for L1Retrieval
+	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, daSyncer, metrics) // auxiliary stage for L1Retrieval
 	l1Src := NewL1Retrieval(log, dataSrc, l1Traversal)
 	frameQueue := NewFrameQueue(log, l1Src)
 	bank := NewChannelBank(log, cfg, frameQueue, l1Fetcher)
