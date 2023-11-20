@@ -392,11 +392,15 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 		l.log.Error("op-batcher call disperse fail", "err", err)
 		return nil, err
 	}
+
+	l.log.Info("disperse meta", "total_stake_index", meta.TotalStakeIndex, "apk_index", meta.ApkIndex, "store_number", meta.StoreNumber)
+
 	callData, err := common.MakeCalldata(l.state.params, *meta, event.StoreNumber, event.MsgHash)
 	if err != nil {
 		l.log.Error("op-batcher make call data fail", "err", err)
 		return nil, err
 	}
+
 	searchData := &bindings.IDataLayrServiceManagerDataStoreSearchData{
 		Duration:  event.Duration,
 		Timestamp: new(big.Int).SetUint64(uint64(event.InitTime)),
