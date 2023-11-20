@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Layr-Labs/datalayr/common/header"
 	"math/big"
 )
@@ -44,6 +45,7 @@ func MakeCalldata(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("TotalStakeIndex %d \n", meta.TotalStakeIndex)
 
 	storeNumberBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(storeNumber)),
@@ -52,6 +54,7 @@ func MakeCalldata(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("storeNumber %d \n", storeNumber)
 
 	referenceBlockNumberBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(params.ReferenceBlockNumber)),
@@ -60,6 +63,7 @@ func MakeCalldata(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("ReferenceBlockNumber %d \n", params.ReferenceBlockNumber)
 
 	numNonPubKeysBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(len(meta.Sigs.NonSignerPubkeys))),
@@ -69,6 +73,8 @@ func MakeCalldata(
 		return nil, err
 	}
 
+	fmt.Printf("NonSignerPubkeys len %d \n", len(meta.Sigs.NonSignerPubkeys))
+
 	flattenedNonPubKeysBytes := make([]byte, 0)
 	for i := 0; i < len(meta.Sigs.NonSignerPubkeys); i++ {
 		flattenedNonPubKeysBytes = append(
@@ -76,6 +82,7 @@ func MakeCalldata(
 			meta.Sigs.NonSignerPubkeys[i]...,
 		)
 	}
+	fmt.Printf("flattenedNonPubKeysBytes len %d \n", len(flattenedNonPubKeysBytes))
 
 	apkIndexBytes, err := bigIntToBytes(
 		new(big.Int).SetUint64(uint64(meta.ApkIndex)),
@@ -84,6 +91,7 @@ func MakeCalldata(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("ApkIndex %d \n", meta.ApkIndex)
 
 	var calldata []byte
 	calldata = append(calldata, msgHash[:]...)
@@ -96,6 +104,10 @@ func MakeCalldata(
 	calldata = append(calldata, meta.Sigs.StoredAggPubkeyG1...)
 	calldata = append(calldata, meta.Sigs.UsedAggPubkeyG2...)
 	calldata = append(calldata, meta.Sigs.AggSig...)
+	fmt.Printf("StoredAggPubkeyG1 %d \n", len(meta.Sigs.StoredAggPubkeyG1))
+	fmt.Printf("UsedAggPubkeyG2 %d \n", len(meta.Sigs.UsedAggPubkeyG2))
+	fmt.Printf("AggSig %d \n", len(meta.Sigs.AggSig))
+
 	return calldata, nil
 
 }
