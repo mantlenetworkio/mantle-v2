@@ -417,8 +417,8 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 	if err != nil {
 		return nil, err
 	}
-
-	l.log.Info("confirmData", "callData", hexutil.Encode(confirmTxData))
+	l.log.Info("confirmData", "callData", hexutil.Encode(callData))
+	l.log.Info("confirmData", hexutil.Encode(confirmTxData))
 	candidate := txmgr.TxCandidate{
 		To:     &l.DataLayrServiceManagerAddr,
 		TxData: confirmTxData,
