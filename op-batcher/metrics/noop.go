@@ -50,3 +50,7 @@ func (m *noopMetrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {}
 func (m *noopMetrics) RecordConfirmedDataStoreId(dataStoreId uint32)     {}
 
 func (*noopMetrics) RecordTxOverMaxLimit() {}
+
+func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
+
+}

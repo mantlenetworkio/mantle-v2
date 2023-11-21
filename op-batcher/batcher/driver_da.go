@@ -193,7 +193,7 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 	if *retry > DaLoopRetryNum {
 		return false
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 	return true
 }
 
@@ -392,6 +392,12 @@ func (l *BatchSubmitter) confirmStoredData(txHash []byte, ctx context.Context) (
 		l.log.Error("op-batcher call disperse fail", "err", err)
 		return nil, err
 	}
+	if len(meta.Sigs.NonSignerPubkeys) != 0 {
+		l.log.Error("op-batcher call disperse success. However, there are nodes that do not participate in the signature.", "number", len(meta.Sigs.NonSignerPubkeys))
+		l.metr.RecordDaNonSignerPubkeys(len(meta.Sigs.NonSignerPubkeys))
+		return nil, errors.New("disperse meta nonSignerPubkeys is not 0")
+	}
+
 	callData, err := common.MakeCalldata(l.state.params, *meta, event.StoreNumber, event.MsgHash)
 	if err != nil {
 		l.log.Error("op-batcher make call data fail", "err", err)

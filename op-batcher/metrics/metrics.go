@@ -52,6 +52,8 @@ type Metricer interface {
 
 	RecordRollupRetry(time int32)
 
+	RecordDaNonSignerPubkeys(num int)
+
 	RecordInitReferenceBlockNumber(dataStoreId uint32)
 
 	RecordConfirmedDataStoreId(dataStoreId uint32)
@@ -87,7 +89,8 @@ type Metrics struct {
 	channelInputBytesTotal  prometheus.Counter
 	channelOutputBytesTotal prometheus.Counter
 
-	rollupRetryCount prometheus.Gauge
+	rollupRetryCount   prometheus.Gauge
+	daNonSignerPubkeys prometheus.Gauge
 
 	recordReferenceBlockNumber prometheus.Gauge
 	recordConfirmedDataStoreId prometheus.Gauge
@@ -197,6 +200,12 @@ func NewMetrics(procName string) *Metrics {
 			Namespace: ns,
 			Name:      "rollup_retry_count",
 			Help:      "Number of retries after rollup failure.",
+		}),
+
+		daNonSignerPubkeys: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "da_no_sign_key_count",
+			Help:      "Number of da nodes not participating in the signature.",
 		}),
 
 		recordReferenceBlockNumber: factory.NewGauge(prometheus.GaugeOpts{
@@ -368,6 +377,10 @@ func (m *Metrics) RecordBatchTxConfirmDataFailed() {
 
 func (m *Metrics) RecordRollupRetry(retryCount int32) {
 	m.rollupRetryCount.Set(float64(retryCount))
+}
+
+func (m *Metrics) RecordDaNonSignerPubkeys(num int) {
+	m.daNonSignerPubkeys.Set(float64(num))
 }
 
 func (m *Metrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {
