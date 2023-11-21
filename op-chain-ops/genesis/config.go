@@ -351,6 +351,7 @@ func (d *DeployConfig) InitDeveloperDeployedAddresses() error {
 	d.L1ERC721BridgeProxy = predeploys.DevL1ERC721BridgeAddr
 	d.OptimismPortalProxy = predeploys.DevOptimismPortalAddr
 	d.SystemConfigProxy = predeploys.DevSystemConfigAddr
+	d.L1MantleToken = predeploys.DevL1MNTAddr
 	return nil
 }
 

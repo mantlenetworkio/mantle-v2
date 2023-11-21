@@ -24,7 +24,7 @@ type Metrics interface {
 	RecordChannelInputBytes(inputCompresedBytes int)
 
 	RecordUnsafePayloadsBuffer(length uint64, memSize uint64, next eth.BlockID)
-
+	RecordParseDataStoreId(dataStoreId uint32)
 	SetDerivationIdle(idle bool)
 
 	RecordL1ReorgDepth(d uint64)

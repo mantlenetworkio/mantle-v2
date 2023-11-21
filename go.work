@@ -8,4 +8,6 @@ replace (
 use (
 	.
 	packages/contracts-bedrock/test-case-generator
+	bss-core
+	l2geth
 )
