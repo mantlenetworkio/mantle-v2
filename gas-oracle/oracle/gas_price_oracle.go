@@ -116,7 +116,7 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 		select {
 		case <-timer.C:
 			if err := updateTokenRatio(); err != nil {
-				log.Error("cannot update token ratio", "message", err)
+				log.Error("cannot update tokenRatio", "message", err)
 			}
 		case <-g.ctx.Done():
 			g.Stop()
