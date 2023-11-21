@@ -40,7 +40,7 @@ const getNonceForTx = async (
 const connectGasPriceOracle = (provider: ProviderLike): Contract => {
   return new Contract(
     predeploys.BVM_GasPriceOracle,
-    getContractInterface('OVM_GasPriceOracle'),
+    getContractInterface('BVM_GasPriceOracle'),
     toProvider(provider)
   )
 }
