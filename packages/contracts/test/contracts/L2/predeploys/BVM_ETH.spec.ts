@@ -6,30 +6,30 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from '../../../setup'
 import { deploy } from '../../../helpers'
 
-describe('OVM_ETH', () => {
+describe('BVM_ETH', () => {
   let signer1: SignerWithAddress
   let signer2: SignerWithAddress
   before(async () => {
     ;[signer1, signer2] = await ethers.getSigners()
   })
 
-  let OVM_ETH: Contract
+  let BVM_ETH: Contract
   beforeEach(async () => {
-    OVM_ETH = await deploy('OVM_ETH')
+    BVM_ETH = await deploy('BVM_ETH')
   })
 
   describe('transfer', () => {
     it('should revert', async () => {
-      await expect(OVM_ETH.transfer(signer2.address, 100)).to.be.revertedWith(
-        'OVM_ETH: transfer is disabled pending further community discussion.'
+      await expect(BVM_ETH.transfer(signer2.address, 100)).to.be.revertedWith(
+        'BVM_ETH: transfer is disabled pending further community discussion.'
       )
     })
   })
 
   describe('approve', () => {
     it('should revert', async () => {
-      await expect(OVM_ETH.approve(signer2.address, 100)).to.be.revertedWith(
-        'OVM_ETH: approve is disabled pending further community discussion.'
+      await expect(BVM_ETH.approve(signer2.address, 100)).to.be.revertedWith(
+        'BVM_ETH: approve is disabled pending further community discussion.'
       )
     })
   })
@@ -37,9 +37,9 @@ describe('OVM_ETH', () => {
   describe('transferFrom', () => {
     it('should revert', async () => {
       await expect(
-        OVM_ETH.transferFrom(signer1.address, signer2.address, 100)
+        BVM_ETH.transferFrom(signer1.address, signer2.address, 100)
       ).to.be.revertedWith(
-        'OVM_ETH: transferFrom is disabled pending further community discussion.'
+        'BVM_ETH: transferFrom is disabled pending further community discussion.'
       )
     })
   })
@@ -47,9 +47,9 @@ describe('OVM_ETH', () => {
   describe('increaseAllowance', () => {
     it('should revert', async () => {
       await expect(
-        OVM_ETH.increaseAllowance(signer2.address, 100)
+        BVM_ETH.increaseAllowance(signer2.address, 100)
       ).to.be.revertedWith(
-        'OVM_ETH: increaseAllowance is disabled pending further community discussion.'
+        'BVM_ETH: increaseAllowance is disabled pending further community discussion.'
       )
     })
   })
@@ -57,9 +57,9 @@ describe('OVM_ETH', () => {
   describe('decreaseAllowance', () => {
     it('should revert', async () => {
       await expect(
-        OVM_ETH.decreaseAllowance(signer2.address, 100)
+        BVM_ETH.decreaseAllowance(signer2.address, 100)
       ).to.be.revertedWith(
-        'OVM_ETH: decreaseAllowance is disabled pending further community discussion.'
+        'BVM_ETH: decreaseAllowance is disabled pending further community discussion.'
       )
     })
   })

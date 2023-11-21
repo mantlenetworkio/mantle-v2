@@ -368,7 +368,7 @@ describe('L1CrossDomainMessenger', () => {
     const generator = await TrieTestGenerator.fromAccounts({
       accounts: [
         {
-          address: predeploys.OVM_L2ToL1MessagePasser,
+          address: predeploys.BVM_L2ToL1MessagePasser,
           nonce: 0,
           balance: 0,
           codeHash: ethers.utils.keccak256('0x1234'),
@@ -383,7 +383,7 @@ describe('L1CrossDomainMessenger', () => {
       stateRootBatchHeader: DUMMY_BATCH_HEADERS[0],
       stateRootProof: DUMMY_BATCH_PROOFS[0],
       stateTrieWitness: (
-        await generator.makeAccountProofTest(predeploys.OVM_L2ToL1MessagePasser)
+        await generator.makeAccountProofTest(predeploys.BVM_L2ToL1MessagePasser)
       ).accountTrieWitness,
       storageTrieWitness: (
         await storageGenerator.makeInclusionProofTest(storageKey)

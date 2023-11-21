@@ -22,15 +22,15 @@ describe('L2CrossDomainMessenger', () => {
 
   let Fake__TargetContract: FakeContract
   let Fake__L1CrossDomainMessenger: FakeContract
-  let Fake__OVM_L2ToL1MessagePasser: FakeContract
+  let Fake__BVM_L2ToL1MessagePasser: FakeContract
   before(async () => {
     Fake__TargetContract = await smock.fake<Contract>('TestERC20')
     Fake__L1CrossDomainMessenger = await smock.fake<Contract>(
       'L1CrossDomainMessenger'
     )
-    Fake__OVM_L2ToL1MessagePasser = await smock.fake<Contract>(
-      'OVM_L2ToL1MessagePasser',
-      { address: predeploys.OVM_L2ToL1MessagePasser }
+    Fake__BVM_L2ToL1MessagePasser = await smock.fake<Contract>(
+      'BVM_L2ToL1MessagePasser',
+      { address: predeploys.BVM_L2ToL1MessagePasser }
     )
   })
 
@@ -81,7 +81,7 @@ describe('L2CrossDomainMessenger', () => {
       ).to.not.be.reverted
 
       expect(
-        Fake__OVM_L2ToL1MessagePasser.passMessageToL1.getCall(0).args[0]
+        Fake__BVM_L2ToL1MessagePasser.passMessageToL1.getCall(0).args[0]
       ).to.deep.equal(
         encodeXDomainCalldata(
           NON_ZERO_ADDRESS,
@@ -176,9 +176,9 @@ describe('L2CrossDomainMessenger', () => {
 
     it('should not make a call if the target is the L2 MessagePasser', async () => {
       const tx = await L2CrossDomainMessenger.relayMessage(
-        predeploys.OVM_L2ToL1MessagePasser,
+        predeploys.BVM_L2ToL1MessagePasser,
         signer.address,
-        Fake__OVM_L2ToL1MessagePasser.interface.encodeFunctionData(
+        Fake__BVM_L2ToL1MessagePasser.interface.encodeFunctionData(
           'passMessageToL1(bytes)',
           [NON_NULL_BYTES32]
         ),
@@ -195,9 +195,9 @@ describe('L2CrossDomainMessenger', () => {
             ['bytes'],
             [
               encodeXDomainCalldata(
-                predeploys.OVM_L2ToL1MessagePasser,
+                predeploys.BVM_L2ToL1MessagePasser,
                 signer.address,
-                Fake__OVM_L2ToL1MessagePasser.interface.encodeFunctionData(
+                Fake__BVM_L2ToL1MessagePasser.interface.encodeFunctionData(
                   'passMessageToL1(bytes)',
                   [NON_NULL_BYTES32]
                 ),

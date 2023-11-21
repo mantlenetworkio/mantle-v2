@@ -24,11 +24,11 @@ const callPredeploy = async (
 }
 
 // TODO: rewrite this test to bypass the execution manager
-describe.skip('OVM_L2ToL1MessagePasser', () => {
-  let Fake__OVM_ExecutionManager: FakeContract
+describe.skip('BVM_L2ToL1MessagePasser', () => {
+  let Fake__BVM_ExecutionManager: FakeContract
   before(async () => {
-    Fake__OVM_ExecutionManager = await smock.fake<Contract>(
-      'OVM_ExecutionManager'
+    Fake__BVM_ExecutionManager = await smock.fake<Contract>(
+      'BVM_ExecutionManager'
     )
   })
 
@@ -38,24 +38,24 @@ describe.skip('OVM_L2ToL1MessagePasser', () => {
       await ethers.getContractFactory('Helper_PredeployCaller')
     ).deploy()
 
-    Helper_PredeployCaller.setTarget(Fake__OVM_ExecutionManager.address)
+    Helper_PredeployCaller.setTarget(Fake__BVM_ExecutionManager.address)
   })
 
-  let Factory__OVM_L2ToL1MessagePasser: ContractFactory
+  let Factory__BVM_L2ToL1MessagePasser: ContractFactory
   before(async () => {
-    Factory__OVM_L2ToL1MessagePasser = await ethers.getContractFactory(
-      'OVM_L2ToL1MessagePasser'
+    Factory__BVM_L2ToL1MessagePasser = await ethers.getContractFactory(
+      'BVM_L2ToL1MessagePasser'
     )
   })
 
-  let OVM_L2ToL1MessagePasser: Contract
+  let BVM_L2ToL1MessagePasser: Contract
   beforeEach(async () => {
-    OVM_L2ToL1MessagePasser = await Factory__OVM_L2ToL1MessagePasser.deploy()
+    BVM_L2ToL1MessagePasser = await Factory__BVM_L2ToL1MessagePasser.deploy()
   })
 
   describe('passMessageToL1', () => {
     before(async () => {
-      Fake__OVM_ExecutionManager.ovmCALLER.returns(NON_ZERO_ADDRESS)
+      Fake__BVM_ExecutionManager.ovmCALLER.returns(NON_ZERO_ADDRESS)
     })
 
     for (const size of ELEMENT_TEST_SIZES) {
@@ -65,13 +65,13 @@ describe.skip('OVM_L2ToL1MessagePasser', () => {
 
           await callPredeploy(
             Helper_PredeployCaller,
-            OVM_L2ToL1MessagePasser,
+            BVM_L2ToL1MessagePasser,
             'passMessageToL1',
             [message]
           )
 
           expect(
-            await OVM_L2ToL1MessagePasser.sentMessages(
+            await BVM_L2ToL1MessagePasser.sentMessages(
               keccak256(message + remove0x(Helper_PredeployCaller.address))
             )
           ).to.equal(true)

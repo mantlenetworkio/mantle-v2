@@ -9,9 +9,9 @@ import { getContractInterface, predeploys } from '../../../../src'
 
 // TODO: Maybe we should consider automatically generating these and exporting them?
 const ERROR_STRINGS = {
-  INVALID_MESSENGER: 'OVM_XCHAIN: messenger contract unauthenticated',
+  INVALID_MESSENGER: 'BVM_XCHAIN: messenger contract unauthenticated',
   INVALID_X_DOMAIN_MSG_SENDER:
-    'OVM_XCHAIN: wrong sender of cross-domain message',
+    'BVM_XCHAIN: wrong sender of cross-domain message',
 }
 
 const DUMMY_L1_ERC20_ADDRESS = '0xaBBAABbaaBbAABbaABbAABbAABbaAbbaaBbaaBBa'
@@ -170,10 +170,10 @@ describe('L2StandardBridge', () => {
   describe('withdrawals', () => {
     const withdrawAmount = 1_000
 
-    let Fake__OVM_ETH: FakeContract<Contract>
+    let Fake__BVM_ETH: FakeContract<Contract>
     before(async () => {
-      Fake__OVM_ETH = await smock.fake('OVM_ETH', {
-        address: predeploys.OVM_ETH,
+      Fake__BVM_ETH = await smock.fake('BVM_ETH', {
+        address: predeploys.BVM_ETH,
       })
     })
 
@@ -196,9 +196,9 @@ describe('L2StandardBridge', () => {
       await Mock__L2Token.setVariable('l2Bridge', L2StandardBridge.address)
     })
 
-    it('withdraw() withdraws and sends the correct withdrawal message for OVM_ETH', async () => {
+    it('withdraw() withdraws and sends the correct withdrawal message for BVM_ETH', async () => {
       await L2StandardBridge.withdraw(
-        Fake__OVM_ETH.address,
+        Fake__BVM_ETH.address,
         0,
         0,
         NON_NULL_BYTES32
