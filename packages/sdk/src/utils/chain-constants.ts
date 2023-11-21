@@ -14,7 +14,7 @@ import {
 import {
   StandardBridgeAdapter,
   DAIBridgeAdapter,
-  ECOBridgeAdapter,
+  ECOBridgeAdapter, ERC20BridgeAdapter,
 } from '../adapters'
 
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
@@ -273,14 +273,14 @@ export const BRIDGE_ADAPTER_DATA: {
       l2Bridge: '0x158F513096923fF2d3aab2BcF4478536de6725e2' as const,
     },
     DAI: {
-      Adapter: StandardBridgeAdapter,
+      Adapter: ERC20BridgeAdapter,
       l1Bridge: '0x10E6593CDda8c58a1d0f14C5164B376352a55f2F' as const,
       l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
     },
   },
   [L2ChainID.MANTLE_KOVAN]: {
     wstETH: {
-      Adapter: StandardBridgeAdapter,
+      Adapter: ERC20BridgeAdapter,
       l1Bridge: '0xa88751C0a08623E11ff38c6B70F2BbEe7865C17c' as const,
       l2Bridge: '0xF9C842dE4381a70eB265d10CF8D43DceFF5bA935' as const,
     },
@@ -295,7 +295,7 @@ export const BRIDGE_ADAPTER_DATA: {
       l2Bridge: '0xB4d37826b14Cd3CB7257A2A5094507d701fe715f' as const,
     },
     DAI: {
-      Adapter: StandardBridgeAdapter,
+      Adapter: ERC20BridgeAdapter,
       l1Bridge: '0xb415e822C4983ecD6B1c1596e8a5f976cf6CD9e3' as const,
       l2Bridge: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65' as const,
     },
