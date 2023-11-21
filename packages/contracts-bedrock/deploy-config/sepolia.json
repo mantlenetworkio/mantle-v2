@@ -1,0 +1,49 @@
+{
+  "numDeployConfirmations": 1,
+
+  "finalSystemOwner": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "portalGuardian": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "controller": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "l1ChainID": 11155111,
+  "l2ChainID": 5003,
+  "l2BlockTime": 2,
+
+  "maxSequencerDrift": 600,
+  "sequencerWindowSize": 3600,
+  "channelTimeout": 300,
+
+  "portalGuardian": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "p2pSequencerAddress": "0x0Af3b3A2811C86bfe6Da899bba4BEb531ddF5c55", 
+  "batchInboxAddress": "0xff00000000000000000000000000000000000420",
+  "batchSenderAddress": "0xF5E2015E4EB5810f39Dab45e72526c59304bEE36",
+
+  "l2OutputOracleSubmissionInterval": 120,
+  "l2OutputOracleStartingBlockNumber": 0,
+  "l2OutputOracleStartingTimestamp": -1,
+  "controller": "0xa945FfF5f850Ff2B0Dd7deA5b2e53D983E20922b",
+  "l2OutputOracleProposer": "0x6D7A225A04A05655e4019E3b255748b657422d6f", 
+  "l2OutputOracleChallenger": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+
+  "finalizationPeriodSeconds": 12,
+
+  "proxyAdminOwner": "0x7E3ccF6f8C350773051F44086ef198CB2B530B4F",
+  "baseFeeVaultRecipient": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "l1FeeVaultRecipient": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "sequencerFeeVaultRecipient": "0x2f673b088e28b36382c662bA1974C8EBf12daaBB",
+  "l1StartingBlockTag": "0x705829d6ee52e5c8cba4d93414b7dd773527355adbd6631f57db98fac461e28e",
+  "gasPriceOracleOverhead": 2100,
+  "gasPriceOracleScalar": 1000000,
+
+
+
+  "governanceTokenSymbol": "OP",
+  "governanceTokenName": "Optimism",
+  "governanceTokenOwner": "0x1377057A1FB111E118cF05c7fB24601B7233c498",
+
+  "l2GenesisBlockGasLimit": "0x17D7840",
+  "l2GenesisBlockBaseFeePerGas": "0x3b9aca00",
+
+  "eip1559Denominator": 50,
+  "eip1559Elasticity": 10,
+  "l1MantleToken": "0x65e37B558F64E2Be5768DB46DF22F93d85741A9E"
+}
