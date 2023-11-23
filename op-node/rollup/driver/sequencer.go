@@ -139,6 +139,7 @@ func (d *Sequencer) PlanNextSequencerAction() time.Duration {
 	// We may have to wait till the next sequencing action, e.g. upon an error.
 	// If the head changed we need to respond and will not delay the sequencing.
 	if delay := d.nextAction.Sub(now); delay > 0 && buildingOnto.Hash == head.Hash {
+		d.log.Info("PlanNextSequencerAction 0", "delay", delay)
 		return delay
 	}
 
@@ -151,18 +152,22 @@ func (d *Sequencer) PlanNextSequencerAction() time.Duration {
 	if buildingID != (eth.PayloadID{}) && buildingOnto.Hash == head.Hash {
 		// if we started building already, then we will schedule the sealing.
 		if remainingTime < sealingDuration {
+			d.log.Info("PlanNextSequencerAction 1", "delay", 0)
 			return 0 // if there's not enough time for sealing, don't wait.
 		} else {
 			// finish with margin of sealing duration before payloadTime
+			d.log.Info("PlanNextSequencerAction 2", "delay", remainingTime-sealingDuration)
 			return remainingTime - sealingDuration
 		}
 	} else {
 		// if we did not yet start building, then we will schedule the start.
 		if remainingTime > blockTime {
 			// if we have too much time, then wait before starting the build
+			d.log.Info("PlanNextSequencerAction 3", "delay", remainingTime-blockTime)
 			return remainingTime - blockTime
 		} else {
 			// otherwise start instantly
+			d.log.Info("PlanNextSequencerAction 4", "delay", 0)
 			return 0
 		}
 	}

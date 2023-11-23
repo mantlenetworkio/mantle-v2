@@ -196,6 +196,7 @@ func (s *Driver) eventLoop() {
 		if len(sequencerCh) > 0 { // empty if not already drained before resetting
 			<-sequencerCh
 		}
+		s.log.Info("sequencerTimer reset", "delay", delay)
 		sequencerTimer.Reset(delay)
 	}
 
@@ -243,6 +244,7 @@ func (s *Driver) eventLoop() {
 
 		select {
 		case <-sequencerCh:
+			s.log.Info("sequencerTimer sequencerCh")
 			payload, err := s.sequencer.RunNextSequencerAction(ctx)
 			if err != nil {
 				s.log.Error("Sequencer critical error", "err", err)
