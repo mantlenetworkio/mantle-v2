@@ -186,6 +186,7 @@ func (dp *DerivationPipeline) Step(ctx context.Context) error {
 	defer dp.metrics.RecordL1Ref("l1_derived", dp.Origin())
 
 	// if any stages need to be reset, do that first.
+	dp.log.Info("DerivationPipeline", "resetting", dp.resetting, "len(dp.stages)", len(dp.stages))
 	if dp.resetting < len(dp.stages) {
 		if err := dp.stages[dp.resetting].Reset(ctx, dp.eng.Origin(), dp.eng.SystemConfig()); err == io.EOF {
 			dp.log.Debug("reset of stage completed", "stage", dp.resetting, "origin", dp.eng.Origin())
