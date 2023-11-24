@@ -1,0 +1,40 @@
+name: E2E Check
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - 'releases/**'
+    paths:
+      - '**'
+jobs:
+  E2E:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Rde-v2 Code
+        uses: actions/checkout@main
+        with:
+          repository: mantlenetworkio/rde-v2
+          path: mantlenetworkio/rde-v2
+          submodules: recursive
+          token: ${{ secrets.NEW_PAT }}
+          ref: develop
+      - name: Checkout Rde-v2 Code
+        uses: actions/checkout@main
+        with:
+          repository: mantlenetworkio/mantle-v2
+          path: mantlenetworkio/mantle-v2
+          submodules: recursive
+          token: ${{ secrets.NEW_PAT }}
+          ref: ${{ env.GITHUB_HEAD_REF }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: E2E
+        run: |
+          ls
+          cd mantlenetworkio/rde-v2
+          rm -rf mantle-v2
+          cp -r ../../mantlenetworkio/mantle-v2 .
+          cmd="docker run -i -v $(pwd):/app shidaxi/op-base:0.1.0-node-16-bullseye /bin/bash /app/e2e.sh"
+          echo -e "\e[32m$cmd\e[0m"
+          $cmd
