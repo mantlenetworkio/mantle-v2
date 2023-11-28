@@ -242,6 +242,7 @@ func (s *Driver) eventLoop() {
 			altSyncTicker.Reset(syncCheckInterval)
 		}
 
+		time.Sleep(100 * time.Microsecond) // sleep 0.1 ms, waiting for sequencerCh to be ready
 		select {
 		case <-sequencerCh:
 			s.log.Info("eventLoop sequencerCh start")
