@@ -77,7 +77,7 @@ var (
 		predeploys.SequencerFeeVaultAddr:            eip1967Slots(predeploys.SequencerFeeVaultAddr),
 		predeploys.OptimismMintableERC20FactoryAddr: eip1967Slots(predeploys.OptimismMintableERC20FactoryAddr),
 		predeploys.L1BlockNumberAddr:                eip1967Slots(predeploys.L1BlockNumberAddr),
-		predeploys.GasPriceOracleAddr:               eip1967Slots(predeploys.GasPriceOracleAddr),
+		//predeploys.GasPriceOracleAddr:                eip1967Slots(predeploys.GasPriceOracleAddr),
 		//predeploys.L1BlockAddr:                       eip1967Slots(predeploys.L1BlockAddr),
 		predeploys.L2ERC721BridgeAddr:                eip1967Slots(predeploys.L2ERC721BridgeAddr),
 		predeploys.OptimismMintableERC721FactoryAddr: eip1967Slots(predeploys.OptimismMintableERC721FactoryAddr),
@@ -95,6 +95,11 @@ var (
 	}
 )
 
+type GasPriceOracleConfig struct {
+	TokenRatio          *big.Int
+	GasPriceOracleOwner common.Address
+}
+
 // PostCheckMigratedDB will check that the migration was performed correctly
 func PostCheckMigratedDB(
 	ldb ethdb.Database,
@@ -105,6 +110,7 @@ func PostCheckMigratedDB(
 	finalSystemOwner common.Address,
 	proxyAdminOwner common.Address,
 	info *derive.L1BlockInfo,
+	gasPriceOracleConfig *GasPriceOracleConfig,
 ) error {
 	log.Info("Validating database migration")
 
@@ -153,6 +159,11 @@ func PostCheckMigratedDB(
 		return err
 	}
 	log.Info("checked predeploys")
+
+	if err := PostCheckGasPriceOracle(db, gasPriceOracleConfig); err != nil {
+		return err
+	}
+	log.Info("checked GasPriceOracle")
 
 	if err := PostCheckL1Block(db, info); err != nil {
 		return err
@@ -330,7 +341,7 @@ func PostCheckPredeployStorage(db *state.StateDB, finalSystemOwner common.Addres
 
 		// Skip the addresses that did not have their storage reset, also skip the
 		// L2ToL1MessagePasser because it's already covered by the withdrawals check.
-		if FrozenStoragePredeploys[*addr] || *addr == predeploys.L2ToL1MessagePasserAddr || *addr == predeploys.L1BlockAddr {
+		if FrozenStoragePredeploys[*addr] || *addr == predeploys.L2ToL1MessagePasserAddr || *addr == predeploys.L1BlockAddr || *addr == predeploys.GasPriceOracleAddr {
 			continue
 		}
 
@@ -494,6 +505,41 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	if innerErr != nil {
 		return innerErr
 	}
+
+	return nil
+}
+
+// PostCheckGasPriceOracle checks that the GasPriceOracle contract was properly set to the L1 origin.
+func PostCheckGasPriceOracle(db *state.StateDB, gasPriceOracleConfig *GasPriceOracleConfig) error {
+	// Slot 0 is the tokenRatio.
+	tokenRatioReal := db.GetState(predeploys.GasPriceOracleAddr, common.Hash{}).Big()
+	if tokenRatioReal.Cmp(gasPriceOracleConfig.TokenRatio) != 0 {
+		return fmt.Errorf("expected GasPriceOracle tokenRatio to be %s, but got %s", gasPriceOracleConfig.TokenRatio.String(), tokenRatioReal.String())
+	}
+	log.Debug("validated GasPriceOracle tokenRatio", "expected", gasPriceOracleConfig.TokenRatio.String())
+
+	// Slot 1 is the owner of GasPriceOracle
+	gasOracleOwnerReal := common.BytesToAddress(db.GetState(predeploys.GasPriceOracleAddr, common.Hash{31: 0x01}).Bytes())
+	if gasOracleOwnerReal != gasPriceOracleConfig.GasPriceOracleOwner {
+		return fmt.Errorf("expected GasPriceOracle gasOracleOwner to be %s, but got %s", gasPriceOracleConfig.GasPriceOracleOwner.String(), gasOracleOwnerReal.String())
+	}
+	log.Debug("validated GasPriceOracle gasOracleOwner", "expected", gasPriceOracleConfig.GasPriceOracleOwner.String())
+
+	// Check EIP-1967
+	proxyAdmin := common.BytesToAddress(db.GetState(predeploys.GasPriceOracleAddr, AdminSlot).Bytes())
+	if proxyAdmin != predeploys.ProxyAdminAddr {
+		return fmt.Errorf("expected GasPriceOracle admin to be %s, but got %s", predeploys.ProxyAdminAddr, proxyAdmin)
+	}
+	log.Debug("validated GasPriceOracle admin", "expected", predeploys.ProxyAdminAddr)
+	expImplementation, err := AddressToCodeNamespace(predeploys.GasPriceOracleAddr)
+	if err != nil {
+		return fmt.Errorf("failed to get expected implementation for L1Block: %w", err)
+	}
+	actImplementation := common.BytesToAddress(db.GetState(predeploys.GasPriceOracleAddr, ImplementationSlot).Bytes())
+	if expImplementation != actImplementation {
+		return fmt.Errorf("expected GasPriceOracle implementation to be %s, but got %s", expImplementation, actImplementation)
+	}
+	log.Debug("validated GasPriceOracle implementation", "expected", expImplementation)
 
 	return nil
 }

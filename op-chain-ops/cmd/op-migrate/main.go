@@ -229,6 +229,10 @@ func main() {
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
 					L1FeeScalar:   eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleScalar))),
 				},
+				&genesis.GasPriceOracleConfig{
+					TokenRatio:          big.NewInt(int64(config.GasPriceOracleTokenRatio)),
+					GasPriceOracleOwner: config.GasPriceOracleOwner,
+				},
 			); err != nil {
 				return err
 			}

@@ -17,6 +17,8 @@ dist
 artifacts
 cache
 
+vendor
+
 l2geth/build/bin
 packages/contracts/deployments/custom
 packages/contracts/coverage*

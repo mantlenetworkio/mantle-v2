@@ -17,7 +17,7 @@
 
   "l2OutputOracleProposer": "0x0000000000000000000000000000000000000000",
   "l2OutputOracleChallenger": "0x0000000000000000000000000000000000000000",
-  "l2GenesisBlockGasLimit": "0x1c9c380",
+  "l2GenesisBlockGasLimit": "0x4000000000000",
   "l1BlockTime": 3,
   "cliqueSignerAddress": "0x0000000000000000000000000000000000000000",
   "baseFeeVaultRecipient": "0x0000000000000000000000000000000000000000",
@@ -31,6 +31,8 @@
   "deploymentWaitConfirmations": 1,
   "fundDevAccounts": true,
   "l2GenesisBlockBaseFeePerGas": "0x3B9ACA00",
+  "gasPriceOracleOwner": "0x0000000000000000000000000000000000000000",
+  "gasPriceOracleTokenRatio": 4500,
   "gasPriceOracleOverhead": 2100,
   "gasPriceOracleScalar": 1000000,
   "governanceTokenSymbol": "MNT",
