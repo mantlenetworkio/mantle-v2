@@ -17,10 +17,13 @@ var ParamsByChainID = map[int]*Params{
 	1: { // mainnet
 		new(big.Int).SetUint64(0),
 	},
-	5: { // testmain
+	5: { // Goerli
 		new(big.Int).SetUint64(0),
 	},
-	31337: { //devnet
+	11155111: { // Sepolia
+		new(big.Int).SetUint64(0),
+	},
+	31337: { //Devnet
 		new(big.Int).Mul(new(big.Int).SetInt64(1e18), new(big.Int).SetInt64(-600000)),
 	},
 }
