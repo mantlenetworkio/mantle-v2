@@ -77,7 +77,7 @@ var (
 		predeploys.SequencerFeeVaultAddr:            eip1967Slots(predeploys.SequencerFeeVaultAddr),
 		predeploys.OptimismMintableERC20FactoryAddr: eip1967Slots(predeploys.OptimismMintableERC20FactoryAddr),
 		predeploys.L1BlockNumberAddr:                eip1967Slots(predeploys.L1BlockNumberAddr),
-		predeploys.GasPriceOracleAddr:               eip1967Slots(predeploys.GasPriceOracleAddr),
+		predeploys.GasPriceOracleAddr:               eip1967SlotsForGasPriceOracle(predeploys.GasPriceOracleAddr),
 		//predeploys.L1BlockAddr:                       eip1967Slots(predeploys.L1BlockAddr),
 		predeploys.L2ERC721BridgeAddr:                eip1967Slots(predeploys.L2ERC721BridgeAddr),
 		predeploys.OptimismMintableERC721FactoryAddr: eip1967Slots(predeploys.OptimismMintableERC721FactoryAddr),
@@ -709,5 +709,20 @@ func eip1967Slots(address common.Address) StorageCheckMap {
 	return StorageCheckMap{
 		AdminSlot:          predeploys.ProxyAdminAddr.Hash(),
 		ImplementationSlot: codeAddr.Hash(),
+	}
+}
+
+func eip1967SlotsForGasPriceOracle(address common.Address) StorageCheckMap {
+	codeAddr, err := AddressToCodeNamespace(address)
+	if err != nil {
+		panic(err)
+	}
+	return StorageCheckMap{
+		// Slot 0x00 (0) is the slot of tokenRatio
+		common.Hash{}: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000001194"),
+		// Slot 0x01 (1) is the slot of owner
+		common.Hash{31: 0x01}: common.HexToHash("0x000000000000000000000000bda5747bfd65f08deb54cb465eb87d40e51b197e"),
+		AdminSlot:             predeploys.ProxyAdminAddr.Hash(),
+		ImplementationSlot:    codeAddr.Hash(),
 	}
 }
