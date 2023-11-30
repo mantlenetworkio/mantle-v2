@@ -197,6 +197,11 @@ func (s *Driver) eventLoop() {
 			<-sequencerCh
 		}
 		sequencerTimer.Reset(delay)
+		// Without this sleep, even if delay is 0,  sequencerCh will not be ready in the following select judge.
+		// As a result, during deriving a batch blocks, producing new block will be stopped.
+		// After sleep for 0.1 ms, both sequencerCh and stepReqCh might be ready.
+		// And select judge will random choose to proceed derivation or produce new blocks
+		time.Sleep(100 * time.Microsecond)
 	}
 
 	// Create a ticker to check if there is a gap in the engine queue. Whenever
