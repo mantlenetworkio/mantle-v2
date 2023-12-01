@@ -75,7 +75,6 @@ func (s *channelManager) Clear() {
 	s.tip = common.Hash{}
 	s.closed = false
 	s.clearPendingChannel()
-	s.clearMantleDAStatus()
 }
 
 // TxFailed records a transaction as failed. It will attempt to resubmit the data
@@ -143,6 +142,7 @@ func (s *channelManager) clearPendingChannel() {
 func (s *channelManager) clearMantleDAStatus() {
 	s.params = nil
 	s.initStoreDataReceipt = nil
+	s.daPendingTxData = make(map[txID]txData)
 	s.daUnConfirmedTxID = s.daUnConfirmedTxID[:0]
 	s.metr.RecordRollupRetry(0)
 }

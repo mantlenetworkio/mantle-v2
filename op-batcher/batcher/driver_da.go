@@ -48,6 +48,7 @@ func (l *BatchSubmitter) mantleDALoop() {
 					l.log.Error("error closing the channel manager to handle a L2 reorg", "err", err)
 				}
 				l.state.Clear()
+				l.state.clearMantleDAStatus()
 				continue
 			} else if err != nil {
 				l.log.Error("load block into state err", "err", err)
@@ -200,7 +201,7 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	var txsData [][]byte
 	var transactionByte []byte
-	sortTxIds := make([]txID, 0, len(l.state.daUnConfirmedTxID))
+	sortTxIds := make([]txID, 0, len(l.state.daPendingTxData))
 	l.state.daUnConfirmedTxID = l.state.daUnConfirmedTxID[:0]
 	for k, _ := range l.state.daPendingTxData {
 		sortTxIds = append(sortTxIds, k)
@@ -484,7 +485,9 @@ func (l *BatchSubmitter) recordConfirmedEigenDATx(receipt *types.Receipt) {
 		l.state.TxConfirmed(id, l1block)
 		l.daTxDataConfirmed(id)
 	}
-	l.state.clearMantleDAStatus()
+	l.state.params = nil
+	l.state.initStoreDataReceipt = nil
+	l.state.metr.RecordRollupRetry(0)
 }
 
 func (l *BatchSubmitter) getMantleDANodesNumber() (int, error) {
