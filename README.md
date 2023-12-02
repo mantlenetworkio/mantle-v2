@@ -78,7 +78,6 @@ root
 ├── <a href="./op-chain-ops">op-chain-ops</a>: State surgery utilities
 ├── <a href="./op-challenger">op-challenger</a>: Dispute game challenge agent
 ├── <a href="./op-e2e">op-e2e</a>: End-to-End testing of all bedrock components in Go
-├── <a href="./op-exporter">op-exporter</a>: Prometheus exporter client
 ├── <a href="./op-heartbeat">op-heartbeat</a>: Heartbeat monitor service
 ├── <a href="./op-node">op-node</a>: rollup consensus-layer client
 ├── <a href="./op-program">op-program</a>: Fault proof program
