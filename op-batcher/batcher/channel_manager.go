@@ -43,7 +43,10 @@ type channelManager struct {
 	pendingTransactions map[txID]txData
 	// Set of confirmed txID -> inclusion block. For determining if the channel is timed out
 	confirmedTransactions map[txID]eth.BlockID
-
+	// Set of txID -> frame data. For rollup to MantleDa
+	daPendingTxData map[txID]txData
+	//Set of unconfirmed txID
+	daUnConfirmedTxID []txID
 	// params of initStoreData on MantleDA
 	params *bcommon.StoreParams
 	//receipt of initStoreData transaction on L1
@@ -60,6 +63,7 @@ func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig)
 
 		pendingTransactions:   make(map[txID]txData),
 		confirmedTransactions: make(map[txID]eth.BlockID),
+		daPendingTxData:       make(map[txID]txData),
 	}
 }
 
@@ -138,6 +142,9 @@ func (s *channelManager) clearPendingChannel() {
 func (s *channelManager) clearMantleDAStatus() {
 	s.params = nil
 	s.initStoreDataReceipt = nil
+	s.daPendingTxData = make(map[txID]txData)
+	s.daUnConfirmedTxID = s.daUnConfirmedTxID[:0]
+	s.metr.RecordRollupRetry(0)
 }
 
 // pendingChannelIsTimedOut returns true if submitted channel has timed out.
@@ -283,6 +290,7 @@ func (s *channelManager) processBlocks() error {
 		blocksAdded += 1
 		latestL2ref = l2BlockRefFromBlockAndL1Info(block, l1info)
 		s.metr.RecordL2BlockInChannel(block)
+		s.log.Info("add block to channel", "channel id", s.pendingChannel.ID(), "block number", block.Number())
 		// current block got added but channel is now full
 		if s.pendingChannel.IsFull() {
 			break

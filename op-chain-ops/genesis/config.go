@@ -98,6 +98,10 @@ type DeployConfig struct {
 	// Mantle Token address on L1
 	L1MantleToken common.Address `json:"l1MantleToken"`
 
+	// The initial value of the gas price oracle owner
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
+	// The initial value of the gas price oracle token ratio
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
@@ -190,6 +194,12 @@ func (d *DeployConfig) Check() error {
 	}
 	if d.SequencerFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: SequencerFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleOwner == (common.Address{}) {
+		return fmt.Errorf("%w: GasPriceOracleOwner cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleTokenRatio == 0 {
+		log.Warn("GasPriceOracleTokenRatio is 0")
 	}
 	if d.GasPriceOracleOverhead == 0 {
 		log.Warn("GasPriceOracleOverhead is 0")
@@ -341,6 +351,7 @@ func (d *DeployConfig) InitDeveloperDeployedAddresses() error {
 	d.L1ERC721BridgeProxy = predeploys.DevL1ERC721BridgeAddr
 	d.OptimismPortalProxy = predeploys.DevOptimismPortalAddr
 	d.SystemConfigProxy = predeploys.DevSystemConfigAddr
+	d.L1MantleToken = predeploys.DevL1MNTAddr
 	return nil
 }
 
@@ -500,6 +511,10 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"_initializing":    false,
 		"xDomainMsgSender": "0x000000000000000000000000000000000000dEaD",
 		"msgNonce":         0,
+	}
+	storage["GasPriceOracle"] = state.StorageValues{
+		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
+		"owner":      config.GasPriceOracleOwner,
 	}
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),

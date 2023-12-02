@@ -26,12 +26,13 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // GasPriceOracleMetaData contains all meta data concerning the GasPriceOracle contract.
 var GasPriceOracleMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"DecimalsUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"GasPriceUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"L1BaseFeeUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"OverheadUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"ScalarUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1Fee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1GasUsed\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"l1BaseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"overhead\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"scalar\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_decimals\",\"type\":\"uint256\"}],\"name\":\"setDecimals\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasPrice\",\"type\":\"uint256\"}],\"name\":\"setGasPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_baseFee\",\"type\":\"uint256\"}],\"name\":\"setL1BaseFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_overhead\",\"type\":\"uint256\"}],\"name\":\"setOverhead\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_scalar\",\"type\":\"uint256\"}],\"name\":\"setScalar\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b50604051610e55380380610e5583398101604081905261002f91610167565b61003833610047565b61004181610097565b50610197565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6000546001600160a01b031633146100f65760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064015b60405180910390fd5b6001600160a01b03811661015b5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b60648201526084016100ed565b61016481610047565b50565b60006020828403121561017957600080fd5b81516001600160a01b038116811461019057600080fd5b9392505050565b610caf806101a66000396000f3fe608060405234801561001057600080fd5b50600436106100f55760003560e01c80638c8885c811610097578063de26c4a111610066578063de26c4a1146101cc578063f2fde38b146101df578063f45e65d8146101f2578063fe173b97146101fb57600080fd5b80638c8885c81461016b5780638da5cb5b1461017e578063bede39b5146101a6578063bf1fe420146101b957600080fd5b806349948e0e116100d357806349948e0e14610134578063519b4bd3146101475780637046559714610150578063715018a61461016357600080fd5b80630c18c162146100fa578063313ce567146101165780633577afc51461011f575b600080fd5b61010360035481565b6040519081526020015b60405180910390f35b61010360055481565b61013261012d3660046108d0565b610204565b005b610103610142366004610918565b6102c6565b61010360025481565b61013261015e3660046108d0565b610322565b6101326103d8565b6101326101793660046108d0565b610465565b60005460405173ffffffffffffffffffffffffffffffffffffffff909116815260200161010d565b6101326101b43660046108d0565b61051b565b6101326101c73660046108d0565b6105d1565b6101036101da366004610918565b610687565b6101326101ed3660046109e7565b61072b565b61010360045481565b61010360015481565b60005473ffffffffffffffffffffffffffffffffffffffff16331461028a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064015b60405180910390fd5b60038190556040518181527f32740b35c0ea213650f60d44366b4fb211c9033b50714e4a1d34e65d5beb9bb4906020015b60405180910390a150565b6000806102d283610687565b90506000600254826102e49190610a53565b90506000600554600a6102f79190610bb2565b90506000600454836103099190610a53565b905060006103178383610bbe565b979650505050505050565b60005473ffffffffffffffffffffffffffffffffffffffff1633146103a3576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b60048190556040518181527f3336cd9708eaf2769a0f0dc0679f30e80f15dcd88d1921b5a16858e8b85c591a906020016102bb565b60005473ffffffffffffffffffffffffffffffffffffffff163314610459576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b610463600061085b565b565b60005473ffffffffffffffffffffffffffffffffffffffff1633146104e6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b60058190556040518181527fd68112a8707e326d08be3656b528c1bcc5bbbfc47f4177e2179b14d8640838c1906020016102bb565b60005473ffffffffffffffffffffffffffffffffffffffff16331461059c576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b60028190556040518181527f351fb23757bb5ea0546c85b7996ddd7155f96b939ebaa5ff7bc49c75f27f2c44906020016102bb565b60005473ffffffffffffffffffffffffffffffffffffffff163314610652576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b60018190556040518181527ffcdccc6074c6c42e4bd578aa9870c697dc976a270968452d2b8c8dc369fae396906020016102bb565b600080805b8351811015610704578381815181106106a7576106a7610bf9565b01602001517fff00000000000000000000000000000000000000000000000000000000000000166106e4576106dd600483610c28565b91506106f2565b6106ef601083610c28565b91505b806106fc81610c40565b91505061068c565b506000600354826107159190610c28565b905061072381610440610c28565b949350505050565b60005473ffffffffffffffffffffffffffffffffffffffff1633146107ac576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610281565b73ffffffffffffffffffffffffffffffffffffffff811661084f576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f64647265737300000000000000000000000000000000000000000000000000006064820152608401610281565b6108588161085b565b50565b6000805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6000602082840312156108e257600080fd5b5035919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b60006020828403121561092a57600080fd5b813567ffffffffffffffff8082111561094257600080fd5b818401915084601f83011261095657600080fd5b813581811115610968576109686108e9565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f011681019083821181831017156109ae576109ae6108e9565b816040528281528760208487010111156109c757600080fd5b826020860160208301376000928101602001929092525095945050505050565b6000602082840312156109f957600080fd5b813573ffffffffffffffffffffffffffffffffffffffff81168114610a1d57600080fd5b9392505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615610a8b57610a8b610a24565b500290565b600181815b80851115610ae957817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610acf57610acf610a24565b80851615610adc57918102915b93841c9390800290610a95565b509250929050565b600082610b0057506001610bac565b81610b0d57506000610bac565b8160018114610b235760028114610b2d57610b49565b6001915050610bac565b60ff841115610b3e57610b3e610a24565b50506001821b610bac565b5060208310610133831016604e8410600b8410161715610b6c575081810a610bac565b610b768383610a90565b807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610ba857610ba8610a24565b0290505b92915050565b6000610a1d8383610af1565b600082610bf4577f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b500490565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60008219821115610c3b57610c3b610a24565b500190565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff821415610c7257610c72610a24565b506001019056fea2646970667358221220f621ba3a2be0d1a6013dd55747de8ced461c9dc210b1ed78e1fadadb047e304064736f6c63430008090033",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOperator\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"OperatorUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"previousTokenRatio\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"newTokenRatio\",\"type\":\"uint256\"}],\"name\":\"TokenRatioUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DECIMALS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"baseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1Fee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1GasUsed\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"l1BaseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"overhead\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"scalar\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"setOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_tokenRatio\",\"type\":\"uint256\"}],\"name\":\"setTokenRatio\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenRatio\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x60e060405234801561001057600080fd5b5060016080819052600060a081905260c081905280610e8561004a823960006103ce015260006103a50152600061037c0152610e856000f3fe608060405234801561001057600080fd5b50600436106101005760003560e01c80636ef25c3a11610097578063e38e91f911610066578063e38e91f9146101fb578063f2fde38b1461020e578063f45e65d814610221578063fe173b97146101ad57600080fd5b80636ef25c3a146101ad5780638da5cb5b146101b3578063b3ab15fb146101d3578063de26c4a1146101e857600080fd5b806349948e0e116100d357806349948e0e14610138578063519b4bd31461014b57806354fd4d5014610153578063570ca7351461016857600080fd5b806306f837d3146101055780630c18c162146101215780632e0f262514610129578063313ce56714610131575b600080fd5b61010e60005481565b6040519081526020015b60405180910390f35b61010e610229565b61010e600681565b600661010e565b61010e6101463660046109bc565b6102b3565b61010e610314565b61015b610375565b6040516101189190610abb565b6002546101889073ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff9091168152602001610118565b4861010e565b6001546101889073ffffffffffffffffffffffffffffffffffffffff1681565b6101e66101e1366004610b0c565b610418565b005b61010e6101f63660046109bc565b610515565b6101e6610209366004610b49565b6105c4565b6101e661021c366004610b0c565b61067a565b61010e6107ef565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16638b239f736040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102ae9190610b62565b905090565b6000806102bf83610515565b905060006102cb610314565b6102d59083610baa565b905060006102e56006600a610d09565b905060006102f16107ef565b6102fb9084610baa565b905060006103098383610d44565b979650505050505050565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16635cf249696040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b60606103a07f0000000000000000000000000000000000000000000000000000000000000000610850565b6103c97f0000000000000000000000000000000000000000000000000000000000000000610850565b6103f27f0000000000000000000000000000000000000000000000000000000000000000610850565b60405160200161040493929190610d58565b604051602081830303815290604052905090565b60015473ffffffffffffffffffffffffffffffffffffffff16331461049e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e657200000000000000000060448201526064015b60405180910390fd5b6002805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907ffbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad0390600090a35050565b80516000908190815b818110156105985784818151811061053857610538610dce565b01602001517fff000000000000000000000000000000000000000000000000000000000000001660000361057857610571600484610dfd565b9250610586565b610583601084610dfd565b92505b8061059081610e15565b91505061051e565b5060006105a3610229565b6105ad9084610dfd565b90506105bb81610440610dfd565b95945050505050565b60025473ffffffffffffffffffffffffffffffffffffffff163314610645576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f43616c6c6572206973206e6f7420746865206f70657261746f720000000000006044820152606401610495565b60008181556040518291829182917f5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd91a35050565b60015473ffffffffffffffffffffffffffffffffffffffff1633146106fb576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e65720000000000000000006044820152606401610495565b73ffffffffffffffffffffffffffffffffffffffff8116610778576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601d60248201527f6e6577206f776e657220697320746865207a65726f20616464726573730000006044820152606401610495565b6001805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16639e8c49666040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b60608160000361089357505060408051808201909152600181527f3000000000000000000000000000000000000000000000000000000000000000602082015290565b8160005b81156108bd57806108a781610e15565b91506108b69050600a83610d44565b9150610897565b60008167ffffffffffffffff8111156108d8576108d861098d565b6040519080825280601f01601f191660200182016040528015610902576020820181803683370190505b5090505b841561098557610917600183610e4d565b9150610924600a86610e64565b61092f906030610dfd565b60f81b81838151811061094457610944610dce565b60200101907effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916908160001a90535061097e600a86610d44565b9450610906565b949350505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6000602082840312156109ce57600080fd5b813567ffffffffffffffff808211156109e657600080fd5b818401915084601f8301126109fa57600080fd5b813581811115610a0c57610a0c61098d565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f01168101908382118183101715610a5257610a5261098d565b81604052828152876020848701011115610a6b57600080fd5b826020860160208301376000928101602001929092525095945050505050565b60005b83811015610aa6578181015183820152602001610a8e565b83811115610ab5576000848401525b50505050565b6020815260008251806020840152610ada816040850160208701610a8b565b601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0169190910160400192915050565b600060208284031215610b1e57600080fd5b813573ffffffffffffffffffffffffffffffffffffffff81168114610b4257600080fd5b9392505050565b600060208284031215610b5b57600080fd5b5035919050565b600060208284031215610b7457600080fd5b5051919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615610be257610be2610b7b565b500290565b600181815b80851115610c4057817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610c2657610c26610b7b565b80851615610c3357918102915b93841c9390800290610bec565b509250929050565b600082610c5757506001610d03565b81610c6457506000610d03565b8160018114610c7a5760028114610c8457610ca0565b6001915050610d03565b60ff841115610c9557610c95610b7b565b50506001821b610d03565b5060208310610133831016604e8410600b8410161715610cc3575081810a610d03565b610ccd8383610be7565b807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610cff57610cff610b7b565b0290505b92915050565b6000610b428383610c48565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b600082610d5357610d53610d15565b500490565b60008451610d6a818460208901610a8b565b80830190507f2e000000000000000000000000000000000000000000000000000000000000008082528551610da6816001850160208a01610a8b565b60019201918201528351610dc1816002840160208801610a8b565b0160020195945050505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60008219821115610e1057610e10610b7b565b500190565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8203610e4657610e46610b7b565b5060010190565b600082821015610e5f57610e5f610b7b565b500390565b600082610e7357610e73610d15565b50069056fea164736f6c634300080f000a",
 }
 
 // GasPriceOracleABI is the input ABI used to generate the binding from.
@@ -43,7 +44,7 @@ var GasPriceOracleABI = GasPriceOracleMetaData.ABI
 var GasPriceOracleBin = GasPriceOracleMetaData.Bin
 
 // DeployGasPriceOracle deploys a new Ethereum contract, binding an instance of GasPriceOracle to it.
-func DeployGasPriceOracle(auth *bind.TransactOpts, backend bind.ContractBackend, _owner common.Address) (common.Address, *types.Transaction, *GasPriceOracle, error) {
+func DeployGasPriceOracle(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GasPriceOracle, error) {
 	parsed, err := GasPriceOracleMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -52,7 +53,7 @@ func DeployGasPriceOracle(auth *bind.TransactOpts, backend bind.ContractBackend,
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(GasPriceOracleBin), backend, _owner)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(GasPriceOracleBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -156,11 +157,11 @@ func NewGasPriceOracleFilterer(address common.Address, filterer bind.ContractFil
 
 // bindGasPriceOracle binds a generic wrapper to an already deployed contract.
 func bindGasPriceOracle(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(GasPriceOracleABI))
+	parsed, err := GasPriceOracleMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -201,9 +202,71 @@ func (_GasPriceOracle *GasPriceOracleTransactorRaw) Transact(opts *bind.Transact
 	return _GasPriceOracle.Contract.contract.Transact(opts, method, params...)
 }
 
+// DECIMALS is a free data retrieval call binding the contract method 0x2e0f2625.
+//
+// Solidity: function DECIMALS() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) DECIMALS(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "DECIMALS")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// DECIMALS is a free data retrieval call binding the contract method 0x2e0f2625.
+//
+// Solidity: function DECIMALS() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) DECIMALS() (*big.Int, error) {
+	return _GasPriceOracle.Contract.DECIMALS(&_GasPriceOracle.CallOpts)
+}
+
+// DECIMALS is a free data retrieval call binding the contract method 0x2e0f2625.
+//
+// Solidity: function DECIMALS() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) DECIMALS() (*big.Int, error) {
+	return _GasPriceOracle.Contract.DECIMALS(&_GasPriceOracle.CallOpts)
+}
+
+// BaseFee is a free data retrieval call binding the contract method 0x6ef25c3a.
+//
+// Solidity: function baseFee() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) BaseFee(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "baseFee")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// BaseFee is a free data retrieval call binding the contract method 0x6ef25c3a.
+//
+// Solidity: function baseFee() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) BaseFee() (*big.Int, error) {
+	return _GasPriceOracle.Contract.BaseFee(&_GasPriceOracle.CallOpts)
+}
+
+// BaseFee is a free data retrieval call binding the contract method 0x6ef25c3a.
+//
+// Solidity: function baseFee() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) BaseFee() (*big.Int, error) {
+	return _GasPriceOracle.Contract.BaseFee(&_GasPriceOracle.CallOpts)
+}
+
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint256)
+// Solidity: function decimals() pure returns(uint256)
 func (_GasPriceOracle *GasPriceOracleCaller) Decimals(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _GasPriceOracle.contract.Call(opts, &out, "decimals")
@@ -220,14 +283,14 @@ func (_GasPriceOracle *GasPriceOracleCaller) Decimals(opts *bind.CallOpts) (*big
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint256)
+// Solidity: function decimals() pure returns(uint256)
 func (_GasPriceOracle *GasPriceOracleSession) Decimals() (*big.Int, error) {
 	return _GasPriceOracle.Contract.Decimals(&_GasPriceOracle.CallOpts)
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
 //
-// Solidity: function decimals() view returns(uint256)
+// Solidity: function decimals() pure returns(uint256)
 func (_GasPriceOracle *GasPriceOracleCallerSession) Decimals() (*big.Int, error) {
 	return _GasPriceOracle.Contract.Decimals(&_GasPriceOracle.CallOpts)
 }
@@ -356,6 +419,37 @@ func (_GasPriceOracle *GasPriceOracleCallerSession) L1BaseFee() (*big.Int, error
 	return _GasPriceOracle.Contract.L1BaseFee(&_GasPriceOracle.CallOpts)
 }
 
+// Operator is a free data retrieval call binding the contract method 0x570ca735.
+//
+// Solidity: function operator() view returns(address)
+func (_GasPriceOracle *GasPriceOracleCaller) Operator(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "operator")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Operator is a free data retrieval call binding the contract method 0x570ca735.
+//
+// Solidity: function operator() view returns(address)
+func (_GasPriceOracle *GasPriceOracleSession) Operator() (common.Address, error) {
+	return _GasPriceOracle.Contract.Operator(&_GasPriceOracle.CallOpts)
+}
+
+// Operator is a free data retrieval call binding the contract method 0x570ca735.
+//
+// Solidity: function operator() view returns(address)
+func (_GasPriceOracle *GasPriceOracleCallerSession) Operator() (common.Address, error) {
+	return _GasPriceOracle.Contract.Operator(&_GasPriceOracle.CallOpts)
+}
+
 // Overhead is a free data retrieval call binding the contract method 0x0c18c162.
 //
 // Solidity: function overhead() view returns(uint256)
@@ -449,156 +543,134 @@ func (_GasPriceOracle *GasPriceOracleCallerSession) Scalar() (*big.Int, error) {
 	return _GasPriceOracle.Contract.Scalar(&_GasPriceOracle.CallOpts)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// TokenRatio is a free data retrieval call binding the contract method 0x06f837d3.
 //
-// Solidity: function renounceOwnership() returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "renounceOwnership")
+// Solidity: function tokenRatio() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) TokenRatio(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "tokenRatio")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// TokenRatio is a free data retrieval call binding the contract method 0x06f837d3.
 //
-// Solidity: function renounceOwnership() returns()
-func (_GasPriceOracle *GasPriceOracleSession) RenounceOwnership() (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.RenounceOwnership(&_GasPriceOracle.TransactOpts)
+// Solidity: function tokenRatio() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) TokenRatio() (*big.Int, error) {
+	return _GasPriceOracle.Contract.TokenRatio(&_GasPriceOracle.CallOpts)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// TokenRatio is a free data retrieval call binding the contract method 0x06f837d3.
 //
-// Solidity: function renounceOwnership() returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) RenounceOwnership() (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.RenounceOwnership(&_GasPriceOracle.TransactOpts)
+// Solidity: function tokenRatio() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) TokenRatio() (*big.Int, error) {
+	return _GasPriceOracle.Contract.TokenRatio(&_GasPriceOracle.CallOpts)
 }
 
-// SetDecimals is a paid mutator transaction binding the contract method 0x8c8885c8.
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
 //
-// Solidity: function setDecimals(uint256 _decimals) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) SetDecimals(opts *bind.TransactOpts, _decimals *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "setDecimals", _decimals)
+// Solidity: function version() view returns(string)
+func (_GasPriceOracle *GasPriceOracleCaller) Version(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "version")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
 }
 
-// SetDecimals is a paid mutator transaction binding the contract method 0x8c8885c8.
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
 //
-// Solidity: function setDecimals(uint256 _decimals) returns()
-func (_GasPriceOracle *GasPriceOracleSession) SetDecimals(_decimals *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetDecimals(&_GasPriceOracle.TransactOpts, _decimals)
+// Solidity: function version() view returns(string)
+func (_GasPriceOracle *GasPriceOracleSession) Version() (string, error) {
+	return _GasPriceOracle.Contract.Version(&_GasPriceOracle.CallOpts)
 }
 
-// SetDecimals is a paid mutator transaction binding the contract method 0x8c8885c8.
+// Version is a free data retrieval call binding the contract method 0x54fd4d50.
 //
-// Solidity: function setDecimals(uint256 _decimals) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) SetDecimals(_decimals *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetDecimals(&_GasPriceOracle.TransactOpts, _decimals)
+// Solidity: function version() view returns(string)
+func (_GasPriceOracle *GasPriceOracleCallerSession) Version() (string, error) {
+	return _GasPriceOracle.Contract.Version(&_GasPriceOracle.CallOpts)
 }
 
-// SetGasPrice is a paid mutator transaction binding the contract method 0xbf1fe420.
+// SetOperator is a paid mutator transaction binding the contract method 0xb3ab15fb.
 //
-// Solidity: function setGasPrice(uint256 _gasPrice) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) SetGasPrice(opts *bind.TransactOpts, _gasPrice *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "setGasPrice", _gasPrice)
+// Solidity: function setOperator(address _operator) returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) SetOperator(opts *bind.TransactOpts, _operator common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "setOperator", _operator)
 }
 
-// SetGasPrice is a paid mutator transaction binding the contract method 0xbf1fe420.
+// SetOperator is a paid mutator transaction binding the contract method 0xb3ab15fb.
 //
-// Solidity: function setGasPrice(uint256 _gasPrice) returns()
-func (_GasPriceOracle *GasPriceOracleSession) SetGasPrice(_gasPrice *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetGasPrice(&_GasPriceOracle.TransactOpts, _gasPrice)
+// Solidity: function setOperator(address _operator) returns()
+func (_GasPriceOracle *GasPriceOracleSession) SetOperator(_operator common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperator(&_GasPriceOracle.TransactOpts, _operator)
 }
 
-// SetGasPrice is a paid mutator transaction binding the contract method 0xbf1fe420.
+// SetOperator is a paid mutator transaction binding the contract method 0xb3ab15fb.
 //
-// Solidity: function setGasPrice(uint256 _gasPrice) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) SetGasPrice(_gasPrice *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetGasPrice(&_GasPriceOracle.TransactOpts, _gasPrice)
+// Solidity: function setOperator(address _operator) returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) SetOperator(_operator common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperator(&_GasPriceOracle.TransactOpts, _operator)
 }
 
-// SetL1BaseFee is a paid mutator transaction binding the contract method 0xbede39b5.
+// SetTokenRatio is a paid mutator transaction binding the contract method 0xe38e91f9.
 //
-// Solidity: function setL1BaseFee(uint256 _baseFee) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) SetL1BaseFee(opts *bind.TransactOpts, _baseFee *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "setL1BaseFee", _baseFee)
+// Solidity: function setTokenRatio(uint256 _tokenRatio) returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) SetTokenRatio(opts *bind.TransactOpts, _tokenRatio *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "setTokenRatio", _tokenRatio)
 }
 
-// SetL1BaseFee is a paid mutator transaction binding the contract method 0xbede39b5.
+// SetTokenRatio is a paid mutator transaction binding the contract method 0xe38e91f9.
 //
-// Solidity: function setL1BaseFee(uint256 _baseFee) returns()
-func (_GasPriceOracle *GasPriceOracleSession) SetL1BaseFee(_baseFee *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetL1BaseFee(&_GasPriceOracle.TransactOpts, _baseFee)
+// Solidity: function setTokenRatio(uint256 _tokenRatio) returns()
+func (_GasPriceOracle *GasPriceOracleSession) SetTokenRatio(_tokenRatio *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetTokenRatio(&_GasPriceOracle.TransactOpts, _tokenRatio)
 }
 
-// SetL1BaseFee is a paid mutator transaction binding the contract method 0xbede39b5.
+// SetTokenRatio is a paid mutator transaction binding the contract method 0xe38e91f9.
 //
-// Solidity: function setL1BaseFee(uint256 _baseFee) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) SetL1BaseFee(_baseFee *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetL1BaseFee(&_GasPriceOracle.TransactOpts, _baseFee)
-}
-
-// SetOverhead is a paid mutator transaction binding the contract method 0x3577afc5.
-//
-// Solidity: function setOverhead(uint256 _overhead) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) SetOverhead(opts *bind.TransactOpts, _overhead *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "setOverhead", _overhead)
-}
-
-// SetOverhead is a paid mutator transaction binding the contract method 0x3577afc5.
-//
-// Solidity: function setOverhead(uint256 _overhead) returns()
-func (_GasPriceOracle *GasPriceOracleSession) SetOverhead(_overhead *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetOverhead(&_GasPriceOracle.TransactOpts, _overhead)
-}
-
-// SetOverhead is a paid mutator transaction binding the contract method 0x3577afc5.
-//
-// Solidity: function setOverhead(uint256 _overhead) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) SetOverhead(_overhead *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetOverhead(&_GasPriceOracle.TransactOpts, _overhead)
-}
-
-// SetScalar is a paid mutator transaction binding the contract method 0x70465597.
-//
-// Solidity: function setScalar(uint256 _scalar) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) SetScalar(opts *bind.TransactOpts, _scalar *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "setScalar", _scalar)
-}
-
-// SetScalar is a paid mutator transaction binding the contract method 0x70465597.
-//
-// Solidity: function setScalar(uint256 _scalar) returns()
-func (_GasPriceOracle *GasPriceOracleSession) SetScalar(_scalar *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetScalar(&_GasPriceOracle.TransactOpts, _scalar)
-}
-
-// SetScalar is a paid mutator transaction binding the contract method 0x70465597.
-//
-// Solidity: function setScalar(uint256 _scalar) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) SetScalar(_scalar *big.Int) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.SetScalar(&_GasPriceOracle.TransactOpts, _scalar)
+// Solidity: function setTokenRatio(uint256 _tokenRatio) returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) SetTokenRatio(_tokenRatio *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetTokenRatio(&_GasPriceOracle.TransactOpts, _tokenRatio)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_GasPriceOracle *GasPriceOracleTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
-	return _GasPriceOracle.contract.Transact(opts, "transferOwnership", newOwner)
+// Solidity: function transferOwnership(address _owner) returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) TransferOwnership(opts *bind.TransactOpts, _owner common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "transferOwnership", _owner)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_GasPriceOracle *GasPriceOracleSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.TransferOwnership(&_GasPriceOracle.TransactOpts, newOwner)
+// Solidity: function transferOwnership(address _owner) returns()
+func (_GasPriceOracle *GasPriceOracleSession) TransferOwnership(_owner common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.TransferOwnership(&_GasPriceOracle.TransactOpts, _owner)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_GasPriceOracle *GasPriceOracleTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _GasPriceOracle.Contract.TransferOwnership(&_GasPriceOracle.TransactOpts, newOwner)
+// Solidity: function transferOwnership(address _owner) returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) TransferOwnership(_owner common.Address) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.TransferOwnership(&_GasPriceOracle.TransactOpts, _owner)
 }
 
-// GasPriceOracleDecimalsUpdatedIterator is returned from FilterDecimalsUpdated and is used to iterate over the raw logs and unpacked data for DecimalsUpdated events raised by the GasPriceOracle contract.
-type GasPriceOracleDecimalsUpdatedIterator struct {
-	Event *GasPriceOracleDecimalsUpdated // Event containing the contract specifics and raw log
+// GasPriceOracleOperatorUpdatedIterator is returned from FilterOperatorUpdated and is used to iterate over the raw logs and unpacked data for OperatorUpdated events raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorUpdatedIterator struct {
+	Event *GasPriceOracleOperatorUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -612,7 +684,7 @@ type GasPriceOracleDecimalsUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *GasPriceOracleDecimalsUpdatedIterator) Next() bool {
+func (it *GasPriceOracleOperatorUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -621,7 +693,7 @@ func (it *GasPriceOracleDecimalsUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(GasPriceOracleDecimalsUpdated)
+			it.Event = new(GasPriceOracleOperatorUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -636,7 +708,7 @@ func (it *GasPriceOracleDecimalsUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(GasPriceOracleDecimalsUpdated)
+		it.Event = new(GasPriceOracleOperatorUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -652,41 +724,60 @@ func (it *GasPriceOracleDecimalsUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasPriceOracleDecimalsUpdatedIterator) Error() error {
+func (it *GasPriceOracleOperatorUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *GasPriceOracleDecimalsUpdatedIterator) Close() error {
+func (it *GasPriceOracleOperatorUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// GasPriceOracleDecimalsUpdated represents a DecimalsUpdated event raised by the GasPriceOracle contract.
-type GasPriceOracleDecimalsUpdated struct {
-	Arg0 *big.Int
-	Raw  types.Log // Blockchain specific contextual infos
+// GasPriceOracleOperatorUpdated represents a OperatorUpdated event raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorUpdated struct {
+	PreviousOperator common.Address
+	NewOperator      common.Address
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
-// FilterDecimalsUpdated is a free log retrieval operation binding the contract event 0xd68112a8707e326d08be3656b528c1bcc5bbbfc47f4177e2179b14d8640838c1.
+// FilterOperatorUpdated is a free log retrieval operation binding the contract event 0xfbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad03.
 //
-// Solidity: event DecimalsUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) FilterDecimalsUpdated(opts *bind.FilterOpts) (*GasPriceOracleDecimalsUpdatedIterator, error) {
+// Solidity: event OperatorUpdated(address indexed previousOperator, address indexed newOperator)
+func (_GasPriceOracle *GasPriceOracleFilterer) FilterOperatorUpdated(opts *bind.FilterOpts, previousOperator []common.Address, newOperator []common.Address) (*GasPriceOracleOperatorUpdatedIterator, error) {
 
-	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "DecimalsUpdated")
+	var previousOperatorRule []interface{}
+	for _, previousOperatorItem := range previousOperator {
+		previousOperatorRule = append(previousOperatorRule, previousOperatorItem)
+	}
+	var newOperatorRule []interface{}
+	for _, newOperatorItem := range newOperator {
+		newOperatorRule = append(newOperatorRule, newOperatorItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "OperatorUpdated", previousOperatorRule, newOperatorRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GasPriceOracleDecimalsUpdatedIterator{contract: _GasPriceOracle.contract, event: "DecimalsUpdated", logs: logs, sub: sub}, nil
+	return &GasPriceOracleOperatorUpdatedIterator{contract: _GasPriceOracle.contract, event: "OperatorUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchDecimalsUpdated is a free log subscription operation binding the contract event 0xd68112a8707e326d08be3656b528c1bcc5bbbfc47f4177e2179b14d8640838c1.
+// WatchOperatorUpdated is a free log subscription operation binding the contract event 0xfbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad03.
 //
-// Solidity: event DecimalsUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) WatchDecimalsUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleDecimalsUpdated) (event.Subscription, error) {
+// Solidity: event OperatorUpdated(address indexed previousOperator, address indexed newOperator)
+func (_GasPriceOracle *GasPriceOracleFilterer) WatchOperatorUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleOperatorUpdated, previousOperator []common.Address, newOperator []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "DecimalsUpdated")
+	var previousOperatorRule []interface{}
+	for _, previousOperatorItem := range previousOperator {
+		previousOperatorRule = append(previousOperatorRule, previousOperatorItem)
+	}
+	var newOperatorRule []interface{}
+	for _, newOperatorItem := range newOperator {
+		newOperatorRule = append(newOperatorRule, newOperatorItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "OperatorUpdated", previousOperatorRule, newOperatorRule)
 	if err != nil {
 		return nil, err
 	}
@@ -696,8 +787,8 @@ func (_GasPriceOracle *GasPriceOracleFilterer) WatchDecimalsUpdated(opts *bind.W
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(GasPriceOracleDecimalsUpdated)
-				if err := _GasPriceOracle.contract.UnpackLog(event, "DecimalsUpdated", log); err != nil {
+				event := new(GasPriceOracleOperatorUpdated)
+				if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -718,414 +809,12 @@ func (_GasPriceOracle *GasPriceOracleFilterer) WatchDecimalsUpdated(opts *bind.W
 	}), nil
 }
 
-// ParseDecimalsUpdated is a log parse operation binding the contract event 0xd68112a8707e326d08be3656b528c1bcc5bbbfc47f4177e2179b14d8640838c1.
+// ParseOperatorUpdated is a log parse operation binding the contract event 0xfbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad03.
 //
-// Solidity: event DecimalsUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) ParseDecimalsUpdated(log types.Log) (*GasPriceOracleDecimalsUpdated, error) {
-	event := new(GasPriceOracleDecimalsUpdated)
-	if err := _GasPriceOracle.contract.UnpackLog(event, "DecimalsUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// GasPriceOracleGasPriceUpdatedIterator is returned from FilterGasPriceUpdated and is used to iterate over the raw logs and unpacked data for GasPriceUpdated events raised by the GasPriceOracle contract.
-type GasPriceOracleGasPriceUpdatedIterator struct {
-	Event *GasPriceOracleGasPriceUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GasPriceOracleGasPriceUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GasPriceOracleGasPriceUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GasPriceOracleGasPriceUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasPriceOracleGasPriceUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GasPriceOracleGasPriceUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GasPriceOracleGasPriceUpdated represents a GasPriceUpdated event raised by the GasPriceOracle contract.
-type GasPriceOracleGasPriceUpdated struct {
-	Arg0 *big.Int
-	Raw  types.Log // Blockchain specific contextual infos
-}
-
-// FilterGasPriceUpdated is a free log retrieval operation binding the contract event 0xfcdccc6074c6c42e4bd578aa9870c697dc976a270968452d2b8c8dc369fae396.
-//
-// Solidity: event GasPriceUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) FilterGasPriceUpdated(opts *bind.FilterOpts) (*GasPriceOracleGasPriceUpdatedIterator, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "GasPriceUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &GasPriceOracleGasPriceUpdatedIterator{contract: _GasPriceOracle.contract, event: "GasPriceUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchGasPriceUpdated is a free log subscription operation binding the contract event 0xfcdccc6074c6c42e4bd578aa9870c697dc976a270968452d2b8c8dc369fae396.
-//
-// Solidity: event GasPriceUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) WatchGasPriceUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleGasPriceUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "GasPriceUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GasPriceOracleGasPriceUpdated)
-				if err := _GasPriceOracle.contract.UnpackLog(event, "GasPriceUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseGasPriceUpdated is a log parse operation binding the contract event 0xfcdccc6074c6c42e4bd578aa9870c697dc976a270968452d2b8c8dc369fae396.
-//
-// Solidity: event GasPriceUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) ParseGasPriceUpdated(log types.Log) (*GasPriceOracleGasPriceUpdated, error) {
-	event := new(GasPriceOracleGasPriceUpdated)
-	if err := _GasPriceOracle.contract.UnpackLog(event, "GasPriceUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// GasPriceOracleL1BaseFeeUpdatedIterator is returned from FilterL1BaseFeeUpdated and is used to iterate over the raw logs and unpacked data for L1BaseFeeUpdated events raised by the GasPriceOracle contract.
-type GasPriceOracleL1BaseFeeUpdatedIterator struct {
-	Event *GasPriceOracleL1BaseFeeUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GasPriceOracleL1BaseFeeUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GasPriceOracleL1BaseFeeUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GasPriceOracleL1BaseFeeUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasPriceOracleL1BaseFeeUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GasPriceOracleL1BaseFeeUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GasPriceOracleL1BaseFeeUpdated represents a L1BaseFeeUpdated event raised by the GasPriceOracle contract.
-type GasPriceOracleL1BaseFeeUpdated struct {
-	Arg0 *big.Int
-	Raw  types.Log // Blockchain specific contextual infos
-}
-
-// FilterL1BaseFeeUpdated is a free log retrieval operation binding the contract event 0x351fb23757bb5ea0546c85b7996ddd7155f96b939ebaa5ff7bc49c75f27f2c44.
-//
-// Solidity: event L1BaseFeeUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) FilterL1BaseFeeUpdated(opts *bind.FilterOpts) (*GasPriceOracleL1BaseFeeUpdatedIterator, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "L1BaseFeeUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &GasPriceOracleL1BaseFeeUpdatedIterator{contract: _GasPriceOracle.contract, event: "L1BaseFeeUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchL1BaseFeeUpdated is a free log subscription operation binding the contract event 0x351fb23757bb5ea0546c85b7996ddd7155f96b939ebaa5ff7bc49c75f27f2c44.
-//
-// Solidity: event L1BaseFeeUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) WatchL1BaseFeeUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleL1BaseFeeUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "L1BaseFeeUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GasPriceOracleL1BaseFeeUpdated)
-				if err := _GasPriceOracle.contract.UnpackLog(event, "L1BaseFeeUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseL1BaseFeeUpdated is a log parse operation binding the contract event 0x351fb23757bb5ea0546c85b7996ddd7155f96b939ebaa5ff7bc49c75f27f2c44.
-//
-// Solidity: event L1BaseFeeUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) ParseL1BaseFeeUpdated(log types.Log) (*GasPriceOracleL1BaseFeeUpdated, error) {
-	event := new(GasPriceOracleL1BaseFeeUpdated)
-	if err := _GasPriceOracle.contract.UnpackLog(event, "L1BaseFeeUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// GasPriceOracleOverheadUpdatedIterator is returned from FilterOverheadUpdated and is used to iterate over the raw logs and unpacked data for OverheadUpdated events raised by the GasPriceOracle contract.
-type GasPriceOracleOverheadUpdatedIterator struct {
-	Event *GasPriceOracleOverheadUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GasPriceOracleOverheadUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GasPriceOracleOverheadUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GasPriceOracleOverheadUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasPriceOracleOverheadUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GasPriceOracleOverheadUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GasPriceOracleOverheadUpdated represents a OverheadUpdated event raised by the GasPriceOracle contract.
-type GasPriceOracleOverheadUpdated struct {
-	Arg0 *big.Int
-	Raw  types.Log // Blockchain specific contextual infos
-}
-
-// FilterOverheadUpdated is a free log retrieval operation binding the contract event 0x32740b35c0ea213650f60d44366b4fb211c9033b50714e4a1d34e65d5beb9bb4.
-//
-// Solidity: event OverheadUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) FilterOverheadUpdated(opts *bind.FilterOpts) (*GasPriceOracleOverheadUpdatedIterator, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "OverheadUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &GasPriceOracleOverheadUpdatedIterator{contract: _GasPriceOracle.contract, event: "OverheadUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchOverheadUpdated is a free log subscription operation binding the contract event 0x32740b35c0ea213650f60d44366b4fb211c9033b50714e4a1d34e65d5beb9bb4.
-//
-// Solidity: event OverheadUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) WatchOverheadUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleOverheadUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "OverheadUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GasPriceOracleOverheadUpdated)
-				if err := _GasPriceOracle.contract.UnpackLog(event, "OverheadUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseOverheadUpdated is a log parse operation binding the contract event 0x32740b35c0ea213650f60d44366b4fb211c9033b50714e4a1d34e65d5beb9bb4.
-//
-// Solidity: event OverheadUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) ParseOverheadUpdated(log types.Log) (*GasPriceOracleOverheadUpdated, error) {
-	event := new(GasPriceOracleOverheadUpdated)
-	if err := _GasPriceOracle.contract.UnpackLog(event, "OverheadUpdated", log); err != nil {
+// Solidity: event OperatorUpdated(address indexed previousOperator, address indexed newOperator)
+func (_GasPriceOracle *GasPriceOracleFilterer) ParseOperatorUpdated(log types.Log) (*GasPriceOracleOperatorUpdated, error) {
+	event := new(GasPriceOracleOperatorUpdated)
+	if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1285,9 +974,9 @@ func (_GasPriceOracle *GasPriceOracleFilterer) ParseOwnershipTransferred(log typ
 	return event, nil
 }
 
-// GasPriceOracleScalarUpdatedIterator is returned from FilterScalarUpdated and is used to iterate over the raw logs and unpacked data for ScalarUpdated events raised by the GasPriceOracle contract.
-type GasPriceOracleScalarUpdatedIterator struct {
-	Event *GasPriceOracleScalarUpdated // Event containing the contract specifics and raw log
+// GasPriceOracleTokenRatioUpdatedIterator is returned from FilterTokenRatioUpdated and is used to iterate over the raw logs and unpacked data for TokenRatioUpdated events raised by the GasPriceOracle contract.
+type GasPriceOracleTokenRatioUpdatedIterator struct {
+	Event *GasPriceOracleTokenRatioUpdated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1301,7 +990,7 @@ type GasPriceOracleScalarUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *GasPriceOracleScalarUpdatedIterator) Next() bool {
+func (it *GasPriceOracleTokenRatioUpdatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1310,7 +999,7 @@ func (it *GasPriceOracleScalarUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(GasPriceOracleScalarUpdated)
+			it.Event = new(GasPriceOracleTokenRatioUpdated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1325,7 +1014,7 @@ func (it *GasPriceOracleScalarUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(GasPriceOracleScalarUpdated)
+		it.Event = new(GasPriceOracleTokenRatioUpdated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1341,41 +1030,60 @@ func (it *GasPriceOracleScalarUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasPriceOracleScalarUpdatedIterator) Error() error {
+func (it *GasPriceOracleTokenRatioUpdatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *GasPriceOracleScalarUpdatedIterator) Close() error {
+func (it *GasPriceOracleTokenRatioUpdatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// GasPriceOracleScalarUpdated represents a ScalarUpdated event raised by the GasPriceOracle contract.
-type GasPriceOracleScalarUpdated struct {
-	Arg0 *big.Int
-	Raw  types.Log // Blockchain specific contextual infos
+// GasPriceOracleTokenRatioUpdated represents a TokenRatioUpdated event raised by the GasPriceOracle contract.
+type GasPriceOracleTokenRatioUpdated struct {
+	PreviousTokenRatio *big.Int
+	NewTokenRatio      *big.Int
+	Raw                types.Log // Blockchain specific contextual infos
 }
 
-// FilterScalarUpdated is a free log retrieval operation binding the contract event 0x3336cd9708eaf2769a0f0dc0679f30e80f15dcd88d1921b5a16858e8b85c591a.
+// FilterTokenRatioUpdated is a free log retrieval operation binding the contract event 0x5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd.
 //
-// Solidity: event ScalarUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) FilterScalarUpdated(opts *bind.FilterOpts) (*GasPriceOracleScalarUpdatedIterator, error) {
+// Solidity: event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio)
+func (_GasPriceOracle *GasPriceOracleFilterer) FilterTokenRatioUpdated(opts *bind.FilterOpts, previousTokenRatio []*big.Int, newTokenRatio []*big.Int) (*GasPriceOracleTokenRatioUpdatedIterator, error) {
 
-	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "ScalarUpdated")
+	var previousTokenRatioRule []interface{}
+	for _, previousTokenRatioItem := range previousTokenRatio {
+		previousTokenRatioRule = append(previousTokenRatioRule, previousTokenRatioItem)
+	}
+	var newTokenRatioRule []interface{}
+	for _, newTokenRatioItem := range newTokenRatio {
+		newTokenRatioRule = append(newTokenRatioRule, newTokenRatioItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "TokenRatioUpdated", previousTokenRatioRule, newTokenRatioRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GasPriceOracleScalarUpdatedIterator{contract: _GasPriceOracle.contract, event: "ScalarUpdated", logs: logs, sub: sub}, nil
+	return &GasPriceOracleTokenRatioUpdatedIterator{contract: _GasPriceOracle.contract, event: "TokenRatioUpdated", logs: logs, sub: sub}, nil
 }
 
-// WatchScalarUpdated is a free log subscription operation binding the contract event 0x3336cd9708eaf2769a0f0dc0679f30e80f15dcd88d1921b5a16858e8b85c591a.
+// WatchTokenRatioUpdated is a free log subscription operation binding the contract event 0x5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd.
 //
-// Solidity: event ScalarUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) WatchScalarUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleScalarUpdated) (event.Subscription, error) {
+// Solidity: event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio)
+func (_GasPriceOracle *GasPriceOracleFilterer) WatchTokenRatioUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleTokenRatioUpdated, previousTokenRatio []*big.Int, newTokenRatio []*big.Int) (event.Subscription, error) {
 
-	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "ScalarUpdated")
+	var previousTokenRatioRule []interface{}
+	for _, previousTokenRatioItem := range previousTokenRatio {
+		previousTokenRatioRule = append(previousTokenRatioRule, previousTokenRatioItem)
+	}
+	var newTokenRatioRule []interface{}
+	for _, newTokenRatioItem := range newTokenRatio {
+		newTokenRatioRule = append(newTokenRatioRule, newTokenRatioItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "TokenRatioUpdated", previousTokenRatioRule, newTokenRatioRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1385,8 +1093,8 @@ func (_GasPriceOracle *GasPriceOracleFilterer) WatchScalarUpdated(opts *bind.Wat
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(GasPriceOracleScalarUpdated)
-				if err := _GasPriceOracle.contract.UnpackLog(event, "ScalarUpdated", log); err != nil {
+				event := new(GasPriceOracleTokenRatioUpdated)
+				if err := _GasPriceOracle.contract.UnpackLog(event, "TokenRatioUpdated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1407,12 +1115,12 @@ func (_GasPriceOracle *GasPriceOracleFilterer) WatchScalarUpdated(opts *bind.Wat
 	}), nil
 }
 
-// ParseScalarUpdated is a log parse operation binding the contract event 0x3336cd9708eaf2769a0f0dc0679f30e80f15dcd88d1921b5a16858e8b85c591a.
+// ParseTokenRatioUpdated is a log parse operation binding the contract event 0x5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd.
 //
-// Solidity: event ScalarUpdated(uint256 arg0)
-func (_GasPriceOracle *GasPriceOracleFilterer) ParseScalarUpdated(log types.Log) (*GasPriceOracleScalarUpdated, error) {
-	event := new(GasPriceOracleScalarUpdated)
-	if err := _GasPriceOracle.contract.UnpackLog(event, "ScalarUpdated", log); err != nil {
+// Solidity: event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio)
+func (_GasPriceOracle *GasPriceOracleFilterer) ParseTokenRatioUpdated(log types.Log) (*GasPriceOracleTokenRatioUpdated, error) {
+	event := new(GasPriceOracleTokenRatioUpdated)
+	if err := _GasPriceOracle.contract.UnpackLog(event, "TokenRatioUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

@@ -44,15 +44,16 @@ type DataSourceFactory struct {
 	cfg     *rollup.Config
 	fetcher L1TransactionFetcher
 	syncer  MantleDaSyncer
+	metrics Metrics
 }
 
-func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer) *DataSourceFactory {
-	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher, syncer: syncer}
+func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, metrics Metrics) *DataSourceFactory {
+	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher, syncer: syncer, metrics: metrics}
 }
 
 // OpenData returns a DataIter. This struct implements the `Next` function.
 func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.BlockID, batcherAddr common.Address) DataIter {
-	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, ds.syncer, id, batcherAddr)
+	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, ds.syncer, ds.metrics, id, batcherAddr)
 }
 
 // DataSource is a fault tolerant approach to fetching data.
@@ -67,6 +68,7 @@ type DataSource struct {
 	cfg     *rollup.Config // TODO: `DataFromEVMTransactions` should probably not take the full config
 	fetcher L1TransactionFetcher
 	syncer  MantleDaSyncer
+	metrics Metrics
 	log     log.Logger
 
 	batcherAddr common.Address
@@ -74,7 +76,7 @@ type DataSource struct {
 
 // NewDataSource creates a new calldata source. It suppresses errors in fetching the L1 block if they occur.
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
-func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, block eth.BlockID, batcherAddr common.Address) DataIter {
+func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, metrics Metrics, block eth.BlockID, batcherAddr common.Address) DataIter {
 	if cfg.MantleDaSwitch {
 		log.Info("Derived by mantle da", "MantleDaSwitch", cfg.MantleDaSwitch)
 		_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
@@ -87,13 +89,14 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 				cfg:         cfg,
 				fetcher:     fetcher,
 				syncer:      syncer,
+				metrics:     metrics,
 				log:         log,
 				batcherAddr: batcherAddr,
 			}
 		} else {
 			return &DataSource{
 				open: true,
-				data: dataFromMantleDa(cfg, receipts, syncer, log.New("origin", block)),
+				data: dataFromMantleDa(cfg, receipts, syncer, metrics, log.New("origin", block)),
 			}
 		}
 	}
@@ -107,6 +110,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 			cfg:         cfg,
 			fetcher:     fetcher,
 			syncer:      syncer,
+			metrics:     metrics,
 			log:         log,
 			batcherAddr: batcherAddr,
 		}
@@ -126,7 +130,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
 			if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
 				ds.open = true
-				ds.data = dataFromMantleDa(ds.cfg, receipts, ds.syncer, log.New("origin", ds.id))
+				ds.data = dataFromMantleDa(ds.cfg, receipts, ds.syncer, ds.metrics, log.New("origin", ds.id))
 			} else if errors.Is(err, ethereum.NotFound) {
 				return nil, NewResetError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 			} else {
@@ -174,7 +178,7 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 	return out
 }
 
-func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, log log.Logger) []eth.Data {
+func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) []eth.Data {
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
@@ -226,6 +230,7 @@ func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 						log.Error("Decode retrieval frames in error", "err", err)
 						continue
 					}
+					metrics.RecordParseDataStoreId(dataStoreId)
 					log.Info("Decode bytes success", "out length", len(out), "dataStoreId", dataStoreId)
 				}
 				return out
