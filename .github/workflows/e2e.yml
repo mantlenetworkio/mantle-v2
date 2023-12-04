@@ -18,7 +18,7 @@ jobs:
           path: mantlenetworkio/rde-v2
           submodules: recursive
           token: ${{ secrets.NEW_PAT }}
-          ref: v0.3.0
+          ref: develop
       - name: Checkout Mantle-v2 Code
         uses: actions/checkout@main
         with:
