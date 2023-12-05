@@ -168,11 +168,17 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
         return false
       }
 
-      // Don't support MNT deposits or withdrawals via this bridge.
+      // Don't support MNT deposits or withdrawals via this bridge on Mantle V2.
       if (
         hexStringEquals(toAddress(l2Token), ethers.constants.AddressZero)
       ) {
         return false
+      }
+      // Support MNT deposits or withdrawals via this bridge on Mantle V1.
+      if (
+        hexStringEquals(toAddress(l2Token), predeploys.LegacyERC20Mantle)
+      ) {
+        return true
       }
 
       // Make sure the L1 token matches.
@@ -181,7 +187,7 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       if (!hexStringEquals(remoteL1Token, toAddress(l1Token))) {
         return false
       }
-      if (hexStringEquals(remoteL1Token, toAddress('0x1a4b46696b2bb4794eb3d4c26f1c55f9170fa4c5'))){
+      if (hexStringEquals(remoteL1Token, toAddress('0x1a4b46696b2bb4794eb3d4c26f1c55f9170fa4c5'))) {
         return true
       }
       // Make sure the L2 bridge matches.
