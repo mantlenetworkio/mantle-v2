@@ -2015,18 +2015,7 @@ export class CrossChainMessenger {
           opts
         )
       } else {
-        const l1MNTAddr =
-          opts?.l1MNTAddr !== undefined
-            ? opts.l1MNTAddr
-            : l1DevPredeploys.L1_MNT
-        const l2MNTAddr = predeploys.LegacyERC20Mantle
-        const bridge = await this.getBridgeForTokenPair(l1MNTAddr, l2MNTAddr)
-        return bridge.populateTransaction.deposit(
-          l1MNTAddr,
-          l2MNTAddr,
-          amount,
-          opts
-        )
+        throw new Error(`call this function must require bedrock param is true`)
       }
     },
 
@@ -2055,18 +2044,7 @@ export class CrossChainMessenger {
           opts
         )
       } else {
-        const l1MNTAddr =
-          opts?.l1MNTAddr !== undefined
-            ? opts.l1MNTAddr
-            : l1DevPredeploys.L1_MNT
-        const l2MNTAddr = predeploys.LegacyERC20Mantle
-        const bridge = await this.getBridgeForTokenPair(l1MNTAddr, l2MNTAddr)
-        return bridge.populateTransaction.withdraw(
-          l1MNTAddr,
-          l2MNTAddr,
-          amount,
-          opts
-        )
+        throw new Error(`call this function must require bedrock param is true`)
       }
     },
 
