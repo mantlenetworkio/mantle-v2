@@ -2,17 +2,21 @@ package oracle
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
+	bsscore "github.com/ethereum-optimism/optimism/bss-core"
 	"github.com/ethereum-optimism/optimism/gas-oracle/bindings"
 	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
 	"github.com/ethereum-optimism/optimism/gas-oracle/tokenratio"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
-	//kms "cloud.google.com/go/kms/apiv1"
-	//"google.golang.org/api/option"
+
+	kms "cloud.google.com/go/kms/apiv1"
+	"google.golang.org/api/option"
 )
 
 func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployContractBackend, tokenRatio *tokenratio.Client, cfg *Config) (func() error, error) {
@@ -35,22 +39,22 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			return nil, err
 		}
 	} else {
-		//seqBytes, err := hex.DecodeString(cfg.HsmCreden)
-		//apikey := option.WithCredentialsJSON(seqBytes)
-		//client, err := kms.NewKeyManagementClient(context.Background(), apikey)
-		//if err != nil {
-		//	log.Crit("gasoracle", "create signer error", err.Error())
-		//}
-		//mk := &bsscore.ManagedKey{
-		//	KeyName:      cfg.HsmAPIName,
-		//	EthereumAddr: common.HexToAddress(cfg.HsmAddress),
-		//	Gclient:      client,
-		//}
-		//opts, err = mk.NewEthereumTransactorrWithChainID(context.Background(), cfg.l2ChainID)
-		//if err != nil {
-		//	log.Crit("gasoracle", "create signer error", err.Error())
-		//	return nil, err
-		//}
+		seqBytes, err := hex.DecodeString(cfg.HsmCreden)
+		apikey := option.WithCredentialsJSON(seqBytes)
+		client, err := kms.NewKeyManagementClient(context.Background(), apikey)
+		if err != nil {
+			log.Crit("gasoracle", "create signer error", err.Error())
+		}
+		mk := &bsscore.ManagedKey{
+			KeyName:      cfg.HsmAPIName,
+			EthereumAddr: common.HexToAddress(cfg.HsmAddress),
+			Gclient:      client,
+		}
+		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), cfg.l2ChainID)
+		if err != nil {
+			log.Crit("gasoracle", "create signer error", err.Error())
+			return nil, err
+		}
 	}
 	// Once https://github.com/ethereum/go-ethereum/pull/23062 is released
 	// then we can remove setting the context here
