@@ -15,6 +15,7 @@ import { IBridgeAdapter } from './bridge-adapter'
 export enum L1ChainID {
   MAINNET = 1,
   GOERLI = 5,
+  SEPOLIA = 11155111,
   HARDHAT_LOCAL = 31337,
   BEDROCK_LOCAL_DEVNET = 900,
 }
@@ -30,7 +31,7 @@ export enum L2ChainID {
   MANTLE_HARDHAT_LOCAL = 31337,
   MANTLE_HARDHAT_DEVNET = 17,
   MANTLE_V2_LOCAL_DEVNET = 901,
-
+  MANTLE_SEPOLIA_TESTNET = 5003,
 }
 
 /**

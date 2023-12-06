@@ -37,6 +37,7 @@ export const CHAIN_BLOCK_TIMES: {
   [L1ChainID.GOERLI]: 15 as const,
   [L1ChainID.HARDHAT_LOCAL]: 1 as const,
   [L1ChainID.BEDROCK_LOCAL_DEVNET]: 15 as const,
+  [L1ChainID.SEPOLIA]: 1 as const,
 }
 
 /**
