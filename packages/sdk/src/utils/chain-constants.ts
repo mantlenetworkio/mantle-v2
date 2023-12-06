@@ -225,8 +225,8 @@ export const CONTRACT_ADDRESSES: {
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
 
       //bedrock part
-      OptimismPortal:"0x6900000000000000000000000000000000000001" as const,
-      L2OutputOracle:"0x6900000000000000000000000000000000000000" as const
+      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
 
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
@@ -255,8 +255,37 @@ export const CONTRACT_ADDRESSES: {
         process.env.Rollup ||
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
       //bedrock part
-      OptimismPortal:"0x6900000000000000000000000000000000000001" as const,
-      L2OutputOracle:"0x6900000000000000000000000000000000000000" as const
+      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
+    },
+    l2: DEFAULT_L2_CONTRACT_ADDRESSES,
+  },
+  [L2ChainID.MANTLE_SEPOLIA_TESTNET]: {
+    l1: {
+      AddressManager:
+        process.env.ADDRESS_MANAGER_ADDRESS ||
+        ('0x94456FaE55EC229D046A9FE8c8420a5cce7486c6' as const),
+      L1CrossDomainMessenger:
+        process.env.L1_CROSS_DOMAIN_MESSENGER_ADDRESS ||
+        ('0x1AD307127c915C3BE4a0B9E5Fe89d91C7f9490f0' as const),
+      L1StandardBridge:
+        process.env.L1_STANDARD_BRIDGE_ADDRESS ||
+        ('0x6a8C5F553A2327CbC66d53F6cc5edD4C95899CC8' as const),
+      StateCommitmentChain:
+        process.env.STATE_COMMITMENT_CHAIN_ADDRESS ||
+        ('0x496dBE4e966989081C9FB9430A6898F4B10e73C9' as const),
+      CanonicalTransactionChain:
+        process.env.CANONICAL_TRANSACTION_CHAIN_ADDRESS ||
+        ('0xf64426c5A003468F08b0F3bD59ce368d416527cA' as const),
+      BondManager:
+        process.env.BOND_MANAGER_ADDRESS ||
+        ('0xc7cA071B62A93e74F6E5Ea71f246208E88F4893a' as const),
+      Rollup:
+        process.env.Rollup ||
+        ('0xa417aA93Ca4FC9F0b0aAc70700b6205173638927' as const),
+      //bedrock part
+      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
