@@ -16,6 +16,7 @@ COPY ./go.sum /app/go.sum
 COPY ./.git /app/.git
 COPY ./bss-core /app/bss-core
 
+COPY ./op-proposer/docker.go.work /go/go.work
 
 WORKDIR /app/op-proposer
 
