@@ -6,7 +6,7 @@ COPY ./gas-oracle /gas-oracle
 COPY ./go.mod /go.mod
 COPY ./go.sum /go.sum
 COPY ./.git /.git
-COPY ./bss-core /app/bss-core
+COPY ./bss-core /bss-core
 
 COPY ./gas-oracle/docker.go.work /go/go.work
 
