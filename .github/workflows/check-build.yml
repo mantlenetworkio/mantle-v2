@@ -51,6 +51,7 @@ jobs:
           result=$(tail -n1 /tmp/1.txt)
           result=$(echo $result|sed -r "s/\\x1B[\\x5d\[]([0-9]{1,3}(;[0-9]{1,3})?(;[0-9]{1,3})?)?[mGK]?//g" | sed -r "s/([0-9]+)/**\1**/g" | sed  "s/passed/passed😊/g" | sed "s/failed/failed😂/g" )
           echo "::set-output name=result::$result"
+
       - name: Comment PR
         uses: thollander/actions-comment-pull-request@v2
         with:
