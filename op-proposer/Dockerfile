@@ -20,7 +20,7 @@ COPY ./op-proposer/docker.go.work /go/go.work
 
 WORKDIR /app/op-proposer
 
-RUN go mod download
+# RUN go mod download
 
 ARG TARGETOS TARGETARCH
 
