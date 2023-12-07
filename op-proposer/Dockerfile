@@ -11,8 +11,8 @@ COPY ./op-node /go/op-node
 COPY ./op-service /go/op-service
 COPY ./op-signer /go/op-signer
 COPY ./datalayr /go/datalayr
-COPY ./go.mod /go/go.mod
-COPY ./go.sum /go/go.sum
+# COPY ./go.mod /go/go.mod
+# COPY ./go.sum /go/go.sum
 COPY ./.git /go/.git
 COPY ./bss-core /go/bss-core
 
