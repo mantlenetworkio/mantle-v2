@@ -19,7 +19,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          golang-version: 1.21
+          golang-version: 1.19
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
