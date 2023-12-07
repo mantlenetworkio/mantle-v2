@@ -24,7 +24,7 @@ RUN make gas-oracle VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH
 FROM alpine:3.15
 
 RUN apk add --no-cache ca-certificates jq curl
-COPY --from=builder /app/gas-oracle/gas-oracle /usr/local/bin/
+COPY --from=builder /app/gas-oracle/bin/gas-oracle /usr/local/bin/
 
 WORKDIR /usr/local/bin/
 ENTRYPOINT ["gas-oracle"]
