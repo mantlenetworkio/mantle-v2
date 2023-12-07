@@ -16,7 +16,7 @@ COPY ./go.sum /app/go.sum
 COPY ./.git /app/.git
 COPY ./bss-core /app/bss-core
 
-COPY ./op-proposer/docker.go.work /go/go.work
+COPY ./op-proposer/docker.go.work /app/go.work
 WORKDIR /app/op-proposer
 
 RUN go mod download
