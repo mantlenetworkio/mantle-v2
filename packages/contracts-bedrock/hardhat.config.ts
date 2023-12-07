@@ -70,6 +70,11 @@ const config: HardhatUserConfig = {
         'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
       ],
     },
+    sepolia: {
+      chainId: 11155111,
+      url: process.env.L1_RPC || '',
+      accounts: [process.env.PRIVATE_KEY_DEPLOYER || ethers.constants.HashZero],
+    },
     hivenet: {
       chainId: Number(process.env.CHAIN_ID),
       url: process.env.L1_RPC || '',

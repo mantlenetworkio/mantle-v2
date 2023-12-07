@@ -4,10 +4,11 @@ network=$1
 step=$2
 
 if [ $network != "devnet" ] &&
-  [ $network != "testnet" ] &&
+  [ $network != "goerli" ] &&
+  [ $network != "sepolia" ] &&
   [ $network != "mainnet" ]
 then
-  echo "invalid network, expected network: testnet, testnet and mainnet"
+  echo "invalid network, expected network: devnet, goerli, sepolia and mainnet"
   exit 0
 fi
 
@@ -18,7 +19,7 @@ then
   echo "------------------------------------"
   rm deploy/*
   cp deploy-backup/bedrock-upgrade-deploy-scripts/step0/* deploy
-  rm -rf deployments/mantle-devnet
+  rm -rf deployments/mantle-${network}
   cp -r deployments/mantle-${network}-bak deployments/mantle-${network}
   yarn deploy --network mantle-${network}
 fi

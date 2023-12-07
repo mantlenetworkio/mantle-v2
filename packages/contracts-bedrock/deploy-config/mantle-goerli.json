@@ -28,7 +28,7 @@
   "portalGuardian": "0x0000000000000000000000000000000000000000",
   "controller": "0x0000000000000000000000000000000000000000",
   "finalizationPeriodSeconds": 2,
-  "deploymentWaitConfirmations": 1,
+  "numDeployConfirmations": 1,
   "fundDevAccounts": true,
   "l2GenesisBlockBaseFeePerGas": "0x3B9ACA00",
   "gasPriceOracleOwner": "0x0000000000000000000000000000000000000000",
