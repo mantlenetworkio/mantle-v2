@@ -31,19 +31,32 @@ const config: HardhatUserConfig = {
       saveDeployments: false,
       tags: ['local'],
     },
-    optimism: {
+    local: {
+      chainId: 31337,
+      url: 'http://127.0.0.1:9545',
+      accounts: [privateKey],
+    },
+    dev: {
+      chainId: 31337,
+      url: 'https://mantle-l1chain.dev.davionlabs.com',
+      accounts: [
+        'dbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97',
+        'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+      ],
+    },
+    mantle: {
       url: 'http://127.0.0.1:8545',
       saveDeployments: false,
     },
-    'optimism-kovan': {
+    'mantle-kovan': {
       chainId: 69,
-      url: 'https://kovan.optimism.io',
+      url: 'https://kovan.mantle.io',
       deploy,
       accounts: [privateKey],
     },
-    'optimism-mainnet': {
+    'mantle-mainnet': {
       chainId: 10,
-      url: 'https://mainnet.optimism.io',
+      url: 'https://mainnet.mantle.io',
       deploy,
       accounts: [privateKey],
     },
@@ -51,6 +64,27 @@ const config: HardhatUserConfig = {
       chainId: 42069,
       url: 'http://127.0.0.1:8545',
       accounts: [privateKey],
+    },
+    goerlibn: {
+      chainId: 5,
+      url: 'https://eth-goerli.g.alchemy.com/v2/821_LFssCCQnEG3mHnP7tSrc87IQKsUp',
+      deploy,
+      accounts: [privateKey],
+    },
+    'goerli-qa': {
+      chainId: 5,
+      url: 'https://goerli.infura.io/v3/d6167662f2104fbc8d5a947e59dbaa28',
+      deploy,
+      accounts: [privateKey],
+    },
+    'goerli-testnet': {
+      chainId: 5,
+      //url: 'https://goerli.infura.io/v3/d6167662f2104fbc8d5a947e59dbaa28',
+      url: 'https://goerli.davionlabs.com',
+      deploy,
+      accounts: [privateKey],
+      gas: 'auto',
+      gasPrice: 'auto',
     },
     kovan: {
       chainId: 42,

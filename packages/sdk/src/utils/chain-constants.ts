@@ -1,21 +1,9 @@
-import {
-  predeploys as v1Predeploys,
-} from '@ethan-bedrock/contracts'
+import {predeploys as v1Predeploys,} from '@ethan-bedrock/contracts'
 
-import { predeploys as bedrockPredeploys } from '@ethan-bedrock/contracts-bedrock'
+import {predeploys as bedrockPredeploys} from '@ethan-bedrock/contracts-bedrock'
 
-import {
-  L1ChainID,
-  L2ChainID,
-  OEContractsLike,
-  OEL2ContractsLike,
-  BridgeAdapterData,
-} from '../interfaces'
-import {
-  StandardBridgeAdapter,
-  DAIBridgeAdapter,
-  ECOBridgeAdapter, ERC20BridgeAdapter,
-} from '../adapters'
+import {BridgeAdapterData, L1ChainID, L2ChainID, OEContractsLike, OEL2ContractsLike,} from '../interfaces'
+import {ERC20BridgeAdapter, StandardBridgeAdapter,} from '../adapters'
 
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [ChainID in L2ChainID]: number
@@ -51,7 +39,7 @@ export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
   L2StandardBridge: v1Predeploys.L2StandardBridge || bedrockPredeploys.L2StandardBridge || '0x4200000000000000000000000000000000000010',
   BVM_L1BlockNumber: v1Predeploys.BVM_L1BlockNumber || bedrockPredeploys.L1BlockNumber || '0x4200000000000000000000000000000000000013',
   BVM_L2ToL1MessagePasser: v1Predeploys.BVM_L2ToL1MessagePasser || bedrockPredeploys.L2ToL1MessagePasser || '0x4200000000000000000000000000000000000000',
-  BVM_DeployerWhitelist: v1Predeploys.BVM_DeployerWhitelist  || '0x4200000000000000000000000000000000000002',
+  BVM_DeployerWhitelist: v1Predeploys.BVM_DeployerWhitelist || '0x4200000000000000000000000000000000000002',
   BVM_ETH: v1Predeploys.BVM_ETH || bedrockPredeploys.BVM_ETH || '0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111',
   BVM_GasPriceOracle: v1Predeploys.BVM_GasPriceOracle || bedrockPredeploys.GasPriceOracle || '0x420000000000000000000000000000000000000F',
   BVM_SequencerFeeVault: v1Predeploys.BVM_SequencerFeeVault || bedrockPredeploys.SequencerFeeVault || '0x4200000000000000000000000000000000000011',
@@ -130,8 +118,8 @@ export const CONTRACT_ADDRESSES: {
       Rollup:
         process.env.Rollup ||
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
-      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
-      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+      OptimismPortal: process.env.OptimismPortal || '0x0000000000000000000000000000000000000000' as const,
+      L2OutputOracle: process.env.L2OutputOracle || '0x0000000000000000000000000000000000000000' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
@@ -158,8 +146,8 @@ export const CONTRACT_ADDRESSES: {
       Rollup:
         process.env.Rollup ||
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
-      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
-      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+      OptimismPortal: process.env.OptimismPortal || '0x0000000000000000000000000000000000000000' as const,
+      L2OutputOracle: process.env.L2OutputOracle || '0x0000000000000000000000000000000000000000' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
@@ -186,8 +174,8 @@ export const CONTRACT_ADDRESSES: {
       Rollup:
         process.env.Rollup ||
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
-      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
-      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+      OptimismPortal: process.env.OptimismPortal || '0x0000000000000000000000000000000000000000' as const,
+      L2OutputOracle: process.env.L2OutputOracle || '0x0000000000000000000000000000000000000000' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
@@ -205,7 +193,7 @@ export const CONTRACT_ADDRESSES: {
       OptimismPortal: '0x6900000000000000000000000000000000000001' as const,
       L2OutputOracle: '0x6900000000000000000000000000000000000000' as const,
       //TODO : Rollup contracts
-      Rollup: '0x0000000000000000000000000000000000000000' as const
+      Rollup: process.env.Rollup || '0x0000000000000000000000000000000000000000' as const
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
@@ -225,8 +213,8 @@ export const CONTRACT_ADDRESSES: {
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
 
       //bedrock part
-      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
-      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
+      OptimismPortal: process.env.OptimismPortal || "0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle: process.env.L2OutputOracle || "0x0000000000000000000000000000000000000000" as const
 
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
@@ -255,8 +243,8 @@ export const CONTRACT_ADDRESSES: {
         process.env.Rollup ||
         ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
       //bedrock part
-      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
-      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
+      OptimismPortal: process.env.OptimismPortal || "0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle: process.env.L2OutputOracle || "0x0000000000000000000000000000000000000000" as const
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
@@ -284,8 +272,8 @@ export const CONTRACT_ADDRESSES: {
         process.env.Rollup ||
         ('0xa417aA93Ca4FC9F0b0aAc70700b6205173638927' as const),
       //bedrock part
-      OptimismPortal:"0x0000000000000000000000000000000000000000" as const,
-      L2OutputOracle:"0x0000000000000000000000000000000000000000" as const
+      OptimismPortal: process.env.OptimismPortal || "0x0000000000000000000000000000000000000000" as const,
+      L2OutputOracle: process.env.L2OutputOracle || "0x0000000000000000000000000000000000000000" as const
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
