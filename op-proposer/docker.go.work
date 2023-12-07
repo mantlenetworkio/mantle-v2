@@ -5,5 +5,6 @@ replace(
 )
 
 use (
+  ./op-proposer
 	./bss-core
 )
