@@ -14,7 +14,7 @@ COPY ./datalayr /app/datalayr
 COPY ./go.mod /app/go.mod
 COPY ./go.sum /app/go.sum
 COPY ./.git /app/.git
-COPY ./bss-core /bss-core
+COPY ./bss-core /app/bss-core
 
 WORKDIR /app/op-proposer
 
