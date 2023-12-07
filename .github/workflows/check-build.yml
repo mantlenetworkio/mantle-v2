@@ -1,4 +1,4 @@
-name: Check Build
+name: UNITEST
 on:
   pull_request:
     branches:
@@ -8,7 +8,7 @@ on:
     paths:
       - '**'
 jobs:
-  CheckBuild:
+  UNITEST:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
