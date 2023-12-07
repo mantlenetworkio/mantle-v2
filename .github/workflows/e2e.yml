@@ -47,4 +47,3 @@ jobs:
           cmd="docker run -i -v $(pwd):/app shidaxi/op-base:0.1.0-node-16-bullseye /bin/bash /app/e2e.sh"
           echo -e "\e[32m$cmd\e[0m"
           $cmd
-          echo "successful"
