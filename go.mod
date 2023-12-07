@@ -17,7 +17,7 @@ require (
 	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
-	github.com/ethereum-optimism/optimism/bss-core v0.0.0-20230603014400-6a474e36aba9
+	github.com/ethereum-optimism/optimism/bss-core v0.0.0
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-resty/resty/v2 v2.10.0
