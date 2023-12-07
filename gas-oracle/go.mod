@@ -3,13 +3,13 @@ module github.com/ethereum-optimism/optimism/gas-oracle
 go 1.19
 
 replace (
-	github.com/ethereum-optimism/optimism/bss-core v0.0.0 => ./bss-core
+	github.com/ethereum-optimism/optimism/bss-core v0.0.0 => ../bss-core
 	github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v0.5.0-alpha.1
 )
 
 require (
 	cloud.google.com/go/kms v1.15.5
-	github.com/ethereum-optimism/optimism/bss-core v0.0.0-20230603014400-6a474e36aba9
+	github.com/ethereum-optimism/optimism/bss-core v0.0.0
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/go-resty/resty/v2 v2.10.0
 	github.com/stretchr/testify v1.8.4
@@ -29,9 +29,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593 // indirect
+	github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
-	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
