@@ -14,7 +14,7 @@
   "l1StartingBlockTag": "latest",
   "l1MantleToken": "0x65e37B558F64E2Be5768DB46DF22F93d85741A9E",
   "l2OutputOracleProposer": "0x9361fb131a1c3928bb22c316257eea7608b26177",
-  "l2OutputOracleChallenger": "0x0000000000000000000000000000000000000000",
+  "l2OutputOracleChallenger": "0x428e2d9c04b2c09d5480c82cffbddb0c73278d50",
   "l2GenesisBlockGasLimit": "0x4000000000000",
   "l1BlockTime": 12,
   "cliqueSignerAddress": "0x0000000000000000000000000000000000000000",
