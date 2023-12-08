@@ -1,79 +1,69 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
-  Provider,
   BlockTag,
+  Provider,
   TransactionReceipt,
-  TransactionResponse,
   TransactionRequest,
+  TransactionResponse,
 } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
+import {Signer} from '@ethersproject/abstract-signer'
+import {BigNumber, CallOverrides, ethers, Overrides, PayableOverrides,} from 'ethers'
 import {
-  ethers,
-  BigNumber,
-  Overrides,
-  CallOverrides,
-  PayableOverrides,
-} from 'ethers'
-import {
-  sleep,
-  remove0x,
-  toHexString,
-  toRpcHexString,
-  hashCrossDomainMessage,
+  BedrockCrossChainMessageProof,
+  BedrockOutputData,
+  decodeVersionedNonce,
   encodeCrossDomainMessageV0,
   encodeCrossDomainMessageV1,
-  BedrockOutputData,
-  BedrockCrossChainMessageProof,
-  decodeVersionedNonce,
   encodeVersionedNonce,
   getChainId,
+  hashCrossDomainMessage,
+  remove0x,
+  sleep,
+  toHexString,
+  toRpcHexString,
 } from '@ethan-bedrock/core-utils'
-import {
-  getContractInterface,
-  predeploys,
-  l1DevPredeploys,
-} from '@ethan-bedrock/contracts'
+import {getContractInterface, l1DevPredeploys, predeploys,} from '@ethan-bedrock/contracts'
 import * as rlp from 'rlp'
 
 import {
-  OEContracts,
-  OEContractsLike,
-  MessageLike,
-  MessageRequestLike,
-  TransactionLike,
   AddressLike,
-  NumberLike,
-  SignerOrProviderLike,
-  CrossChainMessage,
-  CrossChainMessageRequest,
-  CrossChainMessageProof,
-  MessageDirection,
-  MessageStatus,
-  TokenBridgeMessage,
-  MessageReceipt,
-  MessageReceiptStatus,
   BridgeAdapterData,
   BridgeAdapters,
+  CrossChainMessage,
+  CrossChainMessageProof,
+  CrossChainMessageRequest,
+  IBridgeAdapter,
+  LowLevelMessage,
+  MessageDirection,
+  MessageLike,
+  MessageReceipt,
+  MessageReceiptStatus,
+  MessageRequestLike,
+  MessageStatus,
+  NumberLike,
+  OEContracts,
+  OEContractsLike,
+  ProvenWithdrawal,
+  SignerOrProviderLike,
   StateRoot,
   StateRootBatch,
-  IBridgeAdapter,
-  ProvenWithdrawal,
-  LowLevelMessage,
+  TokenBridgeMessage,
+  TransactionLike,
 } from './interfaces'
 import {
-  toSignerOrProvider,
-  toNumber,
-  toTransactionHash,
+  CHAIN_BLOCK_TIMES,
   DeepPartial,
+  DEPOSIT_CONFIRMATION_BLOCKS,
   getAllOEContracts,
   getBridgeAdapters,
+  hashLowLevelMessage,
+  hashMessageHash,
   makeMerkleTreeProof,
   makeStateTrieProof,
-  hashLowLevelMessage,
   migratedWithdrawalGasLimit,
-  DEPOSIT_CONFIRMATION_BLOCKS,
-  CHAIN_BLOCK_TIMES,
-  hashMessageHash,
+  toNumber,
+  toSignerOrProvider,
+  toTransactionHash,
 } from './utils'
 
 export class CrossChainMessenger {
@@ -345,7 +335,7 @@ export class CrossChainMessenger {
     const resolved = await this.toCrossChainMessage(message)
 
     // Bedrock messages are already in the correct format.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     if (version.eq(1)) {
       return resolved
     }
@@ -398,7 +388,7 @@ export class CrossChainMessenger {
     }
 
     // We may have to update the message if it's a legacy message.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     let updated: CrossChainMessage
     if (version.eq(0)) {
       updated = await this.toBedrockCrossChainMessage(resolved)
@@ -780,8 +770,8 @@ export class CrossChainMessenger {
       return {
         receiptStatus: MessageReceiptStatus.RELAYED_FAILED,
         transactionReceipt: await failedRelayedMessageEvents[
-          failedRelayedMessageEvents.length - 1
-        ].getTransactionReceipt(),
+        failedRelayedMessageEvents.length - 1
+          ].getTransactionReceipt(),
       }
     }
 
@@ -1042,12 +1032,12 @@ export class CrossChainMessenger {
       oracleVersion === '1.0.0'
         ? // The ABI in the SDK does not contain FINALIZATION_PERIOD_SECONDS
           // in OptimismPortal, so making an explicit call instead.
-          BigNumber.from(
-            await this.contracts.l1.OptimismPortal.provider.call({
-              to: this.contracts.l1.OptimismPortal.address,
-              data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
-            })
-          )
+        BigNumber.from(
+          await this.contracts.l1.OptimismPortal.provider.call({
+            to: this.contracts.l1.OptimismPortal.address,
+            data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
+          })
+        )
         : await this.contracts.l1.L2OutputOracle.FINALIZATION_PERIOD_SECONDS()
     return challengePeriod.toNumber()
   }
@@ -1824,7 +1814,71 @@ export class CrossChainMessenger {
         )
       }
     },
+    /**
+     * Generates a message proving transaction that can be signed and executed. Only
+     * applicable for L2 to L1 messages.
+     *
+     * @param message Message to generate the proving transaction for.
+     * @param opts Additional options.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to prove the message.
+     */
+    forceWithdrawalMNT: async (
+      mintAmount: NumberLike,
+      forceWithdrawalAmount: NumberLike,
+      opts?: {
+        overrides?: PayableOverrides
+      }
+    ): Promise<TransactionRequest> => {
 
+
+      if (!this.bedrock) {
+        throw new Error(
+          'force withdrawal only applies after the bedrock upgrade'
+        )
+      }
+
+
+      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
+        0,
+        predeploys.L2StandardBridge,
+        forceWithdrawalAmount,
+        false,
+        [])
+    },
+
+    /**
+     * Generates a message proving transaction that can be signed and executed. Only
+     * applicable for L2 to L1 messages.
+     *
+     * @param message Message to generate the proving transaction for.
+     * @param opts Additional options.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to prove the message.
+     */
+    forceWithdrawalERC20: async (
+      l1TokenAddr: AddressLike,
+      l2TokenAddr: AddressLike,
+      forceWithdrawalAmount: NumberLike,
+      opts?: {
+        overrides?: PayableOverrides
+      }
+    ): Promise<TransactionRequest> => {
+      if (!this.bedrock) {
+        throw new Error(
+          'force withdrawal only applies after the bedrock upgrade'
+        )
+      }
+
+      const approveData = this.contracts.l2.L2CrossDomainMessenger.interface.encodeFunctionData('relay', [spender, toHex(amount.quotient)])
+
+      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
+        0,
+        predeploys.L2StandardBridge,
+        forceWithdrawalAmount,
+        false,
+        [])
+    },
     /**
      * Generates a message proving transaction that can be signed and executed. Only
      * applicable for L2 to L1 messages.
