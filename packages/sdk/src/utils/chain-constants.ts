@@ -39,7 +39,7 @@ export const DEFAULT_L2_CONTRACT_ADDRESSES: OEL2ContractsLike = {
   L2StandardBridge: v1Predeploys.L2StandardBridge || bedrockPredeploys.L2StandardBridge || '0x4200000000000000000000000000000000000010',
   BVM_L1BlockNumber: v1Predeploys.BVM_L1BlockNumber || bedrockPredeploys.L1BlockNumber || '0x4200000000000000000000000000000000000013',
   BVM_L2ToL1MessagePasser: v1Predeploys.BVM_L2ToL1MessagePasser || bedrockPredeploys.L2ToL1MessagePasser || '0x4200000000000000000000000000000000000000',
-  BVM_DeployerWhitelist: v1Predeploys.BVM_DeployerWhitelist || '0x4200000000000000000000000000000000000002',
+  BVM_DeployerWhitelist: v1Predeploys.BVM_DeployerWhitelist  || '0x4200000000000000000000000000000000000002',
   BVM_ETH: v1Predeploys.BVM_ETH || bedrockPredeploys.BVM_ETH || '0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111',
   BVM_GasPriceOracle: v1Predeploys.BVM_GasPriceOracle || bedrockPredeploys.GasPriceOracle || '0x420000000000000000000000000000000000000F',
   BVM_SequencerFeeVault: v1Predeploys.BVM_SequencerFeeVault || bedrockPredeploys.SequencerFeeVault || '0x4200000000000000000000000000000000000011',
