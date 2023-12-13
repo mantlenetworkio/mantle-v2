@@ -3,9 +3,9 @@ package op_e2e
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/ethereum-optimism/optimism/l2geth/accounts/abi"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"log"
 	"math/big"
 	"strings"
