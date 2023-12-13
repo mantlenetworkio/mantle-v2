@@ -3,8 +3,12 @@ package op_e2e
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/ethereum-optimism/optimism/l2geth/accounts/abi"
+	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"log"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -1030,4 +1034,150 @@ func TestTx(t *testing.T) {
 	tx, _, err := l2Client.TransactionByHash(context.Background(), common.HexToHash("0xf9bef38d02729976f8550c692a09f7270cad6769ec8e256d7058cfdbe662f55e"))
 	t.Log("ethvalue data = ", tx.ETHValue())
 	t.Log(tx.MarshalJSON())
+}
+
+func TestForceWithdrawal(t *testing.T) {
+	l1url := "http://localhost:8545"
+	l1Client, err := ethclient.Dial(l1url)
+	require.NoError(t, err)
+	l1ChainId, err := l1Client.ChainID(context.Background())
+	require.NoError(t, err)
+	pk := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	PrivKey, err := crypto.HexToECDSA(pk)
+	require.NoError(t, err)
+	minGasLimit := uint32(2000000)
+
+	l2TokenAddress := common.HexToAddress(predeploys.BVM_ETH)
+	forceWithdrawalAmount := big.NewInt(10000000000000)
+	depositValue := big.NewInt(100)
+	l1auth := buildAuth(t, l1Client, pk, depositValue, l1ChainId)
+	// l1 eth value
+	callerAddress := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	nullExtraData := []byte{}
+
+	L2StandardBridgeABI, err := abi.JSON(strings.NewReader(bindings.L2StandardBridgeMetaData.ABI))
+	require.NoError(t, err)
+	withdrawMessage, err := L2StandardBridgeABI.Pack("withdrawTo", l2TokenAddress, callerAddress, forceWithdrawalAmount, minGasLimit, nullExtraData)
+	t.Log(common.Bytes2Hex(withdrawMessage))
+	require.NoError(t, err)
+
+	zero_mnt_amount := big.NewInt(0)
+
+	l1XDMAddress := common.HexToAddress("0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0")
+
+	l1xmsg, err := bindings.NewL1CrossDomainMessenger(l1XDMAddress, l1Client)
+	require.NoError(t, err)
+
+	tx, err := l1xmsg.SendMessage(l1auth, zero_mnt_amount,
+		common.HexToAddress(predeploys.L2StandardBridge),
+		withdrawMessage, minGasLimit)
+
+	//msg := ethereum.CallMsg{From: l1auth.From, To: &to, GasPrice: l1auth.GasPrice, Value: l1auth.Value, Data: sendMessageData}
+	//gasLimit, err := l1Client.EstimateGas(context.Background(), msg)
+	//require.NoError(t, err)
+
+	//tx := types.NewTx(&types.LegacyTx{
+	//	Nonce:    auth.Nonce.Uint64(),
+	//	GasPrice: auth.GasPrice,
+	//	Gas:      gasLimit,
+	//	To:       &to,
+	//	Value:    auth.Value,
+	//	Data:     sendMessageData,
+	//})
+	t.Log("sendMessageHash  ", tx.Hash().Hex())
+	signer := types.LatestSignerForChainID(l1ChainId)
+	tx, err = types.SignTx(tx, signer, PrivKey)
+	require.NoError(t, err)
+	err = l1Client.SendTransaction(context.Background(), tx)
+	require.NoError(t, err)
+	t.Log(tx.Hash().Hex())
+	time.Sleep(time.Second * 20)
+	receipt, err := l1Client.TransactionReceipt(context.Background(), tx.Hash())
+	require.NoError(t, err)
+	t.Log(tx.Hash().Hex())
+
+	t.Log(receipt.Status)
+
+}
+
+func TestForceWithdrawalFromPortal(t *testing.T) {
+	l1url := "http://localhost:8545"
+	l1Client, err := ethclient.Dial(l1url)
+	require.NoError(t, err)
+	l1ChainId, err := l1Client.ChainID(context.Background())
+	require.NoError(t, err)
+	pk := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	//PrivKey, err := crypto.HexToECDSA(pk)
+	require.NoError(t, err)
+	minGasLimit := uint32(2000000)
+
+	l2TokenAddress := common.HexToAddress(predeploys.BVM_ETH)
+	forceWithdrawalAmount := big.NewInt(10000000000000)
+	depositValue := big.NewInt(100)
+	l1auth := buildAuth(t, l1Client, pk, depositValue, l1ChainId)
+	l1auth.Value = depositValue
+	// l1 eth value
+	callerAddress := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	nullExtraData := []byte{}
+
+	L2StandardBridgeABI, err := abi.JSON(strings.NewReader(bindings.L2StandardBridgeMetaData.ABI))
+	require.NoError(t, err)
+	withdrawMessage, err := L2StandardBridgeABI.Pack("withdrawTo", l2TokenAddress, callerAddress, forceWithdrawalAmount, minGasLimit, nullExtraData)
+	t.Log(common.Bytes2Hex(withdrawMessage))
+	require.NoError(t, err)
+
+	//zero_mnt_amount := big.NewInt(0)
+
+	OptimismPortalAddr := common.HexToAddress("0x0B306BF915C4d645ff596e518fAf3F9669b97016")
+	portal, err := bindings.NewOptimismPortal(OptimismPortalAddr, l1Client)
+
+	tx, err := portal.DepositTransaction(l1auth, big.NewInt(0), callerAddress, big.NewInt(0), uint64(minGasLimit), false,
+		withdrawMessage)
+	t.Log("DepositTransaction hash on L1", tx.Hash().Hex())
+	time.Sleep(time.Duration(time.Second * 20))
+	receipt, err := l1Client.TransactionReceipt(context.Background(), tx.Hash())
+	require.NoError(t, err)
+	source := derive.UserDepositSource{
+		L1BlockHash: receipt.BlockHash,
+		LogIndex:    uint64(receipt.TransactionIndex),
+	}
+	depositTx := types.DepositTx{
+		SourceHash:          source.SourceHash(),
+		From:                callerAddress,
+		To:                  &predeploys.L2StandardBridgeAddr,
+		Mint:                big.NewInt(0),
+		Value:               big.NewInt(0),
+		Gas:                 uint64(minGasLimit),
+		IsSystemTransaction: false,
+		EthValue:            depositValue,
+		Data:                withdrawMessage,
+	}
+	l2DepositTx := types.NewTx(&depositTx)
+	t.Log(l2DepositTx.Hash())
+
+	//msg := ethereum.CallMsg{From: l1auth.From, To: &to, GasPrice: l1auth.GasPrice, Value: l1auth.Value, Data: sendMessageData}
+	//gasLimit, err := l1Client.EstimateGas(context.Background(), msg)
+	//require.NoError(t, err)
+
+	//tx := types.NewTx(&types.LegacyTx{
+	//	Nonce:    auth.Nonce.Uint64(),
+	//	GasPrice: auth.GasPrice,
+	//	Gas:      gasLimit,
+	//	To:       &to,
+	//	Value:    auth.Value,
+	//	Data:     sendMessageData,
+	//})
+	t.Log("DepositTransaction on L2 hash  ", l2DepositTx.Hash().Hex())
+	//signer := types.LatestSignerForChainID(l1ChainId)
+	//tx, err = types.SignTx(tx, signer, PrivKey)
+	//require.NoError(t, err)
+	//err = l1Client.SendTransaction(context.Background(), tx)
+	//require.NoError(t, err)
+	//t.Log(tx.Hash().Hex())
+	time.Sleep(time.Second * 20)
+	require.NoError(t, err)
+	t.Log(tx.Hash().Hex())
+
+	t.Log(receipt.Status)
+
 }

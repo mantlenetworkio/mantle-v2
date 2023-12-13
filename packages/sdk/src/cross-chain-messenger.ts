@@ -1870,7 +1870,11 @@ export class CrossChainMessenger {
         )
       }
 
-      const approveData = this.contracts.l2.L2CrossDomainMessenger.interface.encodeFunctionData('relay', [spender, toHex(amount.quotient)])
+      const withdrawTransaction = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData("withdraw", [_l2token, _amount, _minGasLimit, ""])
+
+
+      const approveData = this.contracts.l2.L2CrossDomainMessenger.interface.encodeFunctionData('relayMessage', [spender, toHex(amount.quotient)])
+
 
       return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
         0,
