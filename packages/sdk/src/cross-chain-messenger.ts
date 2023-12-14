@@ -1814,75 +1814,75 @@ export class CrossChainMessenger {
         )
       }
     },
-    /**
-     * Generates a message proving transaction that can be signed and executed. Only
-     * applicable for L2 to L1 messages.
-     *
-     * @param message Message to generate the proving transaction for.
-     * @param opts Additional options.
-     * @param opts.overrides Optional transaction overrides.
-     * @returns Transaction that can be signed and executed to prove the message.
-     */
-    forceWithdrawalMNT: async (
-      mintAmount: NumberLike,
-      forceWithdrawalAmount: NumberLike,
-      opts?: {
-        overrides?: PayableOverrides
-      }
-    ): Promise<TransactionRequest> => {
+    // /**
+    //  * Generates a message proving transaction that can be signed and executed. Only
+    //  * applicable for L2 to L1 messages.
+    //  *
+    //  * @param message Message to generate the proving transaction for.
+    //  * @param opts Additional options.
+    //  * @param opts.overrides Optional transaction overrides.
+    //  * @returns Transaction that can be signed and executed to prove the message.
+    //  */
+    // forceWithdrawalMNT: async (
+    //   mintAmount: NumberLike,
+    //   forceWithdrawalAmount: NumberLike,
+    //   opts?: {
+    //     overrides?: PayableOverrides
+    //   }
+    // ): Promise<TransactionRequest> => {
+    //
+    //
+    //   if (!this.bedrock) {
+    //     throw new Error(
+    //       'force withdrawal only applies after the bedrock upgrade'
+    //     )
+    //   }
+    //
+    //
+    //   return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
+    //     0,
+    //     predeploys.L2StandardBridge,
+    //     forceWithdrawalAmount,
+    //     false,
+    //     [])
+    // },
 
-
-      if (!this.bedrock) {
-        throw new Error(
-          'force withdrawal only applies after the bedrock upgrade'
-        )
-      }
-
-
-      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
-        0,
-        predeploys.L2StandardBridge,
-        forceWithdrawalAmount,
-        false,
-        [])
-    },
-
-    /**
-     * Generates a message proving transaction that can be signed and executed. Only
-     * applicable for L2 to L1 messages.
-     *
-     * @param message Message to generate the proving transaction for.
-     * @param opts Additional options.
-     * @param opts.overrides Optional transaction overrides.
-     * @returns Transaction that can be signed and executed to prove the message.
-     */
-    forceWithdrawalERC20: async (
-      l1TokenAddr: AddressLike,
-      l2TokenAddr: AddressLike,
-      forceWithdrawalAmount: NumberLike,
-      opts?: {
-        overrides?: PayableOverrides
-      }
-    ): Promise<TransactionRequest> => {
-      if (!this.bedrock) {
-        throw new Error(
-          'force withdrawal only applies after the bedrock upgrade'
-        )
-      }
-
-      const withdrawTransaction = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData("withdraw", [_l2token, _amount, _minGasLimit, ""])
-
-
-      const approveData = this.contracts.l2.L2CrossDomainMessenger.interface.encodeFunctionData('relayMessage', [spender, toHex(amount.quotient)])
-
-
-      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
-        0,
-        predeploys.L2StandardBridge,
-        forceWithdrawalAmount,
-        false,
-        [])
-    },
+    // /**
+    //  * Generates a message proving transaction that can be signed and executed. Only
+    //  * applicable for L2 to L1 messages.
+    //  *
+    //  * @param message Message to generate the proving transaction for.
+    //  * @param opts Additional options.
+    //  * @param opts.overrides Optional transaction overrides.
+    //  * @returns Transaction that can be signed and executed to prove the message.
+    //  */
+    // forceWithdrawalERC20: async (
+    //   l1TokenAddr: AddressLike,
+    //   l2TokenAddr: AddressLike,
+    //   forceWithdrawalAmount: NumberLike,
+    //   opts?: {
+    //     overrides?: PayableOverrides
+    //   }
+    // ): Promise<TransactionRequest> => {
+    //   if (!this.bedrock) {
+    //     throw new Error(
+    //       'force withdrawal only applies after the bedrock upgrade'
+    //     )
+    //   }
+    //
+    //   const withdrawTransaction = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData("withdraw", [_l2token, _amount, _minGasLimit, ""])
+    //
+    //
+    //   const approveData = this.contracts.l2.L2CrossDomainMessenger.interface.encodeFunctionData('relayMessage', [spender, toHex(amount.quotient)])
+    //
+    //
+    //   return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
+    //     0,
+    //     predeploys.L2StandardBridge,
+    //     forceWithdrawalAmount,
+    //     false,
+    //     [])
+    // },
     /**
      * Generates a message proving transaction that can be signed and executed. Only
      * applicable for L2 to L1 messages.

@@ -966,29 +966,37 @@ func TestFindDepositSingleTx(t *testing.T) {
 	l2Client, err := ethclient.Dial(l2url)
 	require.NoError(t, err)
 
-	bn := big.NewInt(214)
+	bn := big.NewInt(7047)
+	lastestBn, err := l2Client.BlockNumber(context.Background())
 	require.NoError(t, err)
-	t.Log("now block number", bn)
+	t.Log("from block number", bn)
+	t.Log("now block number", lastestBn)
 
-	block, err := l2Client.BlockByNumber(context.Background(), bn)
-	require.NoError(t, err)
-	txs := block.Transactions()
-	for _, tx := range txs {
-		//t.Log("txs hash list : ", tx.Hash())
+	for i := uint64(bn.Uint64()); i < lastestBn; i++ {
+		t.Log(i)
+		block, err := l2Client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
+		require.NoError(t, err)
+
+		txs := block.Transactions()
+		if txs.Len() == 1 {
+			continue
+		}
+		t.Log(block.Hash())
+		tx := txs[1]
 		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
-			//t.Log("block info", block.Hash().Hex())
 			t.Log("block height: ", block.Number().Int64())
 			t.Log("find deposit tx", tx.Hash().Hex())
 			t.Log("ethvalue data = ", tx.ETHValue())
 			t.Log("tx type", tx.Type())
+
 			jsonTx, err := tx.MarshalJSON()
 			require.NoError(t, err)
 
 			t.Logf("transaction info : %v", string(jsonTx))
 			_, _, err = l2Client.TransactionByHash(context.Background(), tx.Hash())
 			require.NoError(t, err)
-
 		}
+
 	}
 
 }
@@ -1028,75 +1036,14 @@ func TestTx(t *testing.T) {
 	l2Client, err := ethclient.Dial(l2url)
 	require.NoError(t, err)
 
-	bn := big.NewInt(214)
+	bn := big.NewInt(78)
 	require.NoError(t, err)
 	t.Log("now block number", bn)
-	tx, _, err := l2Client.TransactionByHash(context.Background(), common.HexToHash("0xf9bef38d02729976f8550c692a09f7270cad6769ec8e256d7058cfdbe662f55e"))
-	t.Log("ethvalue data = ", tx.ETHValue())
-	t.Log(tx.MarshalJSON())
-}
 
-func TestForceWithdrawal(t *testing.T) {
-	l1url := "http://localhost:8545"
-	l1Client, err := ethclient.Dial(l1url)
-	require.NoError(t, err)
-	l1ChainId, err := l1Client.ChainID(context.Background())
-	require.NoError(t, err)
-	pk := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	PrivKey, err := crypto.HexToECDSA(pk)
-	require.NoError(t, err)
-	minGasLimit := uint32(2000000)
+	block, err := l2Client.BlockByHash(context.Background(), common.HexToHash("0xdd9398f632f2f141b19675ff961bc805a40e5e1cb7b0a29bab6fd54ce78ed8c1"))
 
-	l2TokenAddress := common.HexToAddress(predeploys.BVM_ETH)
-	forceWithdrawalAmount := big.NewInt(10000000000000)
-	depositValue := big.NewInt(100)
-	l1auth := buildAuth(t, l1Client, pk, depositValue, l1ChainId)
-	// l1 eth value
-	callerAddress := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	nullExtraData := []byte{}
-
-	L2StandardBridgeABI, err := abi.JSON(strings.NewReader(bindings.L2StandardBridgeMetaData.ABI))
-	require.NoError(t, err)
-	withdrawMessage, err := L2StandardBridgeABI.Pack("withdrawTo", l2TokenAddress, callerAddress, forceWithdrawalAmount, minGasLimit, nullExtraData)
-	t.Log(common.Bytes2Hex(withdrawMessage))
-	require.NoError(t, err)
-
-	zero_mnt_amount := big.NewInt(0)
-
-	l1XDMAddress := common.HexToAddress("0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0")
-
-	l1xmsg, err := bindings.NewL1CrossDomainMessenger(l1XDMAddress, l1Client)
-	require.NoError(t, err)
-
-	tx, err := l1xmsg.SendMessage(l1auth, zero_mnt_amount,
-		common.HexToAddress(predeploys.L2StandardBridge),
-		withdrawMessage, minGasLimit)
-
-	//msg := ethereum.CallMsg{From: l1auth.From, To: &to, GasPrice: l1auth.GasPrice, Value: l1auth.Value, Data: sendMessageData}
-	//gasLimit, err := l1Client.EstimateGas(context.Background(), msg)
-	//require.NoError(t, err)
-
-	//tx := types.NewTx(&types.LegacyTx{
-	//	Nonce:    auth.Nonce.Uint64(),
-	//	GasPrice: auth.GasPrice,
-	//	Gas:      gasLimit,
-	//	To:       &to,
-	//	Value:    auth.Value,
-	//	Data:     sendMessageData,
-	//})
-	t.Log("sendMessageHash  ", tx.Hash().Hex())
-	signer := types.LatestSignerForChainID(l1ChainId)
-	tx, err = types.SignTx(tx, signer, PrivKey)
-	require.NoError(t, err)
-	err = l1Client.SendTransaction(context.Background(), tx)
-	require.NoError(t, err)
-	t.Log(tx.Hash().Hex())
-	time.Sleep(time.Second * 20)
-	receipt, err := l1Client.TransactionReceipt(context.Background(), tx.Hash())
-	require.NoError(t, err)
-	t.Log(tx.Hash().Hex())
-
-	t.Log(receipt.Status)
+	t.Log(block.Hash())
+	t.Log(block.Transactions()[0])
 
 }
 
@@ -1113,7 +1060,8 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 
 	l2TokenAddress := common.HexToAddress(predeploys.BVM_ETH)
 	forceWithdrawalAmount := big.NewInt(10000000000000)
-	depositValue := big.NewInt(100)
+	depositValue := big.NewInt(0)
+
 	l1auth := buildAuth(t, l1Client, pk, depositValue, l1ChainId)
 	l1auth.Value = depositValue
 	// l1 eth value
@@ -1124,22 +1072,34 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 	require.NoError(t, err)
 	withdrawMessage, err := L2StandardBridgeABI.Pack("withdrawTo", l2TokenAddress, callerAddress, forceWithdrawalAmount, minGasLimit, nullExtraData)
 	t.Log(common.Bytes2Hex(withdrawMessage))
+	withdrawMessage = []byte{}
 	require.NoError(t, err)
-
+	l2client, err := ethclient.Dial(l2url)
+	require.NoError(t, err)
 	//zero_mnt_amount := big.NewInt(0)
 
-	OptimismPortalAddr := common.HexToAddress("0x0B306BF915C4d645ff596e518fAf3F9669b97016")
+	OptimismPortalAddr := common.HexToAddress(predeploys.DevOptimismPortal)
 	portal, err := bindings.NewOptimismPortal(OptimismPortalAddr, l1Client)
 
-	tx, err := portal.DepositTransaction(l1auth, big.NewInt(0), callerAddress, big.NewInt(0), uint64(minGasLimit), false,
+	tx, err := portal.DepositTransaction(l1auth, big.NewInt(0), predeploys.L2StandardBridgeAddr, big.NewInt(0), uint64(minGasLimit), false,
 		withdrawMessage)
+	time.Sleep(10 * time.Second)
 	t.Log("DepositTransaction hash on L1", tx.Hash().Hex())
-	time.Sleep(time.Duration(time.Second * 20))
-	receipt, err := l1Client.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := waitForTransaction(tx.Hash(), l1Client, 10*time.Duration(1)*time.Second)
+	t.Log(receipt.Status)
+	t.Log(receipt.Logs[0].MarshalJSON())
 	require.NoError(t, err)
+	reconstructedDep, err := derive.UnmarshalDepositLogEvent(receipt.Logs[0])
+	require.NoError(t, err, "Could not reconstruct L2 Deposit")
+	tx = types.NewTx(reconstructedDep)
+	receipt, err = waitForTransaction(tx.Hash(), l2client, 30*time.Duration(1)*time.Second)
+	require.NoError(t, err)
+	t.Log(receipt.Status)
+	big.NewInt(0).Int64()
+
 	source := derive.UserDepositSource{
 		L1BlockHash: receipt.BlockHash,
-		LogIndex:    uint64(receipt.TransactionIndex),
+		LogIndex:    uint64(receipt.Logs[0].Index),
 	}
 	depositTx := types.DepositTx{
 		SourceHash:          source.SourceHash(),
@@ -1153,7 +1113,13 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 		Data:                withdrawMessage,
 	}
 	l2DepositTx := types.NewTx(&depositTx)
-	t.Log(l2DepositTx.Hash())
+
+	t.Log(depositTx.SourceHash.Hex())
+	t.Log(depositTx.From.Hex())
+	t.Log(depositTx.To.Hex())
+	t.Log(depositTx.Value.Int64())
+	t.Log(depositTx.Gas)
+	t.Log(depositTx.IsSystemTransaction)
 
 	//msg := ethereum.CallMsg{From: l1auth.From, To: &to, GasPrice: l1auth.GasPrice, Value: l1auth.Value, Data: sendMessageData}
 	//gasLimit, err := l1Client.EstimateGas(context.Background(), msg)
@@ -1175,6 +1141,11 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 	//require.NoError(t, err)
 	//t.Log(tx.Hash().Hex())
 	time.Sleep(time.Second * 20)
+
+	receipt2, err := l2client.TransactionReceipt(context.Background(), l2DepositTx.Hash())
+	require.NoError(t, err)
+	t.Log(receipt2.TxHash.Hex())
+
 	require.NoError(t, err)
 	t.Log(tx.Hash().Hex())
 
