@@ -1007,6 +1007,28 @@
     bufio "^1.0.7"
     chai "^4.3.4"
 
+"@ethan-bedrock/core-utils@1.5.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@ethan-bedrock/core-utils/-/core-utils-1.5.0.tgz#8c0a72ff38a0fe58271f599d3a0c32bb8764c693"
+  integrity sha512-C4SFJOHILDgdxAvCbmcyeYv1G/2dIykDovGMfjgUXd9Mx4CIsWmUFKLylpvmMeyDvmEEpP/1uydbDOBWGePsEg==
+  dependencies:
+    "@ethersproject/abi" "^5.7.0"
+    "@ethersproject/abstract-provider" "^5.7.0"
+    "@ethersproject/address" "^5.7.0"
+    "@ethersproject/bignumber" "^5.7.0"
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/constants" "^5.7.0"
+    "@ethersproject/contracts" "^5.7.0"
+    "@ethersproject/hash" "^5.7.0"
+    "@ethersproject/keccak256" "^5.7.0"
+    "@ethersproject/properties" "^5.7.0"
+    "@ethersproject/providers" "^5.7.0"
+    "@ethersproject/rlp" "^5.7.0"
+    "@ethersproject/transactions" "^5.7.0"
+    "@ethersproject/web" "^5.7.0"
+    bufio "^1.0.7"
+    chai "^4.3.4"
+
 "@ethan-bedrock/hardhat-deploy-config@0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@ethan-bedrock/hardhat-deploy-config/-/hardhat-deploy-config-0.2.0.tgz#9470f4a05b9e2978900b75aea43b6a209cd76415"
