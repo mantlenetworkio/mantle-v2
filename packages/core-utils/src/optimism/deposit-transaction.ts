@@ -154,9 +154,9 @@ export class DepositTx {
       formatNumber(this.value || 0, 'value'),
       formatNumber(this.gas || 0, 'gas'),
       formatBoolean(this.isSystemTransaction),
+      formatNumber(this.ethValue || 0,'ethValue'),
       this.data || '0x',
     ]
-
     return hexConcat([
       BigNumber.from(this.type).toHexString(),
       RLP.encode(fields),

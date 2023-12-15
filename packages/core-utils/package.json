@@ -1,6 +1,6 @@
 {
   "name": "@ethan-bedrock/core-utils",
-  "version": "1.5.0",
+  "version": "1.10.0",
   "description": "[Mantle] Core typescript utilities",
   "main": "dist/index",
   "types": "dist/index",
