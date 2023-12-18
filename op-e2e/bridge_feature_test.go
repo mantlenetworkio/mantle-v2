@@ -966,7 +966,7 @@ func TestFindDepositSingleTx(t *testing.T) {
 	l2Client, err := ethclient.Dial(l2url)
 	require.NoError(t, err)
 
-	bn := big.NewInt(7047)
+	bn := big.NewInt(39989)
 	lastestBn, err := l2Client.BlockNumber(context.Background())
 	require.NoError(t, err)
 	t.Log("from block number", bn)
@@ -981,12 +981,16 @@ func TestFindDepositSingleTx(t *testing.T) {
 		if txs.Len() == 1 {
 			continue
 		}
+
 		t.Log(block.Hash())
+		t.Log("txhash :", block.Transactions()[1].Hash().Hex())
 		tx := txs[1]
-		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x4200000000000000000000000000000000000007" {
+		t.Log(tx.Hash())
+		if tx.IsDepositTx() == true && tx.IsSystemTx() == false && tx.To().Hex() == "0x42000000000000000000000000000000000000010" {
 			t.Log("block height: ", block.Number().Int64())
 			t.Log("find deposit tx", tx.Hash().Hex())
 			t.Log("ethvalue data = ", tx.ETHValue())
+			//l2DepositTx := types.NewTx(tx.inner)
 			t.Log("tx type", tx.Type())
 
 			jsonTx, err := tx.MarshalJSON()
@@ -1081,25 +1085,33 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 	OptimismPortalAddr := common.HexToAddress(predeploys.DevOptimismPortal)
 	portal, err := bindings.NewOptimismPortal(OptimismPortalAddr, l1Client)
 
-	tx, err := portal.DepositTransaction(l1auth, big.NewInt(0), predeploys.L2StandardBridgeAddr, big.NewInt(0), uint64(minGasLimit), false,
+	portalTx, err := portal.DepositTransaction(l1auth, big.NewInt(0), predeploys.L2StandardBridgeAddr, big.NewInt(0), uint64(minGasLimit), false,
 		withdrawMessage)
 	time.Sleep(10 * time.Second)
-	t.Log("DepositTransaction hash on L1", tx.Hash().Hex())
-	receipt, err := waitForTransaction(tx.Hash(), l1Client, 10*time.Duration(1)*time.Second)
-	t.Log(receipt.Status)
-	t.Log(receipt.Logs[0].MarshalJSON())
+	t.Log("DepositTransaction hash on L1", portalTx.Hash().Hex())
+	portalReceipt, err := l1Client.TransactionReceipt(context.Background(), portalTx.Hash())
 	require.NoError(t, err)
-	reconstructedDep, err := derive.UnmarshalDepositLogEvent(receipt.Logs[0])
+
+	portalReceipt, err = waitForTransaction(portalTx.Hash(), l1Client, 10*time.Duration(1)*time.Second)
+
+	require.NoError(t, err)
+	reconstructedDep, err := derive.UnmarshalDepositLogEvent(portalReceipt.Logs[0])
+	t.Log("SourceHash:", reconstructedDep.SourceHash.Hex())
+	t.Log("From:", reconstructedDep.From.Hex())
+	t.Log("To:", reconstructedDep.To.Hex())
+	t.Log("Value:", reconstructedDep.Value.Int64())
+	t.Log("Gas:", reconstructedDep.Gas)
+	t.Log("IsSystemTransaction:", reconstructedDep.IsSystemTransaction)
 	require.NoError(t, err, "Could not reconstruct L2 Deposit")
-	tx = types.NewTx(reconstructedDep)
-	receipt, err = waitForTransaction(tx.Hash(), l2client, 30*time.Duration(1)*time.Second)
+	reconstructedDepTx := types.NewTx(reconstructedDep)
+
+	reconstructedReceipt, err := waitForTransaction(reconstructedDepTx.Hash(), l2client, 30*time.Duration(1)*time.Second)
+	t.Log(reconstructedReceipt.BlockHash.Hex())
 	require.NoError(t, err)
-	t.Log(receipt.Status)
-	big.NewInt(0).Int64()
 
 	source := derive.UserDepositSource{
-		L1BlockHash: receipt.BlockHash,
-		LogIndex:    uint64(receipt.Logs[0].Index),
+		L1BlockHash: portalReceipt.Logs[0].BlockHash,
+		LogIndex:    uint64(portalReceipt.Logs[0].Index),
 	}
 	depositTx := types.DepositTx{
 		SourceHash:          source.SourceHash(),
@@ -1114,32 +1126,15 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 	}
 	l2DepositTx := types.NewTx(&depositTx)
 
-	t.Log(depositTx.SourceHash.Hex())
-	t.Log(depositTx.From.Hex())
-	t.Log(depositTx.To.Hex())
-	t.Log(depositTx.Value.Int64())
-	t.Log(depositTx.Gas)
-	t.Log(depositTx.IsSystemTransaction)
+	t.Log("SourceHash:", depositTx.SourceHash.Hex())
+	t.Log("From:", depositTx.From.Hex())
+	t.Log("To:", depositTx.To.Hex())
+	t.Log("Value:", depositTx.Value.Int64())
+	t.Log("Gas:", depositTx.Gas)
+	t.Log("IsSystemTransaction:", depositTx.IsSystemTransaction)
 
-	//msg := ethereum.CallMsg{From: l1auth.From, To: &to, GasPrice: l1auth.GasPrice, Value: l1auth.Value, Data: sendMessageData}
-	//gasLimit, err := l1Client.EstimateGas(context.Background(), msg)
-	//require.NoError(t, err)
-
-	//tx := types.NewTx(&types.LegacyTx{
-	//	Nonce:    auth.Nonce.Uint64(),
-	//	GasPrice: auth.GasPrice,
-	//	Gas:      gasLimit,
-	//	To:       &to,
-	//	Value:    auth.Value,
-	//	Data:     sendMessageData,
-	//})
 	t.Log("DepositTransaction on L2 hash  ", l2DepositTx.Hash().Hex())
-	//signer := types.LatestSignerForChainID(l1ChainId)
-	//tx, err = types.SignTx(tx, signer, PrivKey)
-	//require.NoError(t, err)
-	//err = l1Client.SendTransaction(context.Background(), tx)
-	//require.NoError(t, err)
-	//t.Log(tx.Hash().Hex())
+
 	time.Sleep(time.Second * 20)
 
 	receipt2, err := l2client.TransactionReceipt(context.Background(), l2DepositTx.Hash())
@@ -1147,8 +1142,32 @@ func TestForceWithdrawalFromPortal(t *testing.T) {
 	t.Log(receipt2.TxHash.Hex())
 
 	require.NoError(t, err)
-	t.Log(tx.Hash().Hex())
 
-	t.Log(receipt.Status)
+}
+
+func TestDepositTxHash(t *testing.T) {
+	callerAddress := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+
+	source := derive.UserDepositSource{
+		L1BlockHash: common.HexToHash("0xa4b6ca1f786ce47e8ba95dd7ce5accdaa8ec00dbf03d618c78bbc5d9997c95e8"),
+		LogIndex:    0,
+	}
+	depositTx := types.DepositTx{
+		SourceHash:          source.SourceHash(),
+		From:                callerAddress,
+		To:                  &predeploys.L2StandardBridgeAddr,
+		Mint:                big.NewInt(0),
+		Value:               big.NewInt(0),
+		Gas:                 0,
+		IsSystemTransaction: false,
+		EthValue:            big.NewInt(0),
+		Data:                []byte{},
+	}
+	l2DepositTx := types.NewTx(&depositTx)
+	t.Log(l2DepositTx.Hash().Hex())
+	bytes, err := l2DepositTx.MarshalJSON()
+	require.NoError(t, err)
+
+	t.Log(string(bytes))
 
 }
