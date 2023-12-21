@@ -1824,6 +1824,34 @@ export class CrossChainMessenger {
         )
       }
     },
+
+    /**
+     * Generates a message proving transaction that can be signed and executed. Only
+     * applicable for L2 to L1 messages.
+     *
+     * @param forceWithdrawalAmount Message to generate the proving transaction for.
+     * @param opts Additional options.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to prove the message.
+     */
+    forceWithdrawalETH: async (
+      forceWithdrawalAmount: NumberLike,
+      opts?: {
+        overrides?: PayableOverrides
+      }
+    ): Promise<TransactionRequest> => {
+      if (!this.bedrock) {
+        throw new Error(
+          'force withdrawal only applies after the bedrock upgrade'
+        )
+      }
+      return this.populateTransaction.forceWithdrawal(
+        predeploys.BVM_ETH,
+        forceWithdrawalAmount,
+        opts
+      )
+    },
+
     /**
      * Generates a message proving transaction that can be signed and executed. Only
      * applicable for L2 to L1 messages.
@@ -1844,27 +1872,10 @@ export class CrossChainMessenger {
           'force withdrawal only applies after the bedrock upgrade'
         )
       }
-
-      const withdrawFuncData =
-        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
-          'withdraw',
-          [
-            '0x0000000000000000000000000000000000000000',
-            forceWithdrawalAmount,
-            1e6,
-            [],
-          ]
-        )
-
-      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
-        [
-          0,
-          this.contracts.l2.L2StandardBridge.address,
-          0,
-          1e6,
-          false,
-          withdrawFuncData,
-        ]
+      return this.populateTransaction.forceWithdrawal(
+        ethers.constants.AddressZero,
+        forceWithdrawalAmount,
+        opts
       )
     },
 
@@ -1885,27 +1896,10 @@ export class CrossChainMessenger {
         overrides?: PayableOverrides
       }
     ): Promise<TransactionRequest> => {
-      if (!this.bedrock) {
-        throw new Error(
-          'force withdrawal only applies after the bedrock upgrade'
-        )
-      }
-
-      const withdrawFuncData =
-        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
-          'withdraw',
-          [l2TokenAddr, forceWithdrawalAmount, 1e6, []]
-        )
-
-      return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
-        [
-          0,
-          this.contracts.l2.L2StandardBridge.address,
-          0,
-          1e6,
-          false,
-          withdrawFuncData,
-        ]
+      return this.populateTransaction.forceWithdrawal(
+        l2TokenAddr,
+        forceWithdrawalAmount,
+        opts
       )
     },
 
@@ -1919,10 +1913,12 @@ export class CrossChainMessenger {
      * @param opts.overrides Optional transaction overrides.
      * @returns Transaction that can be signed and executed to prove the message.
      */
-    forceWithdrawalETH: async (
+    forceWithdrawal: async (
+      l2TokenAddr: AddressLike,
       forceWithdrawalAmount: NumberLike,
       opts?: {
         overrides?: PayableOverrides
+        to?: AddressLike
       }
     ): Promise<TransactionRequest> => {
       if (!this.bedrock) {
@@ -1930,12 +1926,20 @@ export class CrossChainMessenger {
           'force withdrawal only applies after the bedrock upgrade'
         )
       }
-
-      const withdrawFuncData =
-        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
-          'withdraw',
-          [predeploys.BVM_ETH, forceWithdrawalAmount, 1e6, []]
-        )
+      let withdrawFuncData = {}
+      if (opts?.to !== null) {
+        withdrawFuncData =
+          this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
+            'withdrawTo',
+            [l2TokenAddr, opts?.to, forceWithdrawalAmount, 1e6, []]
+          )
+      } else {
+        withdrawFuncData =
+          this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
+            'withdraw',
+            [l2TokenAddr, forceWithdrawalAmount, 1e6, []]
+          )
+      }
 
       return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
         [
