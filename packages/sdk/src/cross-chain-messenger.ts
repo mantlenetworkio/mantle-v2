@@ -6,7 +6,7 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from '@ethersproject/abstract-provider'
-import {Signer} from '@ethersproject/abstract-signer'
+import { Signer } from '@ethersproject/abstract-signer'
 import {
   BigNumber,
   CallOverrides,
@@ -345,7 +345,7 @@ export class CrossChainMessenger {
     const resolved = await this.toCrossChainMessage(message)
 
     // Bedrock messages are already in the correct format.
-    const {version} = decodeVersionedNonce(resolved.messageNonce)
+    const { version } = decodeVersionedNonce(resolved.messageNonce)
     if (version.eq(1)) {
       return resolved
     }
@@ -398,7 +398,7 @@ export class CrossChainMessenger {
     }
 
     // We may have to update the message if it's a legacy message.
-    const {version} = decodeVersionedNonce(resolved.messageNonce)
+    const { version } = decodeVersionedNonce(resolved.messageNonce)
     let updated: CrossChainMessage
     if (version.eq(0)) {
       updated = await this.toBedrockCrossChainMessage(resolved)
@@ -780,8 +780,8 @@ export class CrossChainMessenger {
       return {
         receiptStatus: MessageReceiptStatus.RELAYED_FAILED,
         transactionReceipt: await failedRelayedMessageEvents[
-        failedRelayedMessageEvents.length - 1
-          ].getTransactionReceipt(),
+          failedRelayedMessageEvents.length - 1
+        ].getTransactionReceipt(),
       }
     }
 
@@ -1042,12 +1042,12 @@ export class CrossChainMessenger {
       oracleVersion === '1.0.0'
         ? // The ABI in the SDK does not contain FINALIZATION_PERIOD_SECONDS
           // in OptimismPortal, so making an explicit call instead.
-        BigNumber.from(
-          await this.contracts.l1.OptimismPortal.provider.call({
-            to: this.contracts.l1.OptimismPortal.address,
-            data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
-          })
-        )
+          BigNumber.from(
+            await this.contracts.l1.OptimismPortal.provider.call({
+              to: this.contracts.l1.OptimismPortal.address,
+              data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
+            })
+          )
         : await this.contracts.l1.L2OutputOracle.FINALIZATION_PERIOD_SECONDS()
     return challengePeriod.toNumber()
   }
@@ -1845,13 +1845,16 @@ export class CrossChainMessenger {
         )
       }
 
-      const withdrawFuncData = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData('withdraw', [
-        "0x0000000000000000000000000000000000000000",
-        forceWithdrawalAmount,
-        1e6,
-        []
-      ])
-
+      const withdrawFuncData =
+        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
+          'withdraw',
+          [
+            '0x0000000000000000000000000000000000000000',
+            forceWithdrawalAmount,
+            1e6,
+            [],
+          ]
+        )
 
       return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
         [
@@ -1860,7 +1863,7 @@ export class CrossChainMessenger {
           0,
           1e6,
           false,
-          withdrawFuncData
+          withdrawFuncData,
         ]
       )
     },
@@ -1888,13 +1891,11 @@ export class CrossChainMessenger {
         )
       }
 
-      const withdrawFuncData = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData('withdraw', [
-        l2TokenAddr,
-        forceWithdrawalAmount,
-        1e6,
-        []
-      ])
-
+      const withdrawFuncData =
+        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
+          'withdraw',
+          [l2TokenAddr, forceWithdrawalAmount, 1e6, []]
+        )
 
       return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
         [
@@ -1903,7 +1904,7 @@ export class CrossChainMessenger {
           0,
           1e6,
           false,
-          withdrawFuncData
+          withdrawFuncData,
         ]
       )
     },
@@ -1930,13 +1931,11 @@ export class CrossChainMessenger {
         )
       }
 
-      const withdrawFuncData = this.contracts.l2.L2StandardBridge.interface.encodeFunctionData('withdraw', [
-        predeploys.BVM_ETH,
-        forceWithdrawalAmount,
-        1e6,
-        []
-      ])
-
+      const withdrawFuncData =
+        this.contracts.l2.L2StandardBridge.interface.encodeFunctionData(
+          'withdraw',
+          [predeploys.BVM_ETH, forceWithdrawalAmount, 1e6, []]
+        )
 
       return this.contracts.l1.OptimismPortal.populateTransaction.depositTransaction(
         [
@@ -1945,7 +1944,7 @@ export class CrossChainMessenger {
           0,
           1e6,
           false,
-          withdrawFuncData
+          withdrawFuncData,
         ]
       )
     },

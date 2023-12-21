@@ -154,6 +154,7 @@ export class DepositTx {
       formatNumber(this.value || 0, 'value'),
       formatNumber(this.gas || 0, 'gas'),
       formatBoolean(this.isSystemTransaction),
+      formatNumber(this.ethValue || 0, 'ethValue'),
       this.data || '0x',
     ]
 
@@ -248,7 +249,9 @@ export class DepositTx {
     offset += 32
     this.value = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 32))
     offset += 32
-    this.ethValue = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 32))
+    this.ethValue = BigNumber.from(
+      hexDataSlice(opaqueData, offset, offset + 32)
+    )
     offset += 32
     this.gas = BigNumber.from(hexDataSlice(opaqueData, offset, offset + 8))
     offset += 8
