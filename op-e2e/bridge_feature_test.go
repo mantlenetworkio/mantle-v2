@@ -32,7 +32,7 @@ const (
 	//l1ChainId = 900
 	//L2ChainId = 31337
 
-	l1ChainId = 900
+	l1ChainId = 31337
 	L2ChainId = 901
 
 	l2EthAddress    = predeploys.BVM_ETH
@@ -42,8 +42,8 @@ const (
 	l1MntAddress    = "0x6900000000000000000000000000000000000020"
 	l2MntAddress    = "0x0000000000000000000000000000000000000000"
 
-	userPrivateKey = "ddf04c9058d6fac4fea241820f2fbc3b36868d33b80894ba5ff9a9baf8793e10"
-	userAddress    = "0xeE3e7d56188ae7af8d5bab980908E3e91c0d7384"
+	userPrivateKey = "f7fc132be59acb1921c90841115bef6e21ffdeeb89d06305a04e8f344ad67d6d"
+	userAddress    = "0x25B903C548436f3B563a5F6396071Df82DF560b5"
 
 	//userPrivateKey = "b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291"
 	//userAddress    = "0x71562b71999873DB5b286dF957af199Ec94617F7"
@@ -785,7 +785,6 @@ func transferL2MNT(t *testing.T, client *ethclient.Client, address common.Addres
 	value := big.NewInt(amount) // in wei (1 eth)
 	gasLimit := uint64(9000000) // in units
 	gasPrice, err := client.SuggestGasPrice(context.Background())
-
 	require.NoError(t, err)
 
 	var data []byte
