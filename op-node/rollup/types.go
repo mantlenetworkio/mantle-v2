@@ -27,6 +27,7 @@ var (
 	ErrMissingOverhead               = errors.New("missing genesis system config overhead")
 	ErrMissingScalar                 = errors.New("missing genesis system config scalar")
 	ErrMissingGasLimit               = errors.New("missing genesis system config gas limit")
+	ErrMissingBaseFee                = errors.New("missing genesis system config base fee")
 	ErrMissingBatchInboxAddress      = errors.New("missing batch inbox address")
 	ErrMissingDepositContractAddress = errors.New("missing deposit contract address")
 	ErrMissingL1ChainID              = errors.New("L1 chain ID must not be nil")
@@ -227,6 +228,9 @@ func (cfg *Config) Check() error {
 	}
 	if cfg.Genesis.SystemConfig.GasLimit == 0 {
 		return ErrMissingGasLimit
+	}
+	if cfg.Genesis.SystemConfig.BaseFee == nil {
+		return ErrMissingBaseFee
 	}
 	if cfg.BatchInboxAddress == (common.Address{}) {
 		return ErrMissingBatchInboxAddress
