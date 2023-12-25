@@ -27,7 +27,8 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         BATCHER,
         GAS_CONFIG,
         GAS_LIMIT,
-        UNSAFE_BLOCK_SIGNER
+        UNSAFE_BLOCK_SIGNER,
+        BASE_FEE
     }
 
     /**
@@ -71,6 +72,11 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     ResourceMetering.ResourceConfig internal _resourceConfig;
 
     /**
+     * @notice L2 block base fee.
+     */
+    uint256 public baseFee;
+
+    /**
      * @notice Emitted when configuration is updated
      *
      * @param version    SystemConfig version.
@@ -96,6 +102,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         uint256 _scalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
+        uint256 _baseFee,
         address _unsafeBlockSigner,
         ResourceMetering.ResourceConfig memory _config
     ) Semver(1, 3, 0) {
@@ -105,6 +112,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
             _scalar: _scalar,
             _batcherHash: _batcherHash,
             _gasLimit: _gasLimit,
+            _baseFee: _baseFee,
             _unsafeBlockSigner: _unsafeBlockSigner,
             _config: _config
         });
@@ -128,6 +136,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         uint256 _scalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
+        uint256 _baseFee,
         address _unsafeBlockSigner,
         ResourceMetering.ResourceConfig memory _config
     ) public initializer {
@@ -137,6 +146,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         scalar = _scalar;
         batcherHash = _batcherHash;
         gasLimit = _gasLimit;
+        baseFee = _baseFee;
         _setUnsafeBlockSigner(_unsafeBlockSigner);
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
@@ -221,6 +231,18 @@ contract SystemConfig is OwnableUpgradeable, Semver {
 
         bytes memory data = abi.encode(_gasLimit);
         emit ConfigUpdate(VERSION, UpdateType.GAS_LIMIT, data);
+    }
+
+    /**
+     * @notice Updates the L2 base fee.
+     *
+     * @param _baseFee New base fee.
+     */
+    function setBaseFee(uint256 _baseFee) external onlyOwner {
+        baseFee = _baseFee;
+
+        bytes memory data = abi.encode(_baseFee);
+        emit ConfigUpdate(VERSION, UpdateType.BASE_FEE, data);
     }
 
     /**

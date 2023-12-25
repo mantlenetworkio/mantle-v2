@@ -24,6 +24,7 @@ const deployFn: DeployFunction = async (hre) => {
       hre.deployConfig.gasPriceOracleScalar,
       batcherHash,
       hre.deployConfig.l2GenesisBlockGasLimit,
+      hre.deployConfig.l2GenesisBlockBaseFee,
       hre.deployConfig.p2pSequencerAddress,
       {
         maxResourceLimit: 20_000_000,

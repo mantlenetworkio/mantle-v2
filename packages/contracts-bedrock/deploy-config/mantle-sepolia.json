@@ -16,6 +16,7 @@
   "l2OutputOracleProposer": "0x9361fb131a1c3928bb22c316257eea7608b26177",
   "l2OutputOracleChallenger": "0x428e2d9c04b2c09d5480c82cffbddb0c73278d50",
   "l2GenesisBlockGasLimit": "0x4000000000000",
+  "l2GenesisBlockBaseFee": "0x3B9ACA00",
   "l1BlockTime": 12,
   "cliqueSignerAddress": "0x0000000000000000000000000000000000000000",
   "baseFeeVaultRecipient": "0xa194ceaacf8064aa7a6ce014eb0bb466108ce425",
