@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 
@@ -19,8 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/ethereum/go-ethereum/log"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -72,13 +69,8 @@ func main() {
 				Required: true,
 			},
 			cli.StringFlag{
-				Name:     "network",
-				Usage:    "Name of hardhat deploy network",
-				Required: true,
-			},
-			cli.StringFlag{
-				Name:     "hardhat-deployments",
-				Usage:    "Comma separated list of hardhat deployment directories",
+				Name:     "l1-system-contracts",
+				Usage:    "Path to l1-system-contracts json file",
 				Required: true,
 			},
 			cli.IntFlag{
@@ -133,9 +125,7 @@ func main() {
 				EvmMessages:   evmMessages,
 			}
 
-			network := ctx.String("network")
-			deployments := strings.Split(ctx.String("hardhat-deployments"), ",")
-			hh, err := hardhat.New(network, []string{}, deployments)
+			l1SystemContracts, err := crossdomain.NewL1SystemContracts(ctx.String("l1-system-contracts"))
 			if err != nil {
 				return err
 			}
@@ -163,7 +153,7 @@ func main() {
 			dbHandles := ctx.Int("db-handles")
 
 			// Read the required deployment addresses from disk if required
-			if err := config.GetDeployedAddresses(hh); err != nil {
+			if err := config.GetDeployedAddresses(nil, l1SystemContracts); err != nil {
 				return err
 			}
 
@@ -192,6 +182,10 @@ func main() {
 					BatcherAddr:   config.BatchSenderAddress,
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
 					L1FeeScalar:   eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleScalar))),
+				},
+				&genesis.GasPriceOracleConfig{
+					TokenRatio:          big.NewInt(int64(config.GasPriceOracleTokenRatio)),
+					GasPriceOracleOwner: config.GasPriceOracleOwner,
 				},
 			); err != nil {
 				return err

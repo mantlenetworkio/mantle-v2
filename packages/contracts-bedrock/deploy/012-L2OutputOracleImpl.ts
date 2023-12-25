@@ -2,7 +2,8 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 import '@mantleio/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
-import { assertContractVariable, deploy } from '../src/deploy-utils'
+import {assertContractVariable, deploy, deploySleepTime} from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   if (hre.deployConfig.l2BlockTime === 0) {
@@ -18,6 +19,7 @@ const deployFn: DeployFunction = async (hre) => {
     )
   }
 
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'L2OutputOracle',

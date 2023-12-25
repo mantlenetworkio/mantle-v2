@@ -8,8 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/urfave/cli"
+
+	gethrpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"

@@ -2,13 +2,15 @@ package derive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type Metrics interface {
@@ -16,6 +18,7 @@ type Metrics interface {
 	RecordL2Ref(name string, ref eth.L2BlockRef)
 	RecordUnsafePayloadsBuffer(length uint64, memSize uint64, next eth.BlockID)
 	RecordChannelInputBytes(inputCompresedBytes int)
+	RecordParseDataStoreId(dataStoreId uint32)
 }
 
 type L1Fetcher interface {
@@ -24,6 +27,10 @@ type L1Fetcher interface {
 	L1BlockRefByHashFetcher
 	L1ReceiptsFetcher
 	L1TransactionFetcher
+}
+
+type DaSyncer interface {
+	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
 }
 
 // ResettableEngineControl wraps EngineControl with reset-functionality,
@@ -46,6 +53,7 @@ type EngineQueueStage interface {
 	Finalized() eth.L2BlockRef
 	UnsafeL2Head() eth.L2BlockRef
 	SafeL2Head() eth.L2BlockRef
+	EngineSyncTarget() eth.L2BlockRef
 	Origin() eth.L1BlockRef
 	SystemConfig() eth.SystemConfig
 	SetUnsafeHead(head eth.L2BlockRef)
@@ -75,11 +83,11 @@ type DerivationPipeline struct {
 }
 
 // NewDerivationPipeline creates a derivation pipeline, which should be reset before use.
-func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine, metrics Metrics) *DerivationPipeline {
+func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, engine Engine, daSyncer DaSyncer, metrics Metrics, syncCfg *sync.Config) *DerivationPipeline {
 
 	// Pull stages
 	l1Traversal := NewL1Traversal(log, cfg, l1Fetcher)
-	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher) // auxiliary stage for L1Retrieval
+	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, daSyncer, metrics) // auxiliary stage for L1Retrieval
 	l1Src := NewL1Retrieval(log, dataSrc, l1Traversal)
 	frameQueue := NewFrameQueue(log, l1Src)
 	bank := NewChannelBank(log, cfg, frameQueue, l1Fetcher)
@@ -89,7 +97,7 @@ func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetch
 	attributesQueue := NewAttributesQueue(log, cfg, attrBuilder, batchQueue)
 
 	// Step stages
-	eng := NewEngineQueue(log, cfg, engine, metrics, attributesQueue, l1Fetcher)
+	eng := NewEngineQueue(log, cfg, engine, metrics, attributesQueue, l1Fetcher, syncCfg)
 
 	// Reset from engine queue then up from L1 Traversal. The stages do not talk to each other during
 	// the reset, but after the engine queue, this is the order in which the stages could talk to each other.
@@ -147,6 +155,10 @@ func (dp *DerivationPipeline) UnsafeL2Head() eth.L2BlockRef {
 	return dp.eng.UnsafeL2Head()
 }
 
+func (dp *DerivationPipeline) EngineSyncTarget() eth.L2BlockRef {
+	return dp.eng.EngineSyncTarget()
+}
+
 func (dp *DerivationPipeline) StartPayload(ctx context.Context, parent eth.L2BlockRef, attrs *eth.PayloadAttributes, updateSafe bool) (errType BlockInsertionErrType, err error) {
 	return dp.eng.StartPayload(ctx, parent, attrs, updateSafe)
 }
@@ -199,6 +211,8 @@ func (dp *DerivationPipeline) Step(ctx context.Context) error {
 	if err := dp.eng.Step(ctx); err == io.EOF {
 		// If every stage has returned io.EOF, try to advance the L1 Origin
 		return dp.traversal.AdvanceL1Block(ctx)
+	} else if errors.Is(err, EngineP2PSyncing) {
+		return err
 	} else if err != nil {
 		return fmt.Errorf("engine stage failed: %w", err)
 	} else {

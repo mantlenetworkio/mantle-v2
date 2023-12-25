@@ -199,7 +199,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) external payable onlyEOA {
+    ) external onlyEOA {
         _initiateMNTDeposit(msg.sender, msg.sender, _amount, _minGasLimit, _extraData);
     }
 
@@ -566,16 +566,16 @@ contract L1StandardBridge is StandardBridge, Semver {
     /**
      * @notice Sends MNT to the sender's address on the other chain.
      *
-     * @param _amount      Amount of the MNT.
      * @param _to          Address of the receiver.
+     * @param _amount      Amount of the MNT.
      * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
      * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
     function bridgeMNTTo(
-        uint256 _amount,
         address _to,
+        uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) public payable {
@@ -732,6 +732,9 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint256 _amount,
         bytes calldata _extraData
     ) public payable override onlyOtherBridge {
+        require(_to != address(this), "StandardBridge: cannot send to self");
+        require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
+
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(address(MESSENGER), _to, _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
@@ -858,6 +861,7 @@ contract L1StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
+        require(msg.value==0, "L1StandardBridge: deposit MNT should not include ETH value.");
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(_from, address(this), _amount);
         bool success = IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
         require(success, "L1StandardBridge: approve for L1 MNT failed.");

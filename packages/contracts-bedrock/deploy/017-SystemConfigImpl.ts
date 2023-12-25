@@ -4,7 +4,8 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 import '@mantleio/hardhat-deploy-config'
 import { ethers } from 'ethers'
 
-import { assertContractVariable, deploy } from '../src/deploy-utils'
+import {assertContractVariable, deploy, deploySleepTime} from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const uint128Max = ethers.BigNumber.from('0xffffffffffffffffffffffffffffffff')
 
@@ -13,6 +14,7 @@ const deployFn: DeployFunction = async (hre) => {
     .hexZeroPad(hre.deployConfig.batchSenderAddress, 32)
     .toLowerCase()
 
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'SystemConfig',

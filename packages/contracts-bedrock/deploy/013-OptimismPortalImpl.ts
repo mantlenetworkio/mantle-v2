@@ -3,9 +3,10 @@ import '@mantleio/hardhat-deploy-config'
 
 import {
   assertContractVariable,
-  deploy,
+  deploy, deploySleepTime,
   getContractFromArtifact,
 } from '../src/deploy-utils'
+import {sleep} from "@eth-optimism/core-utils";
 
 const deployFn: DeployFunction = async (hre) => {
   const { deployer } = await hre.getNamedAccounts()
@@ -20,6 +21,11 @@ const deployFn: DeployFunction = async (hre) => {
   const Artifact__SystemConfigProxy = await hre.deployments.get(
     'SystemConfigProxy'
   )
+
+  const l1MantleToken = hre.deployConfig.l1MantleToken
+  if (l1MantleToken.toString() === "0x0000000000000000000000000000000000000000") {
+    throw new Error(`missing l1 mantle token address in deploy config`)
+  }
 
   const portalGuardian = hre.deployConfig.portalGuardian
   const portalGuardianCode = await hre.ethers.provider.getCode(portalGuardian)
@@ -38,6 +44,7 @@ const deployFn: DeployFunction = async (hre) => {
   // ensure that users do not interact with it and instead
   // interact with the proxied contract.
   // The `portalGuardian` is set at the GUARDIAN.
+  await sleep(deploySleepTime)
   await deploy({
     hre,
     name: 'OptimismPortal',
@@ -46,6 +53,7 @@ const deployFn: DeployFunction = async (hre) => {
       portalGuardian,
       true, // paused
       Artifact__SystemConfigProxy.address,
+      l1MantleToken
     ],
     postDeployAction: async (contract) => {
       await assertContractVariable(
@@ -62,6 +70,11 @@ const deployFn: DeployFunction = async (hre) => {
         contract,
         'SYSTEM_CONFIG',
         Artifact__SystemConfigProxy.address
+      )
+      await assertContractVariable(
+        contract,
+        'L1_MNT_ADDRESS',
+        l1MantleToken
       )
     },
   })

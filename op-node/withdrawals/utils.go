@@ -46,14 +46,20 @@ func WaitForFinalizationPeriod(ctx context.Context, client *ethclient.Client, po
 	if err != nil {
 		return 0, err
 	}
+
+	startingBlockNumber, err := l2OO.StartingBlockNumber(opts)
+	if err != nil {
+		return 0, err
+	}
 	// Convert blockNumber to submission interval boundary
 	rem := new(big.Int)
+	l2BlockNumber = l2BlockNumber.Sub(l2BlockNumber, startingBlockNumber)
 	l2BlockNumber, rem = l2BlockNumber.DivMod(l2BlockNumber, submissionInterval, rem)
 	if rem.Cmp(common.Big0) != 0 {
 		l2BlockNumber = l2BlockNumber.Add(l2BlockNumber, common.Big1)
 	}
 	l2BlockNumber = l2BlockNumber.Mul(l2BlockNumber, submissionInterval)
-
+	l2BlockNumber = l2BlockNumber.Add(l2BlockNumber, startingBlockNumber)
 	finalizationPeriod, err := l2OO.FINALIZATIONPERIODSECONDS(opts)
 	if err != nil {
 		return 0, err

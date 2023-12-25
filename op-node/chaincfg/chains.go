@@ -3,11 +3,13 @@ package chaincfg
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 )
 
 var Mainnet = rollup.Config{
@@ -68,6 +70,13 @@ var Goerli = rollup.Config{
 	DepositContractAddress: common.HexToAddress("0x5b47E1A08Ea6d985D6649300584e6722Ec4B1383"),
 	L1SystemConfigAddress:  common.HexToAddress("0xAe851f927Ee40dE99aaBb7461C00f9622ab91d60"),
 	RegolithTime:           u64Ptr(1679079600),
+}
+
+var MockDataStoreConfig = datastore.MantleDataStoreConfig{
+	RetrieverSocket:          "",
+	RetrieverTimeout:         time.Duration(60000000000),
+	GraphProvider:            "",
+	DataStorePollingDuration: time.Duration(1000000000),
 }
 
 var NetworksByName = map[string]rollup.Config{

@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
@@ -125,4 +126,21 @@ func TestDataFromEVMTransactions(t *testing.T) {
 		require.ElementsMatch(t, expectedData, out)
 	}
 
+}
+
+func TestRLPEncodeDecodeEthData(t *testing.T) {
+	var dataS = make([]eth.Data, 0)
+	dataS = append(dataS,
+		eth.Data(common.Hex2Bytes("test1")),
+		eth.Data(common.Hex2Bytes("test2")),
+		eth.Data(common.Hex2Bytes("test3")),
+	)
+	// encode
+	bz, err := rlp.EncodeToBytes(dataS)
+	require.NoError(t, err)
+
+	// decode
+	var dataL = make([]eth.Data, 0)
+	err = rlp.DecodeBytes(bz, &dataL)
+	require.NoError(t, err)
 }

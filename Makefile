@@ -5,7 +5,7 @@ BEDROCK_TAGS_REMOTE?=origin
 build: build-go build-ts
 .PHONY: build
 
-build-go: submodules op-node op-proposer op-batcher
+build-go: submodules op-node op-proposer op-batcher gas-oracle
 .PHONY: build-go
 
 build-ts: submodules
@@ -47,6 +47,10 @@ op-challenger:
 op-program:
 	make -C ./op-program op-program
 .PHONY: op-program
+
+gas-oracle:
+	make -C ./gas-oracle gas-oracle
+.PHONY: gas-oracle
 
 mod-tidy:
 	# Below GOPRIVATE line allows mod-tidy to be run immediately after

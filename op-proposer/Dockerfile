@@ -10,9 +10,13 @@ COPY ./op-bindings /app/op-bindings
 COPY ./op-node /app/op-node
 COPY ./op-service /app/op-service
 COPY ./op-signer /app/op-signer
+COPY ./datalayr /app/datalayr
 COPY ./go.mod /app/go.mod
 COPY ./go.sum /app/go.sum
 COPY ./.git /app/.git
+COPY ./bss-core /app/bss-core
+
+COPY ./op-proposer/docker.go.work /go/go.work
 
 WORKDIR /app/op-proposer
 

@@ -2,7 +2,7 @@ import assert from 'assert'
 
 import { ethers } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@mantleio/core-utils'
+import { awaitCondition, sleep } from '@mantleio/core-utils'
 import '@mantleio/hardhat-deploy-config'
 import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
@@ -16,7 +16,7 @@ import {
   printCastCommand,
   liveDeployer,
   doPhase,
-  isStartOfPhase,
+  isStartOfPhase, deploySleepTime,
 } from '../src/deploy-utils'
 
 const deployFn: DeployFunction = async (hre) => {
@@ -124,6 +124,8 @@ const deployFn: DeployFunction = async (hre) => {
         }
         deployL2StartingTimestamp = l1StartingBlock.timestamp
       }
+      console.log("Set l2OutputOracleStartingBlockNumber to "+hre.deployConfig.l2OutputOracleStartingBlockNumber.toString())
+      console.log("Set L2StartingTimestamp to "+deployL2StartingTimestamp.toString())
 
       await SystemDictator.updateDynamicConfig(
         {
@@ -174,6 +176,8 @@ const deployFn: DeployFunction = async (hre) => {
     )
   }
 
+  await sleep(deploySleepTime)
+
   await doPhase({
     isLiveDeployer,
     SystemDictator,
@@ -197,22 +201,22 @@ const deployFn: DeployFunction = async (hre) => {
     checks: async () => {
       // Step 3 checks
       const deads = [
-        'OVM_CanonicalTransactionChain',
-        'OVM_L2CrossDomainMessenger',
-        'OVM_DecompressionPrecompileAddress',
-        'OVM_Sequencer',
-        'OVM_Proposer',
-        'OVM_ChainStorageContainer-CTC-batches',
-        'OVM_ChainStorageContainer-CTC-queue',
-        'OVM_CanonicalTransactionChain',
-        'OVM_StateCommitmentChain',
-        'OVM_BondManager',
-        'OVM_ExecutionManager',
-        'OVM_FraudVerifier',
-        'OVM_StateManagerFactory',
-        'OVM_StateTransitionerFactory',
-        'OVM_SafetyChecker',
-        'OVM_L1MultiMessageRelayer',
+        'BVM_CanonicalTransactionChain',
+        'BVM_L2CrossDomainMessenger',
+        'BVM_DecompressionPrecompileAddress',
+        'BVM_Sequencer',
+        'BVM_Proposer',
+        'BVM_ChainStorageContainer-CTC-batches',
+        'BVM_ChainStorageContainer-CTC-queue',
+        'BVM_CanonicalTransactionChain',
+        'BVM_StateCommitmentChain',
+        'BVM_BondManager',
+        'BVM_ExecutionManager',
+        'BVM_FraudVerifier',
+        'BVM_StateManagerFactory',
+        'BVM_StateTransitionerFactory',
+        'BVM_SafetyChecker',
+        'BVM_L1MultiMessageRelayer',
         'BondManager',
       ]
       for (const dead of deads) {

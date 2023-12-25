@@ -33,6 +33,7 @@ var (
 // as closely as possible.
 type sendMessageArgs struct {
 	Target      common.Address
+	EthValue    *big.Int
 	Message     []byte
 	MinGasLimit uint32
 }
@@ -122,7 +123,7 @@ func sendCrossDomainMessage(
 	opts, err := bind.NewKeyedTransactorWithChainID(testKey, chainID)
 	require.Nil(t, err)
 
-	tx, err := l2xdm.SendMessage(opts, message.Target, message.Message, message.MinGasLimit)
+	tx, err := l2xdm.SendMessage(opts, message.EthValue, message.Target, message.Message, message.MinGasLimit)
 	require.Nil(t, err)
 	backend.Commit()
 
@@ -159,7 +160,8 @@ func sendCrossDomainMessage(
 		// Parse the new extension event
 		if event.Name == "SentMessageExtension1" {
 			e, _ := l2xdm.ParseSentMessageExtension1(*log)
-			msg.Value = e.Value
+			msg.MntValue = e.MntValue
+			msg.EthValue = e.EthValue
 		}
 	}
 
@@ -199,31 +201,37 @@ func TestGetPendingWithdrawals(t *testing.T) {
 	msgs := []*sendMessageArgs{
 		{
 			Target:      common.Address{},
+			EthValue:    big.NewInt(0),
 			Message:     []byte{},
 			MinGasLimit: 0,
 		},
 		{
 			Target:      common.Address{0x01},
+			EthValue:    big.NewInt(0),
 			Message:     []byte{0x01},
 			MinGasLimit: 0,
 		},
 		{
 			Target:      common.Address{},
+			EthValue:    big.NewInt(0),
 			Message:     []byte{},
 			MinGasLimit: 100,
 		},
 		{
 			Target:      common.Address{19: 0x01},
+			EthValue:    big.NewInt(0),
 			Message:     []byte{0xaa, 0xbb},
 			MinGasLimit: 10000,
 		},
 		{
 			Target:      common.HexToAddress("0x4675C7e5BaAFBFFbca748158bEcBA61ef3b0a263"),
+			EthValue:    big.NewInt(0),
 			Message:     hexutil.MustDecode("0x095ea7b3000000000000000000000000c92e8bdf79f0507f65a392b0ab4667716bfe01100000000000000000000000000000000000000000000000000000000000000000"),
 			MinGasLimit: 50000,
 		},
 		{
 			Target:      common.HexToAddress("0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5"),
+			EthValue:    big.NewInt(0),
 			Message:     []byte{},
 			MinGasLimit: 70511,
 		},

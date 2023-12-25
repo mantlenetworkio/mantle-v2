@@ -224,6 +224,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
+        require(msg.value==0, "L2StandardBridge: the MNT value should be zero. ");
         IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _amount);
         IERC20(Predeploys.BVM_ETH).approve(Predeploys.L2_CROSS_DOMAIN_MESSENGER, _amount);
 
@@ -309,6 +310,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         uint32 _minGasLimit,
         bytes memory _extraData
     ) internal override {
+        require(msg.value==0, "L2StandardBridge: the MNT value should be zero. ");
         require(_localToken != Predeploys.BVM_ETH && _remoteToken != address(0),
             "L2StandardBridge: BridgeERC20 do not support ETH bridging.");
         require(_localToken != address(0x0) && _remoteToken != L1_MNT_ADDRESS,
@@ -470,7 +472,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      *                     not be triggered with this data, but it will be emitted and can be used
      *                     to identify the transaction.
      */
-    function bridgeETH(uint256 _value, uint32 _minGasLimit, bytes calldata _extraData) public payable onlyEOA {
+    function bridgeETH(uint256 _value, uint32 _minGasLimit, bytes calldata _extraData) public onlyEOA {
         _initiateBridgeETH(msg.sender, msg.sender, _value, _minGasLimit, _extraData);
     }
 
@@ -495,7 +497,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         address _to,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable {
+    ) public {
         _initiateBridgeETH(msg.sender, _to, _value, _minGasLimit, _extraData);
     }
 

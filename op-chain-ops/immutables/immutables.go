@@ -86,7 +86,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			Name: "L2StandardBridge",
 			Args: []interface{}{
 				immutable["L2StandardBridge"]["otherBridge"],
-				predeploys.DevL1MNTAddr,
+				immutable["L2StandardBridge"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -139,7 +139,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 		{
 			Name: "LegacyERC20MNT",
 			Args: []interface{}{
-				predeploys.DevL1MNTAddr,
+				immutable["LegacyERC20MNT"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -242,7 +242,7 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 	case "LegacyERC20MNT":
 		L1MNT, ok := deployment.Args[0].(common.Address)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for L1 MNT")
+			return nil, fmt.Errorf("invalid type for LegacyERC20MNT")
 		}
 		_, tx, _, err = bindings.DeployLegacyERC20MNT(opts, backend, L1MNT)
 	case "BVM_ETH":

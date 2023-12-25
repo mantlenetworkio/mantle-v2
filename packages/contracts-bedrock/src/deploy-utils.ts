@@ -11,6 +11,7 @@ import 'hardhat-deploy'
 import '@mantleio/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
+export const deploySleepTime = 3 * 1000;
 /**
  * Wrapper around hardhat-deploy with some extra features.
  *

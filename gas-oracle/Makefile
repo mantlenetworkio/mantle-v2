@@ -1,22 +1,19 @@
-SHELL := /bin/bash
-
 GITCOMMIT := $(shell git rev-parse HEAD)
 GITDATE := $(shell git show -s --format='%ct')
-GITVERSION := $(shell cat package.json | jq .version)
+VERSION := v0.0.0
 
 LDFLAGSSTRING +=-X main.GitCommit=$(GITCOMMIT)
 LDFLAGSSTRING +=-X main.GitDate=$(GITDATE)
-LDFLAGSSTRING +=-X main.GitVersion=$(GITVERSION)
+LDFLAGSSTRING +=-X main.GitVersion=$(VERSION)
 LDFLAGS :=-ldflags "$(LDFLAGSSTRING)"
 
-CONTRACTS_PATH := "../../packages/contracts/artifacts/contracts"
+CONTRACTS_PATH := "../../packages/contracts-bedrock/artifacts/contracts"
 
 gas-oracle:
-	env GO111MODULE=on go build $(LDFLAGS)
-.PHONY: gas-oracle
+	env GO111MODULE=on go build -v $(LDFLAGS) -o ./bin/gas-oracle ./main.go
 
 clean:
-	rm gas-oracle
+	rm bin/gas-oracle
 
 test:
 	go test -v ./...
@@ -25,17 +22,17 @@ lint:
 	golangci-lint run ./...
 
 abi:
-	cat $(CONTRACTS_PATH)/L2/predeploys/OVM_GasPriceOracle.sol/OVM_GasPriceOracle.json \
+	cat $(CONTRACTS_PATH)/L2/GasPriceOracle.sol/GasPriceOracle.json \
 		| jq '{abi,bytecode}' \
-		> abis/OVM_GasPriceOracle.json
+		> abis/GasPriceOracle.json
 
 binding: abi
 	$(eval temp := $(shell mktemp))
 
-	cat abis/OVM_GasPriceOracle.json \
+	cat abis/GasPriceOracle.json \
 		| jq -r .bytecode > $(temp)
 
-	cat abis/OVM_GasPriceOracle.json \
+	cat abis/GasPriceOracle.json \
 		| jq .abi \
 		| abigen --pkg bindings \
 		--abi - \
@@ -44,3 +41,11 @@ binding: abi
 		--bin $(temp)
 
 	rm $(temp)
+
+.PHONY: \
+	gas-oracle \
+	clean \
+	test \
+	lint \
+	abi \
+	binding

@@ -2,11 +2,12 @@ import assert from 'assert'
 
 import { ethers, BigNumber } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@mantleio/core-utils'
+import { awaitCondition, sleep } from '@mantleio/core-utils'
 import '@mantleio/hardhat-deploy-config'
 import 'hardhat-deploy'
 
 import {
+  deploySleepTime,
   getContractsFromArtifacts,
   getDeploymentAddress,
 } from '../src/deploy-utils'
@@ -123,6 +124,7 @@ const deployFn: DeployFunction = async (hre) => {
   ) {
     console.log('Upgrading the SystemDictator proxy...')
 
+    await sleep(deploySleepTime)
     // Upgrade and initialize the proxy.
     await SystemDictatorProxyWithSigner.upgradeToAndCall(
       SystemDictatorImpl.address,
@@ -141,6 +143,9 @@ const deployFn: DeployFunction = async (hre) => {
       30000,
       1000
     )
+
+    console.log("SystemDictator configuration")
+    console.log(JSON.stringify(config, null, 2))
 
     // Verify that the contract was initialized correctly.
     const dictatorConfig = await SystemDictator.config()

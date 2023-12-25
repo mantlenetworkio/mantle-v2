@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/immutables"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -94,6 +95,13 @@ type DeployConfig struct {
 	SystemConfigProxy common.Address `json:"systemConfigProxy"`
 	// OptimismPortal proxy address on L1
 	OptimismPortalProxy common.Address `json:"optimismPortalProxy"`
+	// Mantle Token address on L1
+	L1MantleToken common.Address `json:"l1MantleToken"`
+
+	// The initial value of the gas price oracle owner
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
+	// The initial value of the gas price oracle token ratio
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
 	// The initial value of the gas overhead
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
@@ -111,6 +119,15 @@ type DeployConfig struct {
 	EIP1559Denominator uint64 `json:"eip1559Denominator"`
 
 	FundDevAccounts bool `json:"fundDevAccounts"`
+
+	// The switch of open rollup mantleDA or not,
+	// If true, rollup tx data to MantleDA;
+	// If false, rollup tx data to EOA address
+	MantleDaSwitch bool `json:"mantleDaSwitch"`
+
+	// Contract Address of DataLayrServiceManager, call initDataStore and confirmDataStore
+	// Submit transaction meta info to MantleDA contracts
+	DataLayrServiceManagerAddr string `json:"dataLayrServiceManagerAddr"`
 }
 
 // Check will ensure that the config is sane and return an error when it is not
@@ -178,6 +195,12 @@ func (d *DeployConfig) Check() error {
 	if d.SequencerFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: SequencerFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
 	}
+	if d.GasPriceOracleOwner == (common.Address{}) {
+		return fmt.Errorf("%w: GasPriceOracleOwner cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleTokenRatio == 0 {
+		log.Warn("GasPriceOracleTokenRatio is 0")
+	}
 	if d.GasPriceOracleOverhead == 0 {
 		log.Warn("GasPriceOracleOverhead is 0")
 	}
@@ -198,6 +221,9 @@ func (d *DeployConfig) Check() error {
 	}
 	if d.OptimismPortalProxy == (common.Address{}) {
 		return fmt.Errorf("%w: OptimismPortalProxy cannot be address(0)", ErrInvalidDeployConfig)
+	}
+	if d.L1MantleToken == (common.Address{}) {
+		return fmt.Errorf("%w: L1MantleToken cannot be address(0)", ErrInvalidDeployConfig)
 	}
 	if d.EIP1559Denominator == 0 {
 		return fmt.Errorf("%w: EIP1559Denominator cannot be 0", ErrInvalidDeployConfig)
@@ -232,58 +258,89 @@ func (d *DeployConfig) Check() error {
 // required for the L2 genesis creation. Legacy systems use the `Proxy__` prefix
 // while modern systems use the `Proxy` suffix. First check for the legacy
 // deployments so that this works with upgrading a system.
-func (d *DeployConfig) GetDeployedAddresses(hh *hardhat.Hardhat) error {
-	var err error
+func (d *DeployConfig) GetDeployedAddresses(hh *hardhat.Hardhat, l1SystemContracts *crossdomain.L1SystemContracts) error {
+	if hh != nil {
+		if d.L1StandardBridgeProxy == (common.Address{}) {
+			l1StandardBridgeProxyDeployment, err := hh.GetDeployment("Proxy__BVM_L1StandardBridge")
+			if errors.Is(err, hardhat.ErrCannotFindDeployment) {
+				l1StandardBridgeProxyDeployment, err = hh.GetDeployment("L1StandardBridgeProxy")
+				if err != nil {
+					return err
+				}
+			}
+			d.L1StandardBridgeProxy = l1StandardBridgeProxyDeployment.Address
+		}
 
-	if d.L1StandardBridgeProxy == (common.Address{}) {
-		var l1StandardBridgeProxyDeployment *hardhat.Deployment
-		l1StandardBridgeProxyDeployment, err = hh.GetDeployment("Proxy__BVM_L1StandardBridge")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1StandardBridgeProxyDeployment, err = hh.GetDeployment("L1StandardBridgeProxy")
+		if d.L1CrossDomainMessengerProxy == (common.Address{}) {
+			l1CrossDomainMessengerProxyDeployment, err := hh.GetDeployment("Proxy__BVM_L1CrossDomainMessenger")
+			if errors.Is(err, hardhat.ErrCannotFindDeployment) {
+				l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
+				if err != nil {
+					return err
+				}
+			}
+			d.L1CrossDomainMessengerProxy = l1CrossDomainMessengerProxyDeployment.Address
+		}
+
+		if d.L1ERC721BridgeProxy == (common.Address{}) {
+			l1ERC721BridgeProxyDeployment, err := hh.GetDeployment("L1ERC721BridgeProxy")
 			if err != nil {
 				return err
 			}
+			d.L1ERC721BridgeProxy = l1ERC721BridgeProxyDeployment.Address
 		}
-		d.L1StandardBridgeProxy = l1StandardBridgeProxyDeployment.Address
+
+		if d.SystemConfigProxy == (common.Address{}) {
+			systemConfigProxyDeployment, err := hh.GetDeployment("SystemConfigProxy")
+			if err != nil {
+				return err
+			}
+			d.SystemConfigProxy = systemConfigProxyDeployment.Address
+		}
+
+		if d.OptimismPortalProxy == (common.Address{}) {
+			optimismPortalProxyDeployment, err := hh.GetDeployment("OptimismPortalProxy")
+			if err != nil {
+				return err
+			}
+			d.OptimismPortalProxy = optimismPortalProxyDeployment.Address
+		}
+		return nil
+	}
+	if d.L1StandardBridgeProxy == (common.Address{}) {
+		if l1SystemContracts.L1StandardBridgeProxy == (common.Address{}) {
+			return fmt.Errorf("L1StandardBridgeProxy is zero address")
+		}
+		d.L1StandardBridgeProxy = l1SystemContracts.L1StandardBridgeProxy
 	}
 
 	if d.L1CrossDomainMessengerProxy == (common.Address{}) {
-		var l1CrossDomainMessengerProxyDeployment *hardhat.Deployment
-		l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("Proxy__BVM_L1CrossDomainMessenger")
-		if errors.Is(err, hardhat.ErrCannotFindDeployment) {
-			l1CrossDomainMessengerProxyDeployment, err = hh.GetDeployment("L1CrossDomainMessengerProxy")
-			if err != nil {
-				return err
-			}
+		if l1SystemContracts.L1CrossDomainMessengerProxy == (common.Address{}) {
+			return fmt.Errorf("L1CrossDomainMessengerProxy is zero address")
 		}
-		d.L1CrossDomainMessengerProxy = l1CrossDomainMessengerProxyDeployment.Address
+		d.L1CrossDomainMessengerProxy = l1SystemContracts.L1CrossDomainMessengerProxy
 	}
 
 	if d.L1ERC721BridgeProxy == (common.Address{}) {
-		// There is no legacy deployment of this contract
-		l1ERC721BridgeProxyDeployment, err := hh.GetDeployment("L1ERC721BridgeProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.L1ERC721BridgeProxy == (common.Address{}) {
+			return fmt.Errorf("L1ERC721BridgeProxy is zero address")
 		}
-		d.L1ERC721BridgeProxy = l1ERC721BridgeProxyDeployment.Address
+		d.L1ERC721BridgeProxy = l1SystemContracts.L1ERC721BridgeProxy
 	}
 
 	if d.SystemConfigProxy == (common.Address{}) {
-		systemConfigProxyDeployment, err := hh.GetDeployment("SystemConfigProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.SystemConfigProxy == (common.Address{}) {
+			return fmt.Errorf("SystemConfigProxy is zero address")
 		}
-		d.SystemConfigProxy = systemConfigProxyDeployment.Address
+		d.SystemConfigProxy = l1SystemContracts.SystemConfigProxy
 	}
 
 	if d.OptimismPortalProxy == (common.Address{}) {
-		optimismPortalProxyDeployment, err := hh.GetDeployment("OptimismPortalProxy")
-		if err != nil {
-			return err
+		if l1SystemContracts.OptimismPortalProxy == (common.Address{}) {
+			return fmt.Errorf("OptimismPortalProxy is zero address")
 		}
-		d.OptimismPortalProxy = optimismPortalProxyDeployment.Address
+		d.OptimismPortalProxy = l1SystemContracts.OptimismPortalProxy
 	}
-
 	return nil
 }
 
@@ -294,6 +351,7 @@ func (d *DeployConfig) InitDeveloperDeployedAddresses() error {
 	d.L1ERC721BridgeProxy = predeploys.DevL1ERC721BridgeAddr
 	d.OptimismPortalProxy = predeploys.DevOptimismPortalAddr
 	d.SystemConfigProxy = predeploys.DevSystemConfigAddr
+	d.L1MantleToken = predeploys.DevL1MNTAddr
 	return nil
 }
 
@@ -335,16 +393,18 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
 			},
 		},
-		BlockTime:              d.L2BlockTime,
-		MaxSequencerDrift:      d.MaxSequencerDrift,
-		SeqWindowSize:          d.SequencerWindowSize,
-		ChannelTimeout:         d.ChannelTimeout,
-		L1ChainID:              new(big.Int).SetUint64(d.L1ChainID),
-		L2ChainID:              new(big.Int).SetUint64(d.L2ChainID),
-		BatchInboxAddress:      d.BatchInboxAddress,
-		DepositContractAddress: d.OptimismPortalProxy,
-		L1SystemConfigAddress:  d.SystemConfigProxy,
-		RegolithTime:           d.RegolithTime(l1StartBlock.Time()),
+		BlockTime:                  d.L2BlockTime,
+		MaxSequencerDrift:          d.MaxSequencerDrift,
+		SeqWindowSize:              d.SequencerWindowSize,
+		ChannelTimeout:             d.ChannelTimeout,
+		L1ChainID:                  new(big.Int).SetUint64(d.L1ChainID),
+		L2ChainID:                  new(big.Int).SetUint64(d.L2ChainID),
+		BatchInboxAddress:          d.BatchInboxAddress,
+		DepositContractAddress:     d.OptimismPortalProxy,
+		L1SystemConfigAddress:      d.SystemConfigProxy,
+		RegolithTime:               d.RegolithTime(l1StartBlock.Time()),
+		MantleDaSwitch:             d.MantleDaSwitch,
+		DataLayrServiceManagerAddr: d.DataLayrServiceManagerAddr,
 	}, nil
 }
 
@@ -371,9 +431,8 @@ func NewDeployConfigWithNetwork(network, path string) (*DeployConfig, error) {
 	return NewDeployConfig(deployConfig)
 }
 
-// NewL2ImmutableConfig will create an ImmutableConfig given an instance of a
-// DeployConfig and a block.
-func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.ImmutableConfig, error) {
+// NewL2ImmutableConfig will create an ImmutableConfig given an instance of a DeployConfig
+func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, error) {
 	immutable := make(immutables.ImmutableConfig)
 
 	if config.L1StandardBridgeProxy == (common.Address{}) {
@@ -384,6 +443,12 @@ func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.
 	}
 	if config.L1ERC721BridgeProxy == (common.Address{}) {
 		return immutable, fmt.Errorf("L1ERC721BridgeProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
+	if config.SystemConfigProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("SystemConfigProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
+	}
+	if config.OptimismPortalProxy == (common.Address{}) {
+		return immutable, fmt.Errorf("OptimismPortalProxy cannot be address(0): %w", ErrInvalidImmutablesConfig)
 	}
 	if config.SequencerFeeVaultRecipient == (common.Address{}) {
 		return immutable, fmt.Errorf("SequencerFeeVaultRecipient cannot be address(0): %w", ErrInvalidImmutablesConfig)
@@ -396,7 +461,8 @@ func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.
 	}
 
 	immutable["L2StandardBridge"] = immutables.ImmutableValues{
-		"otherBridge": config.L1StandardBridgeProxy,
+		"otherBridge":    config.L1StandardBridgeProxy,
+		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 	immutable["L2CrossDomainMessenger"] = immutables.ImmutableValues{
 		"otherMessenger": config.L1CrossDomainMessengerProxy,
@@ -417,6 +483,9 @@ func NewL2ImmutableConfig(config *DeployConfig, block *types.Block) (immutables.
 	}
 	immutable["BaseFeeVault"] = immutables.ImmutableValues{
 		"recipient": config.BaseFeeVaultRecipient,
+	}
+	immutable["LegacyERC20MNT"] = immutables.ImmutableValues{
+		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 
 	return immutable, nil
@@ -442,6 +511,10 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"_initializing":    false,
 		"xDomainMsgSender": "0x000000000000000000000000000000000000dEaD",
 		"msgNonce":         0,
+	}
+	storage["GasPriceOracle"] = state.StorageValues{
+		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
+		"owner":      config.GasPriceOracleOwner,
 	}
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
@@ -472,7 +545,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 	}
 	storage["BVM_ETH"] = state.StorageValues{
 		"_name":   "Ether",
-		"_symbol": "ETH",
+		"_symbol": "WETH",
 	}
 	return storage, nil
 }

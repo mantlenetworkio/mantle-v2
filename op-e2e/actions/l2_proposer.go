@@ -48,6 +48,10 @@ func (f fakeTxMgr) Send(_ context.Context, _ txmgr.TxCandidate) (*types.Receipt,
 	panic("unimplemented")
 }
 
+func (f fakeTxMgr) SendTx(_ context.Context, _ *types.Transaction) (*types.Receipt, error) {
+	panic("unimplemented")
+}
+
 func NewL2Proposer(t Testing, log log.Logger, cfg *ProposerCfg, l1 *ethclient.Client, rollupCl *sources.RollupClient) *L2Proposer {
 
 	proposerCfg := proposer.Config{

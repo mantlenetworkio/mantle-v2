@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
+	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 
@@ -23,6 +24,7 @@ import (
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
 
 // NewConfig creates a Config from the provided flags or environment variables.
@@ -57,6 +59,13 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
+	datastoreConfig, err := NewMantleDataStoreConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
+	}
+
+	syncConfig := NewSyncConfig(ctx)
+
 	cfg := &node.Config{
 		L1:     l1Endpoint,
 		L2:     l2Endpoint,
@@ -78,6 +87,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
 			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
 		},
+		DatastoreConfig:     datastoreConfig,
 		P2P:                 p2pConfig,
 		P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
@@ -86,6 +96,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		},
+		Sync: *syncConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -192,4 +203,24 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	logger := log.New()
 	logger.SetHandler(handler)
 	return logger, nil
+}
+
+func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig, error) {
+	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
+	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
+	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
+	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
+	return datastore.MantleDataStoreConfig{
+		RetrieverSocket:          retrieverSocket,
+		RetrieverTimeout:         retrieverTimeout,
+		GraphProvider:            graphProvider,
+		DataStorePollingDuration: dataStorePollingDuration,
+	}, nil
+}
+
+func NewSyncConfig(ctx *cli.Context) *sync.Config {
+	return &sync.Config{
+		EngineSync:         ctx.Bool(flags.L2EngineSyncEnabled.Name),
+		SkipSyncStartCheck: ctx.Bool(flags.SkipSyncStartCheck.Name),
+	}
 }

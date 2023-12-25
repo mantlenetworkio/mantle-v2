@@ -182,6 +182,14 @@ abstract contract CrossDomainMessenger is
      */
     address internal xDomainMsgSender;
 
+
+    /**
+     * @custom:legacy
+     * @custom:spacer pauseOwner
+     * @notice Spacer for backwards compatibility.
+     */
+    address internal pauseOwner_spacer;
+
     /**
      * @notice Nonce for the next message to be sent, without the message version applied. Use the
      *         messageNonce getter which will insert the message version into the nonce to give you
@@ -201,7 +209,7 @@ abstract contract CrossDomainMessenger is
      *         A gap size of 41 was chosen here, so that the first slot used in a child contract
      *         would be a multiple of 50.
      */
-    uint256[42] private __gap;
+    uint256[41] private __gap;
 
     /**
      * @notice Emitted whenever a message is sent to the other chain.

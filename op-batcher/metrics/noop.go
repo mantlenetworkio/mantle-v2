@@ -35,3 +35,22 @@ func (*noopMetrics) RecordChannelTimedOut(derive.ChannelID)       {}
 func (*noopMetrics) RecordBatchTxSubmitted() {}
 func (*noopMetrics) RecordBatchTxSuccess()   {}
 func (*noopMetrics) RecordBatchTxFailed()    {}
+
+func (*noopMetrics) RecordBatchTxInitDataSubmitted() {}
+func (*noopMetrics) RecordBatchTxInitDataSuccess()   {}
+func (*noopMetrics) RecordBatchTxInitDataFailed()    {}
+
+func (*noopMetrics) RecordBatchTxConfirmDataSubmitted() {}
+func (*noopMetrics) RecordBatchTxConfirmDataSuccess()   {}
+func (*noopMetrics) RecordBatchTxConfirmDataFailed()    {}
+
+func (*noopMetrics) RecordRollupRetry(time int32) {}
+
+func (m *noopMetrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {}
+func (m *noopMetrics) RecordConfirmedDataStoreId(dataStoreId uint32)     {}
+
+func (*noopMetrics) RecordTxOverMaxLimit() {}
+
+func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
+
+}

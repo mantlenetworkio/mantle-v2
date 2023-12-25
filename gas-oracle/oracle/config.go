@@ -10,38 +10,34 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+
 	"github.com/urfave/cli"
 )
 
 // Config represents the configuration options for the gas oracle
 type Config struct {
-	l1ChainID                    *big.Int
-	l2ChainID                    *big.Int
-	ethereumHttpUrl              string
-	layerTwoHttpUrl              string
-	gasPriceOracleAddress        common.Address
-	privateKey                   *ecdsa.PrivateKey
-	gasPrice                     *big.Int
-	waitForReceipt               bool
-	floorPrice                   uint64
-	targetGasPerSecond           uint64
-	maxPercentChangePerEpoch     float64
-	averageBlockGasLimitPerEpoch uint64
-	epochLengthSeconds           uint64
-	l1BaseFeeEpochLengthSeconds  uint64
-	l2GasPriceSignificanceFactor float64
-	l1BaseFeeSignificanceFactor  float64
-	enableL1BaseFee              bool
-	enableL2GasPrice             bool
+	l1ChainID                       *big.Int
+	l2ChainID                       *big.Int
+	ethereumHttpUrl                 string
+	layerTwoHttpUrl                 string
+	gasPriceOracleAddress           common.Address
+	privateKey                      *ecdsa.PrivateKey
+	gasPrice                        *big.Int
+	waitForReceipt                  bool
+	tokenRatioEpochLengthSeconds    uint64
+	tokenRatioSignificanceFactor    float64
+	tokenRatioCexURL                string
+	tokenRatioDexURL                string
+	tokenRatioUpdateFrequencySecond uint64
+	// hsm config
+	EnableHsm  bool
+	HsmAPIName string
+	HsmCreden  string
+	HsmAddress string
 	// Metrics config
-	MetricsEnabled          bool
-	MetricsHTTP             string
-	MetricsPort             int
-	MetricsEnableInfluxDB   bool
-	MetricsInfluxDBEndpoint string
-	MetricsInfluxDBDatabase string
-	MetricsInfluxDBUsername string
-	MetricsInfluxDBPassword string
+	MetricsEnabled bool
+	MetricsHTTP    string
+	MetricsPort    int
 }
 
 // NewConfig creates a new Config
@@ -51,27 +47,31 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.layerTwoHttpUrl = ctx.GlobalString(flags.LayerTwoHttpUrlFlag.Name)
 	addr := ctx.GlobalString(flags.GasPriceOracleAddressFlag.Name)
 	cfg.gasPriceOracleAddress = common.HexToAddress(addr)
-	cfg.targetGasPerSecond = ctx.GlobalUint64(flags.TargetGasPerSecondFlag.Name)
-	cfg.maxPercentChangePerEpoch = ctx.GlobalFloat64(flags.MaxPercentChangePerEpochFlag.Name)
-	cfg.averageBlockGasLimitPerEpoch = ctx.GlobalUint64(flags.AverageBlockGasLimitPerEpochFlag.Name)
-	cfg.epochLengthSeconds = ctx.GlobalUint64(flags.EpochLengthSecondsFlag.Name)
-	cfg.l1BaseFeeEpochLengthSeconds = ctx.GlobalUint64(flags.L1BaseFeeEpochLengthSecondsFlag.Name)
-	cfg.l2GasPriceSignificanceFactor = ctx.GlobalFloat64(flags.L2GasPriceSignificanceFactorFlag.Name)
-	cfg.floorPrice = ctx.GlobalUint64(flags.FloorPriceFlag.Name)
-	cfg.l1BaseFeeSignificanceFactor = ctx.GlobalFloat64(flags.L1BaseFeeSignificanceFactorFlag.Name)
-	cfg.enableL1BaseFee = ctx.GlobalBool(flags.EnableL1BaseFeeFlag.Name)
-	cfg.enableL2GasPrice = ctx.GlobalBool(flags.EnableL2GasPriceFlag.Name)
+	cfg.tokenRatioCexURL = ctx.GlobalString(flags.TokenRatioCexURL.Name)
+	cfg.tokenRatioDexURL = ctx.GlobalString(flags.TokenRatioDexURL.Name)
+	cfg.tokenRatioUpdateFrequencySecond = ctx.GlobalUint64(flags.TokenRatioUpdateFrequencySecond.Name)
+	cfg.tokenRatioEpochLengthSeconds = ctx.GlobalUint64(flags.TokenRatioEpochLengthSecondsFlag.Name)
+	cfg.tokenRatioSignificanceFactor = ctx.GlobalFloat64(flags.TokenRatioSignificanceFactorFlag.Name)
+	cfg.EnableHsm = ctx.GlobalBool(flags.EnableHsmFlag.Name)
+	cfg.HsmAddress = ctx.GlobalString(flags.HsmAddressFlag.Name)
+	cfg.HsmAPIName = ctx.GlobalString(flags.HsmAPINameFlag.Name)
+	cfg.HsmCreden = ctx.GlobalString(flags.HsmCredenFlag.Name)
 
-	if ctx.GlobalIsSet(flags.PrivateKeyFlag.Name) {
-		hex := ctx.GlobalString(flags.PrivateKeyFlag.Name)
-		hex = strings.TrimPrefix(hex, "0x")
-		key, err := crypto.HexToECDSA(hex)
-		if err != nil {
-			log.Error(fmt.Sprintf("Option %q: %v", flags.PrivateKeyFlag.Name, err))
-		}
-		cfg.privateKey = key
+	if cfg.EnableHsm {
+		log.Info("gasoracle", "enableHsm", cfg.EnableHsm,
+			"hsmAddress", cfg.HsmAddress)
 	} else {
-		log.Crit("No private key configured")
+		if ctx.GlobalIsSet(flags.PrivateKeyFlag.Name) {
+			hex := ctx.GlobalString(flags.PrivateKeyFlag.Name)
+			hex = strings.TrimPrefix(hex, "0x")
+			key, err := crypto.HexToECDSA(hex)
+			if err != nil {
+				log.Error(fmt.Sprintf("Option %q: %v", flags.PrivateKeyFlag.Name, err))
+			}
+			cfg.privateKey = key
+		} else {
+			log.Crit("No private key configured")
+		}
 	}
 
 	if ctx.GlobalIsSet(flags.L1ChainIDFlag.Name) {
@@ -95,11 +95,6 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.MetricsEnabled = ctx.GlobalBool(flags.MetricsEnabledFlag.Name)
 	cfg.MetricsHTTP = ctx.GlobalString(flags.MetricsHTTPFlag.Name)
 	cfg.MetricsPort = ctx.GlobalInt(flags.MetricsPortFlag.Name)
-	cfg.MetricsEnableInfluxDB = ctx.GlobalBool(flags.MetricsEnableInfluxDBFlag.Name)
-	cfg.MetricsInfluxDBEndpoint = ctx.GlobalString(flags.MetricsInfluxDBEndpointFlag.Name)
-	cfg.MetricsInfluxDBDatabase = ctx.GlobalString(flags.MetricsInfluxDBDatabaseFlag.Name)
-	cfg.MetricsInfluxDBUsername = ctx.GlobalString(flags.MetricsInfluxDBUsernameFlag.Name)
-	cfg.MetricsInfluxDBPassword = ctx.GlobalString(flags.MetricsInfluxDBPasswordFlag.Name)
 
 	return &cfg
 }
