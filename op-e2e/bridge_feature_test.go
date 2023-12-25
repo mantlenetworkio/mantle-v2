@@ -894,7 +894,7 @@ func TestFindDepositTx(t *testing.T) {
 				t.Log("block info", block.Hash().Hex())
 				t.Log("block height: ", block.Number().Int64())
 				t.Log("find deposit tx", tx.Hash().Hex())
-				t.Log("ethvalue data = ", tx.ETHValue())
+				t.Log("eth value data = ", tx.ETHValue())
 				t.Log("value data = ", tx.Value())
 				t.Log("mint data = ", tx.Mint())
 				jsonTx, err := tx.MarshalJSON()
@@ -1028,6 +1028,6 @@ func TestTx(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("now block number", bn)
 	tx, _, err := l2Client.TransactionByHash(context.Background(), common.HexToHash("0xf9bef38d02729976f8550c692a09f7270cad6769ec8e256d7058cfdbe662f55e"))
-	t.Log("ethvalue data = ", tx.ETHValue())
+	t.Log("eth value data = ", tx.ETHValue())
 	t.Log(tx.MarshalJSON())
 }

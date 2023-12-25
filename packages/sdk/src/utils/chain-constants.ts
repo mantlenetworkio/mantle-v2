@@ -1,6 +1,6 @@
-import {predeploys as v1Predeploys,} from '@ethan-bedrock/contracts'
+import {predeploys as v1Predeploys,} from '@mantleio/contracts'
 
-import {predeploys as bedrockPredeploys} from '@ethan-bedrock/contracts-bedrock'
+import {predeploys as bedrockPredeploys} from '@mantleio/contracts-bedrock'
 
 import {BridgeAdapterData, L1ChainID, L2ChainID, OEContractsLike, OEL2ContractsLike,} from '../interfaces'
 import {ERC20BridgeAdapter, StandardBridgeAdapter,} from '../adapters'

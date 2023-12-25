@@ -5,9 +5,9 @@ import {
   Gauge,
   validators,
   waitForProvider,
-} from '@ethan-bedrock/common-ts'
-import { CrossChainMessenger } from '@ethan-bedrock/sdk'
-import { getChainId, sleep } from '@ethan-bedrock/core-utils'
+} from '@mantleio/common-ts'
+import { CrossChainMessenger } from '@mantleio/sdk'
+import { getChainId, sleep } from '@mantleio/core-utils'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Event } from 'ethers'
 import dateformat from 'dateformat'

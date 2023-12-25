@@ -4,7 +4,7 @@ import { defineConfig } from 'tsup'
  * @see https://tsup.egoist.dev/
  */
 export default defineConfig({
-  name: '@ethan-bedrock/atst',
+  name: '@mantleio/atst',
   /**
    * This is also a cli app and tsup will automatically make the cli entrypoint executable
    *

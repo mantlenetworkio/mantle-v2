@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/l2geth-exporter",
+  "name": "@mantleio/l2geth-exporter",
   "version": "0.0.8",
   "private": true,
   "devDependencies": {}

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { hexStringEquals } from '@ethan-bedrock/core-utils'
+import { hexStringEquals } from '@mantleio/core-utils'
 import {
   NumberLike,
   AddressLike,
@@ -10,7 +10,7 @@ import {
 } from '../interfaces'
 import { toAddress, omit } from '../utils'
 import { StandardBridgeAdapter } from './standard-bridge'
-import { getContractInterface } from '@ethan-bedrock/contracts-bedrock'
+import { getContractInterface } from '@mantleio/contracts-bedrock'
 
 /**
  * Bridge adapter for the MNT bridge.

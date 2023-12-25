@@ -1,8 +1,8 @@
 /* Imports: External */
 import { BigNumber, Contract, ContractFactory, utils, Wallet } from 'ethers'
 import { ethers } from 'hardhat'
-import { getContractFactory } from '@ethan-bedrock/contracts'
-import { MessageStatus } from '@ethan-bedrock/sdk'
+import { getContractFactory } from '@mantleio/contracts'
+import { MessageStatus } from '@mantleio/sdk'
 
 /* Imports: Internal */
 import { expect } from './shared/setup'

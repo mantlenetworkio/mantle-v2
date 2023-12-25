@@ -1,8 +1,8 @@
 /* Imports: Internal */
 import { providers } from 'ethers'
-import { applyL1ToL2Alias } from '@ethan-bedrock/core-utils'
-import { asL2Provider } from '@ethan-bedrock/sdk'
-import { getContractInterface } from '@ethan-bedrock/contracts'
+import { applyL1ToL2Alias } from '@mantleio/core-utils'
+import { asL2Provider } from '@mantleio/sdk'
+import { getContractInterface } from '@mantleio/contracts'
 
 /* Imports: External */
 import { expect } from './shared/setup'

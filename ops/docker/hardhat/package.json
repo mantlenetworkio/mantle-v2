@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/hardhat-node",
+  "name": "@mantleio/hardhat-node",
   "version": "0.2.0",
   "scripts": {
     "start": "hardhat node --network hardhat"

@@ -1,7 +1,7 @@
 import { task, types } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { Wallet, providers } from 'ethers'
-import { predeploys } from '@ethan-bedrock/contracts-bedrock'
+import { predeploys } from '@mantleio/contracts-bedrock'
 import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
 

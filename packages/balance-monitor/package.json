@@ -1,6 +1,6 @@
 {
-  "name": "@ethan-bedrock/balance-monitor",
-  "version": "0.2.0",
+  "name": "@mantleio/balance-monitor",
+  "version": "0.1.0",
   "description": "[Mantle] Forta Agent that reports whether certain accounts have fallen below some balance",
   "main": "dist/index",
   "types": "dist/index",

@@ -4,11 +4,11 @@ import { URLSearchParams } from 'url'
 import { ethers, Contract } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { awaitCondition, sleep } from '@ethan-bedrock/core-utils'
+import { awaitCondition, sleep } from '@mantleio/core-utils'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { Deployment, DeployResult } from 'hardhat-deploy/dist/types'
 import 'hardhat-deploy'
-import '@ethan-bedrock/hardhat-deploy-config'
+import '@mantleio/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
 /**

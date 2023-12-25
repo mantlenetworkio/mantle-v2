@@ -74,7 +74,7 @@ wagmiCore.createClient({
 Here is an example of reading an attestation used by the optimist nft
 
 ```javascript
-import { readAttestation } from '@ethan-bedrock/atst'
+import { readAttestation } from '@mantleio/atst'
 
 const creator = '0x60c5C9c98bcBd0b0F2fD89B24c16e533BaA8CdA3'
 const about = '0x2335022c740d17c2837f9C884Bfe4fFdbf0A95D5'
@@ -95,7 +95,7 @@ To write to an attestation you must [connect](https://wagmi.sh/core/connectors/m
 If using Node.js use the [mock connector](https://wagmi.sh/core/connectors/mock).
 
 ```typescript
-import { prepareWriteAttestation, writeAttestation } from '@ethan-bedrock/atst'
+import { prepareWriteAttestation, writeAttestation } from '@mantleio/atst'
 
 const preparedTx = await prepareWriteAttestation(about, key, 'hello world')
 console.log(preparedTx.gasLimit)
@@ -196,7 +196,7 @@ These definitions allow you to communicate with AttestationStation, but are not 
 The deployment address for AttestationStation currently deployed with create2 on Optimism and Optimism Goerli `0xEE36eaaD94d1Cc1d0eccaDb55C38bFfB6Be06C77`.
 
 ```typescript
-import { ATTESTATION_STATION_ADDRESS } from '@ethan-bedrock/atst'
+import { ATTESTATION_STATION_ADDRESS } from '@mantleio/atst'
 ```
 
 #### `abi`
@@ -204,7 +204,7 @@ import { ATTESTATION_STATION_ADDRESS } from '@ethan-bedrock/atst'
 The abi of the AttestationStation contract
 
 ```typescript
-import { abi } from '@ethan-bedrock/atst'
+import { abi } from '@mantleio/atst'
 ```
 
 #### `createKey`

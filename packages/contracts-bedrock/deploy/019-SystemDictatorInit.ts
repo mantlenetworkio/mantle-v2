@@ -2,8 +2,8 @@ import assert from 'assert'
 
 import { ethers, BigNumber } from 'ethers'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import { awaitCondition } from '@ethan-bedrock/core-utils'
-import '@ethan-bedrock/hardhat-deploy-config'
+import { awaitCondition } from '@mantleio/core-utils'
+import '@mantleio/hardhat-deploy-config'
 import 'hardhat-deploy'
 
 import {

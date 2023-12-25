@@ -1,7 +1,7 @@
 {
   "private": true,
-  "name": "@ethan-bedrock/chain-mon",
-  "version": "0.2.0",
+  "name": "@mantleio/chain-mon",
+  "version": "0.1.0",
   "description": "[Mantle] Chain monitoring services",
   "main": "dist/index",
   "types": "dist/index",
@@ -33,10 +33,10 @@
     "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "dependencies": {
-    "@ethan-bedrock/common-ts": "0.2.0",
-    "@ethan-bedrock/contracts-periphery": "0.2.0",
-    "@ethan-bedrock/core-utils": "0.2.0",
-    "@ethan-bedrock/sdk": "0.2.0",
+    "@mantleio/common-ts": "0.2.0",
+    "@mantleio/contracts-periphery": "0.1.0",
+    "@mantleio/core-utils": "0.2.0",
+    "@mantleio/sdk": "1.0.0",
     "ethers": "^5.7.0",
     "@types/dateformat": "^5.0.0",
     "chai-as-promised": "^7.1.1",

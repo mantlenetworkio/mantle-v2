@@ -1,5 +1,5 @@
 import { Contract, BigNumber } from 'ethers'
-import { Logger } from '@ethan-bedrock/common-ts'
+import { Logger } from '@mantleio/common-ts'
 
 export interface OutputOracle<TSubmissionEventArgs> {
   contract: Contract

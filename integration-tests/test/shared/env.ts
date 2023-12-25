@@ -4,7 +4,7 @@ import {
   TransactionResponse,
   TransactionReceipt,
 } from '@ethersproject/providers'
-import { getChainId, sleep } from '@ethan-bedrock/core-utils'
+import { getChainId, sleep } from '@mantleio/core-utils'
 import {
   CrossChainMessenger,
   MessageStatus,
@@ -12,8 +12,8 @@ import {
   StandardBridgeAdapter,
   ETHBridgeAdapter,
   BridgeAdapterData,
-} from '@ethan-bedrock/sdk'
-import { predeploys } from '@ethan-bedrock/contracts'
+} from '@mantleio/sdk'
+import { predeploys } from '@mantleio/contracts'
 
 /* Imports: Internal */
 import {

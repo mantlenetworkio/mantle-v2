@@ -1,7 +1,7 @@
 {
   "private": true,
-  "name": "@ethan-bedrock/migration-data",
-  "version": "0.2.0",
+  "name": "@mantleio/migration-data",
+  "version": "0.1.0",
   "description": "[Mantle] Data collection scripts for Mantle V2 migration",
   "main": "dist/index",
   "types": "dist/index",
@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "commander": "^9.0.0",
-    "@ethan-bedrock/contracts": "1.0.0",
+    "@mantleio/contracts": "0.3.0",
 
     "@eth-optimism/old-contracts": "npm:@eth-optimism/contracts@0.4.10",
     "ethers": "^5.7.0",

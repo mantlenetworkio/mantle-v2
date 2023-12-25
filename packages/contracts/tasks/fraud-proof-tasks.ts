@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config'
 import { ethers } from 'ethers'
-import { hexStringEquals, sleep } from '@ethan-bedrock/core-utils'
+import { hexStringEquals, sleep } from '@mantleio/core-utils'
 
 // @ts-ignore
 import { getContractFactory } from '../src'

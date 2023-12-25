@@ -7,7 +7,7 @@ import {
   BatchContext,
   encodeAppendSequencerBatch,
   expectApprox,
-} from '@ethan-bedrock/core-utils'
+} from '@mantleio/core-utils'
 import { TransactionResponse } from '@ethersproject/abstract-provider'
 
 /* Internal Imports */

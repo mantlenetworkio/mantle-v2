@@ -1,5 +1,5 @@
 ---
-'@ethan-bedrock/sdk': patch
+'@mantleio/sdk': patch
 ---
 
 add eco bridge adapter

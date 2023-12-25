@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/actor-tests",
+  "name": "@mantleio/actor-tests",
   "version": "0.1.0",
   "description": "A library and suite of tests to stress test Mantle V2.",
   "license": "MIT",
@@ -18,9 +18,9 @@
     "test:coverage": "yarn test"
   },
   "dependencies": {
-    "@ethan-bedrock/contracts-bedrock": "0.2.0",
-    "@ethan-bedrock/core-utils": "0.2.0",
-    "@ethan-bedrock/sdk": "0.2.0",
+    "@mantleio/contracts-bedrock": "0.1.0",
+    "@mantleio/core-utils": "0.2.0",
+    "@mantleio/sdk": "1.0.0",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
     "async-mutex": "^0.3.2",

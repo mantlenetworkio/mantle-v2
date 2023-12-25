@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 import { ethers } from 'ethers'
-import '@ethan-bedrock/hardhat-deploy-config'
+import '@mantleio/hardhat-deploy-config'
 import '@nomiclabs/hardhat-ethers'
 
 import { assertContractVariable, deploy } from '../src/deploy-utils'

@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/gas-oracle",
+  "name": "@mantleio/gas-oracle",
   "version": "0.1.13",
   "private": true,
   "devDependencies": {}

@@ -22,14 +22,14 @@
     "nohoist": [
       "**/typechain/*",
       "**/@typechain/*",
-      "@ethan-bedrock/contracts-bedrock/ds-test",
-      "@ethan-bedrock/contracts-bedrock/forge-std",
-      "@ethan-bedrock/contracts-bedrock/@rari-capital/solmate",
-      "@ethan-bedrock/contracts-bedrock/clones-with-immutable-args",
+      "@mantleio/contracts-bedrock/ds-test",
+      "@mantleio/contracts-bedrock/forge-std",
+      "@mantleio/contracts-bedrock/@rari-capital/solmate",
+      "@mantleio/contracts-bedrock/clones-with-immutable-args",
       "**/@openzeppelin/*",
-      "@ethan-bedrock/contracts-periphery/ds-test",
-      "@ethan-bedrock/contracts-periphery/forge-std",
-      "@ethan-bedrock/contracts-periphery/@rari-capital/solmate",
+      "@mantleio/contracts-periphery/ds-test",
+      "@mantleio/contracts-periphery/forge-std",
+      "@mantleio/contracts-periphery/@rari-capital/solmate",
       "forta-agent"
     ]
   },

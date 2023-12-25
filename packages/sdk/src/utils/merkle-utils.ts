@@ -4,7 +4,7 @@ import {
   fromHexString,
   toHexString,
   toRpcHexString,
-} from '@ethan-bedrock/core-utils'
+} from '@mantleio/core-utils'
 import { MerkleTree } from 'merkletreejs'
 
 /**

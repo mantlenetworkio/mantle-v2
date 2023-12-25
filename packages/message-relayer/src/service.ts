@@ -1,13 +1,13 @@
 /* Imports: External */
 import { Signer } from 'ethers'
-import { getChainId, sleep } from '@ethan-bedrock/core-utils'
+import { getChainId, sleep } from '@mantleio/core-utils'
 import {
   BaseServiceV2,
   validators,
   Gauge,
   Counter,
-} from '@ethan-bedrock/common-ts'
-import { CrossChainMessenger, MessageStatus } from '@ethan-bedrock/sdk'
+} from '@mantleio/common-ts'
+import { CrossChainMessenger, MessageStatus } from '@mantleio/sdk'
 import { Provider } from '@ethersproject/abstract-provider'
 
 import { version } from '../package.json'

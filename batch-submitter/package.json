@@ -1,5 +1,5 @@
 {
-	"name": "@ethan-bedrock/batch-submitter-service",
+	"name": "@mantleio/batch-submitter-service",
 	"version": "0.2.0",
 	"private": true,
 	"devDependencies": {}

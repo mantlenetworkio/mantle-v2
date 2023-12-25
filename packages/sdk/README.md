@@ -1,14 +1,14 @@
 
-# @ethan-bedrock/sdk
+# @mantleio/sdk
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/master/graph/badge.svg?token=0VTG7PG7YR&flag=sdk-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 
-The `@ethan-bedrock/sdk` package provides a set of tools for interacting with Optimism.
+The `@mantleio/sdk` package provides a set of tools for interacting with Optimism.
 
 ## Installation
 
 ```
-npm install @ethan-bedrock/sdk
+npm install @mantleio/sdk
 ```
 
 ## Docs

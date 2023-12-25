@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/endpoint-monitor",
+  "name": "@mantleio/endpoint-monitor",
   "version": "1.0.1",
   "private": true,
   "dependencies": {}

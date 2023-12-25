@@ -1,6 +1,6 @@
 {
-  "name": "@ethan-bedrock/hardhat-deploy-config",
-  "version": "1.5.0",
+  "name": "@mantleio/hardhat-deploy-config",
+  "version": "0.2.0",
   "description": "[Mantle] Hardhat deploy configuration plugin",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

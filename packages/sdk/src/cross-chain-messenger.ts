@@ -21,8 +21,8 @@ import {
   sleep,
   toHexString,
   toRpcHexString,
-} from '@ethan-bedrock/core-utils'
-import {getContractInterface, l1DevPredeploys, predeploys,} from '@ethan-bedrock/contracts'
+} from '@mantleio/core-utils'
+import {getContractInterface, l1DevPredeploys, predeploys,} from '@mantleio/contracts'
 import * as rlp from 'rlp'
 
 import {

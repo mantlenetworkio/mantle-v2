@@ -21,7 +21,7 @@ copies or substantial portions of the Software.
 pragma solidity ^0.8.9;
 
 // Can't do this until the package is published.
-//import { iOVM_L1BlockNumber } from "@ethan-bedrock/contracts/iOVM_L1BlockNumber";
+//import { iOVM_L1BlockNumber } from "@mantleio/contracts/iOVM_L1BlockNumber";
 
 interface iOVM_L1BlockNumber {
     function getL1BlockNumber() external view returns (uint256);

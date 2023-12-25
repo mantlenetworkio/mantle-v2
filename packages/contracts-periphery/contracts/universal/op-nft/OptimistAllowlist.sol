@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { Semver } from "@ethan-bedrock/contracts-bedrock/contracts/universal/Semver.sol";
+import { Semver } from "@mantleio/contracts-bedrock/contracts/universal/Semver.sol";
 import { AttestationStation } from "./AttestationStation.sol";
 import { OptimistConstants } from "./libraries/OptimistConstants.sol";
 

@@ -1,5 +1,5 @@
 {
-  "name": "@ethan-bedrock/op-exporter",
+  "name": "@mantleio/op-exporter",
   "version": "0.5.4",
   "private": true,
   "devDependencies": {}

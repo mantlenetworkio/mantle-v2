@@ -1,6 +1,6 @@
 {
-  "name": "@ethan-bedrock/contracts-periphery",
-  "version": "0.2.0",
+  "name": "@mantleio/contracts-periphery",
+  "version": "0.1.0",
   "description": "[Mantle] External (out-of-protocol) L1 and L2 smart contracts for Mantle",
   "main": "dist/index",
   "types": "dist/index",
@@ -53,9 +53,9 @@
     "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "devDependencies": {
-    "@ethan-bedrock/contracts-bedrock": "0.2.0",
-    "@ethan-bedrock/core-utils": "0.2.0",
-    "@ethan-bedrock/hardhat-deploy-config": "0.2.0",
+    "@mantleio/contracts-bedrock": "0.1.0",
+    "@mantleio/core-utils": "0.2.0",
+    "@mantleio/hardhat-deploy-config": "0.2.0",
     "@ethersproject/hardware-wallets": "^5.7.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",

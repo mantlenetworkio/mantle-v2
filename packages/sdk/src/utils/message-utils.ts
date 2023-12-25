@@ -1,4 +1,4 @@
-import { hashWithdrawal } from '@ethan-bedrock/core-utils'
+import { hashWithdrawal } from '@mantleio/core-utils'
 import { BigNumber, utils, ethers } from 'ethers'
 
 import { LowLevelMessage } from '../interfaces'

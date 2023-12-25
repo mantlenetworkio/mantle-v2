@@ -4,7 +4,7 @@ import {
   Gauge,
   Counter,
   validators,
-} from '@ethan-bedrock/common-ts'
+} from '@mantleio/common-ts'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ethers } from 'ethers'
 

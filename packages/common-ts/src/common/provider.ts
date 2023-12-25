@@ -1,5 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { sleep } from "@ethan-bedrock/core-utils"
+import { sleep } from "@mantleio/core-utils"
 
 import { Logger } from './logger'
 

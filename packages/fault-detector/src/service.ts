@@ -5,15 +5,15 @@ import {
   Gauge,
   validators,
   waitForProvider,
-} from '@ethan-bedrock/common-ts'
-import { getChainId, sleep, toRpcHexString } from '@ethan-bedrock/core-utils'
+} from '@mantleio/common-ts'
+import { getChainId, sleep, toRpcHexString } from '@mantleio/core-utils'
 import {
   CONTRACT_ADDRESSES,
   CrossChainMessenger,
   getOEContract,
   L2ChainID,
   OEL1ContractsLike,
-} from '@ethan-bedrock/sdk'
+} from '@mantleio/sdk'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ethers, Transaction } from 'ethers'
 import dateformat from 'dateformat'

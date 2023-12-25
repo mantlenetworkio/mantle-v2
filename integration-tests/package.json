@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@ethan-bedrock/integration-tests",
+  "name": "@mantleio/integration-tests",
   "version": "0.2.0",
   "description": "[Mantle] Integration tests",
   "scripts": {
@@ -29,11 +29,11 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.5.4",
-    "@ethan-bedrock/contracts": "1.5.0",
-    "@ethan-bedrock/contracts-bedrock": "1.5.0",
-    "@ethan-bedrock/contracts-periphery": "0.2.0",
-    "@ethan-bedrock/core-utils": "1.5.0",
-    "@ethan-bedrock/sdk": "1.5.0",
+    "@mantleio/contracts": "0.3.0",
+    "@mantleio/contracts-bedrock": "0.1.0",
+    "@mantleio/contracts-periphery": "0.1.0",
+    "@mantleio/core-utils": "0.2.0",
+    "@mantleio/sdk": "1.0.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/providers": "^5.7.0",
     "@ethersproject/transactions": "^5.7.0",

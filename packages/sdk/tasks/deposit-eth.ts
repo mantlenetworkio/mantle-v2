@@ -7,7 +7,7 @@ import { Deployment } from 'hardhat-deploy/types'
 import {
   predeploys,
   getContractDefinition,
-} from '@ethan-bedrock/contracts-bedrock'
+} from '@mantleio/contracts-bedrock'
 import { providers, utils, ethers } from 'ethers'
 
 import {

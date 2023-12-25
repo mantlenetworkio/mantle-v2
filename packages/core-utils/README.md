@@ -31,7 +31,7 @@ $ yarn lint
 locally.
 
 ```typescript
-import { TxGasLimit } from '@ethan-bedrock/core-utils'
+import { TxGasLimit } from '@mantleio/core-utils'
 import { JsonRpcProvider } from 'ethers'
 
 const L2Provider = new JsonRpcProvider('https://mainnet.optimism.io')

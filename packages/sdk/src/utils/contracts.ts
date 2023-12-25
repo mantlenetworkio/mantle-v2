@@ -1,5 +1,5 @@
-import { getContractInterface, predeploys } from '@ethan-bedrock/contracts'
-import { getContractInterface as getContractInterfaceBedrock } from '@ethan-bedrock/contracts-bedrock'
+import { getContractInterface, predeploys } from '@mantleio/contracts'
+import { getContractInterface as getContractInterfaceBedrock } from '@mantleio/contracts-bedrock'
 import { ethers, Contract } from 'ethers'
 
 import { toAddress } from './coercion'

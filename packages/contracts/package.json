@@ -1,6 +1,6 @@
 {
-  "name": "@ethan-bedrock/contracts",
-  "version": "1.5.0",
+  "name": "@mantleio/contracts",
+  "version": "0.3.0",
   "description": "[Mantle] L1 and L2 smart contracts for Mantle",
   "main": "dist/index",
   "types": "dist/index",
@@ -65,14 +65,14 @@
     "url": "https://github.com/mantlenetworkio/mantle.git"
   },
   "dependencies": {
-    "@ethan-bedrock/core-utils": "1.5.0",
+    "@mantleio/core-utils": "0.2.0",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/abstract-signer": "^5.7.0"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.11",
     "@defi-wonderland/smock": "^2.0.2",
-    "@ethan-bedrock/hardhat-deploy-config": "0.2.0",
+    "@mantleio/hardhat-deploy-config": "0.2.0",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/hardware-wallets": "^5.7.0",

@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 import { task } from 'hardhat/config'
-import { getChainId } from '@ethan-bedrock/core-utils'
+import { getChainId } from '@mantleio/core-utils'
 
 import { isSameConfig, getDrippieConfig, addChecksum } from '../src'
 

@@ -1,8 +1,8 @@
 /* Imports: External */
 import { BigNumber, Contract, ContractFactory, utils, Wallet } from 'ethers'
 import { ethers } from 'hardhat'
-import { futurePredeploys } from '@ethan-bedrock/contracts'
-import { sleep } from '@ethan-bedrock/core-utils'
+import { futurePredeploys } from '@mantleio/contracts'
+import { sleep } from '@mantleio/core-utils'
 
 /* Imports: Internal */
 import { expect } from './shared/setup'

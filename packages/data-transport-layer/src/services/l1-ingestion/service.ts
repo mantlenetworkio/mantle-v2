@@ -1,7 +1,7 @@
 /* Imports: External */
-import { fromHexString, getChainId, sleep } from '@ethan-bedrock/core-utils'
-import { BaseService, LegacyMetrics } from '@ethan-bedrock/common-ts'
-import { TypedEvent } from '@ethan-bedrock/contracts/dist/types/common'
+import { fromHexString, getChainId, sleep } from '@mantleio/core-utils'
+import { BaseService, LegacyMetrics } from '@mantleio/common-ts'
+import { TypedEvent } from '@mantleio/contracts/dist/types/common'
 import { BaseProvider, StaticJsonRpcProvider } from '@ethersproject/providers'
 import { LevelUp } from 'levelup'
 import { BigNumber, constants } from 'ethers'

@@ -5,8 +5,8 @@ import {
   Counter,
   Gauge,
   validators,
-} from '@ethan-bedrock/common-ts'
-import { sleep } from '@ethan-bedrock/core-utils'
+} from '@mantleio/common-ts'
+import { sleep } from '@mantleio/core-utils'
 
 import { version } from '../package.json'
 
