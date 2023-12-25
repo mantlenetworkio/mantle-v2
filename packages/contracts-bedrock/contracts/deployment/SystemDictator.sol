@@ -183,7 +183,7 @@ contract SystemDictator is OwnableUpgradeable {
                     PortalSender(zero),
                     SystemConfig(zero)
                 ),
-                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, zero, zero, rcfg)
+                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, 0, zero, rcfg)
             )
         );
     }
