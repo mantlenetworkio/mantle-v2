@@ -122,7 +122,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 	if gasLimit == 0 {
 		gasLimit = defaultL2GasLimit
 	}
-	baseFee := config.L2GenesisBlockBaseFee
+	baseFee := config.L2GenesisBlockBaseFeePerGas
 	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {
 		baseFee = newHexBig(defaultL2BaseFee)
 	}
@@ -134,7 +134,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		uint642Big(config.GasPriceOracleScalar),
 		config.BatchSenderAddress.Hash(),
 		gasLimit,
-		baseFee,
+		baseFee.ToInt(),
 		config.P2PSequencerAddress,
 		defaultResourceConfig,
 	)
@@ -311,6 +311,10 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 	if gasLimit == 0 {
 		gasLimit = defaultL2GasLimit
 	}
+	baseFee := config.L2GenesisBlockBaseFeePerGas
+	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {
+		baseFee = newHexBig(defaultL2BaseFee)
+	}
 
 	constructors = append(constructors, []deployer.Constructor{
 		{
@@ -321,6 +325,7 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 				uint642Big(config.GasPriceOracleScalar),
 				config.BatchSenderAddress.Hash(), // left-padded 32 bytes value, version is zero anyway
 				gasLimit,
+				baseFee.ToInt(),
 				config.P2PSequencerAddress,
 				defaultResourceConfig,
 			},

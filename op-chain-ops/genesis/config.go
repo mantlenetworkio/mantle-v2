@@ -63,7 +63,6 @@ type DeployConfig struct {
 
 	L2GenesisBlockNonce         hexutil.Uint64 `json:"l2GenesisBlockNonce"`
 	L2GenesisBlockGasLimit      hexutil.Uint64 `json:"l2GenesisBlockGasLimit"`
-	L2GenesisBlockBaseFee       *hexutil.Big   `json:"L2GenesisBlockBaseFee"`
 	L2GenesisBlockDifficulty    *hexutil.Big   `json:"l2GenesisBlockDifficulty"`
 	L2GenesisBlockMixHash       common.Hash    `json:"l2GenesisBlockMixHash"`
 	L2GenesisBlockNumber        hexutil.Uint64 `json:"l2GenesisBlockNumber"`
@@ -392,7 +391,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				Overhead:    eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleOverhead))),
 				Scalar:      eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleScalar))),
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
-				BaseFee:     d.L2GenesisBlockBaseFee.ToInt(),
+				BaseFee:     d.L2GenesisBlockBaseFeePerGas.ToInt(),
 			},
 		},
 		BlockTime:                  d.L2BlockTime,
