@@ -37,6 +37,7 @@ func randConfig() *Config {
 				Overhead:    randHash(),
 				Scalar:      randHash(),
 				GasLimit:    1234567,
+				BaseFee:     big.NewInt(1e9),
 			},
 		},
 		BlockTime:              2,
