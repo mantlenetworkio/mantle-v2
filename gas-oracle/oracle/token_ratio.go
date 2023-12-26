@@ -108,7 +108,9 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 		ometrics.GasOracleStats.L1BaseFeeGauge.Update(l1BaseFee.Int64())
 
 		// NOTE this will return base multiple with coin ratio
-		latestRatio := tokenRatio.TokenRatio()
+		latestRatio := tokenRatio.TokenRatio() * cfg.tokenRatioScalar
+		ometrics.GasOracleStats.TokenRatioGauge.Update(tokenRatio.TokenRatio())
+		ometrics.GasOracleStats.TokenRatioWithScalarGauge.Update(latestRatio)
 		if !isDifferenceSignificant(lastTokenRatio.Uint64(), uint64(latestRatio), cfg.tokenRatioSignificanceFactor) {
 			log.Warn("non significant tokenRatio update", "former", lastTokenRatio, "current", latestRatio)
 			return nil
@@ -136,7 +138,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			return fmt.Errorf("cannot update tokenRatio: %w", err)
 		}
 		log.Info("TokenRatio transaction already sent", "hash", tx.Hash().Hex(), "tokenRatio", int64(latestRatio))
-		ometrics.GasOracleStats.TokenRatioGauge.Update(latestRatio)
+		ometrics.GasOracleStats.TokenRatioOnchainGauge.Update(latestRatio)
 
 		if cfg.waitForReceipt {
 			// Wait for the receipt
