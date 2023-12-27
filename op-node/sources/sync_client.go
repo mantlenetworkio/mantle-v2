@@ -69,7 +69,7 @@ func NewSyncClient(receiver receivePayload, client client.RPC, log log.Logger, m
 		L2Client:       l2Client,
 		resCtx:         resCtx,
 		resCancel:      resCancel,
-		requests:       make(chan uint64, 128),
+		requests:       make(chan uint64, 1024),
 		receivePayload: receiver,
 	}, nil
 }
@@ -142,6 +142,7 @@ func (s *SyncClient) eventLoop() {
 			s.log.Debug("Shutting down RPC sync worker")
 			return
 		case reqNum := <-s.requests:
+			s.log.Info("Sync client pending request quantity", "quantity", len(s.requests))
 			err := backoff.DoCtx(s.resCtx, 5, backoffStrategy, func() error {
 				// Limit the maximum time for fetching payloads
 				ctx, cancel := context.WithTimeout(s.resCtx, time.Second*10)
