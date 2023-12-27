@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	unsafeL2PayloadsChannelBufferSize = 1024
+	unsafeL2PayloadsChannelBufferSize = 4096
 )
 
 type Metrics interface {
