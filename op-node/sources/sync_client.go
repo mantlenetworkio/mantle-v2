@@ -120,6 +120,9 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end eth.L2BlockR
 	s.log.Info("Scheduling to fetch trailing missing payloads from backup RPC", "start", start, "end", endNum, "size", endNum-start.Number-1)
 
 	for i := start.Number + 1; i < endNum; i++ {
+		if len(s.requests) == requestsChannelBufferSize {
+			return nil
+		}
 		select {
 		case s.requests <- i:
 		case <-ctx.Done():
