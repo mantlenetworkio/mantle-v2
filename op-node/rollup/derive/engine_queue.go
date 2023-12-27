@@ -64,7 +64,7 @@ type EngineControl interface {
 }
 
 // Max memory used for buffering unsafe payloads
-const maxUnsafePayloadsMemory = 1024 * 1024 * 1024
+const maxUnsafePayloadsMemory = 16 * 1024 * 1024 * 1024
 
 // finalityLookback defines the amount of L1<>L2 relations to track for finalization purposes, one per L1 block.
 //
