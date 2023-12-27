@@ -132,7 +132,7 @@ func (s *Driver) OnL1Finalized(ctx context.Context, finalized eth.L1BlockRef) er
 }
 
 func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error {
-	s.log.Info("On unsafe L2 payload channel buffer size", "length", len(s.unsafeL2Payloads))
+	s.log.Debug("On unsafeL2Payloads channel buffer size", "length", len(s.unsafeL2Payloads))
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -513,10 +513,10 @@ func (s *Driver) checkForGapInUnsafeQueue(ctx context.Context) error {
 	end := s.derivation.UnsafeL2SyncTarget()
 	// Check if we have missing blocks between the start and end. Request them if we do.
 	if end == (eth.L2BlockRef{}) {
-		s.log.Info("Requesting sync with open-end range", "start", start)
+		s.log.Debug("requesting sync with open-end range", "start", start)
 		return s.altSync.RequestL2Range(ctx, start, eth.L2BlockRef{})
 	} else if end.Number > start.Number+1 {
-		s.log.Info("Requesting missing unsafe L2 block range", "start", start, "end", end, "size", end.Number-start.Number)
+		s.log.Debug("requesting missing unsafe L2 block range", "start", start, "end", end, "size", end.Number-start.Number)
 		return s.altSync.RequestL2Range(ctx, start, end)
 	}
 	return nil
