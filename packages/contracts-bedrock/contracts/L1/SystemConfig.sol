@@ -24,11 +24,11 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      *                                    block distrubution.
      */
     enum UpdateType {
-        BATCHER,
-        GAS_CONFIG,
-        GAS_LIMIT,
-        UNSAFE_BLOCK_SIGNER,
-        BASE_FEE
+        BATCHER,                // Batcher submitter address
+        GAS_CONFIG,             // L2 gas overhead/scalar
+        GAS_LIMIT,              // L2 gas limit
+        UNSAFE_BLOCK_SIGNER,    // L2 sequencer signer
+        BASE_FEE                // L2 base fee
     }
 
     /**
