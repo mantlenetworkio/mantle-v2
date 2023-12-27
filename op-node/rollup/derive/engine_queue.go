@@ -64,7 +64,7 @@ type EngineControl interface {
 }
 
 // Max memory used for buffering unsafe payloads
-const maxUnsafePayloadsMemory = 500 * 1024 * 1024
+const maxUnsafePayloadsMemory = 1024 * 1024 * 1024
 
 // finalityLookback defines the amount of L1<>L2 relations to track for finalization purposes, one per L1 block.
 //
@@ -251,8 +251,10 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	// Trying unsafe payload should be done before safe attributes
 	// It allows the unsafe head can move forward while the long-range consolidation is in progress.
 	unsafePayloadsLen := eq.unsafePayloads.Len()
+	eq.log.Info("Found unsafe payloads", "length", unsafePayloadsLen)
 	if unsafePayloadsLen > 0 {
 		for i := 0; i < tryNextUnsafePayloadBatchSize && i < unsafePayloadsLen; i++ {
+			eq.log.Info("batch try unsafe payloads", "batchIndex", i)
 			err := eq.tryNextUnsafePayload(ctx)
 			if err == nil {
 				continue
