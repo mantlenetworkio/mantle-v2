@@ -232,7 +232,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage{value: msg.value}(
+        MESSENGER.sendMessage(
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -682,8 +682,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
-
-        bool success = SafeCall.call(_to, gasleft(), _amount, _extraData);
+        bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
         require(success, "StandardBridge: MNT transfer failed");
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.

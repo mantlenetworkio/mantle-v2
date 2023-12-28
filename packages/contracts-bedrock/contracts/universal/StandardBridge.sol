@@ -178,7 +178,11 @@ abstract contract StandardBridge {
             !Address.isContract(msg.sender),
             "StandardBridge: function can only be called from an EOA"
         );
-        _;
+        require(
+            msg.sender==tx.origin,
+            "StandardBridge: function can only be called from an EOA"
+        );
+    _;
     }
 
     /**

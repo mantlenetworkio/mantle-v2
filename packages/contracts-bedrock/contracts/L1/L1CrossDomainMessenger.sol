@@ -216,7 +216,9 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _ethValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
-
+        if (_mntValue!=0){
+            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target, 0);
+        }
         if (success && mntSuccess) {
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
@@ -224,9 +226,6 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
             failedMessages[versionedHash] = true;
             emit FailedRelayedMessage(versionedHash);
 
-            if (_mntValue!=0){
-                mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target, 0);
-            }
             // Revert in this case if the transaction was triggered by the estimation address. This
             // should only be possible during gas estimation or we have bigger problems. Reverting
             // here will make the behavior of gas estimation change such that the gas limit

@@ -297,7 +297,7 @@ abstract contract CrossDomainMessenger is
         );
 
         emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
-        emit SentMessageExtension1(msg.sender, 0, msg.value);
+        emit SentMessageExtension1(msg.sender, _otherSideNativeTokenAmount, msg.value);
 
         unchecked {
             ++msgNonce;
