@@ -182,7 +182,7 @@ abstract contract StandardBridge {
             msg.sender==tx.origin,
             "StandardBridge: function can only be called from an EOA"
         );
-    _;
+        _;
     }
 
     /**
