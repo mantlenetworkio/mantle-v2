@@ -132,6 +132,7 @@ func (s *Driver) OnL1Finalized(ctx context.Context, finalized eth.L1BlockRef) er
 }
 
 func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error {
+	s.log.Debug("On unsafeL2Payloads channel buffer size", "length", len(s.unsafeL2Payloads))
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -275,6 +276,12 @@ func (s *Driver) eventLoop() {
 			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
 			s.derivation.AddUnsafePayload(payload)
 			s.metrics.RecordReceivedUnsafePayload(payload)
+			for len(s.unsafeL2Payloads) > 0 {
+				payload = <-s.unsafeL2Payloads
+				s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
+				s.derivation.AddUnsafePayload(payload)
+				s.metrics.RecordReceivedUnsafePayload(payload)
+			}
 			reqStep()
 
 		case newL1Head := <-s.l1HeadSig:

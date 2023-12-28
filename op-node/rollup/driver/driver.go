@@ -13,6 +13,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
 
+const (
+	unsafeL2PayloadsChannelBufferSize = 4096
+)
+
 type Metrics interface {
 	RecordPipelineReset()
 	RecordPublishingError()
@@ -141,7 +145,7 @@ func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, da
 		l1HeadSig:        make(chan eth.L1BlockRef, 10),
 		l1SafeSig:        make(chan eth.L1BlockRef, 10),
 		l1FinalizedSig:   make(chan eth.L1BlockRef, 10),
-		unsafeL2Payloads: make(chan *eth.ExecutionPayload, 10),
+		unsafeL2Payloads: make(chan *eth.ExecutionPayload, unsafeL2PayloadsChannelBufferSize),
 		altSync:          altSync,
 	}
 }

@@ -18,6 +18,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
+const (
+	requestsChannelBufferSize = 1024
+)
+
 var ErrNoUnsafeL2PayloadChannel = errors.New("unsafeL2Payloads channel must not be nil")
 
 // RpcSyncPeer is a mock PeerID for the RPC sync client.
@@ -69,7 +73,7 @@ func NewSyncClient(receiver receivePayload, client client.RPC, log log.Logger, m
 		L2Client:       l2Client,
 		resCtx:         resCtx,
 		resCancel:      resCancel,
-		requests:       make(chan uint64, 128),
+		requests:       make(chan uint64, requestsChannelBufferSize),
 		receivePayload: receiver,
 	}, nil
 }
@@ -116,6 +120,9 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end eth.L2BlockR
 	s.log.Info("Scheduling to fetch trailing missing payloads from backup RPC", "start", start, "end", endNum, "size", endNum-start.Number-1)
 
 	for i := start.Number + 1; i < endNum; i++ {
+		if len(s.requests) == requestsChannelBufferSize {
+			return nil
+		}
 		select {
 		case s.requests <- i:
 		case <-ctx.Done():
@@ -142,6 +149,7 @@ func (s *SyncClient) eventLoop() {
 			s.log.Debug("Shutting down RPC sync worker")
 			return
 		case reqNum := <-s.requests:
+			s.log.Debug("Sync client left request quantity", "quantity", len(s.requests))
 			err := backoff.DoCtx(s.resCtx, 5, backoffStrategy, func() error {
 				// Limit the maximum time for fetching payloads
 				ctx, cancel := context.WithTimeout(s.resCtx, time.Second*10)
