@@ -180,7 +180,7 @@ abstract contract StandardBridge {
         );
         require(
             msg.sender==tx.origin,
-            "StandardBridge: function can only be called from an EOA"
+            "StandardBridge: msg sender must equal to tx origin"
         );
         _;
     }
