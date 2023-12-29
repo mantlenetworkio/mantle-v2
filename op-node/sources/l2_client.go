@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/goccy/go-json"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -158,6 +159,9 @@ func (s *L2Client) SystemConfigByL2Hash(ctx context.Context, hash common.Hash) (
 		// w%: wrap to preserve ethereum.NotFound case
 		return eth.SystemConfig{}, fmt.Errorf("failed to determine block-hash of hash %v, could not get payload: %w", hash, err)
 	}
+	payloadBz, _ := json.MarshalIndent(payload, "", "  ")
+	s.log.Info("SystemConfigByL2Hash payload", "payload", string(payloadBz))
+	s.log.Info("SystemConfigByL2Hash payload", "GasLimit", payload.GasLimit, "BaseFeePerGas", payload.BaseFeePerGas.String())
 	cfg, err := derive.PayloadToSystemConfig(payload, s.rollupCfg)
 	if err != nil {
 		return eth.SystemConfig{}, err
