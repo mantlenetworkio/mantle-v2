@@ -2,16 +2,15 @@ package opnode
 
 import (
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
 func initMantleUpgradeConfig(rollupConfig *rollup.Config) {
-	switch rollupConfig.L2ChainID {
-	case params.MantleSepoliaChainId:
-		rollupConfig.BaseFeeTime = core.MantleSepoliaUpgradeConfig.BaseFeeTime
-	default:
+	upgradeConfig := core.GetUpgradeConfigForMantle(rollupConfig.L2ChainID)
+	if upgradeConfig == nil {
 		rollupConfig.BaseFeeTime = nil
+		return
 	}
+	rollupConfig.BaseFeeTime = upgradeConfig.BaseFeeTime
 }
