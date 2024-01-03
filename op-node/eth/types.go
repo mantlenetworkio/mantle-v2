@@ -234,6 +234,8 @@ type PayloadAttributes struct {
 	NoTxPool bool `json:"noTxPool,omitempty"`
 	// GasLimit override
 	GasLimit *Uint64Quantity `json:"gasLimit,omitempty"`
+	// BaseFee override
+	BaseFee *big.Int `json:"baseFee,omitempty"`
 }
 
 type ExecutePayloadStatus string
@@ -291,5 +293,7 @@ type SystemConfig struct {
 	Scalar Bytes32 `json:"scalar"`
 	// GasLimit identifies the L2 block gas limit
 	GasLimit uint64 `json:"gasLimit"`
+	// BaseFee identifies the L2 block base fee
+	BaseFee *big.Int `json:"baseFee"`
 	// More fields can be added for future SystemConfig versions.
 }

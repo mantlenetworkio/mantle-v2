@@ -16,7 +16,10 @@ import (
 )
 
 // defaultL2GasLimit represents the default gas limit for an L2 block.
-const defaultL2GasLimit = 30_000_000
+const (
+	defaultL2GasLimit = 30_000_000
+	defaultL2BaseFee  = 1_000_000_000
+)
 
 // NewL2Genesis will create a new L2 genesis
 func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, error) {

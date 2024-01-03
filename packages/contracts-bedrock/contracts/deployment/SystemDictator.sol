@@ -80,6 +80,7 @@ contract SystemDictator is OwnableUpgradeable {
         uint256 scalar;
         bytes32 batcherHash;
         uint64 gasLimit;
+        uint256 baseFee;
         address unsafeBlockSigner;
         ResourceMetering.ResourceConfig resourceConfig;
     }
@@ -182,7 +183,7 @@ contract SystemDictator is OwnableUpgradeable {
                     PortalSender(zero),
                     SystemConfig(zero)
                 ),
-                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, zero, rcfg)
+                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, 0, zero, rcfg)
             )
         );
     }
@@ -249,6 +250,7 @@ contract SystemDictator is OwnableUpgradeable {
                     config.systemConfigConfig.scalar,
                     config.systemConfigConfig.batcherHash,
                     config.systemConfigConfig.gasLimit,
+                    config.systemConfigConfig.baseFee,
                     config.systemConfigConfig.unsafeBlockSigner,
                     config.systemConfigConfig.resourceConfig
                 )

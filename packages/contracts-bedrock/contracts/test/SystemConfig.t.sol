@@ -27,6 +27,7 @@ contract SystemConfig_Init is CommonTest {
             _scalar: 1000000,
             _batcherHash: bytes32(hex"abcd"),
             _gasLimit: 30_000_000,
+            _baseFee: 1_000_000_000,
             _unsafeBlockSigner: address(1),
             _config: config
         });
@@ -53,6 +54,7 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Init {
             _scalar: 0,
             _batcherHash: bytes32(hex""),
             _gasLimit: minimumGasLimit - 1,
+            _baseFee: 1_000_000_000,
             _unsafeBlockSigner: address(1),
             _config: cfg
         });

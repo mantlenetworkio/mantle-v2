@@ -27,6 +27,7 @@ var (
 	ErrMissingOverhead               = errors.New("missing genesis system config overhead")
 	ErrMissingScalar                 = errors.New("missing genesis system config scalar")
 	ErrMissingGasLimit               = errors.New("missing genesis system config gas limit")
+	ErrMissingBaseFee                = errors.New("missing genesis system config base fee")
 	ErrMissingBatchInboxAddress      = errors.New("missing batch inbox address")
 	ErrMissingDepositContractAddress = errors.New("missing deposit contract address")
 	ErrMissingL1ChainID              = errors.New("L1 chain ID must not be nil")
@@ -228,6 +229,9 @@ func (cfg *Config) Check() error {
 	if cfg.Genesis.SystemConfig.GasLimit == 0 {
 		return ErrMissingGasLimit
 	}
+	if cfg.Genesis.SystemConfig.BaseFee == nil {
+		return ErrMissingBaseFee
+	}
 	if cfg.BatchInboxAddress == (common.Address{}) {
 		return ErrMissingBatchInboxAddress
 	}
@@ -291,7 +295,7 @@ func (c *Config) Description(l2Chains map[string]string) string {
 	return banner
 }
 
-// Description outputs a banner describing the important parts of rollup configuration in a log format.
+// LogDescription outputs a banner describing the important parts of rollup configuration in a log format.
 // Optionally provide a mapping of L2 chain IDs to network names to label the L2 chain with if not unknown.
 // The config should be config.Check()-ed before creating a description.
 func (c *Config) LogDescription(log log.Logger, l2Chains map[string]string) {
