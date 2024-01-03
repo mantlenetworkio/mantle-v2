@@ -2,6 +2,7 @@ import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { serialize } from '@ethersproject/transactions'
 import { Contract, BigNumber } from 'ethers'
 import { predeploys, getContractInterface } from '@mantleio/contracts'
+import { getContractInterface as getContractBedrockInterface } from '@mantleio/contracts-bedrock'
 import cloneDeep from 'lodash/cloneDeep'
 
 import { assert } from './utils/assert'
@@ -38,9 +39,19 @@ const getNonceForTx = async (
  * @returns Contract object for the GasPriceOracle.
  */
 const connectGasPriceOracle = (provider: ProviderLike): Contract => {
+  // @ts-ignore
   return new Contract(
     predeploys.BVM_GasPriceOracle,
-    getContractInterface('BVM_GasPriceOracle'),
+    getContractInterface('OVM_GasPriceOracle'),
+    toProvider(provider)
+  )
+}
+
+const connectBedrockGasPriceOracle = (provider: ProviderLike): Contract => {
+  // @ts-ignore
+  return new Contract(
+    predeploys.BVM_GasPriceOracle,
+    getContractBedrockInterface('GasPriceOracle'),
     toProvider(provider)
   )
 }
@@ -77,13 +88,10 @@ export const decimals = async (
  * @param l2Provider L2 provider to query the L1 gas used from.
  * @returns scalar
  */
-export const scalar = async (
-  l2Provider: ProviderLike
-): Promise<BigNumber> => {
+export const scalar = async (l2Provider: ProviderLike): Promise<BigNumber> => {
   const gpo = connectGasPriceOracle(l2Provider)
   return gpo.scalar()
 }
-
 
 /**
  * Gets the current L1 gas limit as seen on L2.
@@ -97,7 +105,6 @@ export const overhead = async (
   const gpo = connectGasPriceOracle(l2Provider)
   return gpo.overhead()
 }
-
 
 /**
  * Estimates the amount of L1 gas required for a given L2 transaction.
@@ -124,7 +131,7 @@ export const estimateL1Gas = async (
 }
 
 /**
- * Estimates the amount of L1 gas cost for a given L2 transaction in wei.
+ * Estimates the amount of L1 gas cost for a given L2 transaction in the bedrock version.
  *
  * @param l2Provider L2 provider to query the gas usage from.
  * @param tx Transaction to estimate L1 gas cost for.
@@ -134,8 +141,9 @@ export const estimateL1GasCost = async (
   l2Provider: ProviderLike,
   tx: TransactionRequest
 ): Promise<BigNumber> => {
-  const gpo = connectGasPriceOracle(l2Provider)
-  return gpo.getL1Fee(
+  const gpo = connectBedrockGasPriceOracle(l2Provider)
+  const ratio = await gpo.tokenRatio()
+  const l1Fee = await gpo.getL1Fee(
     serialize({
       data: tx.data,
       to: tx.to,
@@ -145,39 +153,40 @@ export const estimateL1GasCost = async (
       nonce: await getNonceForTx(l2Provider, tx),
     })
   )
+  return l1Fee.mul(ratio)
 }
 
 /**
- * Estimates the L2 gas cost for a given L2 transaction in wei.
+ * Estimates the L2 gas cost for a given L2 transaction in the bedrock version.
  *
  * @param l2Provider L2 provider to query the gas usage from.
  * @param tx Transaction to estimate L2 gas cost for.
  * @returns Estimated L2 gas cost.
  */
-export const estimateL2GasCost = async (
+export const estimateTotalGasCost = async (
   l2Provider: ProviderLike,
   tx: TransactionRequest
 ): Promise<BigNumber> => {
   const parsed = toProvider(l2Provider)
-  const l2GasPrice = await parsed.getGasPrice()
-  const l2GasCost = await parsed.estimateGas(tx)
-  return l2GasPrice.mul(l2GasCost)
+  const gasPrice = await parsed.getGasPrice()
+  const gasCost = await parsed.estimateGas(tx)
+  return gasPrice.mul(gasCost)
 }
 
 /**
- * Estimates the total gas cost for a given L2 transaction in wei.
+ * Estimates the total gas cost for a given L2 transaction in the bedrock version.
  *
  * @param l2Provider L2 provider to query the gas usage from.
  * @param tx Transaction to estimate total gas cost for.
  * @returns Estimated total gas cost.
  */
-export const estimateTotalGasCost = async (
+export const estimateL2GasCost = async (
   l2Provider: ProviderLike,
   tx: TransactionRequest
 ): Promise<BigNumber> => {
+  const totalGasCost = await estimateTotalGasCost(l2Provider, tx)
   const l1GasCost = await estimateL1GasCost(l2Provider, tx)
-  const l2GasCost = await estimateL2GasCost(l2Provider, tx)
-  return l1GasCost.add(l2GasCost)
+  return totalGasCost.sub(l1GasCost)
 }
 
 /**
@@ -285,6 +294,7 @@ export const asL2Provider = <TProvider extends Provider>(
   l2Provider.getL1GasPrice = async () => {
     return getL1GasPrice(l2Provider)
   }
+
   l2Provider.decimals = async () => {
     return decimals(l2Provider)
   }
