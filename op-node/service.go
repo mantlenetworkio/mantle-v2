@@ -186,6 +186,9 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
 	if err := json.NewDecoder(file).Decode(&rollupConfig); err != nil {
 		return nil, fmt.Errorf("failed to decode rollup config: %w", err)
 	}
+
+	initMantleUpgradeConfig(&rollupConfig)
+
 	return &rollupConfig, nil
 }
 

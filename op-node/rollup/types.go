@@ -76,6 +76,10 @@ type Config struct {
 	// Active if RegolithTime != nil && L2 block timestamp >= *RegolithTime, inactive otherwise.
 	RegolithTime *uint64 `json:"regolith_time,omitempty"`
 
+	// BaseFeeTime sets the activation time of the BaseFee network-upgrade:
+	// Active if BaseFeeTime != nil && L2 block timestamp >= *BaseFeeTime, inactive otherwise.
+	BaseFeeTime *uint64 `json:"base_fee_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -263,6 +267,11 @@ func (c *Config) L1Signer() types.Signer {
 // IsRegolith returns true if the Regolith hardfork is active at or past the given timestamp.
 func (c *Config) IsRegolith(timestamp uint64) bool {
 	return c.RegolithTime != nil && timestamp >= *c.RegolithTime
+}
+
+// IsBaseFee returns true if the BaseFee hardfork is active at or past the given timestamp.
+func (c *Config) IsBaseFee(timestamp uint64) bool {
+	return c.BaseFeeTime != nil && timestamp >= *c.BaseFeeTime
 }
 
 // Description outputs a banner describing the important parts of rollup configuration in a human-readable form.
