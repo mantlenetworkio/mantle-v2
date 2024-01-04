@@ -41,11 +41,8 @@ func AttributesMatchBlock(attrs *eth.PayloadAttributes, parentHash common.Hash, 
 	if *attrs.GasLimit != block.GasLimit {
 		return fmt.Errorf("gas limit does not match. expected %d. got: %d", *attrs.GasLimit, block.GasLimit)
 	}
-	log.Info("AttributesMatchBlock", "attrs.BaseFee", attrs.BaseFee)
 	if attrs.BaseFee != nil {
-		log.Info("AttributesMatchBlock", "attrs.BaseFee", attrs.BaseFee.String(), "block.BlockNumber", block.BlockNumber, "block.BaseFee", block.BaseFeePerGas.String())
-	} else {
-		log.Info("AttributesMatchBlock", "attrs.BaseFee", attrs.BaseFee)
+		log.Info("attributes match block check", "blockNumber", block.BlockNumber, "attrs", attrs.BaseFee.String(), "block", block.BaseFeePerGas.String())
 	}
 	if attrs.BaseFee != nil && block.BaseFeePerGas.ToBig().Cmp(attrs.BaseFee) != 0 {
 		return fmt.Errorf("base fee does not match. blockNumber %d. expected %s. got: %s", block.BlockNumber, attrs.BaseFee.String(), block.BaseFeePerGas.String())
