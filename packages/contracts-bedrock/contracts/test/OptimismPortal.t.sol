@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
+import { console } from "forge-std/console.sol";
 import { stdError } from "forge-std/Test.sol";
 import { Portal_Initializer, CommonTest, NextImpl } from "./CommonTest.t.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
@@ -690,7 +691,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         );
 
         vm.warp(block.timestamp + oracle.FINALIZATION_PERIOD_SECONDS() + 1);
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, false, false);
         emit WithdrawalFinalized(_withdrawalHash, true);
         op.finalizeWithdrawalTransaction(_defaultTx);
 
@@ -924,7 +925,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         );
 
         vm.warp(block.timestamp + oracle.FINALIZATION_PERIOD_SECONDS() + 1);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, true, false, false);
         emit WithdrawalFinalized(_withdrawalHash, true);
         op.finalizeWithdrawalTransaction(_defaultTx);
 
@@ -1032,7 +1033,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         vm.warp(block.timestamp + oracle.FINALIZATION_PERIOD_SECONDS() + 1);
         vm.expectCall(address(this), _testTx.data);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, true, true, false);
         emit WithdrawalFinalized(withdrawalHash, true);
         op.finalizeWithdrawalTransaction(_testTx);
 
