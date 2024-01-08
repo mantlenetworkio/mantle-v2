@@ -35,7 +35,7 @@
   "gasPriceOracleScalar": 1000000,
   "governanceTokenSymbol": "MNT",
   "governanceTokenName": "Mantle",
-  "governanceTokenOwner": "0x87991DFc31DE1A8d699FD1a2b4ba5032B4fAF6AC",
+  "governanceTokenOwner": "0x0000000000000000000000000000000000000000",
   "eip1559Denominator": 8,
   "eip1559Elasticity": 2,
   "l1GenesisBlockTimestamp": "0x638a4554",
