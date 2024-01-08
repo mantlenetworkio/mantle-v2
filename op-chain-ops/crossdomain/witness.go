@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -84,11 +85,22 @@ func ReadWitnessData(path string) ([]*SentMessage, OVMETHAddresses, error) {
 	}
 	defer f.Close()
 
-	scan := bufio.NewScanner(f)
+	rd := bufio.NewReader(f)
 	var witnesses []*SentMessage
 	addresses := make(map[common.Address]bool)
-	for scan.Scan() {
-		line := scan.Text()
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, nil, err
+		}
+		line = strings.TrimPrefix(line, "\n")
+		line = strings.TrimSuffix(line, "\n")
+		if line == "" {
+			continue
+		}
 		splits := strings.Split(line, "|")
 		if len(splits) < 2 {
 			return nil, nil, fmt.Errorf("invalid line: %s", line)
