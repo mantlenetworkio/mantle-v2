@@ -53,7 +53,7 @@ contract L1StandardBridge_Receive_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L2Bridge),
                 abi.encodeWithSelector(
@@ -108,7 +108,7 @@ contract PreBridgeETH is Bridge_Initializer {
             address(L1Messenger),
             500,
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -246,7 +246,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -379,7 +379,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -492,7 +492,7 @@ contract PreBridgeMNT is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 500,
                 address(L2Bridge),
                 message,
@@ -649,7 +649,7 @@ contract PreBridgeMNTTo is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 600,
                 address(L2Bridge),
                 message,
@@ -796,7 +796,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessage.selector,
+                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L2Bridge),
                 message,

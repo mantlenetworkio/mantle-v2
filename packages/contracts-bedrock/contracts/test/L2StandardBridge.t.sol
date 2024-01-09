@@ -96,7 +96,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
             address(L2Messenger),
             100,
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                L2CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L1Bridge),
                 message,
@@ -269,7 +269,7 @@ contract PreBridgeERC20 is Bridge_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                L2CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L1Bridge),
                 message,
@@ -476,7 +476,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                L2CrossDomainMessenger.sendMessageMantleBedrock.selector,
                 0,
                 address(L1Bridge),
                 message,

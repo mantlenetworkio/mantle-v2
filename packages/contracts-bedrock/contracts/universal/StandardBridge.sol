@@ -400,7 +400,7 @@ abstract contract StandardBridge {
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage{ value: _amount }(
+        MESSENGER.sendMessageMantleBedrock{ value: _amount }(
             0,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -451,7 +451,7 @@ abstract contract StandardBridge {
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage(
+        MESSENGER.sendMessageMantleBedrock(
             0,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(

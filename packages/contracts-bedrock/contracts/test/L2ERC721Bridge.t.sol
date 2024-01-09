@@ -82,7 +82,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeCall(
-                L2Messenger.sendMessage,
+                L2Messenger.sendMessageMantleBedrock,
                 (
                     0,
                     address(otherBridge),
@@ -168,7 +168,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeCall(
-                L2Messenger.sendMessage,
+                L2Messenger.sendMessageMantleBedrock,
                 (
                     0,
                     address(otherBridge),
