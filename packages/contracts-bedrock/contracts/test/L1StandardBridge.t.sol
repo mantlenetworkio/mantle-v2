@@ -49,11 +49,11 @@ contract L1StandardBridge_Receive_Test is Bridge_Initializer {
 
         vm.expectEmit(true, true, true, true, address(L1Bridge));
         emit ETHBridgeInitiated(alice, alice, 100, hex"");
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 0,
                 address(L2Bridge),
                 abi.encodeWithSelector(
@@ -82,7 +82,7 @@ contract PreBridgeETH is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         bytes memory message = abi.encodeWithSelector(
             L2StandardBridge.finalizeBridgeETH.selector,
             alice,
@@ -108,7 +108,7 @@ contract PreBridgeETH is Bridge_Initializer {
             address(L1Messenger),
             500,
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -218,7 +218,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         if (isLegacy) {
             vm.expectCall(
                 address(L1Bridge),
@@ -246,7 +246,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -353,7 +353,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         // Deal Alice's ERC20 State
         deal(address(L1Token), alice, 100000, true);
         vm.prank(alice);
@@ -379,7 +379,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 0,
                 address(L2Bridge),
                 message,
@@ -458,7 +458,7 @@ contract PreBridgeMNT is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         bytes memory message = abi.encodeWithSelector(
             L2StandardBridge.finalizeBridgeMNT.selector,
             alice,
@@ -492,7 +492,7 @@ contract PreBridgeMNT is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 500,
                 address(L2Bridge),
                 message,
@@ -617,7 +617,7 @@ contract PreBridgeMNTTo is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.deal(alice,1000);
         deal(address(l1MNT), alice, 600);
         vm.prank(alice);
@@ -649,7 +649,7 @@ contract PreBridgeMNTTo is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 600,
                 address(L2Bridge),
                 message,
@@ -775,7 +775,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         deal(address(L1Token), alice, 100000, true);
         vm.store(address(L1Token), bytes32(uint256(0x2)), bytes32(uint256(100000))); //set total supply
 
@@ -796,7 +796,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeWithSelector(
-                L1CrossDomainMessenger.sendMessageMantleBedrock.selector,
+                selector,
                 0,
                 address(L2Bridge),
                 message,

@@ -70,7 +70,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     /**
      * @inheritdoc CrossDomainMessenger
      */
-    function sendMessageMantleBedrock(
+    function sendMessage(
         uint256 _ethAmount,
         address _target,
         bytes calldata _message,
