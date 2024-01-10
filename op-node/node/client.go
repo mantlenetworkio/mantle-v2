@@ -58,6 +58,7 @@ func (cfg *L2EndpointConfig) Setup(ctx context.Context, log log.Logger, rollupCf
 	if err := cfg.Check(); err != nil {
 		return nil, nil, err
 	}
+	log.Info("------ jwt secret", "key", cfg.L2EngineJWTSecret)
 	auth := rpc.WithHTTPAuth(gn.NewJWTAuth(cfg.L2EngineJWTSecret))
 	l2Node, err := client.NewRPC(ctx, log, cfg.L2EngineAddr, client.WithGethRPCOptions(auth))
 	if err != nil {

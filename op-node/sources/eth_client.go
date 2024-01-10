@@ -388,7 +388,6 @@ func (s *EthClient) GetProof(ctx context.Context, address common.Address, storag
 			return nil, fmt.Errorf("unexpected storage proof key difference for entry %d: got %s but requested %s", i, getProofResponse.StorageProof[i].Key, key)
 		}
 	}
-	log.Info("-------StorageProof", "len", len(getProofResponse.StorageProof))
 	return getProofResponse, nil
 }
 
@@ -420,8 +419,6 @@ func (s *EthClient) ReadStorageAt(ctx context.Context, address common.Address, s
 	if err := result.Verify(block.Root()); err != nil {
 		return common.Hash{}, fmt.Errorf("failed to verify retrieved proof against state root: %w", err)
 	}
-	log.Info("---proof result", "result", result)
-	log.Info("---proof result", "result StorageProof len", result.StorageProof)
 
 	value := result.StorageProof[0].Value.ToInt()
 	return common.BytesToHash(value.Bytes()), nil

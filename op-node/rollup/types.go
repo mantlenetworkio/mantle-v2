@@ -115,11 +115,13 @@ func (cfg *Config) ValidateL1Config(ctx context.Context, client L1Client) error 
 func (cfg *Config) ValidateL2Config(ctx context.Context, client L2Client) error {
 	// Validate the L2 Client Chain ID
 	if err := cfg.CheckL2ChainID(ctx, client); err != nil {
+		log.Info("-------check l2 chain id ", "err", err)
 		return err
 	}
 
 	// Validate the Rollup L2 Genesis Blockhash
 	if err := cfg.CheckL2GenesisBlockHash(ctx, client); err != nil {
+		log.Info("-------check l2 GenesisBlockHash ", "err", err)
 		return err
 	}
 
@@ -178,6 +180,7 @@ type L2Client interface {
 func (cfg *Config) CheckL2ChainID(ctx context.Context, client L2Client) error {
 	id, err := client.ChainID(ctx)
 	if err != nil {
+		log.Error("---------failed to get chain id")
 		return err
 	}
 	if cfg.L2ChainID.Cmp(id) != 0 {
@@ -190,6 +193,7 @@ func (cfg *Config) CheckL2ChainID(ctx context.Context, client L2Client) error {
 func (cfg *Config) CheckL2GenesisBlockHash(ctx context.Context, client L2Client) error {
 	l2GenesisBlockRef, err := client.L2BlockRefByNumber(ctx, cfg.Genesis.L2.Number)
 	if err != nil {
+		log.Error("------ failed to get l2GenesisBlockRef", "number", cfg.Genesis.L2.Number, "err", err)
 		return err
 	}
 	if l2GenesisBlockRef.Hash != cfg.Genesis.L2.Hash {
