@@ -67,6 +67,7 @@ func (r *RuntimeConfig) P2PSequencerAddress() common.Address {
 // Load is safe to call concurrently, but will lock the runtime configuration modifications only,
 // and will thus not block other Load calls with possibly alternative L1 block views.
 func (r *RuntimeConfig) Load(ctx context.Context, l1Ref eth.L1BlockRef) error {
+	log.Info("-------load system config", "system address", r.rollupCfg.L1SystemConfigAddress, "slot", UnsafeBlockSignerAddressSystemConfigStorageSlot, "l1 hash", l1Ref.Hash)
 	val, err := r.l1Client.ReadStorageAt(ctx, r.rollupCfg.L1SystemConfigAddress, UnsafeBlockSignerAddressSystemConfigStorageSlot, l1Ref.Hash)
 	if err != nil {
 		return fmt.Errorf("failed to fetch unsafe block signing address from system config: %w", err)
