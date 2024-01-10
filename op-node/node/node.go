@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ethereum "github.com/ethereum-optimism/optimism/l2geth"
+	"github.com/ethereum/go-ethereum"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
