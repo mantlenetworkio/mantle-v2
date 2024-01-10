@@ -412,7 +412,7 @@ func (s *EthClient) ReadStorageAt(ctx context.Context, address common.Address, s
 		return common.Hash{}, fmt.Errorf("failed to retrieve state root of block %s: %w", blockHash, err)
 	}
 
-	result, err := s.GetProof(ctx, address, []common.Hash{}, blockHash.String())
+	result, err := s.GetProof(ctx, address, []common.Hash{storageSlot}, blockHash.String())
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to fetch proof of storage slot %s at block %s: %w", storageSlot, blockHash, err)
 	}
