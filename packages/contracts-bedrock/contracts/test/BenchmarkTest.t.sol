@@ -122,37 +122,37 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
 }
 
 contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
-    function test_sendMessageMantleBedrock_benchmark_0() external {
+    function test_sendMessage_benchmark_0_0() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 1 gwei);
         // The amount of data typically sent during a bridge deposit.
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessageMantleBedrock(0, bob, data, uint32(100));
+        L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
 
-    function test_sendMessage_benchmark_0() external {
+    function test_sendMessage_benchmark_0_1() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 1 gwei);
         // The amount of data typically sent during a bridge deposit.
         bytes
         memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessage( bob, data, uint32(100));
+        L1Messenger.sendMessage(bob, data, uint32(100));
     }
 
-    function test_sendMessageMantleBedrock_benchmark_1() external {
+    function test_sendMessage_benchmark_1_0() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 10 gwei);
         // The amount of data typically sent during a bridge deposit.
         bytes
             memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
         vm.resumeGasMetering();
-        L1Messenger.sendMessageMantleBedrock(0, bob, data, uint32(100));
+        L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
 
-    function test_sendMessage_benchmark_1() external {
+    function test_sendMessage_benchmark_1_1() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 10 gwei);
         // The amount of data typically sent during a bridge deposit.

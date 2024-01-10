@@ -232,7 +232,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessageMantleBedrock(
+        MESSENGER.sendMessage(
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -272,7 +272,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         // contracts may override this function in order to emit legacy events as well.
         _emitMNTBridgeInitiated(_from, _to, _amount, _extraData);
         uint256 zeroETHValue = 0;
-        MESSENGER.sendMessageMantleBedrock{value: msg.value}(
+        MESSENGER.sendMessage{value: msg.value}(
             zeroETHValue,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -332,7 +332,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         // contracts may override this function in order to emit legacy events as well.
         _emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessageMantleBedrock(
+        MESSENGER.sendMessage(
             0,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(

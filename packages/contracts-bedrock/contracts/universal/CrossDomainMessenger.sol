@@ -270,7 +270,7 @@ abstract contract CrossDomainMessenger is
      * @param _message                      Message to trigger the target address with.
      * @param _minGasLimit                  Minimum gas limit that the message can be executed with.
      */
-    function sendMessageMantleBedrock(
+    function sendMessage(
         uint256 _otherSideNativeTokenAmount,
         address _target,
         bytes calldata _message,
