@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ethereum "github.com/ethereum-optimism/optimism/l2geth"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p/core/peer"
-	
-	"github.com/ethereum/go-ethereum"
+
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 
@@ -86,22 +86,38 @@ func (n *OpNode) init(ctx context.Context, cfg *Config, snapshotLog log.Logger) 
 	if err := n.initRuntimeConfig(ctx, cfg); err != nil {
 		return err
 	}
+	fmt.Println("--------init runtime config success")
 	if err := n.initL2(ctx, cfg, snapshotLog); err != nil {
 		return err
 	}
+	fmt.Println("--------initL2 success")
+
 	if err := n.initRPCSync(ctx, cfg); err != nil {
 		return err
 	}
+	fmt.Println("--------initRPCSync success")
+
 	if err := n.initP2PSigner(ctx, cfg); err != nil {
+		fmt.Println("--------initP2PSigner failed")
 		return err
 	}
+	fmt.Println("--------initP2PSigner success")
+
 	if err := n.initP2P(ctx, cfg); err != nil {
+		fmt.Println("--------initP2P failed")
+
 		return err
 	}
+	fmt.Println("--------initP2P success")
+
 	// Only expose the server at the end, ensuring all RPC backend components are initialized.
 	if err := n.initRPCServer(ctx, cfg); err != nil {
+		fmt.Println("--------initRPCServer failed")
+
 		return err
 	}
+	fmt.Println("--------initRPCServer success")
+
 	if err := n.initMetricsServer(ctx, cfg); err != nil {
 		return err
 	}
@@ -198,11 +214,14 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	}
 
 	if err := cfg.Rollup.ValidateL2Config(ctx, n.l2Source); err != nil {
+		fmt.Println("------ ValidateL2Config failed")
 		return err
 	}
 
 	n.daSyncer, err = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
 	if err != nil {
+		fmt.Println("------ NewMantleDataStore failed")
+
 		return err
 	}
 
