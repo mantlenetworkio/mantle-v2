@@ -166,10 +166,10 @@ func (n *OpNode) initRuntimeConfig(ctx context.Context, cfg *Config) error {
 	for i := 0; i < 5; i++ {
 		fetchCtx, fetchCancel := context.WithTimeout(ctx, time.Second*10)
 		//TODO upgrade simulation
-		upgradeBlock := os.Getenv("tmp_block_number")
+		upgradeBlock := os.Getenv("TMP_BLOCK_NUMBER")
 		blockNumber, err := strconv.ParseUint(upgradeBlock, 10, 64)
 		if err != nil {
-			n.log.Error("tmp_block_number can not convert to uint64", "tmp_block_number", upgradeBlock)
+			n.log.Error("TMP_BLOCK_NUMBER can not convert to uint64", "TMP_BLOCK_NUMBER", upgradeBlock)
 			panic(err)
 		}
 		//l1Head, err := n.l1Source.L1BlockRefByLabel(fetchCtx, eth.Unsafe)
