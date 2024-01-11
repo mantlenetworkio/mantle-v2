@@ -141,6 +141,8 @@ type EngineQueue struct {
 	l1Fetcher L1Fetcher
 
 	syncCfg *sync.Config
+
+	isPossibleFork bool
 }
 
 var _ EngineControl = (*EngineQueue)(nil)
@@ -244,16 +246,6 @@ func (eq *EngineQueue) isEngineSyncing() bool {
 	return eq.unsafeHead.Hash != eq.engineSyncTarget.Hash
 }
 
-func (eq *EngineQueue) isPossibleFork(ctx context.Context) bool {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
-	defer cancel()
-	_, err := eq.engine.L2BlockRefByHash(ctx, eq.unsafeHead.Hash)
-	if err != nil {
-		return true
-	}
-	return false
-}
-
 func (eq *EngineQueue) Step(ctx context.Context) error {
 	if eq.needForkchoiceUpdate {
 		return eq.tryUpdateEngine(ctx)
@@ -262,8 +254,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	// It allows the unsafe head can move forward while the long-range consolidation is in progress.
 	unsafePayloadsLen := eq.unsafePayloads.Len()
 	eq.log.Debug("Pending unsafe payloads", "length", unsafePayloadsLen)
-	isFork := eq.isPossibleFork(ctx)
-	if unsafePayloadsLen > 0 && !isFork {
+	if unsafePayloadsLen > 0 {
 		for i := 0; i < tryNextUnsafePayloadBatchSize && i < unsafePayloadsLen; i++ {
 			err := eq.tryNextUnsafePayload(ctx)
 			if err == nil {
@@ -276,7 +267,7 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 		}
 		// EOF error means we can't process the next unsafe payload. Then we should process next safe attributes.
 	}
-	if eq.isEngineSyncing() && !isFork {
+	if eq.isEngineSyncing() && !eq.isPossibleFork {
 		// Make pipeline first focus to sync unsafe blocks to engineSyncTarget
 		return EngineP2PSyncing
 	}
@@ -515,9 +506,15 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 		if first.ParentHash != eq.unsafeHead.Hash {
 			eq.log.Info("skipping unsafe payload, since it does not build onto the existing unsafe chain", "safe", eq.safeHead.ID(), "unsafe", first.ID(), "payload", first.ID())
 			eq.unsafePayloads.Pop()
+			eq.isPossibleFork = true
 			return io.EOF
 		}
+		eq.isPossibleFork = false
 	} else if !eq.syncCfg.EngineSync {
+		return io.EOF
+	}
+
+	if eq.isPossibleFork {
 		return io.EOF
 	}
 
