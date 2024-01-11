@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p/core/peer"
-	
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -163,7 +165,15 @@ func (n *OpNode) initRuntimeConfig(ctx context.Context, cfg *Config) error {
 
 	for i := 0; i < 5; i++ {
 		fetchCtx, fetchCancel := context.WithTimeout(ctx, time.Second*10)
-		l1Head, err := n.l1Source.L1BlockRefByLabel(fetchCtx, eth.Unsafe)
+		//TODO upgrade simulation
+		upgradeBlock := os.Getenv("tmp_block_number")
+		blockNumber, err := strconv.ParseUint(upgradeBlock, 10, 64)
+		if err != nil {
+			n.log.Error("tmp_block_number can not convert to uint64", "tmp_block_number", upgradeBlock)
+			panic(err)
+		}
+		//l1Head, err := n.l1Source.L1BlockRefByLabel(fetchCtx, eth.Unsafe)
+		l1Head, err := n.l1Source.L1BlockRefByNumber(fetchCtx, blockNumber)
 		fetchCancel()
 		if err != nil {
 			n.log.Error("failed to fetch L1 head for runtime config initialization", "err", err)
