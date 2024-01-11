@@ -356,7 +356,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
 
         // Deal Alice's ERC20 State
         deal(address(L1Token), alice, 100000, true);
-        vm.prank(alice);
+        vm.prank(alice, alice);
         L1Token.approve(address(L1Bridge), type(uint256).max);
 
         // The L1Bridge should transfer alice's tokens to itself
@@ -440,7 +440,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L1Messenger));
         emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
-        vm.prank(alice);
+        vm.prank(alice, alice);
         L1Bridge.depositERC20(address(L1Token), address(L2Token), 100, 10000, hex"");
         assertEq(L1Bridge.deposits(address(L1Token), address(L2Token)), 100);
     }
