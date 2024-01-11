@@ -698,7 +698,7 @@ func (eq *EngineQueue) forceNextSafeAttributes(ctx context.Context) error {
 }
 
 func (eq *EngineQueue) StartPayload(ctx context.Context, parent eth.L2BlockRef, attrs *eth.PayloadAttributes, updateSafe bool) (errType BlockInsertionErrType, err error) {
-	if eq.isEngineSyncing() {
+	if eq.isEngineSyncing() && !eq.isPossibleFork {
 		return BlockInsertTemporaryErr, fmt.Errorf("engine is in progess of p2p sync")
 	}
 	if eq.buildingID != (eth.PayloadID{}) {
