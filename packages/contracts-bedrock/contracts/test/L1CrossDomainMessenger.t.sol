@@ -35,7 +35,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
     // sendMessage: should be able to send a single message
     // TODO: this same test needs to be done with the legacy message type
     // by setting the message version to 0
-    function test_sendMessage_succeeds() external {
+    function test_sendMessage_succeeds_0() external {
         // deposit transaction on the optimism portal should be called
         vm.expectCall(
             address(op),
@@ -89,6 +89,62 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
 
         vm.prank(alice);
         L1Messenger.sendMessage(0, recipient, hex"ff", uint32(100));
+    }
+
+    function test_sendMessage_succeeds_1() external {
+        // deposit transaction on the optimism portal should be called
+        vm.expectCall(
+            address(op),
+            abi.encodeWithSelector(
+                OptimismPortal.depositTransaction.selector,
+                0,
+                Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+                0,
+                L1Messenger.baseGas(hex"ff", 100),
+                false,
+                Encoding.encodeCrossDomainMessage(
+                    L1Messenger.messageNonce(),
+                    alice,
+                    recipient,
+                    0,
+                    0,
+                    100,
+                    hex"ff"
+                )
+            )
+        );
+
+        // TransactionDeposited event
+        vm.expectEmit(true, true, true, true);
+        emitTransactionDeposited(
+            AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger)),
+            Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+            0,
+            0,
+            0,
+            L1Messenger.baseGas(hex"ff", 100),
+            false,
+            Encoding.encodeCrossDomainMessage(
+                L1Messenger.messageNonce(),
+                alice,
+                recipient,
+                0,
+                0,
+                100,
+                hex"ff"
+            )
+        );
+
+        // SentMessage event
+        vm.expectEmit(true, true, true, true);
+        emit SentMessage(recipient, alice, hex"ff", L1Messenger.messageNonce(), 100);
+
+        // SentMessageExtension1 event
+        vm.expectEmit(true, true, true, true);
+        emit SentMessageExtension1(alice, 0, 0);
+
+        vm.prank(alice);
+        L1Messenger.sendMessage(recipient, hex"ff", uint32(100));
     }
 
     // sendMessage: should be able to send the same message twice
