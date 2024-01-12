@@ -493,15 +493,6 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 	}
 
 	// Ensure that the unsafe payload builds upon the current unsafe head
-	//if !eq.syncCfg.EngineSync && first.ParentHash != eq.unsafeHead.Hash {
-	//	if uint64(first.BlockNumber) == eq.unsafeHead.Number+1 {
-	//		eq.log.Info("skipping unsafe payload, since it does not build onto the existing unsafe chain", "safe", eq.safeHead.ID(), "unsafe", first.ID(), "payload", first.ID())
-	//		eq.unsafePayloads.Pop()
-	//	}
-	//	return io.EOF // time to go to next stage if we cannot process the first unsafe payload
-	//}
-
-	// Ensure that the unsafe payload builds upon the current unsafe head
 	if uint64(first.BlockNumber) == eq.unsafeHead.Number+1 {
 		if first.ParentHash != eq.unsafeHead.Hash {
 			eq.log.Info("skipping unsafe payload, since it does not build onto the existing unsafe chain", "safe", eq.safeHead.ID(), "unsafe", first.ID(), "payload", first.ID())
