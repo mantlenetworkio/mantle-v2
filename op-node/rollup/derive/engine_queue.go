@@ -513,7 +513,6 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 	} else if !eq.syncCfg.EngineSync {
 		return io.EOF
 	}
-	log.Info("---------- is possible fork", "isPossibleFork", eq.isPossibleFork)
 
 	if eq.isPossibleFork {
 		return io.EOF
