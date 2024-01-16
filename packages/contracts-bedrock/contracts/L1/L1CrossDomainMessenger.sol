@@ -106,6 +106,43 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
+     * @inheritdoc CrossDomainMessenger
+     */
+    function sendMessage(
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    ) external payable override {
+
+        // Triggers a message to the other messenger. Note that the amount of gas provided to the
+        // message is the amount of gas requested by the user PLUS the base gas value. We want to
+        // guarantee the property that the call to the target contract will always have at least
+        // the minimum gas limit specified by the user.
+        _sendMessage(
+            0,
+            OTHER_MESSENGER,
+            baseGas(_message, _minGasLimit),
+            abi.encodeWithSelector(
+                L2CrossDomainMessenger.relayMessage.selector,
+                messageNonce(),
+                msg.sender,
+                _target,
+                0,
+                msg.value,
+                _minGasLimit,
+                _message
+            )
+        );
+
+        emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
+        emit SentMessageExtension1(msg.sender, 0, msg.value);
+
+        unchecked {
+            ++msgNonce;
+        }
+    }
+
+    /**
      * @notice Relays a message that was sent by the other CrossDomainMessenger contract. Can only
      *         be executed via cross-chain call from the other messenger OR if the message was
      *         already received once and is currently being replayed.
