@@ -85,6 +85,7 @@ func makeDepositTx(
 	value *big.Int,
 	mint *big.Int,
 	ethValue *big.Int,
+	ethTxValue *big.Int,
 	gasLimit *big.Int,
 	isCreate bool,
 	data []byte,
@@ -113,6 +114,9 @@ func makeDepositTx(
 	}
 	if ethValue.Cmp(big.NewInt(0)) == 1 {
 		depositTx.EthValue = ethValue
+	}
+	if ethTxValue.Cmp(big.NewInt(0)) == 1 {
+		depositTx.EthTxValue = ethTxValue
 	}
 	if !isCreate {
 		depositTx.To = &to

@@ -79,6 +79,7 @@ contract CommonTest is Test {
         uint256 _mntValue,
         uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -87,7 +88,7 @@ contract CommonTest is Test {
             _from,
             _to,
             0,
-            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
+            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _ethTxValue, _gasLimit, _isCreation, _data)
         );
     }
 }

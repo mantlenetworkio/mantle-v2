@@ -158,7 +158,7 @@ func main() {
 		data := common.FromHex(args[9])
 
 		// Create deposit transaction
-		depositTx := makeDepositTx(from, to, value, mint, ethValue, gasLimit, false, data, l1BlockHash, logIndex)
+		depositTx := makeDepositTx(from, to, value, mint, ethValue, ethValue, gasLimit, false, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -189,7 +189,7 @@ func main() {
 		l1BlockHash := common.HexToHash(args[9])
 		logIndex, ok := new(big.Int).SetString(args[10], 10)
 		checkOk(ok)
-		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
+		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, ethValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()

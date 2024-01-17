@@ -39,6 +39,7 @@ func GenerateDeposit(sourceHash common.Hash, rng *rand.Rand) *types.DepositTx {
 		Mint:                mint,
 		IsSystemTransaction: false,
 		EthValue:            ethValue,
+		EthTxValue:          ethValue,
 	}
 	return dep
 }
