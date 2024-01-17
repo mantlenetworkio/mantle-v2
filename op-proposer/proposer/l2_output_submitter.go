@@ -199,14 +199,14 @@ func NewL2OutputSubmitter(cfg Config, l log.Logger, m metrics.Metricer) (*L2Outp
 		return nil, err
 	}
 
-	cCtx, cCancel := context.WithTimeout(ctx, cfg.NetworkTimeout)
-	defer cCancel()
-	version, err := l2ooContract.Version(&bind.CallOpts{Context: cCtx})
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	log.Info("Connected to L2OutputOracle", "address", cfg.L2OutputOracleAddr, "version", version)
+	//cCtx, cCancel := context.WithTimeout(ctx, cfg.NetworkTimeout)
+	//defer cCancel()
+	//version, err := l2ooContract.Version(&bind.CallOpts{Context: cCtx})
+	//if err != nil {
+	//	cancel()
+	//	return nil, err
+	//}
+	//log.Info("Connected to L2OutputOracle", "address", cfg.L2OutputOracleAddr, "version", version)
 
 	parsed, err := bindings.L2OutputOracleMetaData.GetAbi()
 	if err != nil {

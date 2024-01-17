@@ -327,7 +327,7 @@ func (s *CrossLayerUser) ActDeposit(t Testing) {
 		depositGas = gas
 	}
 
-	tx, err := s.L1.env.Bindings.OptimismPortal.DepositTransaction(&s.L1.txOpts, big.NewInt(0), toAddr, depositTransferValue, depositGas, isCreation, s.L2.txCallData)
+	tx, err := s.L1.env.Bindings.OptimismPortal.DepositTransaction(&s.L1.txOpts, s.L1.txOpts.Value, big.NewInt(0), toAddr, depositTransferValue, depositGas, isCreation, s.L2.txCallData)
 	require.NoError(t, err, "failed to create deposit tx")
 
 	// Send the actual tx (since tx opts don't send by default)
