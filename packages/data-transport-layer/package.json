@@ -36,7 +36,7 @@
     "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "dependencies": {
-    "@mantleio/common-ts": "0.2.0",
+    "@mantleio/common-ts": "0.2.1",
     "@mantleio/contracts": "0.3.0",
 
     "@mantleio/core-utils": "0.2.0",
