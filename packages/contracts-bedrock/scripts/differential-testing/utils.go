@@ -82,8 +82,8 @@ func hashOutputRootProof(version common.Hash, stateRoot common.Hash, messagePass
 func makeDepositTx(
 	from common.Address,
 	to common.Address,
-	value *big.Int,
-	mint *big.Int,
+	mntValue *big.Int,
+	mntTxValue *big.Int,
 	ethValue *big.Int,
 	ethTxValue *big.Int,
 	gasLimit *big.Int,
@@ -102,15 +102,15 @@ func makeDepositTx(
 	depositTx := types.DepositTx{
 		SourceHash:          udp.SourceHash(),
 		From:                from,
-		Value:               value,
+		Value:               mntTxValue,
 		Gas:                 gasLimit.Uint64(),
 		IsSystemTransaction: false, // This will never be a system transaction in the tests.
 		Data:                data,
 	}
 
 	// Fill optional fields
-	if mint.Cmp(big.NewInt(0)) == 1 {
-		depositTx.Mint = mint
+	if mntValue.Cmp(big.NewInt(0)) == 1 {
+		depositTx.Mint = mntValue
 	}
 	if ethValue.Cmp(big.NewInt(0)) == 1 {
 		depositTx.EthValue = ethValue
