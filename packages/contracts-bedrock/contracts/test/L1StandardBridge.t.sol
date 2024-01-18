@@ -80,7 +80,7 @@ contract PreBridgeETH is Bridge_Initializer {
     function _preBridgeETH(bool isLegacy) internal {
         assertEq(address(op).balance, 0);
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
@@ -219,7 +219,7 @@ contract PreBridgeETHTo is Bridge_Initializer {
     function _preBridgeETHTo(bool isLegacy) internal {
         assertEq(address(op).balance, 0);
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
@@ -357,7 +357,7 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
     // - only callable by EOA
     function test_depositERC20_succeeds() external {
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
@@ -465,7 +465,7 @@ contract PreBridgeMNT is Bridge_Initializer {
     function _preBridgeMNT(bool isLegacy) internal {
         assertEq(l1MNT.balanceOf(address(op)),0);
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         bytes memory message = abi.encodeWithSelector(
@@ -626,7 +626,7 @@ contract PreBridgeMNTTo is Bridge_Initializer {
     function _preBridgeMNTTo(bool isLegacy) internal {
         assertEq(l1MNT.balanceOf(address(op)), 0);
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.deal(alice,1000);
@@ -786,7 +786,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
     // - callable by a contract
     function test_depositERC20To_succeeds() external {
         uint256 nonce = L1Messenger.messageNonce();
-        uint256 version = 0; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
+        uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
         bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         deal(address(L1Token), alice, 100000, true);

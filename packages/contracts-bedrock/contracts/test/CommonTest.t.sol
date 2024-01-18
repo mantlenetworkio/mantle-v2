@@ -87,7 +87,7 @@ contract CommonTest is Test {
         emit TransactionDeposited(
             _from,
             _to,
-            0,
+            1,
             abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _ethTxValue, _gasLimit, _isCreation, _data)
         );
     }
