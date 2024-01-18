@@ -16,7 +16,7 @@ var (
 	DepositEventABI      = "TransactionDeposited(address,address,uint256,bytes)"
 	DepositEventABIHash  = crypto.Keccak256Hash([]byte(DepositEventABI))
 	DepositEventVersion0 = common.Hash{}
-	DepositEventVersion1 = common.Hash{0x01}
+	DepositEventVersion1 = common.Hash{31: 0x01}
 )
 
 // UnmarshalDepositLogEvent decodes an EVM log entry emitted by the deposit contract into typed deposit data.
