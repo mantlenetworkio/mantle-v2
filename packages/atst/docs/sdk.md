@@ -26,19 +26,19 @@ Install atst and its peer dependencies.
 npm
 
 ```bash
-npm i @eth-optimism/atst @wagmi/core ethers@5.7.0
+npm i @mantleio/atst @wagmi/core ethers@5.7.0
 ```
 
 pnpm
 
 ```bash
-pnpm i @eth-optimism/atst @wagmi/core ethers@5.7.0
+pnpm i @mantleio/atst @wagmi/core ethers@5.7.0
 ```
 
 yarn
 
 ```bash
-yarn add @eth-optimism/atst @wagmi/core ethers@5.7.0
+yarn add @mantleio/atst @wagmi/core ethers@5.7.0
 ```
 
 **Note:** As ethers v6 is not yet stable we only support ethers v5 at this time

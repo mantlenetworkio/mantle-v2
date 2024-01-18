@@ -1,4 +1,4 @@
-# @eth-optimism/fault-detector
+# @mantleio/fault-detector
 
 ## 0.6.3
 
@@ -6,7 +6,7 @@
 
 - dbe5eb308: Empty patch release to re-release packages that failed to be released by a bug in the release process.
 - Updated dependencies [be3315689]
-  - @eth-optimism/sdk@2.0.2
+  - @mantleio/sdk@2.0.2
 
 ## 0.6.2
 
@@ -15,15 +15,15 @@
 - f9b579d55: Fixes a bug that would cause the fault detector to error out if no outputs had been proposed yet.
 - Updated dependencies [fecd42d67]
 - Updated dependencies [66cafc00a]
-  - @eth-optimism/common-ts@0.8.1
-  - @eth-optimism/sdk@2.0.1
+  - @mantleio/common-ts@0.8.1
+  - @mantleio/sdk@2.0.1
 
 ## 0.6.1
 
 ### Patch Changes
 
 - Updated dependencies [cb19e2f9c]
-  - @eth-optimism/sdk@2.0.0
+  - @mantleio/sdk@2.0.0
 
 ## 0.6.0
 
@@ -36,8 +36,8 @@
 - Updated dependencies [0e179781b]
 - Updated dependencies [5372c9f5b]
 - Updated dependencies [4ae94b412]
-  - @eth-optimism/common-ts@0.8.0
-  - @eth-optimism/sdk@1.10.2
+  - @mantleio/common-ts@0.8.0
+  - @mantleio/sdk@1.10.2
 
 ## 0.5.0
 
@@ -57,9 +57,9 @@
 - Updated dependencies [c6c9c7dbf]
 - Updated dependencies [ffcee1013]
 - Updated dependencies [eceb0de1d]
-  - @eth-optimism/common-ts@0.7.0
-  - @eth-optimism/sdk@1.9.0
-  - @eth-optimism/contracts@0.5.40
+  - @mantleio/common-ts@0.7.0
+  - @mantleio/sdk@1.9.0
+  - @mantleio/contracts@0.5.40
 
 ## 0.4.0
 
@@ -75,27 +75,27 @@
 - Updated dependencies [c975c9620]
 - Updated dependencies [1d3c749a2]
 - Updated dependencies [136ea1785]
-  - @eth-optimism/contracts@0.5.39
-  - @eth-optimism/sdk@1.8.0
-  - @eth-optimism/core-utils@0.12.0
-  - @eth-optimism/common-ts@0.6.8
+  - @mantleio/contracts@0.5.39
+  - @mantleio/sdk@1.8.0
+  - @mantleio/core-utils@0.12.0
+  - @mantleio/common-ts@0.6.8
 
 ## 0.3.2
 
 ### Patch Changes
 
 - 97b5f578c: Fixes how versions are imported for BaseServiceV2 services
-  - @eth-optimism/sdk@1.6.11
+  - @mantleio/sdk@1.6.11
 
 ## 0.3.1
 
 ### Patch Changes
 
 - Updated dependencies [1e76cdb86]
-  - @eth-optimism/core-utils@0.11.0
-  - @eth-optimism/common-ts@0.6.7
-  - @eth-optimism/contracts@0.5.38
-  - @eth-optimism/sdk@1.6.10
+  - @mantleio/core-utils@0.11.0
+  - @mantleio/common-ts@0.6.7
+  - @mantleio/contracts@0.5.38
+  - @mantleio/sdk@1.6.10
 
 ## 0.3.0
 
@@ -106,7 +106,7 @@
 ### Patch Changes
 
 - Updated dependencies [e2faaa8b]
-  - @eth-optimism/sdk@1.6.5
+  - @mantleio/sdk@1.6.5
 
 ## 0.2.7
 
@@ -118,10 +118,10 @@
 - Updated dependencies [7215f4ce]
 - Updated dependencies [206f6033]
 - Updated dependencies [d7679ca4]
-  - @eth-optimism/common-ts@0.6.5
-  - @eth-optimism/contracts@0.5.36
-  - @eth-optimism/core-utils@0.10.1
-  - @eth-optimism/sdk@1.6.4
+  - @mantleio/common-ts@0.6.5
+  - @mantleio/contracts@0.5.36
+  - @mantleio/core-utils@0.10.1
+  - @mantleio/sdk@1.6.4
 
 ## 0.2.6
 
@@ -130,10 +130,10 @@
 - Updated dependencies [b27d0fa7]
 - Updated dependencies [dbfea116]
 - Updated dependencies [299157e7]
-  - @eth-optimism/sdk@1.6.1
-  - @eth-optimism/core-utils@0.10.0
-  - @eth-optimism/contracts@0.5.34
-  - @eth-optimism/common-ts@0.6.4
+  - @mantleio/sdk@1.6.1
+  - @mantleio/core-utils@0.10.0
+  - @mantleio/contracts@0.5.34
+  - @mantleio/common-ts@0.6.4
 
 ## 0.2.5
 
@@ -148,10 +148,10 @@
 - 89d01f2e: Update dev deps
 - Updated dependencies [6e3449ba]
 - Updated dependencies [f9fee446]
-  - @eth-optimism/contracts@0.5.30
-  - @eth-optimism/core-utils@0.9.1
-  - @eth-optimism/sdk@1.2.1
-  - @eth-optimism/common-ts@0.6.1
+  - @mantleio/contracts@0.5.30
+  - @mantleio/core-utils@0.9.1
+  - @mantleio/sdk@1.2.1
+  - @mantleio/common-ts@0.6.1
 
 ## 0.2.3
 
@@ -162,10 +162,10 @@
 - Updated dependencies [977493bc]
 - Updated dependencies [700dcbb0]
 - Updated dependencies [3d1cb720]
-  - @eth-optimism/sdk@1.2.0
-  - @eth-optimism/core-utils@0.9.0
-  - @eth-optimism/common-ts@0.6.0
-  - @eth-optimism/contracts@0.5.29
+  - @mantleio/sdk@1.2.0
+  - @mantleio/core-utils@0.9.0
+  - @mantleio/common-ts@0.6.0
+  - @mantleio/contracts@0.5.29
 
 ## 0.2.2
 
@@ -173,7 +173,7 @@
 
 - Updated dependencies [cb71fcde]
 - Updated dependencies [10e41522]
-  - @eth-optimism/common-ts@0.5.0
+  - @mantleio/common-ts@0.5.0
 
 ## 0.2.1
 
@@ -184,10 +184,10 @@
 - Updated dependencies [c201f3f1]
 - Updated dependencies [29ff7462]
 - Updated dependencies [52b26878]
-  - @eth-optimism/contracts@0.5.28
-  - @eth-optimism/common-ts@0.4.0
-  - @eth-optimism/core-utils@0.8.7
-  - @eth-optimism/sdk@1.1.9
+  - @mantleio/contracts@0.5.28
+  - @mantleio/common-ts@0.4.0
+  - @mantleio/core-utils@0.8.7
+  - @mantleio/sdk@1.1.9
 
 ## 0.2.0
 
@@ -201,7 +201,7 @@
 - 6fe58eb2: Fix order in which a metric was bumped then emitted to fix off by one issue
 - Updated dependencies [d9e39931]
 - Updated dependencies [84a8934c]
-  - @eth-optimism/common-ts@0.3.0
+  - @mantleio/common-ts@0.3.0
 
 ## 0.1.1
 
@@ -210,9 +210,9 @@
 - d18ae135: Updates all ethers versions in response to BN.js bug
 - Updated dependencies [f16383f2]
 - Updated dependencies [d18ae135]
-  - @eth-optimism/common-ts@0.2.8
-  - @eth-optimism/core-utils@0.8.5
-  - @eth-optimism/sdk@1.1.6
+  - @mantleio/common-ts@0.2.8
+  - @mantleio/core-utils@0.8.5
+  - @mantleio/sdk@1.1.6
 
 ## 0.1.0
 
@@ -222,4 +222,4 @@
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.1.4
+- @mantleio/sdk@1.1.4

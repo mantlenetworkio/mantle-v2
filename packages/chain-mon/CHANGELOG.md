@@ -1,4 +1,4 @@
-# @eth-optimism/drippie-mon
+# @mantleio/drippie-mon
 
 ## 0.3.0
 
@@ -10,7 +10,7 @@
 
 - dbe5eb308: Empty patch release to re-release packages that failed to be released by a bug in the release process.
 - Updated dependencies [be3315689]
-  - @eth-optimism/sdk@2.0.2
+  - @mantleio/sdk@2.0.2
 
 ## 0.2.1
 
@@ -18,8 +18,8 @@
 
 - Updated dependencies [fecd42d67]
 - Updated dependencies [66cafc00a]
-  - @eth-optimism/common-ts@0.8.1
-  - @eth-optimism/sdk@2.0.1
+  - @mantleio/common-ts@0.8.1
+  - @mantleio/sdk@2.0.1
 
 ## 0.2.0
 
@@ -30,19 +30,19 @@
 ### Patch Changes
 
 - Updated dependencies [cb19e2f9c]
-  - @eth-optimism/sdk@2.0.0
+  - @mantleio/sdk@2.0.0
 
 ## 0.1.3
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.10.4
+- @mantleio/sdk@1.10.4
 
 ## 0.1.2
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.10.3
+- @mantleio/sdk@1.10.3
 
 ## 0.1.1
 
@@ -52,8 +52,8 @@
 - Updated dependencies [0e179781b]
 - Updated dependencies [5372c9f5b]
 - Updated dependencies [4ae94b412]
-  - @eth-optimism/common-ts@0.8.0
-  - @eth-optimism/sdk@1.10.2
+  - @mantleio/common-ts@0.8.0
+  - @mantleio/sdk@1.10.2
 
 ## 0.4.3
 
@@ -61,24 +61,24 @@
 
 - Updated dependencies [f04e5db2d]
 - Updated dependencies [4c64a5811]
-  - @eth-optimism/common-ts@0.7.1
-  - @eth-optimism/contracts-periphery@1.0.7
-  - @eth-optimism/sdk@1.10.1
+  - @mantleio/common-ts@0.7.1
+  - @mantleio/contracts-periphery@1.0.7
+  - @mantleio/sdk@1.10.1
 
 ## 0.4.2
 
 ### Patch Changes
 
 - Updated dependencies [3f4b3c328]
-  - @eth-optimism/sdk@1.10.0
+  - @mantleio/sdk@1.10.0
 
 ## 0.4.1
 
 ### Patch Changes
 
 - Updated dependencies [0222215f6]
-  - @eth-optimism/contracts-periphery@1.0.6
-  - @eth-optimism/sdk@1.9.1
+  - @mantleio/contracts-periphery@1.0.6
+  - @mantleio/sdk@1.9.1
 
 ## 0.4.0
 
@@ -108,9 +108,9 @@
 - Updated dependencies [746ce5545]
 - Updated dependencies [eceb0de1d]
 - Updated dependencies [0e0546a11]
-  - @eth-optimism/contracts-periphery@1.0.5
-  - @eth-optimism/common-ts@0.7.0
-  - @eth-optimism/sdk@1.9.0
+  - @mantleio/contracts-periphery@1.0.5
+  - @mantleio/common-ts@0.7.0
+  - @mantleio/sdk@1.9.0
 
 ## 0.3.24
 
@@ -121,10 +121,10 @@
 - Updated dependencies [767585b07]
 - Updated dependencies [c975c9620]
 - Updated dependencies [136ea1785]
-  - @eth-optimism/contracts-periphery@1.0.4
-  - @eth-optimism/sdk@1.8.0
-  - @eth-optimism/core-utils@0.12.0
-  - @eth-optimism/common-ts@0.6.8
+  - @mantleio/contracts-periphery@1.0.4
+  - @mantleio/sdk@1.8.0
+  - @mantleio/core-utils@0.12.0
+  - @mantleio/common-ts@0.6.8
 
 ## 0.3.23
 
@@ -132,36 +132,36 @@
 
 - Updated dependencies [f49b71d50]
 - Updated dependencies [1bfe79f20]
-  - @eth-optimism/contracts-periphery@1.0.3
-  - @eth-optimism/sdk@1.7.0
+  - @mantleio/contracts-periphery@1.0.3
+  - @mantleio/sdk@1.7.0
 
 ## 0.3.22
 
 ### Patch Changes
 
 - 97b5f578c: Fixes how versions are imported for BaseServiceV2 services
-  - @eth-optimism/sdk@1.6.11
+  - @mantleio/sdk@1.6.11
 
 ## 0.3.21
 
 ### Patch Changes
 
 - Updated dependencies [1e76cdb86]
-  - @eth-optimism/core-utils@0.11.0
-  - @eth-optimism/common-ts@0.6.7
-  - @eth-optimism/sdk@1.6.10
+  - @mantleio/core-utils@0.11.0
+  - @mantleio/common-ts@0.6.7
+  - @mantleio/sdk@1.6.10
 
 ## 0.3.20
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.6.9
+- @mantleio/sdk@1.6.9
 
 ## 0.3.19
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.6.8
+- @mantleio/sdk@1.6.8
 
 ## 0.3.18
 
@@ -172,8 +172,8 @@
 - Updated dependencies [e81a6ff5]
 - Updated dependencies [a3242d4f]
 - Updated dependencies [ffa5297e]
-  - @eth-optimism/sdk@1.6.7
-  - @eth-optimism/contracts-periphery@1.0.2
+  - @mantleio/sdk@1.6.7
+  - @mantleio/contracts-periphery@1.0.2
 
 ## 0.3.17
 
@@ -184,9 +184,9 @@
 - Updated dependencies [d3fe9b6d]
 - Updated dependencies [220ad4ef]
 - Updated dependencies [5d86ff0e]
-  - @eth-optimism/contracts-periphery@1.0.1
-  - @eth-optimism/common-ts@0.6.6
-  - @eth-optimism/sdk@1.6.6
+  - @mantleio/contracts-periphery@1.0.1
+  - @mantleio/common-ts@0.6.6
+  - @mantleio/sdk@1.6.6
 
 ## 0.3.16
 
@@ -195,8 +195,8 @@
 - Updated dependencies [e2faaa8b]
 - Updated dependencies [5c3f2b1f]
 - Updated dependencies [3883f34b]
-  - @eth-optimism/sdk@1.6.5
-  - @eth-optimism/contracts-periphery@1.0.0
+  - @mantleio/sdk@1.6.5
+  - @mantleio/contracts-periphery@1.0.0
 
 ## 0.3.15
 
@@ -220,23 +220,23 @@
 - Updated dependencies [0ceff8b8]
 - Updated dependencies [0ceff8b8]
 - Updated dependencies [0ceff8b8]
-  - @eth-optimism/common-ts@0.6.5
-  - @eth-optimism/contracts-periphery@0.2.4
-  - @eth-optimism/core-utils@0.10.1
-  - @eth-optimism/sdk@1.6.4
+  - @mantleio/common-ts@0.6.5
+  - @mantleio/contracts-periphery@0.2.4
+  - @mantleio/core-utils@0.10.1
+  - @mantleio/sdk@1.6.4
 
 ## 0.3.14
 
 ### Patch Changes
 
-- @eth-optimism/sdk@1.6.3
+- @mantleio/sdk@1.6.3
 
 ## 0.3.13
 
 ### Patch Changes
 
 - Updated dependencies [cfa81f88]
-  - @eth-optimism/sdk@1.6.2
+  - @mantleio/sdk@1.6.2
 
 ## 0.3.12
 
@@ -245,10 +245,10 @@
 - Updated dependencies [f4bf4f52]
 - Updated dependencies [b27d0fa7]
 - Updated dependencies [dbfea116]
-  - @eth-optimism/contracts-periphery@0.2.3
-  - @eth-optimism/sdk@1.6.1
-  - @eth-optimism/core-utils@0.10.0
-  - @eth-optimism/common-ts@0.6.4
+  - @mantleio/contracts-periphery@0.2.3
+  - @mantleio/sdk@1.6.1
+  - @mantleio/core-utils@0.10.0
+  - @mantleio/common-ts@0.6.4
 
 ## 0.3.11
 
@@ -261,15 +261,15 @@
 - Updated dependencies [aa2949ef]
 - Updated dependencies [a1a73e64]
 - Updated dependencies [f53c30b9]
-  - @eth-optimism/contracts-periphery@0.2.2
-  - @eth-optimism/sdk@1.6.0
+  - @mantleio/contracts-periphery@0.2.2
+  - @mantleio/sdk@1.6.0
 
 ## 0.3.10
 
 ### Patch Changes
 
 - Updated dependencies [dcd715a6]
-  - @eth-optimism/sdk@1.5.0
+  - @mantleio/sdk@1.5.0
 
 ## 0.3.9
 
@@ -279,9 +279,9 @@
 - Updated dependencies [8ae39154]
 - Updated dependencies [f05ab6b6]
 - Updated dependencies [dac4a9f0]
-  - @eth-optimism/core-utils@0.9.3
-  - @eth-optimism/sdk@1.4.0
-  - @eth-optimism/common-ts@0.6.3
+  - @mantleio/core-utils@0.9.3
+  - @mantleio/sdk@1.4.0
+  - @mantleio/common-ts@0.6.3
 
 ## 0.3.8
 
@@ -295,17 +295,17 @@
 - Updated dependencies [29830750]
 - Updated dependencies [bcfd1edc]
 - Updated dependencies [0bf3b9b4]
-  - @eth-optimism/core-utils@0.9.2
-  - @eth-optimism/contracts-periphery@0.2.1
-  - @eth-optimism/sdk@1.3.1
-  - @eth-optimism/common-ts@0.6.2
+  - @mantleio/core-utils@0.9.2
+  - @mantleio/contracts-periphery@0.2.1
+  - @mantleio/sdk@1.3.1
+  - @mantleio/common-ts@0.6.2
 
 ## 0.3.7
 
 ### Patch Changes
 
 - Updated dependencies [032f7214]
-  - @eth-optimism/sdk@1.3.0
+  - @mantleio/sdk@1.3.0
 
 ## 0.3.6
 
@@ -319,17 +319,17 @@
 - Updated dependencies [8a335b7b]
 - Updated dependencies [f9fee446]
 - Updated dependencies [89d01f2e]
-  - @eth-optimism/contracts-periphery@0.2.0
-  - @eth-optimism/core-utils@0.9.1
-  - @eth-optimism/sdk@1.2.1
-  - @eth-optimism/common-ts@0.6.1
+  - @mantleio/contracts-periphery@0.2.0
+  - @mantleio/core-utils@0.9.1
+  - @mantleio/sdk@1.2.1
+  - @mantleio/common-ts@0.6.1
 
 ## 0.3.5
 
 ### Patch Changes
 
 - Updated dependencies [3799bb6f]
-  - @eth-optimism/contracts-periphery@0.1.5
+  - @mantleio/contracts-periphery@0.1.5
 
 ## 0.3.4
 
@@ -338,9 +338,9 @@
 - Updated dependencies [977493bc]
 - Updated dependencies [700dcbb0]
 - Updated dependencies [3d1cb720]
-  - @eth-optimism/sdk@1.2.0
-  - @eth-optimism/core-utils@0.9.0
-  - @eth-optimism/common-ts@0.6.0
+  - @mantleio/sdk@1.2.0
+  - @mantleio/core-utils@0.9.0
+  - @mantleio/common-ts@0.6.0
 
 ## 0.3.3
 
@@ -350,8 +350,8 @@
 - Updated dependencies [cb71fcde]
 - Updated dependencies [10e41522]
 - Updated dependencies [9aa8049c]
-  - @eth-optimism/common-ts@0.5.0
-  - @eth-optimism/contracts-periphery@0.1.4
+  - @mantleio/common-ts@0.5.0
+  - @mantleio/contracts-periphery@0.1.4
 
 ## 0.3.2
 
@@ -365,10 +365,10 @@
 - Updated dependencies [29ff7462]
 - Updated dependencies [604dd315]
 - Updated dependencies [52b26878]
-  - @eth-optimism/common-ts@0.4.0
-  - @eth-optimism/contracts-periphery@0.1.3
-  - @eth-optimism/core-utils@0.8.7
-  - @eth-optimism/sdk@1.1.9
+  - @mantleio/common-ts@0.4.0
+  - @mantleio/contracts-periphery@0.1.3
+  - @mantleio/core-utils@0.8.7
+  - @mantleio/sdk@1.1.9
 
 ## 0.3.1
 
@@ -376,7 +376,7 @@
 
 - Updated dependencies [9ba869a7]
 - Updated dependencies [050859fd]
-  - @eth-optimism/common-ts@0.3.1
+  - @mantleio/common-ts@0.3.1
 
 ## 0.3.0
 
@@ -388,7 +388,7 @@
 
 - Updated dependencies [d9e39931]
 - Updated dependencies [84a8934c]
-  - @eth-optimism/common-ts@0.3.0
+  - @mantleio/common-ts@0.3.0
 
 ## 0.2.0
 
@@ -402,6 +402,6 @@
 - Updated dependencies [982cb980]
 - Updated dependencies [9142adc4]
 - Updated dependencies [9ecbf3e5]
-  - @eth-optimism/contracts-periphery@0.1.2
-  - @eth-optimism/common-ts@0.2.10
-  - @eth-optimism/sdk@1.1.8
+  - @mantleio/contracts-periphery@0.1.2
+  - @mantleio/common-ts@0.2.10
+  - @mantleio/sdk@1.1.8

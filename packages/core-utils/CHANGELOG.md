@@ -1,4 +1,4 @@
-# @eth-optimism/core-utils
+# @mantleio/core-utils
 
 ## 0.12.0
 
@@ -112,7 +112,7 @@
 ### Patch Changes
 
 - b4165299: Added tests and docstrings to misc functions
-- 3c2acd91: Refactor folder structure of @eth-optimism/core-utils.
+- 3c2acd91: Refactor folder structure of @mantleio/core-utils.
 
 ## 0.7.6
 
@@ -330,4 +330,4 @@
 
 ### Minor Changes
 
-- 6cbc54d: allow injecting L2 transaction and block context via core-utils (this removes the need to import the now deprecated @eth-optimism/provider package)
+- 6cbc54d: allow injecting L2 transaction and block context via core-utils (this removes the need to import the now deprecated @mantleio/provider package)

@@ -1,10 +1,10 @@
-# @eth-optimism/core-utils
+# @mantleio/core-utils
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/develop/graph/badge.svg?token=0VTG7PG7YR&flag=core-utils-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 
 ## What is this?
 
-`@eth-optimism/core-utils` contains the Optimistic Virtual Machine core utilities.
+`@mantleio/core-utils` contains the Optimistic Virtual Machine core utilities.
 
 ## Getting started
 

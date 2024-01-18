@@ -2,24 +2,24 @@
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/master/graph/badge.svg?token=0VTG7PG7YR&flag=contracts-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 
-`@eth-optimism/contracts` contains the various Solidity smart contracts used within the Optimism system.
+`@mantleio/contracts` contains the various Solidity smart contracts used within the Optimism system.
 Some of these contracts are [meant to be deployed to Ethereum ("Layer 1")](https://github.com/ethereum-optimism/optimism/tree/develop/packages/contracts/contracts/L1), while others are [meant to be deployed to Optimism ("Layer 2")](https://github.com/ethereum-optimism/optimism/tree/develop/packages/contracts/contracts/L2).
 Within each contract file you'll find the network upon which the contract is meant to be deloyed, listed as either `EVM` (for Ethereum) or `OVM` (for Optimism).
 If neither `EVM` nor `OVM` are listed, the contract is likely intended to be used on either network.
 
 ## Usage (npm)
 
-You can import `@eth-optimism/contracts` to use the Optimism contracts within your own codebase.
+You can import `@mantleio/contracts` to use the Optimism contracts within your own codebase.
 Install via `npm` or `yarn`:
 
 ```shell
-npm install @eth-optimism/contracts
+npm install @mantleio/contracts
 ```
 
 Within your contracts:
 
 ```solidity
-import { SomeContract } from "@eth-optimism/contracts/path/to/SomeContract.sol";
+import { SomeContract } from "@mantleio/contracts/path/to/SomeContract.sol";
 ```
 
 Note that the `/path/to/SomeContract.sol` is the path to the target contract within the [contracts folder](https://github.com/ethereum-optimism/optimism/tree/develop/packages/contracts/contracts) inside of this package.
@@ -28,7 +28,7 @@ You would therefore import the contract as:
 
 
 ```solidity
-import { L1CrossDomainMessenger } from "@eth-optimism/contracts/L1/messaging/L1CrossDomainMessenger.sol";
+import { L1CrossDomainMessenger } from "@mantleio/contracts/L1/messaging/L1CrossDomainMessenger.sol";
 ```
 
 ## Guide for Developers

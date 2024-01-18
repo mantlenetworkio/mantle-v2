@@ -3,15 +3,15 @@
   <br />
   <a href="https://optimism.io"><img alt="Optimism" src="https://raw.githubusercontent.com/ethereum-optimism/brand-kit/main/assets/svg/OPTIMISM-R.svg" width=600></a>
   <br />
-  <h3>@eth-optimism/atst</h3> The official SDK and cli for Optimism's attestation Station
+  <h3>@mantleio/atst</h3> The official SDK and cli for Optimism's attestation Station
   <br />
 </div>
 
 <p align="center">
 
 <p>
-<a href="https://www.npmjs.com/package/@eth-optimism/atst" target="\_parent">
-<img alt="" src="https://img.shields.io/npm/dm/@eth-optimism/atst.svg" />
+<a href="https://www.npmjs.com/package/@mantleio/atst" target="\_parent">
+<img alt="" src="https://img.shields.io/npm/dm/@mantleio/atst.svg" />
 </a>
 
 # atst
@@ -25,7 +25,7 @@ atst is a typescript / javascript sdk and cli around AttestationStation
 Install
 
 ```bash
-npm install @eth-optimism/atst wagmi @wagmi/core ethers@5.7.0
+npm install @mantleio/atst wagmi @wagmi/core ethers@5.7.0
 ```
 
 ## atst typescript/javascript sdk

@@ -1,4 +1,4 @@
-# @eth-optimism/message-relayer
+# @mantleio/message-relayer
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/develop/graph/badge.svg?token=0VTG7PG7YR&flag=message-relayer-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 

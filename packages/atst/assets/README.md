@@ -15,7 +15,7 @@ To execute:
 2. Install the local version of atst
 
 ```bash
-npm uninstall @eth-optimism/atst -g && npm i . -g && atst --version
+npm uninstall @mantleio/atst -g && npm i . -g && atst --version
 ```
 
 3. Start anvil

@@ -19,7 +19,7 @@ remappings = [
   'multicall/=lib/multicall',
   '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
   '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
-  '@eth-optimism/contracts-bedrock/=../../node_modules/@eth-optimism/contracts-bedrock',
+  '@mantleio/contracts-bedrock/=../../node_modules/@mantleio/contracts-bedrock',
 ]
 # The metadata hash can be removed from the bytecode by setting "none"
 bytecode_hash = "none"
