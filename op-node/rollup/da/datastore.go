@@ -27,6 +27,8 @@ type MantleDataStoreConfig struct {
 	RetrieverTimeout         time.Duration
 	GraphProvider            string
 	DataStorePollingDuration time.Duration
+	MantleDaIndexerSocket    string
+	MantleDAIndexerEnable    bool
 }
 
 type MantleDataStore struct {
@@ -93,6 +95,27 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 	return reply.GetData(), nil
 }
 
+func (mda *MantleDataStore) getFramesFromIndexerByDataStoreId(dataStoreId uint32) ([]byte, error) {
+	conn, err := grpc.Dial(mda.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Connect to mantle da index retriever fail", "err", err)
+		return nil, err
+	}
+	defer conn.Close()
+	client := pb.NewDataRetrievalClient(conn)
+	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
+	request := &pb.FramesAndDataRequest{
+		DataStoreId: dataStoreId,
+	}
+	reply, err := client.RetrieveFramesAndData(mda.Ctx, request, opt)
+	if err != nil {
+		log.Error("Retrieve frames and data fail", "err", err)
+		return nil, err
+	}
+	log.Debug("Get reply data from mantle da success", "reply length", len(reply.GetData()))
+	return reply.GetData(), nil
+}
+
 func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error) {
 	pollingTimeout := time.NewTimer(mda.Cfg.DataStorePollingDuration)
 	defer pollingTimeout.Stop()
@@ -118,14 +141,22 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 				log.Warn("This batch is not confirmed")
 				continue
 			}
-			frames, err := mda.getFramesByDataStoreId(dataStoreId)
-			if err != nil {
-				log.Warn("Get frames fail", "err", err)
-				continue
+			var frames []byte
+			if mda.Cfg.MantleDAIndexerEnable { // from mantle da indexer
+				frames, err = mda.getFramesFromIndexerByDataStoreId(dataStoreId)
+				if err != nil {
+					log.Warn("Get frames from indexer fail", "err", err)
+					continue
+				}
+			} else { // from mantle da retriever
+				frames, err = mda.getFramesByDataStoreId(dataStoreId)
+				if err != nil {
+					log.Warn("Get frames from mantle da retriever fail", "err", err)
+					continue
+				}
 			}
 			return frames, nil
 		case <-pollingTimeout.C:
-			// todo: add metrics in the future
 			return nil, errors.New("Get frame ticker exit")
 		case err := <-mda.Ctx.Done():
 			log.Warn("Retrieval service shutting down", "err", err)
