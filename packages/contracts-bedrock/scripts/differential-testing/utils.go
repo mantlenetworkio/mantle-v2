@@ -115,9 +115,7 @@ func makeDepositTx(
 	if ethValue.Cmp(big.NewInt(0)) == 1 {
 		depositTx.EthValue = ethValue
 	}
-	if ethTxValue.Cmp(big.NewInt(0)) == 1 {
-		depositTx.EthTxValue = ethTxValue
-	}
+	depositTx.EthTxValue = ethTxValue
 	if !isCreate {
 		depositTx.To = &to
 	}

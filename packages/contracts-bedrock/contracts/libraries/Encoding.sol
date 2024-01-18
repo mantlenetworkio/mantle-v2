@@ -29,12 +29,12 @@ library Encoding {
         raw[0] = RLPWriter.writeBytes(abi.encodePacked(source));
         raw[1] = RLPWriter.writeAddress(_tx.from);
         raw[2] = _tx.isCreation ? RLPWriter.writeBytes("") : RLPWriter.writeAddress(_tx.to);
-        raw[3] = RLPWriter.writeUint(_tx.mntValue);
         raw[4] = RLPWriter.writeUint(_tx.mntTxValue);
-        raw[5] = RLPWriter.writeUint(_tx.ethValue);
-        raw[6] = RLPWriter.writeUint(_tx.ethTxValue);
-        raw[7] = RLPWriter.writeUint(uint256(_tx.gasLimit));
-        raw[8] = RLPWriter.writeBool(false);
+        raw[3] = RLPWriter.writeUint(_tx.mntValue);
+        raw[5] = RLPWriter.writeUint(uint256(_tx.gasLimit));
+        raw[6] = RLPWriter.writeBool(false);
+        raw[7] = RLPWriter.writeUint(_tx.ethValue);
+        raw[8] = RLPWriter.writeUint(_tx.ethTxValue);
         raw[9] = RLPWriter.writeBytes(_tx.data);
         return abi.encodePacked(uint8(0x7e), RLPWriter.writeList(raw));
     }

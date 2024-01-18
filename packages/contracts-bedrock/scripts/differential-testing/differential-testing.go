@@ -142,7 +142,6 @@ func main() {
 		fmt.Print(hexutil.Encode(packed))
 	case "hashDepositTransaction":
 		// Parse input arguments
-		fmt.Println(args)
 		l1BlockHash := common.HexToHash(args[1])
 		logIndex, ok := new(big.Int).SetString(args[2], 10)
 		checkOk(ok)
