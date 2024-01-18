@@ -41,7 +41,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     /**
      * @notice Version of the deposit event.
      */
-    uint256 internal constant DEPOSIT_VERSION = 0;
+    uint256 internal constant DEPOSIT_VERSION = 1;
 
     /**
      * @notice The L2 gas limit set when eth is deposited using the receive() function.
