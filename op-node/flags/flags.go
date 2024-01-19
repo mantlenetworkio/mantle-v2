@@ -83,10 +83,9 @@ var (
 		EnvVar: prefixEnvVar("DATASTORE_POLLING_DURATION"),
 	}
 	MantleDaIndexerSocketFlag = cli.StringFlag{
-		Name:     "da.indexer-socket",
-		Usage:    "mantle da indexer socket",
-		Required: true,
-		EnvVar:   prefixEnvVar("INDEXER_SOCKET"),
+		Name:   "da.indexer-socket",
+		Usage:  "mantle da indexer socket",
+		EnvVar: prefixEnvVar("INDEXER_SOCKET"),
 	}
 	MantleDAIndexerEnableFlag = cli.BoolFlag{
 		Name:   "da.indexer-enable",
@@ -262,7 +261,6 @@ var requiredFlags = []cli.Flag{
 	L2EngineAddr,
 	RPCListenAddr,
 	RPCListenPort,
-	MantleDaIndexerSocketFlag,
 }
 
 var optionalFlags = []cli.Flag{
@@ -298,6 +296,8 @@ var optionalFlags = []cli.Flag{
 	BackupL2UnsafeSyncRPCTrustRPC,
 	L2EngineSyncEnabled,
 	SkipSyncStartCheck,
+	MantleDaIndexerSocketFlag,
+	MantleDAIndexerEnableFlag,
 }
 
 // Flags contains the list of configuration options available to the binary.
