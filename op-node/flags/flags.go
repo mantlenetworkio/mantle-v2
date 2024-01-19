@@ -86,13 +86,12 @@ var (
 		Name:     "da.indexer-socket",
 		Usage:    "mantle da indexer socket",
 		Required: true,
-		EnvVar:   prefixEnvVar("MANTLE_DA_INDEXER_SOCKET"),
+		EnvVar:   prefixEnvVar("INDEXER_SOCKET"),
 	}
 	MantleDAIndexerEnableFlag = cli.BoolFlag{
-		Name:     "da.indexer-enable",
-		Usage:    "enable mantle da",
-		Required: true,
-		EnvVar:   prefixEnvVar("MANTLE_DA_INDEXER_ENABLE"),
+		Name:   "da.indexer-enable",
+		Usage:  "mantle da enable",
+		EnvVar: prefixEnvVar("INDEXER_ENABLE"),
 	}
 
 	/* Optional Flags */
@@ -263,6 +262,7 @@ var requiredFlags = []cli.Flag{
 	L2EngineAddr,
 	RPCListenAddr,
 	RPCListenPort,
+	MantleDaIndexerSocketFlag,
 }
 
 var optionalFlags = []cli.Flag{
@@ -284,8 +284,6 @@ var optionalFlags = []cli.Flag{
 	RetrieverTimeoutFlag,
 	GraphProviderFlag,
 	DataStorePollingDurationFlag,
-	MantleDaIndexerSocketFlag,
-	MantleDAIndexerEnableFlag,
 	MetricsEnabledFlag,
 	MetricsAddrFlag,
 	MetricsPortFlag,
