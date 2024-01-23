@@ -91,7 +91,7 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
 	}
-	log.Debug("Get reply data success", "reply length", len(reply.GetData()))
+	log.Debug("Get reply data success", "replyLength", len(reply.GetData()))
 	return reply.GetData(), nil
 }
 
@@ -112,7 +112,7 @@ func (mda *MantleDataStore) getFramesFromIndexerByDataStoreId(dataStoreId uint32
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
 	}
-	log.Debug("Get reply data from mantle da success", "reply length", len(reply.GetData()))
+	log.Debug("Get reply data from mantle da success", "replyLength", len(reply.GetData()))
 	return reply.GetData(), nil
 }
 
