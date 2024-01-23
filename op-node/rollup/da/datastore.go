@@ -143,17 +143,22 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 			}
 			var frames []byte
 			if mda.Cfg.MantleDAIndexerEnable { // from mantle da indexer
+				log.Info("sync block data from mantle da indexer")
 				frames, err = mda.getFramesFromIndexerByDataStoreId(dataStoreId)
 				if err != nil {
 					log.Warn("Get frames from indexer fail", "err", err)
 					continue
 				}
 			} else { // from mantle da retriever
+				log.Info("sync block data from mantle da retriever")
 				frames, err = mda.getFramesByDataStoreId(dataStoreId)
 				if err != nil {
 					log.Warn("Get frames from mantle da retriever fail", "err", err)
 					continue
 				}
+			}
+			if frames == nil {
+				continue
 			}
 			return frames, nil
 		case <-pollingTimeout.C:
