@@ -29,8 +29,8 @@ library Encoding {
         raw[0] = RLPWriter.writeBytes(abi.encodePacked(source));
         raw[1] = RLPWriter.writeAddress(_tx.from);
         raw[2] = _tx.isCreation ? RLPWriter.writeBytes("") : RLPWriter.writeAddress(_tx.to);
-        raw[4] = RLPWriter.writeUint(_tx.mntTxValue);
         raw[3] = RLPWriter.writeUint(_tx.mntValue);
+        raw[4] = RLPWriter.writeUint(_tx.mntTxValue);
         raw[5] = RLPWriter.writeUint(uint256(_tx.gasLimit));
         raw[6] = RLPWriter.writeBool(false);
         raw[7] = RLPWriter.writeUint(_tx.ethValue);
