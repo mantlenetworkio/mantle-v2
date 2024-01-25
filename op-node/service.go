@@ -213,11 +213,15 @@ func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig
 	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
 	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
 	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
+	mantleDaIndexerSocket := ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name)
+	mantleDAIndexerEnable := ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name)
 	return datastore.MantleDataStoreConfig{
 		RetrieverSocket:          retrieverSocket,
 		RetrieverTimeout:         retrieverTimeout,
 		GraphProvider:            graphProvider,
 		DataStorePollingDuration: dataStorePollingDuration,
+		MantleDaIndexerSocket:    mantleDaIndexerSocket,
+		MantleDAIndexerEnable:    mantleDAIndexerEnable,
 	}, nil
 }
 
