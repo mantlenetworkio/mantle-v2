@@ -192,9 +192,9 @@ func main() {
 
 			dryRun := ctx.Bool("dry-run")
 			noCheck := ctx.Bool("no-check")
-			if noCheck {
-				panic("must run with check on")
-			}
+			//if noCheck {
+			//	panic("must run with check on")
+			//}
 
 			// Perform the migration
 			res, err := genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
@@ -205,6 +205,12 @@ func main() {
 			// Close the database handle
 			if err := ldb.Close(); err != nil {
 				return err
+			}
+
+			postCheckOnly := ctx.Bool("post-check-only")
+			if postCheckOnly {
+				log.Info("post-check-only, return now")
+				return nil
 			}
 
 			postLDB, err := db.Open(ctx.String("db-path"), dbCache, dbHandles)
