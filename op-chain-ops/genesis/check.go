@@ -150,7 +150,7 @@ func PostCheckMigratedDB(
 	}
 	log.Info("checked predeploy storage")
 
-	if err := PostCheckUntouchables(underlyingDB, db, prevHeader.Root, l1ChainID); err != nil {
+	if err := PostCheckUntouchables(underlyingDB, db, prevHeader.Root, l2ChainID); err != nil {
 		return err
 	}
 	log.Info("checked untouchables")
@@ -188,7 +188,7 @@ func PostCheckMigratedDB(
 
 // PostCheckUntouchables will check that the untouchable contracts have
 // not been modified by the migration process.
-func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot common.Hash, l1ChainID uint64) error {
+func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot common.Hash, l2ChainID uint64) error {
 	prevDB, err := state.New(prevRoot, udb, nil)
 	if err != nil {
 		return fmt.Errorf("cannot open StateDB: %w", err)
@@ -198,9 +198,13 @@ func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot c
 		// Check that the code is the same.
 		code := currDB.GetCode(addr)
 		hash := crypto.Keccak256Hash(code)
-		expHash := UntouchableCodeHashes[addr][l1ChainID]
+		// only set 5001[testnet] to a specific hash, align all the others the same
+		expHash := UntouchableCodeHashes[addr][l2ChainID]
+		if expHash.String() == "" {
+			expHash = common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35")
+		}
 		if hash != expHash {
-			return fmt.Errorf("expected code hash for %s to be %s, but got %s，l1ChainID %d, addr: %s", addr, expHash, hash, l1ChainID, addr)
+			return fmt.Errorf("expected code hash for %s to be %s, but got %s，l1ChainID %d, addr: %s", addr, expHash, hash, l2ChainID, addr)
 		}
 		log.Info("checked code hash", "address", addr, "hash", hash)
 
