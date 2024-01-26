@@ -27,16 +27,24 @@ var (
 
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
 	// that should not be touched by the migration process.
+	//UntouchableCodeHashes = map[common.Address]ChainHashMap{
+	//	predeploys.WETH9Addr: {
+	//		// Mainnet keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/mainnet/genesis.json#L110C22-L110C3550
+	//		1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+	//		// Goerli keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/goerli/genesis.json#L116C22-L116C4106
+	//		5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+	//		// Sepolia
+	//		11155111: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+	//		// Devnet keccak256 code: https://github.com/mantlenetworkio/mantle/blob/5cda5f811f73d9f331e6168617f87d3e19e6db6b/packages/contracts/genesis/state-dump.latest.json#L110
+	//		31337: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+	//	},
+	//}
 	UntouchableCodeHashes = map[common.Address]ChainHashMap{
 		predeploys.WETH9Addr: {
-			// Mainnet keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/mainnet/genesis.json#L110C22-L110C3550
-			1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
-			// Goerli keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/goerli/genesis.json#L116C22-L116C4106
-			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
-			// Sepolia
-			11155111: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
-			// Devnet keccak256 code: https://github.com/mantlenetworkio/mantle/blob/5cda5f811f73d9f331e6168617f87d3e19e6db6b/packages/contracts/genesis/state-dump.latest.json#L110
-			31337: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			// TestNet keccak256 code
+			5001: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			// Default
+			0: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
 		},
 	}
 
