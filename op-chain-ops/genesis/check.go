@@ -200,7 +200,7 @@ func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot c
 		hash := crypto.Keccak256Hash(code)
 		expHash := UntouchableCodeHashes[addr][l1ChainID]
 		if hash != expHash {
-			return fmt.Errorf("expected code hash for %s to be %s, but got %s", addr, expHash, hash)
+			return fmt.Errorf("expected code hash for %s to be %s, but got %s，l1ChainID %d, addr: %s", addr, expHash, hash, l1ChainID, addr)
 		}
 		log.Info("checked code hash", "address", addr, "hash", hash)
 

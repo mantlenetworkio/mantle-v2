@@ -86,6 +86,7 @@ func main() {
 		},
 		Action: func(ctx *cli.Context) error {
 			deployConfig := ctx.String("deploy-config")
+			log.Info("show deployConfig path", "path", deployConfig)
 			config, err := genesis.NewDeployConfig(deployConfig)
 			if err != nil {
 				return err
