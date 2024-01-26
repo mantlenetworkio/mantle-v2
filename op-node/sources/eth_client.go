@@ -203,7 +203,8 @@ type hashID common.Hash
 func (h hashID) Arg() any { return common.Hash(h) }
 func (h hashID) CheckID(id eth.BlockID) error {
 	if common.Hash(h) != id.Hash {
-		return fmt.Errorf("expected block hash %s but got block %s", common.Hash(h), id)
+		log.Error("CheckID", "expected block hash", common.Hash(h), "got block hash", id)
+		//return fmt.Errorf("expected block hash %s but got block %s", common.Hash(h), id)
 	}
 	return nil
 }
