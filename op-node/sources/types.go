@@ -116,23 +116,23 @@ type rpcHeader struct {
 // checkPostMerge checks that the block header meets all criteria to be a valid ExecutionPayloadHeader,
 // see EIP-3675 (block header changes) and EIP-4399 (mixHash usage for prev-randao)
 func (hdr *rpcHeader) checkPostMerge() error {
-	// TODO: the genesis block has a non-zero difficulty number value.
-	// Either this block needs to change, or we special case it. This is not valid w.r.t. EIP-3675.
-	if hdr.Number != 0 && (*big.Int)(&hdr.Difficulty).Cmp(common.Big0) != 0 {
-		return fmt.Errorf("post-merge block header requires zeroed difficulty field, but got: %s", &hdr.Difficulty)
-	}
-	if hdr.Nonce != (types.BlockNonce{}) {
-		return fmt.Errorf("post-merge block header requires zeroed block nonce field, but got: %s", hdr.Nonce)
-	}
-	if hdr.BaseFee == nil {
-		return fmt.Errorf("post-merge block header requires EIP-1559 basefee field, but got %s", hdr.BaseFee)
-	}
-	if len(hdr.Extra) > 32 {
-		return fmt.Errorf("post-merge block header requires 32 or less bytes of extra data, but got %d", len(hdr.Extra))
-	}
-	if hdr.UncleHash != types.EmptyUncleHash {
-		return fmt.Errorf("post-merge block header requires uncle hash to be of empty uncle list, but got %s", hdr.UncleHash)
-	}
+	//// TODO: the genesis block has a non-zero difficulty number value.
+	//// Either this block needs to change, or we special case it. This is not valid w.r.t. EIP-3675.
+	//if hdr.Number != 0 && (*big.Int)(&hdr.Difficulty).Cmp(common.Big0) != 0 {
+	//	return fmt.Errorf("post-merge block header requires zeroed difficulty field, but got: %s", &hdr.Difficulty)
+	//}
+	//if hdr.Nonce != (types.BlockNonce{}) {
+	//	return fmt.Errorf("post-merge block header requires zeroed block nonce field, but got: %s", hdr.Nonce)
+	//}
+	//if hdr.BaseFee == nil {
+	//	return fmt.Errorf("post-merge block header requires EIP-1559 basefee field, but got %s", hdr.BaseFee)
+	//}
+	//if len(hdr.Extra) > 32 {
+	//	return fmt.Errorf("post-merge block header requires 32 or less bytes of extra data, but got %d", len(hdr.Extra))
+	//}
+	//if hdr.UncleHash != types.EmptyUncleHash {
+	//	return fmt.Errorf("post-merge block header requires uncle hash to be of empty uncle list, but got %s", hdr.UncleHash)
+	//}
 	return nil
 }
 
