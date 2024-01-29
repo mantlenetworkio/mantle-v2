@@ -428,7 +428,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if (success && l1mntSuccess == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if ((success == false || l1mntSuccess == false) && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }
