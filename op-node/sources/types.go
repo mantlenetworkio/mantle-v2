@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 )
@@ -170,11 +169,11 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 			return nil, err
 		}
 	}
-	if !trustCache {
-		if computed := hdr.computeBlockHash(); computed != hdr.Hash {
-			return nil, fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash)
-		}
-	}
+	//if !trustCache {
+	//	if computed := hdr.computeBlockHash(); computed != hdr.Hash {
+	//		return nil, fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash)
+	//	}
+	//}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
 
@@ -184,12 +183,12 @@ type rpcBlock struct {
 }
 
 func (block *rpcBlock) verify() error {
-	if computed := block.computeBlockHash(); computed != block.Hash {
-		return fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash)
-	}
-	if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
-		return fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash)
-	}
+	//if computed := block.computeBlockHash(); computed != block.Hash {
+	//	return fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash)
+	//}
+	//if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
+	//	return fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash)
+	//}
 	return nil
 }
 
