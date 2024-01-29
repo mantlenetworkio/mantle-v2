@@ -46,17 +46,31 @@ type StorageCheckMap = map[common.Hash]common.Hash
 
 var (
 	ProxyAdminOwnerSlot = common.Hash{}
-	LegacyMNTCheckSlots = map[common.Hash]common.Hash{
-		// Bridge
-		common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
-		// l1Token
-		common.Hash{31: 0x05}: common.HexToHash("0x0000000000000000000000003c3a81e81dc49a522a592e7622a7e711c06bf354"),
-		// Symbol
-		common.Hash{31: 0x04}: common.HexToHash("0x4d4e540000000000000000000000000000000000000000000000000000000006"),
-		// Name
-		common.Hash{31: 0x03}: common.HexToHash("0x4d616e746c6520546f6b656e0000000000000000000000000000000000000018"),
-		// Total supply
-		common.Hash{31: 0x02}: {},
+	LegacyMNTCheckSlots = map[uint64]map[common.Hash]common.Hash{
+		5001: {
+			// Bridge
+			common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
+			// l1Token
+			common.Hash{31: 0x05}: common.HexToHash("0x0000000000000000000000001a4b46696b2bb4794eb3d4c26f1c55f9170fa4c5"),
+			// Symbol
+			common.Hash{31: 0x04}: common.HexToHash("0x4d4e540000000000000000000000000000000000000000000000000000000006"),
+			// Name
+			common.Hash{31: 0x03}: common.HexToHash("0x4d616e746c6520546f6b656e0000000000000000000000000000000000000018"),
+			// Total supply
+			common.Hash{31: 0x02}: {},
+		},
+		0: { // default
+			// Bridge
+			common.Hash{31: 0x06}: common.HexToHash("0x0000000000000000000000124200000000000000000000000000000000000010"),
+			// l1Token
+			common.Hash{31: 0x05}: common.HexToHash("0x0000000000000000000000003c3a81e81dc49a522a592e7622a7e711c06bf354"),
+			// Symbol
+			common.Hash{31: 0x04}: common.HexToHash("0x4d4e540000000000000000000000000000000000000000000000000000000006"),
+			// Name
+			common.Hash{31: 0x03}: common.HexToHash("0x4d616e746c6520546f6b656e0000000000000000000000000000000000000018"),
+			// Total supply
+			common.Hash{31: 0x02}: {},
+		},
 	}
 
 	// ExpectedStorageSlots is a map of predeploy addresses to the storage slots and values that are
@@ -170,7 +184,7 @@ func PostCheckMigratedDB(
 	}
 	log.Info("checked L1Block")
 
-	if err := PostCheckLegacyMNT(prevDB, db, migrationData); err != nil {
+	if err := PostCheckLegacyMNT(prevDB, db, migrationData, l2ChainID); err != nil {
 		return err
 	}
 	if err := PostCheckBVMETH(underlyingDB, db, prevHeader.Root); err != nil {
@@ -424,7 +438,7 @@ func PostCheckBVMETH(udb state.Database, currDB *state.StateDB, prevRoot common.
 // PostCheckLegacyMNT checks that the legacy eth migration was successful.
 // It checks that the total supply was set to 0, and randomly samples storage
 // slots pre- and post-migration to ensure that balances were correctly migrated.
-func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdomain.MigrationData) error {
+func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdomain.MigrationData, l2ChainID uint64) error {
 	allowanceSlots := make(map[common.Hash]bool)
 	addresses := make(map[common.Hash]common.Address)
 
@@ -439,7 +453,11 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	}
 
 	log.Info("checking legacy mnt fixed storage slots")
-	for slot, expValue := range LegacyMNTCheckSlots {
+	legacySlot := LegacyMNTCheckSlots[l2ChainID]
+	if legacySlot == nil {
+		legacySlot = LegacyMNTCheckSlots[0]
+	}
+	for slot, expValue := range legacySlot {
 		actValue := migratedDB.GetState(predeploys.LegacyERC20MNTAddr, slot)
 		if actValue != expValue {
 			return fmt.Errorf("expected slot %s on %s to be %s, but got %s", slot, predeploys.LegacyERC20MNTAddr, expValue, actValue)
@@ -459,7 +477,11 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		}
 
 		// Ignore fixed slots.
-		if _, ok := LegacyMNTCheckSlots[key]; ok {
+		//legacySlot = LegacyMNTCheckSlots[l2ChainID]
+		//if legacySlot == nil {
+		//	legacySlot = LegacyMNTCheckSlots[0]
+		//}
+		if _, ok := legacySlot[key]; ok {
 			return true
 		}
 
