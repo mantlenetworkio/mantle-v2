@@ -16,7 +16,7 @@ contract EchidnaFuzzBurnEth is StdUtils {
         uint256 value = bound(_value, 0, preBurnBalance);
 
         // execute a burn of _value eth
-        Burn.eth(value);
+        Burn.mnt(value);
 
         // check that exactly value eth was transfered from the contract
         unchecked {

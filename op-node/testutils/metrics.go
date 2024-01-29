@@ -7,11 +7,18 @@ import (
 // TestDerivationMetrics implements the metrics used in the derivation pipeline as no-op operations.
 // Optionally a test may hook into the metrics
 type TestDerivationMetrics struct {
+	FnRecordParseDataStoreId  func(dataStoreId uint32)
 	FnRecordL1ReorgDepth      func(d uint64)
 	FnRecordL1Ref             func(name string, ref eth.L1BlockRef)
 	FnRecordL2Ref             func(name string, ref eth.L2BlockRef)
 	FnRecordUnsafePayloads    func(length uint64, memSize uint64, next eth.BlockID)
 	FnRecordChannelInputBytes func(inputCompresedBytes int)
+}
+
+func (t *TestDerivationMetrics) RecordParseDataStoreId(dataStoreId uint32) {
+	if t.FnRecordParseDataStoreId != nil {
+		t.FnRecordParseDataStoreId(dataStoreId)
+	}
 }
 
 func (t *TestDerivationMetrics) RecordL1ReorgDepth(d uint64) {

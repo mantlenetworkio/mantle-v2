@@ -205,16 +205,18 @@ func Setup(t require.TestingT, deployParams *DeployParams, alloc *AllocParams) *
 			L2Time:       uint64(deployConf.L1GenesisBlockTimestamp),
 			SystemConfig: SystemConfigFromDeployConfig(deployConf),
 		},
-		BlockTime:              deployConf.L2BlockTime,
-		MaxSequencerDrift:      deployConf.MaxSequencerDrift,
-		SeqWindowSize:          deployConf.SequencerWindowSize,
-		ChannelTimeout:         deployConf.ChannelTimeout,
-		L1ChainID:              new(big.Int).SetUint64(deployConf.L1ChainID),
-		L2ChainID:              new(big.Int).SetUint64(deployConf.L2ChainID),
-		BatchInboxAddress:      deployConf.BatchInboxAddress,
-		DepositContractAddress: predeploys.DevOptimismPortalAddr,
-		L1SystemConfigAddress:  predeploys.DevSystemConfigAddr,
-		RegolithTime:           deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		BlockTime:                  deployConf.L2BlockTime,
+		MaxSequencerDrift:          deployConf.MaxSequencerDrift,
+		SeqWindowSize:              deployConf.SequencerWindowSize,
+		ChannelTimeout:             deployConf.ChannelTimeout,
+		L1ChainID:                  new(big.Int).SetUint64(deployConf.L1ChainID),
+		L2ChainID:                  new(big.Int).SetUint64(deployConf.L2ChainID),
+		BatchInboxAddress:          deployConf.BatchInboxAddress,
+		DepositContractAddress:     predeploys.DevOptimismPortalAddr,
+		L1SystemConfigAddress:      predeploys.DevSystemConfigAddr,
+		RegolithTime:               deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleDaSwitch:             deployConf.MantleDaSwitch,
+		DataLayrServiceManagerAddr: deployConf.DataLayrServiceManagerAddr,
 	}
 
 	deploymentsL1 := DeploymentsL1{
@@ -239,6 +241,7 @@ func SystemConfigFromDeployConfig(deployConfig *genesis.DeployConfig) eth.System
 		Overhead:    eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(deployConfig.GasPriceOracleOverhead))),
 		Scalar:      eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(deployConfig.GasPriceOracleScalar))),
 		GasLimit:    uint64(deployConfig.L2GenesisBlockGasLimit),
+		BaseFee:     deployConfig.L2GenesisBlockBaseFeePerGas.ToInt(),
 	}
 }
 

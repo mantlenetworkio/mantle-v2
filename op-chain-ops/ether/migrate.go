@@ -76,7 +76,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 	// Mint events are instrumented as regular ETH events in the witness data, so we no longer
 	// need to iterate over mint events during the migration.
 	for _, addr := range addresses {
-		sk := CalcOVMETHStorageKey(addr)
+		sk := CalcBVMMNTStorageKey(addr)
 		slotsAddrs[sk] = addr
 		slotsInp[sk] = BalanceSlot
 	}
@@ -90,7 +90,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 
 	// Add the old SequencerEntrypoint because someone sent it ETH a long time ago and it has a
 	// balance but none of our instrumentation could easily find it. Special case.
-	entrySK := CalcOVMETHStorageKey(sequencerEntrypointAddr)
+	entrySK := CalcBVMMNTStorageKey(sequencerEntrypointAddr)
 	slotsAddrs[entrySK] = sequencerEntrypointAddr
 	slotsInp[entrySK] = BalanceSlot
 
@@ -127,13 +127,13 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 			totalFound = new(big.Int).Add(totalFound, account.balance)
 
 			mutableDB.SetBalance(account.address, account.balance)
-			mutableDB.SetState(predeploys.LegacyERC20ETHAddr, account.legacySlot, common.Hash{})
+			mutableDB.SetState(predeploys.LegacyERC20MNTAddr, account.legacySlot, common.Hash{})
 			count++
 			seenAccounts[account.address] = true
 		}
 	}()
 
-	err := util.IterateState(dbFactory, predeploys.LegacyERC20ETHAddr, func(db *state.StateDB, key, value common.Hash) error {
+	err := util.IterateState(dbFactory, predeploys.LegacyERC20MNTAddr, func(db *state.StateDB, key, value common.Hash) error {
 		// We can safely ignore specific slots (totalSupply, name, symbol).
 		if ignoredSlots[key] {
 			return nil
@@ -209,7 +209,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 		log.Crit("cannot get database", "err", err)
 	}
 
-	totalSupply := getOVMETHTotalSupply(db)
+	totalSupply := getBVMMNTTotalSupply(db)
 	delta := new(big.Int).Sub(totalSupply, totalFound)
 	if delta.Cmp(expDiff) != 0 {
 		log.Error(
@@ -237,7 +237,7 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 	// different than the sum of all balances since we no longer track balances inside the contract
 	// itself. The total supply is going to be weird no matter what, might as well set it to zero
 	// so it's explicitly weird instead of implicitly weird.
-	mutableDB.SetState(predeploys.LegacyERC20ETHAddr, getOVMETHTotalSupplySlot(), common.Hash{})
+	mutableDB.SetState(predeploys.LegacyERC20MNTAddr, getBVMMNTTotalSupplySlot(), common.Hash{})
 	log.Info("Set the totalSupply to 0")
 
 	return nil

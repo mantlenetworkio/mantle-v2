@@ -122,6 +122,10 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 	if gasLimit == 0 {
 		gasLimit = defaultL2GasLimit
 	}
+	baseFee := config.L2GenesisBlockBaseFeePerGas
+	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {
+		baseFee = newHexBig(defaultL2BaseFee)
+	}
 
 	data, err = sysCfgABI.Pack(
 		"initialize",
@@ -130,6 +134,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		uint642Big(config.GasPriceOracleScalar),
 		config.BatchSenderAddress.Hash(),
 		gasLimit,
+		baseFee.ToInt(),
 		config.P2PSequencerAddress,
 		defaultResourceConfig,
 	)
@@ -237,6 +242,14 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 			memDB.SetState(*proxyAddr, common.Hash{31: 0x01}, symbol)
 			memDB.SetState(*proxyAddr, common.Hash{31: 0x02}, decimals)
 		}
+		if name == "L1MantleToken" {
+			name, _ := state.EncodeStringValue("Mantle Token", 0)
+			symbol, _ := state.EncodeStringValue("MNT", 0)
+			decimals, _ := state.EncodeUintValue(18, 0)
+			memDB.SetState(*proxyAddr, common.Hash{}, name)
+			memDB.SetState(*proxyAddr, common.Hash{31: 0x01}, symbol)
+			memDB.SetState(*proxyAddr, common.Hash{31: 0x02}, decimals)
+		}
 	}
 
 	stateDB, err := backend.Blockchain().State()
@@ -257,6 +270,9 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		depAddr := dep.Address
 		if strings.HasSuffix(dep.Name, "Proxy") {
 			depAddr = *predeploys.DevPredeploys[strings.TrimSuffix(dep.Name, "Proxy")]
+		}
+		if dep.Name == "L1MantleToken" {
+			depAddr = *predeploys.DevPredeploys["L1MantleToken"]
 		}
 
 		memDB.CreateAccount(depAddr)
@@ -295,6 +311,10 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 	if gasLimit == 0 {
 		gasLimit = defaultL2GasLimit
 	}
+	baseFee := config.L2GenesisBlockBaseFeePerGas
+	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {
+		baseFee = newHexBig(defaultL2BaseFee)
+	}
 
 	constructors = append(constructors, []deployer.Constructor{
 		{
@@ -305,6 +325,7 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 				uint642Big(config.GasPriceOracleScalar),
 				config.BatchSenderAddress.Hash(), // left-padded 32 bytes value, version is zero anyway
 				gasLimit,
+				baseFee.ToInt(),
 				config.P2PSequencerAddress,
 				defaultResourceConfig,
 			},
@@ -331,6 +352,7 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 				config.PortalGuardian,
 				true, // _paused
 				predeploys.DevSystemConfigAddr,
+				predeploys.DevL1MNTAddr,
 			},
 		},
 		{
@@ -357,6 +379,9 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 		{
 			Name: "WETH9",
 		},
+		{
+			Name: "L1MantleToken",
+		},
 	}...)
 	return deployer.Deploy(backend, constructors, l1Deployer)
 }
@@ -375,8 +400,9 @@ func l1Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			deployment.Args[2].(*big.Int),
 			deployment.Args[3].(common.Hash),
 			deployment.Args[4].(uint64),
-			deployment.Args[5].(common.Address),
-			deployment.Args[6].(bindings.ResourceMeteringResourceConfig),
+			deployment.Args[5].(*big.Int),
+			deployment.Args[6].(common.Address),
+			deployment.Args[7].(bindings.ResourceMeteringResourceConfig),
 		)
 	case "L2OutputOracle":
 		_, tx, _, err = bindings.DeployL2OutputOracle(
@@ -398,18 +424,21 @@ func l1Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			deployment.Args[1].(common.Address),
 			deployment.Args[2].(bool),
 			deployment.Args[3].(common.Address),
+			deployment.Args[4].(common.Address),
 		)
 	case "L1CrossDomainMessenger":
 		_, tx, _, err = bindings.DeployL1CrossDomainMessenger(
 			opts,
 			backend,
 			predeploys.DevOptimismPortalAddr,
+			predeploys.DevL1MNTAddr,
 		)
 	case "L1StandardBridge":
 		_, tx, _, err = bindings.DeployL1StandardBridge(
 			opts,
 			backend,
 			predeploys.DevL1CrossDomainMessengerAddr,
+			predeploys.DevL1MNTAddr,
 		)
 	case "OptimismMintableERC20Factory":
 		_, tx, _, err = bindings.DeployOptimismMintableERC20Factory(
@@ -439,6 +468,11 @@ func l1Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			backend,
 			predeploys.DevL1CrossDomainMessengerAddr,
 			predeploys.L2ERC721BridgeAddr,
+		)
+	case "L1MantleToken":
+		_, tx, _, err = bindings.DeployL1MantleToken(
+			opts,
+			backend,
 		)
 	default:
 		if strings.HasSuffix(deployment.Name, "Proxy") {

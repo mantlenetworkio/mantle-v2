@@ -199,6 +199,7 @@ func (d *OpGeth) CreatePayloadAttributes(txs ...*types.Transaction) (*eth.Payloa
 		Transactions: txBytes,
 		NoTxPool:     true,
 		GasLimit:     (*eth.Uint64Quantity)(&d.SystemConfig.GasLimit),
+		BaseFee:      d.SystemConfig.BaseFee,
 	}
 	return &attrs, nil
 }

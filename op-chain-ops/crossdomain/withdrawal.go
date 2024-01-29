@@ -15,9 +15,9 @@ import (
 var (
 	SentMessageEventABI               = "SentMessage(address,address,bytes,uint256)"
 	SentMessageEventABIHash           = crypto.Keccak256Hash([]byte(SentMessageEventABI))
-	SentMessageExtension1EventABI     = "SentMessage(address,uint256)"
+	SentMessageExtension1EventABI     = "SentMessage(address,uint256,uint256)"
 	SentMessageExtension1EventABIHash = crypto.Keccak256Hash([]byte(SentMessageExtension1EventABI))
-	MessagePassedEventABI             = "MessagePassed(uint256,address,address,uint256,uint256,bytes,bytes32)"
+	MessagePassedEventABI             = "MessagePassed(uint256,address,address,uint256,uint256,uint256,bytes,bytes32)"
 	MessagePassedEventABIHash         = crypto.Keccak256Hash([]byte(MessagePassedEventABI))
 )
 
@@ -28,7 +28,8 @@ type Withdrawal struct {
 	Nonce    *big.Int        `json:"nonce"`
 	Sender   *common.Address `json:"sender"`
 	Target   *common.Address `json:"target"`
-	Value    *big.Int        `json:"value"`
+	MNTValue *big.Int        `json:"mntValue"`
+	ETHValue *big.Int        `json:"ethValue"`
 	GasLimit *big.Int        `json:"gasLimit"`
 	Data     hexutil.Bytes   `json:"data"`
 }
@@ -37,16 +38,17 @@ type Withdrawal struct {
 func NewWithdrawal(
 	nonce *big.Int,
 	sender, target *common.Address,
-	value, gasLimit *big.Int,
+	mntValue, ethValue, gasLimit *big.Int,
 	data []byte,
 ) *Withdrawal {
 	return &Withdrawal{
 		Nonce:    nonce,
 		Sender:   sender,
 		Target:   target,
-		Value:    value,
+		MNTValue: mntValue,
+		ETHValue: ethValue,
 		GasLimit: gasLimit,
-		Data:     hexutil.Bytes(data),
+		Data:     data,
 	}
 }
 
@@ -56,11 +58,12 @@ func (w *Withdrawal) Encode() ([]byte, error) {
 		{Name: "nonce", Type: Uint256Type},
 		{Name: "sender", Type: AddressType},
 		{Name: "target", Type: AddressType},
-		{Name: "value", Type: Uint256Type},
+		{Name: "mntValue", Type: Uint256Type},
+		{Name: "ethValue", Type: Uint256Type},
 		{Name: "gasLimit", Type: Uint256Type},
 		{Name: "data", Type: BytesType},
 	}
-	enc, err := args.Pack(w.Nonce, w.Sender, w.Target, w.Value, w.GasLimit, []byte(w.Data))
+	enc, err := args.Pack(w.Nonce, w.Sender, w.Target, w.MNTValue, w.ETHValue, w.GasLimit, []byte(w.Data))
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode withdrawal: %w", err)
 	}
@@ -73,7 +76,8 @@ func (w *Withdrawal) Decode(data []byte) error {
 		{Name: "nonce", Type: Uint256Type},
 		{Name: "sender", Type: AddressType},
 		{Name: "target", Type: AddressType},
-		{Name: "value", Type: Uint256Type},
+		{Name: "mntValue", Type: Uint256Type},
+		{Name: "ethValue", Type: Uint256Type},
 		{Name: "gasLimit", Type: Uint256Type},
 		{Name: "data", Type: BytesType},
 	}
@@ -94,15 +98,19 @@ func (w *Withdrawal) Decode(data []byte) error {
 	if !ok {
 		return errors.New("cannot abi decode target")
 	}
-	value, ok := decoded[3].(*big.Int)
+	mntValue, ok := decoded[3].(*big.Int)
 	if !ok {
-		return errors.New("cannot abi decode value")
+		return errors.New("cannot abi decode mntValue")
 	}
-	gasLimit, ok := decoded[4].(*big.Int)
+	ethValue, ok := decoded[4].(*big.Int)
+	if !ok {
+		return errors.New("cannot abi decode ethValue")
+	}
+	gasLimit, ok := decoded[5].(*big.Int)
 	if !ok {
 		return errors.New("cannot abi decode gasLimit")
 	}
-	msgData, ok := decoded[5].([]byte)
+	msgData, ok := decoded[6].([]byte)
 	if !ok {
 		return errors.New("cannot abi decode data")
 	}
@@ -110,7 +118,8 @@ func (w *Withdrawal) Decode(data []byte) error {
 	w.Nonce = nonce
 	w.Sender = &sender
 	w.Target = &target
-	w.Value = value
+	w.ETHValue = ethValue
+	w.MNTValue = mntValue
 	w.GasLimit = gasLimit
 	w.Data = hexutil.Bytes(msgData)
 	return nil
@@ -150,7 +159,8 @@ func (w *Withdrawal) WithdrawalTransaction() bindings.TypesWithdrawalTransaction
 		Nonce:    w.Nonce,
 		Sender:   *w.Sender,
 		Target:   *w.Target,
-		Value:    w.Value,
+		EthValue: w.ETHValue,
+		MntValue: w.MNTValue,
 		GasLimit: w.GasLimit,
 		Data:     []byte(w.Data),
 	}

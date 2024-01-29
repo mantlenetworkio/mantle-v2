@@ -197,21 +197,11 @@ func main() {
 					return err
 				}
 
-				log.Info("Connecting to StateCommitmentChain", "address", addresses.StateCommitmentChain)
-				scc, err := legacy_bindings.NewStateCommitmentChain(addresses.StateCommitmentChain, clients.L1Client)
-				if err != nil {
-					return err
-				}
-
 				var wg sync.WaitGroup
 
 				log.Info("Waiting for CanonicalTransactionChain")
 				wg.Add(1)
 				go waitForTotalElements(&wg, ctc, clients.L2Client, "CanonicalTransactionChain")
-
-				log.Info("Waiting for StateCommitmentChain")
-				wg.Add(1)
-				go waitForTotalElements(&wg, scc, clients.L2Client, "StateCommitmentChain")
 
 				wg.Wait()
 				log.Info("All batches have been submitted")

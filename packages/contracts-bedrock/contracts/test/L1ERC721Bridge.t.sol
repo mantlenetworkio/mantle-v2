@@ -70,8 +70,9 @@ contract L1ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeCall(
-                L1Messenger.sendMessage,
+                IL1CrossDomainMessenger(address(L1Messenger)).sendMessage,
                 (
+                    0,
                     address(otherBridge),
                     abi.encodeCall(
                         L2ERC721Bridge.finalizeBridgeERC721,
@@ -159,8 +160,9 @@ contract L1ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L1Messenger),
             abi.encodeCall(
-                L1Messenger.sendMessage,
+                IL1CrossDomainMessenger(address(L1Messenger)).sendMessage,
                 (
+                    0,
                     address(otherBridge),
                     abi.encodeCall(
                         L2ERC721Bridge.finalizeBridgeERC721,
@@ -345,4 +347,13 @@ contract L1ERC721Bridge_Test is Messenger_Initializer {
             hex"5678"
         );
     }
+}
+
+interface IL1CrossDomainMessenger {
+    function sendMessage(
+        uint256 _ethAmount,
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    ) external payable;
 }

@@ -29,7 +29,7 @@ func SendDepositTx(t *testing.T, cfg SystemConfig, l1Client *ethclient.Client, l
 	require.Nil(t, err)
 
 	// Finally send TX
-	tx, err := depositContract.DepositTransaction(l1Opts, l2Opts.ToAddr, l2Opts.Value, l2Opts.GasLimit, l2Opts.IsCreation, l2Opts.Data)
+	tx, err := depositContract.DepositTransaction(l1Opts, l2Opts.MNTValue, l2Opts.ToAddr, l2Opts.ETHValue, l2Opts.GasLimit, l2Opts.IsCreation, l2Opts.Data)
 	require.Nil(t, err, "with deposit tx")
 
 	// Wait for transaction on L1
@@ -49,7 +49,8 @@ type DepositTxOptsFn func(l2Opts *DepositTxOpts)
 
 type DepositTxOpts struct {
 	ToAddr         common.Address
-	Value          *big.Int
+	ETHValue       *big.Int
+	MNTValue       *big.Int
 	GasLimit       uint64
 	IsCreation     bool
 	Data           []byte
@@ -59,7 +60,8 @@ type DepositTxOpts struct {
 func defaultDepositTxOpts(opts *bind.TransactOpts) *DepositTxOpts {
 	return &DepositTxOpts{
 		ToAddr:         opts.From,
-		Value:          opts.Value,
+		ETHValue:       opts.Value,
+		MNTValue:       big.NewInt(0),
 		GasLimit:       1_000_000,
 		IsCreation:     false,
 		Data:           nil,

@@ -36,6 +36,44 @@ var (
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_RPC"),
 	}
 	// Optional flags
+	DisperserSocketFlag = cli.StringFlag{
+		Name:   "disperser-socket",
+		Usage:  "Websocket for MantleDA disperser",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_SOCKET"),
+	}
+	DataStoreDurationFlag = cli.Uint64Flag{
+		Name:   "datastore-duration",
+		Usage:  "Duration to store blob",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DATA_STORE_DURATION"),
+	}
+	DisperserTimeoutFlag = cli.DurationFlag{
+		Name:   "disperser-timeout",
+		Usage:  "disperser timeout",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_TIMEOUT"),
+	}
+	GraphPollingDurationFlag = cli.DurationFlag{
+		Name:   "graph-polling-duration",
+		Usage:  "polling duration for fetch data from da graph node",
+		Value:  1200 * time.Millisecond,
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_POLLING_DURATION"),
+	}
+	GraphProviderFlag = cli.StringFlag{
+		Name:   "graph-node-provider",
+		Usage:  "graph node url of MantleDA graph node",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_PROVIDER"),
+	}
+	RollUpMaxSizeFlag = cli.Uint64Flag{
+		Name:   "rollup-max-size",
+		Usage:  "Each rollup data to MantleDa maximum limit, rollup data can not be greater than the value, otherwise the rollup failure",
+		Value:  31600, // ktz for order is 3000
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
+	}
+	MantleDaNodeFlag = cli.IntFlag{
+		Name:   "mantle-da-node",
+		Usage:  "The number of nodes in MantleDA",
+		Value:  4,
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "MANTLE_DA_NODE"),
+	}
 	SubSafetyMarginFlag = cli.Uint64Flag{
 		Name: "sub-safety-margin",
 		Usage: "The batcher tx submission safety margin (in #L1-blocks) to subtract " +
@@ -91,6 +129,13 @@ var optionalFlags = []cli.Flag{
 	MaxL1TxSizeBytesFlag,
 	StoppedFlag,
 	SequencerHDPathFlag,
+	DisperserTimeoutFlag,
+	DisperserSocketFlag,
+	DataStoreDurationFlag,
+	GraphPollingDurationFlag,
+	GraphProviderFlag,
+	RollUpMaxSizeFlag,
+	MantleDaNodeFlag,
 }
 
 func init() {

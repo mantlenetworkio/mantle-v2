@@ -30,8 +30,11 @@ bindings: l1block-bindings \
 	optimism-mintable-erc721-factory-bindings \
 	l1-fee-vault-bindings \
 	basefee-vault-bindings \
-	legacy-erc20-eth-bindings
-
+	legacy-erc20-mnt-bindings \
+	l1mnt-bindings \
+	l2eth-bindings \
+	l1-test-token \
+	l2-test-token
 version:
 	forge --version
 	abigen --version
@@ -98,8 +101,8 @@ optimism-mintable-erc20-factory-bindings: compile
 optimism-mintable-erc20-bindings: compile
 	./gen_bindings.sh contracts/universal/OptimismMintableERC20.sol:OptimismMintableERC20 $(pkg)
 
-legacy-erc20-eth-bindings: compile
-	./gen_bindings.sh contracts/legacy/LegacyERC20ETH.sol:LegacyERC20ETH $(pkg)
+legacy-erc20-mnt-bindings: compile
+	./gen_bindings.sh contracts/legacy/LegacyERC20MNT.sol:LegacyERC20MNT $(pkg)
 
 proxy-bindings: compile
 	./gen_bindings.sh contracts/universal/Proxy.sol:Proxy $(pkg)
@@ -122,11 +125,24 @@ deployer-whitelist-bindings: compile
 l1-blocknumber-bindings: compile
 	./gen_bindings.sh contracts/legacy/L1BlockNumber.sol:L1BlockNumber $(pkg)
 
+l1mnt-bindings:compile
+	./gen_bindings.sh contracts/local/TestMantleToken.sol:L1MantleToken $(pkg)
+
+l2eth-bindings:compile
+	./gen_bindings.sh contracts/L2/BVM_ETH.sol:BVM_ETH $(pkg)
+
+l1-test-token:compile
+	./gen_bindings.sh contracts/local/L1TestToken.sol:L1TestToken $(pkg)
+
+l2-test-token:compile
+	./gen_bindings.sh contracts/local/L2TestToken.sol:L2TestToken $(pkg)
+
+
 more:
 	go run ./gen/main.go \
 		-artifacts ../packages/contracts-bedrock/artifacts \
 		-out ./bindings \
-		-contracts SystemConfig,OptimismMintableERC20Factory,L2StandardBridge,L1BlockNumber,LegacyMessagePasser,DeployerWhitelist,Proxy,OptimismPortal,L2ToL1MessagePasser,L2CrossDomainMessenger,SequencerFeeVault,L1Block,LegacyERC20ETH,WETH9,GovernanceToken,L1CrossDomainMessenger,L2ERC721Bridge,OptimismMintableERC721Factory,ProxyAdmin \
+		-contracts SystemConfig,OptimismMintableERC20Factory,L2StandardBridge,L1BlockNumber,LegacyMessagePasser,DeployerWhitelist,Proxy,OptimismPortal,L2ToL1MessagePasser,L2CrossDomainMessenger,SequencerFeeVault,L1Block,GasPriceOracle,LegacyERC20MNT,WETH9,GovernanceToken,L1CrossDomainMessenger,L2ERC721Bridge,OptimismMintableERC721Factory,ProxyAdmin,L1MantleToken,BVM_ETH  \
 		-package bindings
 
 mkdir:

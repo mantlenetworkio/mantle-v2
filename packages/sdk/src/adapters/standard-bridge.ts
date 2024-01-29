@@ -12,7 +12,7 @@ import {
   TransactionResponse,
   BlockTag,
 } from '@ethersproject/abstract-provider'
-import { predeploys } from '@eth-optimism/contracts'
+import {l1DevPredeploys, predeploys} from '@eth-optimism/contracts'
 import { getContractInterface } from '@eth-optimism/contracts-bedrock'
 import { hexStringEquals } from '@eth-optimism/core-utils'
 
@@ -164,6 +164,14 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       if (
         hexStringEquals(toAddress(l1Token), ethers.constants.AddressZero) ||
         hexStringEquals(toAddress(l2Token), predeploys.OVM_ETH)
+      ) {
+        return false
+      }
+
+      // Don't support MNT deposits or withdrawals via this bridge.
+      if (
+        hexStringEquals(toAddress(l1Token), l1DevPredeploys.L1_MNT) ||
+        hexStringEquals(toAddress(l2Token), ethers.constants.AddressZero)
       ) {
         return false
       }

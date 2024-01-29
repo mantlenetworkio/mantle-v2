@@ -22,20 +22,21 @@ var (
 	// UntouchablePredeploys are addresses in the predeploy namespace
 	// that should not be touched by the migration process.
 	UntouchablePredeploys = map[common.Address]bool{
-		predeploys.GovernanceTokenAddr: true,
-		predeploys.WETH9Addr:           true,
+		predeploys.WETH9Addr: true,
 	}
 
 	// UntouchableCodeHashes represent the bytecode hashes of contracts
 	// that should not be touched by the migration process.
 	UntouchableCodeHashes = map[common.Address]ChainHashMap{
-		predeploys.GovernanceTokenAddr: {
-			1: common.HexToHash("0x8551d935f4e67ad3c98609f0d9f0f234740c4c4599f82674633b55204393e07f"),
-			5: common.HexToHash("0xc4a213cf5f06418533e5168d8d82f7ccbcc97f27ab90197c2c051af6a4941cf9"),
-		},
 		predeploys.WETH9Addr: {
-			1: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			// Mainnet keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/mainnet/genesis.json#L110C22-L110C3550
+			1: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			// Goerli keccak256 code: https://github.com/mantlenetworkio/networks/blob/0833e5029fa1b4b753d3fbacd541363352ddb4a0/goerli/genesis.json#L116C22-L116C4106
 			5: common.HexToHash("0x779bbf2a738ef09d961c945116197e2ac764c1b39304b2b4418cd4e42668b173"),
+			// Sepolia
+			11155111: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
+			// Devnet keccak256 code: https://github.com/mantlenetworkio/mantle/blob/5cda5f811f73d9f331e6168617f87d3e19e6db6b/packages/contracts/genesis/state-dump.latest.json#L110
+			31337: common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35"),
 		},
 	}
 
@@ -49,8 +50,9 @@ var (
 		predeploys.GovernanceTokenAddr:     true,
 		predeploys.WETH9Addr:               true,
 		predeploys.LegacyMessagePasserAddr: true,
-		predeploys.LegacyERC20ETHAddr:      true,
+		predeploys.LegacyERC20MNTAddr:      true,
 		predeploys.DeployerWhitelistAddr:   true,
+		predeploys.BVM_ETHAddr:             true,
 	}
 )
 
@@ -111,6 +113,15 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 	}
 
 	for i := uint64(0); i <= count; i++ {
+		// ignore dev L1's L1_MANTLE_TOEKN address for 0x6900000000000000000000000000000000000020 and the 20 for hexadecimal means 32 in 10 hex.
+		if i == uint64(32) && namespace == bigL1PredeployNamespace {
+			bigAddr := new(big.Int).Or(namespace, new(big.Int).SetUint64(i))
+			addr := common.BigToAddress(bigAddr)
+			if !db.Exist(addr) {
+				db.CreateAccount(addr)
+			}
+			continue
+		}
 		bigAddr := new(big.Int).Or(namespace, new(big.Int).SetUint64(i))
 		addr := common.BigToAddress(bigAddr)
 
@@ -131,13 +142,22 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 	return nil
 }
 
-func SetLegacyETH(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
+func SetLegacyMNT(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
 	deployResults, err := immutables.BuildOptimism(immutable)
 	if err != nil {
 		return err
 	}
 
-	return setupPredeploy(db, deployResults, storage, "LegacyERC20ETH", predeploys.LegacyERC20ETHAddr, predeploys.LegacyERC20ETHAddr)
+	return setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr)
+}
+
+func SetLegacyBVMETH(db vm.StateDB, storage state.StorageConfig, immutable immutables.ImmutableConfig) error {
+	deployResults, err := immutables.BuildOptimism(immutable)
+	if err != nil {
+		return err
+	}
+
+	return setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.BVM_ETHAddr, predeploys.BVM_ETHAddr)
 }
 
 // SetImplementations will set the implementations of the contracts in the state
@@ -154,7 +174,7 @@ func SetImplementations(db vm.StateDB, storage state.StorageConfig, immutable im
 			continue
 		}
 
-		if *address == predeploys.LegacyERC20ETHAddr {
+		if *address == predeploys.LegacyERC20MNTAddr || *address == predeploys.BVM_ETHAddr {
 			continue
 		}
 
@@ -204,11 +224,14 @@ func SetDevOnlyL2Implementations(db vm.StateDB, storage state.StorageConfig, imm
 		}
 	}
 
-	db.CreateAccount(predeploys.LegacyERC20ETHAddr)
-	if err := setupPredeploy(db, deployResults, storage, "LegacyERC20ETH", predeploys.LegacyERC20ETHAddr, predeploys.LegacyERC20ETHAddr); err != nil {
+	db.CreateAccount(predeploys.LegacyERC20MNTAddr)
+	db.CreateAccount(predeploys.BVM_ETHAddr)
+	if err := setupPredeploy(db, deployResults, storage, "LegacyERC20MNT", predeploys.LegacyERC20MNTAddr, predeploys.LegacyERC20MNTAddr); err != nil {
 		return fmt.Errorf("error setting up legacy eth: %w", err)
 	}
-
+	if err := setupPredeploy(db, deployResults, storage, "BVM_ETH", predeploys.BVM_ETHAddr, predeploys.BVM_ETHAddr); err != nil {
+		return fmt.Errorf("error setting up bvm eth: %w", err)
+	}
 	return nil
 }
 

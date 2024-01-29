@@ -7,13 +7,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/urfave/cli"
+
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
 	"github.com/ethereum-optimism/optimism/op-signer/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/urfave/cli"
 )
 
 const (
@@ -31,6 +32,10 @@ const (
 	TxSendTimeoutFlagName             = "txmgr.send-timeout"
 	TxNotInMempoolTimeoutFlagName     = "txmgr.not-in-mempool-timeout"
 	ReceiptQueryIntervalFlagName      = "txmgr.receipt-query-interval"
+	EnableHsmFlagName                 = "enable-hsm"
+	HsmCredenFlagName                 = "hsm-creden"
+	HsmAddressFlagName                = "hsm-address"
+	HsmAPINameFlagName                = "hsm-api-name"
 )
 
 var (
@@ -92,7 +97,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.DurationFlag{
 			Name:   TxSendTimeoutFlagName,
 			Usage:  "Timeout for sending transactions. If 0 it is disabled.",
-			Value:  0,
+			Value:  2 * time.Minute,
 			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_TX_SEND_TIMEOUT"),
 		},
 		cli.DurationFlag{
@@ -106,6 +111,29 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:  "Frequency to poll for receipts",
 			Value:  12 * time.Second,
 			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_RECEIPT_QUERY_INTERVAL"),
+		},
+		cli.BoolFlag{
+			Name:   EnableHsmFlagName,
+			Usage:  "Whether or not to use cloud hsm",
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "ENABLE_HSM"),
+		},
+		cli.StringFlag{
+			Name:   HsmAddressFlagName,
+			Usage:  "The address of private-key in hsm",
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_ADDRESS"),
+			Value:  "",
+		},
+		cli.StringFlag{
+			Name:   HsmAPINameFlagName,
+			Usage:  "The api-name of private-key in hsm",
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_API_NAME"),
+			Value:  "",
+		},
+		cli.StringFlag{
+			Name:   HsmCredenFlagName,
+			Usage:  "The creden of private-key in hsm",
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_CREDEN"),
+			Value:  "",
 		},
 	}, client.CLIFlags(envPrefix)...)
 }
@@ -125,6 +153,10 @@ type CLIConfig struct {
 	NetworkTimeout            time.Duration
 	TxSendTimeout             time.Duration
 	TxNotInMempoolTimeout     time.Duration
+	EnableHsm                 bool
+	HsmCreden                 string
+	HsmAddress                string
+	HsmAPIName                string
 }
 
 func (m CLIConfig) Check() error {
@@ -171,6 +203,10 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		NetworkTimeout:            ctx.GlobalDuration(NetworkTimeoutFlagName),
 		TxSendTimeout:             ctx.GlobalDuration(TxSendTimeoutFlagName),
 		TxNotInMempoolTimeout:     ctx.GlobalDuration(TxNotInMempoolTimeoutFlagName),
+		EnableHsm:                 ctx.GlobalBool(EnableHsmFlagName),
+		HsmAddress:                ctx.GlobalString(HsmAddressFlagName),
+		HsmAPIName:                ctx.GlobalString(HsmAPINameFlagName),
+		HsmCreden:                 ctx.GlobalString(HsmCredenFlagName),
 	}
 }
 
@@ -201,7 +237,8 @@ func NewConfig(cfg CLIConfig, l log.Logger) (Config, error) {
 		hdPath = cfg.L2OutputHDPath
 	}
 
-	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig)
+	ctx = context.Background()
+	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig, ctx, cfg.EnableHsm, cfg.HsmAPIName, cfg.HsmAddress, cfg.HsmCreden)
 	if err != nil {
 		return Config{}, fmt.Errorf("could not init signer: %w", err)
 	}
@@ -218,6 +255,10 @@ func NewConfig(cfg CLIConfig, l log.Logger) (Config, error) {
 		SafeAbortNonceTooLowCount: cfg.SafeAbortNonceTooLowCount,
 		Signer:                    signerFactory(chainID),
 		From:                      from,
+		EnableHsm:                 cfg.EnableHsm,
+		HsmAddress:                cfg.HsmAddress,
+		HsmCreden:                 cfg.HsmCreden,
+		HsmAPIName:                cfg.HsmAPIName,
 	}, nil
 }
 
@@ -262,4 +303,10 @@ type Config struct {
 	// Signer is used to sign transactions when the gas price is increased.
 	Signer opcrypto.SignerFn
 	From   common.Address
+
+	// use cloud-hsm to sign
+	EnableHsm  bool
+	HsmCreden  string
+	HsmAddress string
+	HsmAPIName string
 }

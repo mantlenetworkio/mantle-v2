@@ -17,7 +17,8 @@ contract EchidnaFuzzHashing {
         uint240 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) public {
@@ -26,7 +27,7 @@ contract EchidnaFuzzHashing {
 
         // hash the cross domain message. we don't need to store the result since the function
         // validates and should revert if an invalid version (>1) is encoded
-        Hashing.hashCrossDomainMessage(encodedNonce, _sender, _target, _value, _gasLimit, _data);
+        Hashing.hashCrossDomainMessage(encodedNonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data);
 
         // check that execution never makes it this far for an invalid version
         if (_version > 1) {
@@ -42,7 +43,8 @@ contract EchidnaFuzzHashing {
         uint240 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) public {
@@ -55,7 +57,8 @@ contract EchidnaFuzzHashing {
             encodedNonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _gasLimit,
             _data
         );
@@ -80,7 +83,8 @@ contract EchidnaFuzzHashing {
         uint240 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) public {
@@ -93,7 +97,8 @@ contract EchidnaFuzzHashing {
             encodedNonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _gasLimit,
             _data
         );
@@ -101,7 +106,8 @@ contract EchidnaFuzzHashing {
             encodedNonce,
             _sender,
             _target,
-            _value,
+            _mntValue,
+            _ethValue,
             _gasLimit,
             _data
         );

@@ -27,6 +27,7 @@ var (
 	ErrMissingOverhead               = errors.New("missing genesis system config overhead")
 	ErrMissingScalar                 = errors.New("missing genesis system config scalar")
 	ErrMissingGasLimit               = errors.New("missing genesis system config gas limit")
+	ErrMissingBaseFee                = errors.New("missing genesis system config base fee")
 	ErrMissingBatchInboxAddress      = errors.New("missing batch inbox address")
 	ErrMissingDepositContractAddress = errors.New("missing deposit contract address")
 	ErrMissingL1ChainID              = errors.New("L1 chain ID must not be nil")
@@ -75,6 +76,10 @@ type Config struct {
 	// Active if RegolithTime != nil && L2 block timestamp >= *RegolithTime, inactive otherwise.
 	RegolithTime *uint64 `json:"regolith_time,omitempty"`
 
+	// BaseFeeTime sets the activation time of the BaseFee network-upgrade:
+	// Active if BaseFeeTime != nil && L2 block timestamp >= *BaseFeeTime, inactive otherwise.
+	BaseFeeTime *uint64 `json:"base_fee_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -84,6 +89,11 @@ type Config struct {
 	DepositContractAddress common.Address `json:"deposit_contract_address"`
 	// L1 System Config Address
 	L1SystemConfigAddress common.Address `json:"l1_system_config_address"`
+	// MANTLE DA MODIFY //
+	// Use Da from MantleDA(EigenDA)
+	MantleDaSwitch bool `json:"mantle_da_switch"`
+	// MantleDA(EigenDA) DataLayrServiceManage contract address
+	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.
@@ -223,6 +233,9 @@ func (cfg *Config) Check() error {
 	if cfg.Genesis.SystemConfig.GasLimit == 0 {
 		return ErrMissingGasLimit
 	}
+	if cfg.Genesis.SystemConfig.BaseFee == nil {
+		return ErrMissingBaseFee
+	}
 	if cfg.BatchInboxAddress == (common.Address{}) {
 		return ErrMissingBatchInboxAddress
 	}
@@ -256,6 +269,11 @@ func (c *Config) IsRegolith(timestamp uint64) bool {
 	return c.RegolithTime != nil && timestamp >= *c.RegolithTime
 }
 
+// IsBaseFee returns true if the BaseFee hardfork is active at or past the given timestamp.
+func (c *Config) IsBaseFee(timestamp uint64) bool {
+	return c.BaseFeeTime != nil && timestamp >= *c.BaseFeeTime
+}
+
 // Description outputs a banner describing the important parts of rollup configuration in a human-readable form.
 // Optionally provide a mapping of L2 chain IDs to network names to label the L2 chain with if not unknown.
 // The config should be config.Check()-ed before creating a description.
@@ -286,7 +304,7 @@ func (c *Config) Description(l2Chains map[string]string) string {
 	return banner
 }
 
-// Description outputs a banner describing the important parts of rollup configuration in a log format.
+// LogDescription outputs a banner describing the important parts of rollup configuration in a log format.
 // Optionally provide a mapping of L2 chain IDs to network names to label the L2 chain with if not unknown.
 // The config should be config.Check()-ed before creating a description.
 func (c *Config) LogDescription(log log.Logger, l2Chains map[string]string) {

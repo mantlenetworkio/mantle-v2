@@ -6,6 +6,13 @@ pragma solidity ^0.8.0;
  * @notice Contains constant addresses for contracts that are pre-deployed to the L2 system.
  */
 library Predeploys {
+
+
+    /**
+    * @notice Address of the BVM_ETH predeploy.
+     */
+    address internal constant BVM_ETH = 0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111;
+
     /**
      * @notice Address of the L2ToL1MessagePasser predeploy.
      */
@@ -70,11 +77,11 @@ library Predeploys {
 
     /**
      * @custom:legacy
-     * @notice Address of the LegacyERC20ETH predeploy. Deprecated. Balances are migrated to the
+     * @notice Address of the LegacyERC20MNT predeploy. Deprecated. Balances are migrated to the
      *         state trie as of the Bedrock upgrade. Contract has been locked and write functions
      *         can no longer be accessed.
      */
-    address internal constant LEGACY_ERC20_ETH = 0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000;
+    address internal constant LEGACY_ERC20_MNT = 0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000;
 
     /**
      * @custom:legacy

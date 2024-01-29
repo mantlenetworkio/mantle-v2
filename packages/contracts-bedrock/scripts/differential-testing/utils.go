@@ -32,7 +32,7 @@ func checkErr(err error, failReason string) {
 }
 
 // encodeCrossDomainMessage encodes a versioned cross domain message into a byte array.
-func encodeCrossDomainMessage(nonce *big.Int, sender common.Address, target common.Address, value *big.Int, gasLimit *big.Int, data []byte) ([]byte, error) {
+func encodeCrossDomainMessage(nonce *big.Int, sender common.Address, target common.Address, mntValue *big.Int, ethValue *big.Int, gasLimit *big.Int, data []byte) ([]byte, error) {
 	_, version := crossdomain.DecodeVersionedNonce(nonce)
 
 	var encoded []byte
@@ -42,7 +42,7 @@ func encodeCrossDomainMessage(nonce *big.Int, sender common.Address, target comm
 		encoded, err = crossdomain.EncodeCrossDomainMessageV0(target, sender, data, nonce)
 	} else if version.Cmp(big.NewInt(1)) == 0 {
 		// Encode cross domain message V1
-		encoded, err = crossdomain.EncodeCrossDomainMessageV1(nonce, sender, target, value, gasLimit, data)
+		encoded, err = crossdomain.EncodeCrossDomainMessageV1(nonce, sender, target, mntValue, ethValue, gasLimit, data)
 	} else {
 		return nil, UnknownNonceVersion
 	}
@@ -51,12 +51,13 @@ func encodeCrossDomainMessage(nonce *big.Int, sender common.Address, target comm
 }
 
 // hashWithdrawal hashes a withdrawal transaction.
-func hashWithdrawal(nonce *big.Int, sender common.Address, target common.Address, value *big.Int, gasLimit *big.Int, data []byte) (common.Hash, error) {
+func hashWithdrawal(nonce *big.Int, sender common.Address, target common.Address, mntValue *big.Int, ethValue *big.Int, gasLimit *big.Int, data []byte) (common.Hash, error) {
 	wd := crossdomain.Withdrawal{
 		Nonce:    nonce,
 		Sender:   &sender,
 		Target:   &target,
-		Value:    value,
+		MNTValue: mntValue,
+		ETHValue: ethValue,
 		GasLimit: gasLimit,
 		Data:     data,
 	}
@@ -83,6 +84,7 @@ func makeDepositTx(
 	to common.Address,
 	value *big.Int,
 	mint *big.Int,
+	ethValue *big.Int,
 	gasLimit *big.Int,
 	isCreate bool,
 	data []byte,
@@ -108,6 +110,9 @@ func makeDepositTx(
 	// Fill optional fields
 	if mint.Cmp(big.NewInt(0)) == 1 {
 		depositTx.Mint = mint
+	}
+	if ethValue.Cmp(big.NewInt(0)) == 1 {
+		depositTx.EthValue = ethValue
 	}
 	if !isCreate {
 		depositTx.To = &to

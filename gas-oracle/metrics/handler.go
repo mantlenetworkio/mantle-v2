@@ -59,9 +59,9 @@ func ExpHandler(r metrics.Registry) http.Handler {
 // This function enables metrics reporting separate from pprof.
 func Setup(address string) {
 	m := http.NewServeMux()
-	m.Handle("/debug/metrics", ExpHandler(DefaultRegistry))
-	m.Handle("/debug/metrics/prometheus", prometheus.Handler(DefaultRegistry))
-	log.Info("Starting metrics server", "addr", fmt.Sprintf("http://%s/debug/metrics", address))
+	m.Handle("/metrics", ExpHandler(DefaultRegistry))
+	m.Handle("/metrics/prometheus", prometheus.Handler(DefaultRegistry))
+	log.Info("Starting metrics server", "addr", fmt.Sprintf("http://%s/metrics", address))
 	go func() {
 		if err := http.ListenAndServe(address, m); err != nil {
 			log.Error("Failure in running metrics server", "err", err)

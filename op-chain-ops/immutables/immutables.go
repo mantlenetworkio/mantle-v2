@@ -86,6 +86,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			Name: "L2StandardBridge",
 			Args: []interface{}{
 				immutable["L2StandardBridge"]["otherBridge"],
+				immutable["L2StandardBridge"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -136,7 +137,13 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			},
 		},
 		{
-			Name: "LegacyERC20ETH",
+			Name: "LegacyERC20MNT",
+			Args: []interface{}{
+				immutable["LegacyERC20MNT"]["L1_MNT_ADDRESS"],
+			},
+		},
+		{
+			Name: "BVM_ETH",
 		},
 	}
 	return BuildL2(deployments)
@@ -177,7 +184,11 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 		if !ok {
 			return nil, fmt.Errorf("invalid type for otherBridge")
 		}
-		_, tx, _, err = bindings.DeployL2StandardBridge(opts, backend, otherBridge)
+		L1MNT, ok := deployment.Args[1].(common.Address)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for L1 MNT")
+		}
+		_, tx, _, err = bindings.DeployL2StandardBridge(opts, backend, otherBridge, L1MNT)
 	case "L2ToL1MessagePasser":
 		// No arguments required for L2ToL1MessagePasser
 		_, tx, _, err = bindings.DeployL2ToL1MessagePasser(opts, backend)
@@ -228,8 +239,14 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 			return nil, fmt.Errorf("invalid type for remoteChainId")
 		}
 		_, tx, _, err = bindings.DeployOptimismMintableERC721Factory(opts, backend, bridge, remoteChainId)
-	case "LegacyERC20ETH":
-		_, tx, _, err = bindings.DeployLegacyERC20ETH(opts, backend)
+	case "LegacyERC20MNT":
+		L1MNT, ok := deployment.Args[0].(common.Address)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for LegacyERC20MNT")
+		}
+		_, tx, _, err = bindings.DeployLegacyERC20MNT(opts, backend, L1MNT)
+	case "BVM_ETH":
+		_, tx, _, err = bindings.DeployBVMETH(opts, backend)
 	default:
 		return tx, fmt.Errorf("unknown contract: %s", deployment.Name)
 	}

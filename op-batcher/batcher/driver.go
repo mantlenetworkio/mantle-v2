@@ -10,14 +10,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Layr-Labs/datalayr/common/graphView"
+	"github.com/Layr-Labs/datalayr/common/logging"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
+
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
@@ -83,6 +89,12 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		MaxPendingTransactions: cfg.MaxPendingTransactions,
 		NetworkTimeout:         cfg.TxMgrConfig.NetworkTimeout,
 		TxManager:              txManager,
+		DisperserSocket:        cfg.DisperserSocket,
+		DisperserTimeout:       cfg.DisperserTimeout,
+		DataStoreDuration:      cfg.DataStoreDuration,
+		GraphPollingDuration:   cfg.GraphPollingDuration,
+		RollupMaxSize:          cfg.RollupMaxSize,
+		MantleDaNodes:          cfg.MantleDaNodes,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -98,7 +110,35 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 	if err := batcherCfg.Check(); err != nil {
 		return nil, err
 	}
+	if rcfg.MantleDaSwitch {
+		if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
+			return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
+		}
+		dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
 
+		if len(cfg.GraphProvider) == 0 {
+			return nil, fmt.Errorf("graph node provider url is empty")
+		}
+		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
+		if err != nil {
+			return nil, err
+		}
+		parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
+		if err != nil {
+			return nil, err
+		}
+		eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
+		batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
+		batcherCfg.DataLayrServiceManagerContract = dataLayrContract
+		batcherCfg.DataLayrServiceManagerABI = parsed
+		batcherCfg.GraphClient = graphClient
+
+	}
 	return NewBatchSubmitter(ctx, batcherCfg, l, m)
 }
 
@@ -140,7 +180,12 @@ func (l *BatchSubmitter) Start() error {
 	l.lastStoredBlock = eth.BlockID{}
 
 	l.wg.Add(1)
-	go l.loop()
+
+	if !l.Rollup.MantleDaSwitch {
+		go l.loop()
+	} else {
+		go l.mantleDALoop()
+	}
 
 	l.log.Info("Batch Submitter started")
 

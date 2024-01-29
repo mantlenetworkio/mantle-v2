@@ -52,7 +52,8 @@ library Hashing {
      * @param _nonce    Message nonce with version encoded into the first two bytes.
      * @param _sender   Address of the sender of the message.
      * @param _target   Address of the target of the message.
-     * @param _value    ETH value to send to the target.
+     * @param _mntValue MNT value to send to the target.
+     * @param _ethValue ETH value to send to the target.
      * @param _gasLimit Gas limit to use for the message.
      * @param _data     Data to send with the message.
      *
@@ -62,7 +63,8 @@ library Hashing {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) internal pure returns (bytes32) {
@@ -70,7 +72,7 @@ library Hashing {
         if (version == 0) {
             return hashCrossDomainMessageV0(_target, _sender, _data, _nonce);
         } else if (version == 1) {
-            return hashCrossDomainMessageV1(_nonce, _sender, _target, _value, _gasLimit, _data);
+            return hashCrossDomainMessageV1(_nonce, _sender, _target, _mntValue, _ethValue, _gasLimit, _data);
         } else {
             revert("Hashing: unknown cross domain message version");
         }
@@ -101,7 +103,8 @@ library Hashing {
      * @param _nonce    Message nonce.
      * @param _sender   Address of the sender of the message.
      * @param _target   Address of the target of the message.
-     * @param _value    ETH value to send to the target.
+     * @param _mntValue MNT value to send to the target.
+     * @param _ethValue ETH value to send to the target.
      * @param _gasLimit Gas limit to use for the message.
      * @param _data     Data to send with the message.
      *
@@ -111,7 +114,8 @@ library Hashing {
         uint256 _nonce,
         address _sender,
         address _target,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
     ) internal pure returns (bytes32) {
@@ -121,7 +125,8 @@ library Hashing {
                     _nonce,
                     _sender,
                     _target,
-                    _value,
+                    _mntValue,
+                    _ethValue,
                     _gasLimit,
                     _data
                 )
@@ -142,7 +147,7 @@ library Hashing {
     {
         return
             keccak256(
-                abi.encode(_tx.nonce, _tx.sender, _tx.target, _tx.value, _tx.gasLimit, _tx.data)
+                abi.encode(_tx.nonce, _tx.sender, _tx.target,_tx.mntValue, _tx.ethValue, _tx.gasLimit, _tx.data)
             );
     }
 

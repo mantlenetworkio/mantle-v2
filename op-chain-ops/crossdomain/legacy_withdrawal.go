@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -138,12 +137,12 @@ func (w *LegacyWithdrawal) StorageSlot() (common.Hash, error) {
 	return common.BytesToHash(slot), nil
 }
 
-// Value returns the ETH value associated with the withdrawal. Since
+// ETHValue returns the ETH value associated with the withdrawal. Since
 // ETH was represented as an ERC20 token before the Bedrock upgrade,
 // the sender and calldata must be observed and the value must be parsed
 // out if "finalizeETHWithdrawal" is the method.
-func (w *LegacyWithdrawal) Value() (*big.Int, error) {
-	abi, err := bindings.L1StandardBridgeMetaData.GetAbi()
+func (w *LegacyWithdrawal) ETHValue() (*big.Int, error) {
+	legacyStandardBridgeABI, err := getLegacyStandardBridgeABI()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +150,7 @@ func (w *LegacyWithdrawal) Value() (*big.Int, error) {
 	value := new(big.Int)
 
 	// Parse the 4byte selector
-	method, err := abi.MethodById(w.XDomainData)
+	method, err := legacyStandardBridgeABI.MethodById(w.XDomainData)
 	// If it is an unknown selector, there is no value
 	if err != nil {
 		return value, nil
@@ -159,6 +158,45 @@ func (w *LegacyWithdrawal) Value() (*big.Int, error) {
 
 	isFromL2StandardBridge := w.XDomainSender == predeploys.L2StandardBridgeAddr
 	if isFromL2StandardBridge && method.Name == "finalizeETHWithdrawal" {
+		data, err := method.Inputs.Unpack(w.XDomainData[4:])
+		if err != nil {
+			return nil, err
+		}
+		// bounds check
+		if len(data) < 3 {
+			return nil, errors.New("not enough data")
+		}
+		var ok bool
+		value, ok = data[2].(*big.Int)
+		if !ok {
+			return nil, errors.New("not big.Int")
+		}
+	}
+
+	return value, nil
+}
+
+// MNTValue returns the MNT value associated with the withdrawal. Since
+// ETH was represented as an ERC20 token before the Bedrock upgrade,
+// the sender and calldata must be observed and the value must be parsed
+// out if "finalizeETHWithdrawal" is the method.
+func (w *LegacyWithdrawal) MNTValue() (*big.Int, error) {
+	legacyStandardBridgeABI, err := getLegacyStandardBridgeABI()
+	if err != nil {
+		return nil, err
+	}
+
+	value := new(big.Int)
+
+	// Parse the 4byte selector
+	method, err := legacyStandardBridgeABI.MethodById(w.XDomainData)
+	// If it is an unknown selector, there is no value
+	if err != nil {
+		return value, nil
+	}
+
+	isFromL2StandardBridge := w.XDomainSender == predeploys.L2StandardBridgeAddr
+	if isFromL2StandardBridge && method.Name == "finalizeMantleWithdrawal" {
 		data, err := method.Inputs.Unpack(w.XDomainData[4:])
 		if err != nil {
 			return nil, err
@@ -185,7 +223,8 @@ func (w *LegacyWithdrawal) CrossDomainMessage() *CrossDomainMessage {
 		Nonce:    w.XDomainNonce,
 		Sender:   w.XDomainSender,
 		Target:   w.XDomainTarget,
-		Value:    new(big.Int),
+		EthValue: new(big.Int),
+		MntValue: new(big.Int),
 		GasLimit: new(big.Int),
 		Data:     []byte(w.XDomainData),
 	}

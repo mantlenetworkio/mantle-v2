@@ -94,8 +94,9 @@ var Subcommands = cli.Commands{
 				Usage: "Path to hardhat deploy config file",
 			},
 			cli.StringFlag{
-				Name:  "deployment-dir",
-				Usage: "Path to deployment directory",
+				Name:     "deployment-dir",
+				Usage:    "Path to deployment directory",
+				Required: true,
 			},
 			cli.StringFlag{
 				Name:  "outfile.l2",
@@ -118,9 +119,8 @@ var Subcommands = cli.Commands{
 			if err != nil {
 				return err
 			}
-
 			// Read the appropriate deployment addresses from disk
-			if err := config.GetDeployedAddresses(hh); err != nil {
+			if err := config.GetDeployedAddresses(hh, nil); err != nil {
 				return err
 			}
 			// Sanity check the config

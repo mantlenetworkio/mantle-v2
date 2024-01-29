@@ -20,15 +20,16 @@ contract EchidnaFuzzOptimismPortal {
             _scalar: 10000,
             _batcherHash: bytes32(0),
             _gasLimit: 30_000_000,
+            _baseFee: 1_000_000_000,
             _unsafeBlockSigner: address(0),
             _config: rcfg
         });
-
         portal = new OptimismPortal({
             _l2Oracle: L2OutputOracle(address(0)),
             _guardian: address(0),
             _paused: false,
-            _config: systemConfig
+            _config: systemConfig,
+            _l1MNT: address(0)
         });
     }
 
@@ -43,7 +44,7 @@ contract EchidnaFuzzOptimismPortal {
     ) public payable {
         failedToComplete = true;
         require(!_isCreation || _to == address(0), "EchidnaFuzzOptimismPortal: invalid test case.");
-        portal.depositTransaction{ value: _mint }(_to, _value, _gasLimit, _isCreation, _data);
+        portal.depositTransaction{ value: _mint }(0,_to, _value, _gasLimit, _isCreation, _data);
         failedToComplete = false;
     }
 

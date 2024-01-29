@@ -3,6 +3,7 @@ package predeploys
 import "github.com/ethereum/go-ethereum/common"
 
 const (
+	DevL1MNT                        = "0x6900000000000000000000000000000000000020"
 	DevL2OutputOracle               = "0x6900000000000000000000000000000000000000"
 	DevOptimismPortal               = "0x6900000000000000000000000000000000000001"
 	DevL1CrossDomainMessenger       = "0x6900000000000000000000000000000000000002"
@@ -16,6 +17,7 @@ const (
 )
 
 var (
+	DevL1MNTAddr                        = common.HexToAddress(DevL1MNT)
 	DevL2OutputOracleAddr               = common.HexToAddress(DevL2OutputOracle)
 	DevOptimismPortalAddr               = common.HexToAddress(DevOptimismPortal)
 	DevL1CrossDomainMessengerAddr       = common.HexToAddress(DevL1CrossDomainMessenger)
@@ -31,6 +33,7 @@ var (
 )
 
 func init() {
+	DevPredeploys["L1MantleToken"] = &DevL1MNTAddr
 	DevPredeploys["L2OutputOracle"] = &DevL2OutputOracleAddr
 	DevPredeploys["OptimismPortal"] = &DevOptimismPortalAddr
 	DevPredeploys["L1CrossDomainMessenger"] = &DevL1CrossDomainMessengerAddr

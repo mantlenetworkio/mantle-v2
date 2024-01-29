@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	cldr "github.com/ethereum-optimism/optimism/op-program/client/driver"
 	"github.com/ethereum-optimism/optimism/op-program/client/l1"
 	"github.com/ethereum-optimism/optimism/op-program/client/l2"
@@ -52,6 +53,7 @@ func RunProgram(logger log.Logger, preimageOracle io.ReadWriter, preimageHinter 
 		logger,
 		bootInfo.RollupConfig,
 		bootInfo.L2ChainConfig,
+		bootInfo.DatastoreConfig,
 		bootInfo.L1Head,
 		bootInfo.L2Head,
 		bootInfo.L2Claim,
@@ -62,16 +64,19 @@ func RunProgram(logger log.Logger, preimageOracle io.ReadWriter, preimageHinter 
 }
 
 // runDerivation executes the L2 state transition, given a minimal interface to retrieve data.
-func runDerivation(logger log.Logger, cfg *rollup.Config, l2Cfg *params.ChainConfig, l1Head common.Hash, l2Head common.Hash, l2Claim common.Hash, l2ClaimBlockNum uint64, l1Oracle l1.Oracle, l2Oracle l2.Oracle) error {
+func runDerivation(logger log.Logger, cfg *rollup.Config, l2Cfg *params.ChainConfig, daCfg *da.MantleDataStoreConfig, l1Head common.Hash, l2Head common.Hash, l2Claim common.Hash, l2ClaimBlockNum uint64, l1Oracle l1.Oracle, l2Oracle l2.Oracle) error {
 	l1Source := l1.NewOracleL1Client(logger, l1Oracle, l1Head)
 	engineBackend, err := l2.NewOracleBackedL2Chain(logger, l2Oracle, l2Cfg, l2Head)
 	if err != nil {
 		return fmt.Errorf("failed to create oracle-backed L2 chain: %w", err)
 	}
 	l2Source := l2.NewOracleEngine(cfg, logger, engineBackend)
-
+	daSyncer, err := da.NewMantleDataStore(context.Background(), daCfg)
+	if err != nil {
+		return fmt.Errorf("failed to create mantle data store: %w", err)
+	}
 	logger.Info("Starting derivation")
-	d := cldr.NewDriver(logger, cfg, l1Source, l2Source, l2ClaimBlockNum)
+	d := cldr.NewDriver(logger, cfg, l1Source, l2Source, daSyncer, l2ClaimBlockNum)
 	for {
 		if err = d.Step(context.Background()); errors.Is(err, io.EOF) {
 			break

@@ -115,7 +115,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 	}
 
 	// Generate and verify the configuration for immutable variables to be set on L2.
-	immutable, err := NewL2ImmutableConfig(config, l1Block)
+	immutable, err := NewL2ImmutableConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create immutable config: %w", err)
 	}
@@ -176,9 +176,17 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 	// We need to update the code for LegacyERC20ETH. This is NOT a standard predeploy because it's
 	// deployed at the 0xdeaddeaddead... address and therefore won't be updated by the previous
 	// function call to SetImplementations.
-	log.Info("Updating code for LegacyERC20ETH")
-	if err := SetLegacyETH(db, storage, immutable); err != nil {
-		return nil, fmt.Errorf("cannot set legacy ETH: %w", err)
+	log.Info("Updating code for LegacyERC20MNT")
+	if err := SetLegacyMNT(db, storage, immutable); err != nil {
+		return nil, fmt.Errorf("cannot set legacy MNT: %w", err)
+	}
+
+	// We need to update the code for BVM_ETH. This is NOT a standard predeploy because it's
+	// deployed at the 0xdeaddeaddead... address and therefore won't be updated by the previous
+	// function call to SetImplementations.
+	log.Info("Updating code for BVM_ETH")
+	if err := SetLegacyBVMETH(db, storage, immutable); err != nil {
+		return nil, fmt.Errorf("cannot set BVM_ETH: %w", err)
 	}
 
 	// Now we migrate legacy withdrawals from the LegacyMessagePasser contract to their new format
@@ -226,7 +234,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 		Extra:       BedrockTransitionBlockExtraData,
 		MixDigest:   common.Hash{},
 		Nonce:       types.BlockNonce{},
-		BaseFee:     big.NewInt(params.InitialBaseFee),
+		BaseFee:     config.L2GenesisBlockBaseFeePerGas.ToInt(),
 	}
 
 	// Create the Bedrock transition block from the header. Note that there are no transactions,

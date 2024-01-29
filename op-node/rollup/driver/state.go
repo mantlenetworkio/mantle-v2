@@ -132,6 +132,7 @@ func (s *Driver) OnL1Finalized(ctx context.Context, finalized eth.L1BlockRef) er
 }
 
 func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error {
+	s.log.Debug("On unsafeL2Payloads channel buffer size", "length", len(s.unsafeL2Payloads))
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -197,6 +198,11 @@ func (s *Driver) eventLoop() {
 			<-sequencerCh
 		}
 		sequencerTimer.Reset(delay)
+		// Without this sleep, even if delay is 0,  sequencerCh will not be ready in the following select judge.
+		// As a result, during deriving a batch blocks, producing new block will be stopped.
+		// After sleep for 0.1 ms, both sequencerCh and stepReqCh might be ready.
+		// And select judge will random choose to proceed derivation or produce new blocks
+		time.Sleep(100 * time.Microsecond)
 	}
 
 	// Create a ticker to check if there is a gap in the engine queue. Whenever
@@ -270,6 +276,12 @@ func (s *Driver) eventLoop() {
 			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
 			s.derivation.AddUnsafePayload(payload)
 			s.metrics.RecordReceivedUnsafePayload(payload)
+			for len(s.unsafeL2Payloads) > 0 {
+				payload = <-s.unsafeL2Payloads
+				s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
+				s.derivation.AddUnsafePayload(payload)
+				s.metrics.RecordReceivedUnsafePayload(payload)
+			}
 			reqStep()
 
 		case newL1Head := <-s.l1HeadSig:
@@ -290,8 +302,14 @@ func (s *Driver) eventLoop() {
 			s.log.Debug("Derivation process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
 			err := s.derivation.Step(context.Background())
 			stepAttempts += 1 // count as attempt by default. We reset to 0 if we are making healthy progress.
+
 			if err == io.EOF {
-				s.log.Debug("Derivation process went idle", "progress", s.derivation.Origin())
+				s.log.Debug("Derivation process went idle", "progress", s.derivation.Origin(), "err", err)
+				stepAttempts = 0
+				s.metrics.SetDerivationIdle(true)
+				continue
+			} else if err != nil && errors.Is(err, derive.EngineP2PSyncing) {
+				s.log.Debug("Derivation process went idle because the engine is syncing", "progress", s.derivation.Origin(), "sync_target", s.derivation.EngineSyncTarget(), "err", err)
 				stepAttempts = 0
 				s.metrics.SetDerivationIdle(true)
 				continue
@@ -423,6 +441,7 @@ func (s *Driver) syncStatus() *eth.SyncStatus {
 		SafeL2:             s.derivation.SafeL2Head(),
 		FinalizedL2:        s.derivation.Finalized(),
 		UnsafeL2SyncTarget: s.derivation.UnsafeL2SyncTarget(),
+		EngineSyncTarget:   s.derivation.EngineSyncTarget(),
 	}
 }
 

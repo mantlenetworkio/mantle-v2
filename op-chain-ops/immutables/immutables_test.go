@@ -12,7 +12,8 @@ import (
 func TestBuildOptimism(t *testing.T) {
 	results, err := immutables.BuildOptimism(immutables.ImmutableConfig{
 		"L2StandardBridge": {
-			"otherBridge": common.HexToAddress("0x1234567890123456789012345678901234567890"),
+			"otherBridge":    common.HexToAddress("0x1234567890123456789012345678901234567890"),
+			"L1_MNT_ADDRESS": common.HexToAddress("0x1234567890123456789012345678901234567890"),
 		},
 		"L2CrossDomainMessenger": {
 			"otherMessenger": common.HexToAddress("0x1234567890123456789012345678901234567890"),
@@ -34,6 +35,10 @@ func TestBuildOptimism(t *testing.T) {
 		"BaseFeeVault": {
 			"recipient": common.HexToAddress("0x1234567890123456789012345678901234567890"),
 		},
+		"LegacyERC20MNT": {
+			"L1_MNT_ADDRESS": common.HexToAddress("0x1234567890123456789012345678901234567890"),
+			"recipient":      common.HexToAddress("0x1234567890123456789012345678901234567890"),
+		},
 	})
 	require.Nil(t, err)
 	require.NotNil(t, results)
@@ -53,7 +58,8 @@ func TestBuildOptimism(t *testing.T) {
 		"L1BlockNumber":                 true,
 		"L2ERC721Bridge":                true,
 		"OptimismMintableERC721Factory": true,
-		"LegacyERC20ETH":                true,
+		"LegacyERC20MNT":                true,
+		"BVM_ETH":                       true,
 	}
 
 	// Only the exact contracts that we care about are being

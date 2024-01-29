@@ -20,6 +20,7 @@ var (
 	SystemConfigUpdateGasConfig         = common.Hash{31: 1}
 	SystemConfigUpdateGasLimit          = common.Hash{31: 2}
 	SystemConfigUpdateUnsafeBlockSigner = common.Hash{31: 3}
+	SystemConfigUpdateBaseFee           = common.Hash{31: 4}
 )
 
 var (
@@ -131,6 +132,22 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 		return nil
 	case SystemConfigUpdateUnsafeBlockSigner:
 		// Ignored in derivation. This configurable applies to runtime configuration outside of the derivation.
+		return nil
+	case SystemConfigUpdateBaseFee:
+		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
+			return NewCriticalError(errors.New("invalid pointer field"))
+		}
+		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
+			return NewCriticalError(errors.New("invalid length field"))
+		}
+		l2BaseFee, err := solabi.ReadUint256(reader)
+		if err != nil {
+			return NewCriticalError(errors.New("could not read l2 base fee"))
+		}
+		if !solabi.EmptyReader(reader) {
+			return NewCriticalError(errors.New("too many bytes"))
+		}
+		destSysCfg.BaseFee = l2BaseFee
 		return nil
 	default:
 		return fmt.Errorf("unrecognized L1 sysCfg update type: %s", updateType)

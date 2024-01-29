@@ -27,7 +27,7 @@ func BuildL2DeveloperGenesis(config *DeployConfig, l1StartBlock *types.Block) (*
 		return nil, err
 	}
 
-	immutable, err := NewL2ImmutableConfig(config, l1StartBlock)
+	immutable, err := NewL2ImmutableConfig(config)
 	if err != nil {
 		return nil, err
 	}

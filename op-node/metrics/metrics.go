@@ -65,6 +65,10 @@ type Metricer interface {
 	RecordSequencerSealingTime(duration time.Duration)
 	Document() []metrics.DocumentedMetric
 	RecordChannelInputBytes(num int)
+
+	// MantleDA
+	RecordParseDataStoreId(dataStoreId uint32)
+
 	// P2P Metrics
 	SetPeerScores(scores map[string]float64)
 	ClientPayloadByNumberEvent(num uint64, resultCode byte, duration time.Duration)
@@ -135,6 +139,8 @@ type Metrics struct {
 	BandwidthTotal    *prometheus.GaugeVec
 
 	ChannelInputBytes prometheus.Counter
+
+	ParseDataStoreId prometheus.Gauge
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
@@ -340,6 +346,13 @@ func NewMetrics(procName string) *Metrics {
 			Namespace: ns,
 			Name:      "channel_input_bytes",
 			Help:      "Number of compressed bytes added to the channel",
+		}),
+
+		ParseDataStoreId: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Subsystem: "da",
+			Name:      "parse_data_store_id",
+			Help:      "Latest derive dataStoreId",
 		}),
 
 		P2PReqDurationSeconds: factory.NewHistogramVec(prometheus.HistogramOpts{
@@ -663,6 +676,10 @@ func (m *Metrics) RecordChannelInputBytes(inputCompressedBytes int) {
 	m.ChannelInputBytes.Add(float64(inputCompressedBytes))
 }
 
+func (m *Metrics) RecordParseDataStoreId(dataStoreId uint32) {
+	m.ParseDataStoreId.Set(float64(dataStoreId))
+}
+
 type noopMetricer struct{}
 
 var NoopMetrics Metricer = new(noopMetricer)
@@ -767,4 +784,7 @@ func (n *noopMetricer) PayloadsQuarantineSize(int) {
 }
 
 func (n *noopMetricer) RecordChannelInputBytes(int) {
+}
+
+func (n *noopMetricer) RecordParseDataStoreId(dataStoreId uint32) {
 }

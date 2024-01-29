@@ -46,12 +46,17 @@
   "optimismPortalProxy": "0x4200000000000000000000000000000000000062",
   "proxyAdminOwner": "0x0000000000000000000000000000000000000222",
   "gasPriceOracleOverhead": 2100,
+  "gasPriceOracleOwner":"0x0000000000000000000000000000000000000000",
   "gasPriceOracleScalar": 1000000,
+  "gasPriceOracleTokenRatio":0,
   "governanceTokenSymbol": "OP",
   "governanceTokenName": "Optimism",
   "governanceTokenOwner": "0x0000000000000000000000000000000000000333",
   "deploymentWaitConfirmations": 1,
   "eip1559Denominator": 8,
   "eip1559Elasticity": 2,
-  "fundDevAccounts": true
+  "fundDevAccounts": true,
+  "mantleDaSwitch": true,
+  "dataLayrServiceManagerAddr": "0x0000000000000000000000000000000000000111",
+  "l1MantleToken": "0x0000000000000000000000000000000000000111"
 }
