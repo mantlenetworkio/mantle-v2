@@ -79,6 +79,12 @@ var (
 		Usage:  "token ratio update frequency",
 		EnvVar: "GAS_PRICE_ORACLE_TOKEN_RATIO_UPDATE_FREQUENCY",
 	}
+	TokenRatioScalarFlag = cli.Float64Flag{
+		Name:   "token-ratio-scalar",
+		Value:  1.00,
+		Usage:  "token ratio scalar",
+		EnvVar: "GAS_PRICE_ORACLE_TOKEN_RATIO_SCALAR",
+	}
 	WaitForReceiptFlag = cli.BoolFlag{
 		Name:   "wait-for-receipt",
 		Usage:  "wait for receipts when sending transactions",
@@ -137,6 +143,7 @@ var Flags = []cli.Flag{
 	TokenRatioCexURL,
 	TokenRatioDexURL,
 	TokenRatioUpdateFrequencySecond,
+	TokenRatioScalarFlag,
 	WaitForReceiptFlag,
 	EnableHsmFlag,
 	HsmAddressFlag,

@@ -26,6 +26,7 @@ type Config struct {
 	waitForReceipt                  bool
 	tokenRatioEpochLengthSeconds    uint64
 	tokenRatioSignificanceFactor    float64
+	tokenRatioScalar                float64
 	tokenRatioCexURL                string
 	tokenRatioDexURL                string
 	tokenRatioUpdateFrequencySecond uint64
@@ -52,6 +53,7 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.tokenRatioUpdateFrequencySecond = ctx.GlobalUint64(flags.TokenRatioUpdateFrequencySecond.Name)
 	cfg.tokenRatioEpochLengthSeconds = ctx.GlobalUint64(flags.TokenRatioEpochLengthSecondsFlag.Name)
 	cfg.tokenRatioSignificanceFactor = ctx.GlobalFloat64(flags.TokenRatioSignificanceFactorFlag.Name)
+	cfg.tokenRatioScalar = ctx.GlobalFloat64(flags.TokenRatioScalarFlag.Name)
 	cfg.EnableHsm = ctx.GlobalBool(flags.EnableHsmFlag.Name)
 	cfg.HsmAddress = ctx.GlobalString(flags.HsmAddressFlag.Name)
 	cfg.HsmAPIName = ctx.GlobalString(flags.HsmAPINameFlag.Name)

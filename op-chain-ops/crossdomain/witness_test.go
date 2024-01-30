@@ -17,6 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestReadWitnessData(t *testing.T) {
+	witnesses, addresses, err := ReadWitnessData("testdata/big-witness.out")
+	require.NoError(t, err)
+
+	require.Equal(t, 1701, len(witnesses))
+	require.Equal(t, 30858, len(addresses))
+}
+
 func TestRead(t *testing.T) {
 	witnesses, addresses, err := ReadWitnessData("testdata/witness.txt")
 	require.NoError(t, err)

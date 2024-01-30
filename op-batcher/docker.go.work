@@ -1,0 +1,10 @@
+go 1.18
+
+replace(
+    github.com/ethereum-optimism/optimism/bss-core => ./bss-core
+)
+
+use (
+  ./op-batcher
+	./bss-core
+)

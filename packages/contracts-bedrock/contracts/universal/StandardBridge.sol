@@ -178,6 +178,10 @@ abstract contract StandardBridge {
             !Address.isContract(msg.sender),
             "StandardBridge: function can only be called from an EOA"
         );
+        require(
+            msg.sender==tx.origin,
+            "StandardBridge: msg sender must equal to tx origin"
+        );
         _;
     }
 
