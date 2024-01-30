@@ -124,12 +124,25 @@ func main() {
 				Name:  "storage-out",
 				Usage: "Path to write text file of L2ToL1MessagePasser storage",
 			},
+			&cli.BoolFlag{
+				Name:  "need_proven",
+				Value: true,
+				Usage: "True ,need to execute proven transaction",
+			},
+			&cli.BoolFlag{
+				Name:  "need_finalized",
+				Value: true,
+				Usage: "True, need to execute finalized transaction",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			clients, err := util.NewClients(ctx)
 			if err != nil {
 				return err
 			}
+
+			need_proven := ctx.Bool("need_proven")
+			need_finalized := ctx.Bool("need_finalized")
 
 			// initialize the contract bindings
 			contracts, err := newContracts(ctx, clients.L1Client, clients.L2Client)
@@ -297,173 +310,177 @@ func main() {
 				}
 				log.Debug("LegacyMessagePasser status", "value", common.Bytes2Hex(legacyStorageValue))
 
-				// check to see if its already been proven
-				proven, err := contracts.OptimismPortal.ProvenWithdrawals(&bind.CallOpts{}, hash)
-				if err != nil {
-					return err
-				}
-
-				// if it has not been proven, then prove it
-				if proven.Timestamp.Cmp(common.Big0) == 0 {
-					log.Info("Proving withdrawal to OptimismPortal")
-					if err := proveWithdrawalTransaction(contracts, clients, opts, withdrawal, bedrockStartingBlockNumber, period); err != nil {
-						return err
-					}
-				} else {
-					log.Info("Withdrawal already proven to OptimismPortal")
-				}
-
-				// check to see if the withdrawal has been finalized already
-				isFinalized, err := contracts.OptimismPortal.FinalizedWithdrawals(&bind.CallOpts{}, hash)
-				if err != nil {
-					return err
-				}
-
-				if !isFinalized {
-					// Get the ETH balance of the withdrawal target *before* the finalization
-					targetBalBefore, err := clients.L1Client.BalanceAt(context.Background(), wd.XDomainTarget, nil)
-					if err != nil {
-						return err
-					}
-					log.Debug("Balance before finalization", "balance", targetBalBefore, "account", wd.XDomainTarget)
-
-					log.Info("Finalizing withdrawal")
-					receipt, err := finalizeWithdrawalTransaction(contracts, clients, opts, wd, withdrawal)
-					if err != nil {
-						return err
-					}
-					log.Info("withdrawal finalized", "tx-hash", receipt.TxHash, "withdrawal-hash", hash)
-
-					finalizationTrace, err := callTrace(clients, receipt)
-					if err != nil {
-						return nil
-					}
-
-					isSuccessNewPost, err := contracts.L1CrossDomainMessenger.SuccessfulMessages(&bind.CallOpts{}, xdmHash)
+				if need_proven {
+					// check to see if its already been proven
+					proven, err := contracts.OptimismPortal.ProvenWithdrawals(&bind.CallOpts{}, hash)
 					if err != nil {
 						return err
 					}
 
-					// This would indicate that there is a replayability problem
-					if isSuccess && isSuccessNewPost {
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "should revert"); err != nil {
+					// if it has not been proven, then prove it
+					if proven.Timestamp.Cmp(common.Big0) == 0 {
+						log.Info("Proving withdrawal to OptimismPortal")
+						if err := proveWithdrawalTransaction(contracts, clients, opts, withdrawal, bedrockStartingBlockNumber, period); err != nil {
 							return err
 						}
-						panic("DOUBLE PLAYED DEPOSIT ALLOWED")
+					} else {
+						log.Info("Withdrawal already proven to OptimismPortal")
+					}
+				}
+
+				if need_finalized {
+					// check to see if the withdrawal has been finalized already
+					isFinalized, err := contracts.OptimismPortal.FinalizedWithdrawals(&bind.CallOpts{}, hash)
+					if err != nil {
+						return err
 					}
 
-					callFrame := findWithdrawalCall(&finalizationTrace, wd, l1xdmAddr)
-					if callFrame == nil {
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "cannot find callframe"); err != nil {
+					if !isFinalized {
+						// Get the ETH balance of the withdrawal target *before* the finalization
+						targetBalBefore, err := clients.L1Client.BalanceAt(context.Background(), wd.XDomainTarget, nil)
+						if err != nil {
 							return err
 						}
-						continue
-					}
+						log.Debug("Balance before finalization", "balance", targetBalBefore, "account", wd.XDomainTarget)
 
-					traceJson, err := json.MarshalIndent(callFrame, "", "    ")
-					if err != nil {
-						return err
-					}
-					log.Debug(fmt.Sprintf("%v", string(traceJson)))
+						log.Info("Finalizing withdrawal")
+						receipt, err := finalizeWithdrawalTransaction(contracts, clients, opts, wd, withdrawal)
+						if err != nil {
+							return err
+						}
+						log.Info("withdrawal finalized", "tx-hash", receipt.TxHash, "withdrawal-hash", hash)
 
-					abi, err := bindings.L1StandardBridgeMetaData.GetAbi()
-					if err != nil {
-						return err
-					}
+						finalizationTrace, err := callTrace(clients, receipt)
+						if err != nil {
+							return nil
+						}
 
-					calldata := hexutil.MustDecode(callFrame.Input)
-
-					// this must be the L1 standard bridge
-					method, err := abi.MethodById(calldata)
-					// Handle L1StandardBridge specific logic
-					if err == nil {
-						args, err := method.Inputs.Unpack(calldata[4:])
+						isSuccessNewPost, err := contracts.L1CrossDomainMessenger.SuccessfulMessages(&bind.CallOpts{}, xdmHash)
 						if err != nil {
 							return err
 						}
 
-						log.Info("decoded calldata", "name", method.Name)
-
-						switch method.Name {
-						case "finalizeERC20Withdrawal":
-							if err := handleFinalizeERC20Withdrawal(args, receipt, l1StandardBridgeAddress); err != nil {
+						// This would indicate that there is a replayability problem
+						if isSuccess && isSuccessNewPost {
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "should revert"); err != nil {
 								return err
 							}
-						case "finalizeETHWithdrawal":
-							if err := handleFinalizeETHWithdrawal(args); err != nil {
-								return err
-							}
-						case "finalizeMantleWithdrawal":
-							if err := handleFinalizeMNTWithdrawal(args); err != nil {
-								return err
-							}
-						default:
-							log.Info("Unhandled method", "name", method.Name)
+							panic("DOUBLE PLAYED DEPOSIT ALLOWED")
 						}
-					}
 
-					// Ensure that the target's balance was increasedData correctly
-					wdValue, err := wd.ETHValue()
-					if err != nil {
-						return err
-					}
-					if method != nil {
-						log.Info("withdrawal action", "function", method.Name, "value", wdValue)
+						callFrame := findWithdrawalCall(&finalizationTrace, wd, l1xdmAddr)
+						if callFrame == nil {
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "cannot find callframe"); err != nil {
+								return err
+							}
+							continue
+						}
+
+						traceJson, err := json.MarshalIndent(callFrame, "", "    ")
+						if err != nil {
+							return err
+						}
+						log.Debug(fmt.Sprintf("%v", string(traceJson)))
+
+						abi, err := bindings.L1StandardBridgeMetaData.GetAbi()
+						if err != nil {
+							return err
+						}
+
+						calldata := hexutil.MustDecode(callFrame.Input)
+
+						// this must be the L1 standard bridge
+						method, err := abi.MethodById(calldata)
+						// Handle L1StandardBridge specific logic
+						if err == nil {
+							args, err := method.Inputs.Unpack(calldata[4:])
+							if err != nil {
+								return err
+							}
+
+							log.Info("decoded calldata", "name", method.Name)
+
+							switch method.Name {
+							case "finalizeERC20Withdrawal":
+								if err := handleFinalizeERC20Withdrawal(args, receipt, l1StandardBridgeAddress); err != nil {
+									return err
+								}
+							case "finalizeETHWithdrawal":
+								if err := handleFinalizeETHWithdrawal(args); err != nil {
+									return err
+								}
+							case "finalizeMantleWithdrawal":
+								if err := handleFinalizeMNTWithdrawal(args); err != nil {
+									return err
+								}
+							default:
+								log.Info("Unhandled method", "name", method.Name)
+							}
+						}
+
+						// Ensure that the target's balance was increasedData correctly
+						wdValue, err := wd.ETHValue()
+						if err != nil {
+							return err
+						}
+						if method != nil {
+							log.Info("withdrawal action", "function", method.Name, "value", wdValue)
+						} else {
+							log.Info("unknown method", "to", wd.XDomainTarget, "data", hexutil.Encode(wd.XDomainData))
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "unknown method"); err != nil {
+								return err
+							}
+						}
+
+						// check that the user's intents are actually executed
+						if common.HexToAddress(callFrame.To) != wd.XDomainTarget {
+							log.Info("target mismatch", "index", i)
+
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "target mismatch"); err != nil {
+								return err
+							}
+							continue
+						}
+						if !bytes.Equal(hexutil.MustDecode(callFrame.Input), wd.XDomainData) {
+							log.Info("calldata mismatch", "index", i)
+
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "calldata mismatch"); err != nil {
+								return err
+							}
+							continue
+						}
+						if callFrame.BigValue().Cmp(wdValue) != 0 {
+							log.Info("value mismatch", "index", i)
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "value mismatch"); err != nil {
+								return err
+							}
+							continue
+						}
+
+						// Get the ETH balance of the withdrawal target *after* the finalization
+						targetBalAfter, err := clients.L1Client.BalanceAt(context.Background(), wd.XDomainTarget, nil)
+						if err != nil {
+							return err
+						}
+
+						diff := new(big.Int).Sub(targetBalAfter, targetBalBefore)
+						log.Debug("balances", "before", targetBalBefore, "after", targetBalAfter, "diff", diff)
+
+						isSuccessNewPost, err = contracts.L1CrossDomainMessenger.SuccessfulMessages(&bind.CallOpts{}, xdmHash)
+						if err != nil {
+							return err
+						}
+
+						if diff.Cmp(wdValue) != 0 && isSuccessNewPost && isSuccess {
+							log.Info("native eth balance diff mismatch", "index", i, "diff", diff, "val", wdValue)
+							if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "balance mismatch"); err != nil {
+								return err
+							}
+							continue
+						}
 					} else {
-						log.Info("unknown method", "to", wd.XDomainTarget, "data", hexutil.Encode(wd.XDomainData))
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "unknown method"); err != nil {
-							return err
-						}
+						log.Info("Already finalized")
 					}
-
-					// check that the user's intents are actually executed
-					if common.HexToAddress(callFrame.To) != wd.XDomainTarget {
-						log.Info("target mismatch", "index", i)
-
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "target mismatch"); err != nil {
-							return err
-						}
-						continue
-					}
-					if !bytes.Equal(hexutil.MustDecode(callFrame.Input), wd.XDomainData) {
-						log.Info("calldata mismatch", "index", i)
-
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "calldata mismatch"); err != nil {
-							return err
-						}
-						continue
-					}
-					if callFrame.BigValue().Cmp(wdValue) != 0 {
-						log.Info("value mismatch", "index", i)
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "value mismatch"); err != nil {
-							return err
-						}
-						continue
-					}
-
-					// Get the ETH balance of the withdrawal target *after* the finalization
-					targetBalAfter, err := clients.L1Client.BalanceAt(context.Background(), wd.XDomainTarget, nil)
-					if err != nil {
-						return err
-					}
-
-					diff := new(big.Int).Sub(targetBalAfter, targetBalBefore)
-					log.Debug("balances", "before", targetBalBefore, "after", targetBalAfter, "diff", diff)
-
-					isSuccessNewPost, err = contracts.L1CrossDomainMessenger.SuccessfulMessages(&bind.CallOpts{}, xdmHash)
-					if err != nil {
-						return err
-					}
-
-					if diff.Cmp(wdValue) != 0 && isSuccessNewPost && isSuccess {
-						log.Info("native eth balance diff mismatch", "index", i, "diff", diff, "val", wdValue)
-						if err := writeSuspicious(f, withdrawal, wd, finalizationTrace, i, "balance mismatch"); err != nil {
-							return err
-						}
-						continue
-					}
-				} else {
-					log.Info("Already finalized")
 				}
 			}
 			return nil
