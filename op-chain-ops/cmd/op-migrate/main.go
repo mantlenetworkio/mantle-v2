@@ -230,7 +230,7 @@ func main() {
 					Number:        block.NumberU64(),
 					Time:          block.Time(),
 					BaseFee:       block.BaseFee(),
-					BlockHash:     block.Hash(),
+					BlockHash:     ethclient.BlockHashCache[block.Hash()],
 					BatcherAddr:   config.BatchSenderAddress,
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
 					L1FeeScalar:   eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleScalar))),

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -42,7 +43,7 @@ type NumberAndHash interface {
 
 func ToBlockID(b NumberAndHash) BlockID {
 	return BlockID{
-		Hash:   b.Hash(),
+		Hash:   ethclient.BlockHashCache[b.Hash()],
 		Number: b.NumberU64(),
 	}
 }
