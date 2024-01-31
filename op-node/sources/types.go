@@ -174,7 +174,9 @@ func (hdr *rpcHeader) createGethHeader() *types.Header {
 		log.Info("createGethHeader", "excessBlobGas", *excessBlobGas)
 	}
 
-	log.Info("createGethHeader", "parentBeaconBlockRoot", hdr.ParentBeaconRoot.String())
+	if hdr.ParentBeaconRoot != nil {
+		log.Info("createGethHeader", "parentBeaconBlockRoot", hdr.ParentBeaconRoot.String())
+	}
 
 	return &types.Header{
 		ParentHash:      hdr.ParentHash,
