@@ -417,6 +417,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         if (_tx.mntValue>0){
             l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         }
+        require(_tx.target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;

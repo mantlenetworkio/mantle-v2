@@ -112,6 +112,9 @@ contract L2OutputOracle_Initializer is CommonTest {
     // Test data
     uint256 initL1Time;
 
+    L1MantleToken internal l1MNTImpl;
+    L1MantleToken internal l1MNT;
+
     event OutputProposed(
         bytes32 indexed outputRoot,
         uint256 indexed l2OutputIndex,
@@ -128,6 +131,12 @@ contract L2OutputOracle_Initializer is CommonTest {
 
     function setUp() public virtual override {
         super.setUp();
+
+        vm.prank(multisig);
+        l1MNTImpl = new L1MantleToken();
+        l1MNT = L1MantleToken(address(l1MNTImpl));
+        vm.label(address(l1MNT), "L1MantleToken");
+
         guardian = makeAddr("guardian");
 
         // By default the first block has timestamp and number zero, which will cause underflows in the
@@ -155,7 +164,7 @@ contract L2OutputOracle_Initializer is CommonTest {
         vm.label(address(oracle), "L2OutputOracle");
 
         // Set the L2ToL1MessagePasser at the correct address
-        vm.etch(Predeploys.L2_TO_L1_MESSAGE_PASSER, address(new L2ToL1MessagePasser()).code);
+        vm.etch(Predeploys.L2_TO_L1_MESSAGE_PASSER, address(new L2ToL1MessagePasser(address(l1MNT))).code);
 
         vm.label(Predeploys.L2_TO_L1_MESSAGE_PASSER, "L2ToL1MessagePasser");
     }
@@ -164,26 +173,9 @@ contract L2OutputOracle_Initializer is CommonTest {
 contract MNTToken_Initializer is L2OutputOracle_Initializer {
     using stdStorage for StdStorage;
 
-    // Test target
-    L1MantleToken internal l1MNTImpl;
-    L1MantleToken internal l1MNT;
-
 
     function setUp() public virtual override {
         super.setUp();
-
-
-        vm.prank(multisig);
-        l1MNTImpl = new L1MantleToken();
-//        Proxy proxy = new Proxy(multisig);
-//        vm.prank(multisig);
-//        proxy.upgradeToAndCall(
-//            address(l1MNTImpl),
-//            abi.encodeWithSelector(L1MantleToken.initialize.selector, 1000000 * 10 ** 18, multisig)
-//        );
-
-        l1MNT = L1MantleToken(address(l1MNTImpl));
-        vm.label(address(l1MNT), "L1MantleToken");
     }
 
     function dealL1MNT(address _target,uint256 _amount) public {
