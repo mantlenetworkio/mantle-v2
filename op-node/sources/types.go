@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum-optimism/optimism/l2geth/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/holiman/uint256"
 
@@ -195,9 +196,11 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 		}
 	}
 	if !trustCache {
-		if computed := hdr.computeBlockHash(); computed != hdr.Hash {
-			return nil, fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash)
+		computed := hdr.computeBlockHash()
+		if computed != hdr.Hash {
+			log.Error("rpcHeader Info", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash).Error())
 		}
+		OpNodeBlockHashCache[computed] = hdr.Hash
 	}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
