@@ -18,6 +18,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum-optimism/optimism/bss-core v0.0.0
+	github.com/ethereum-optimism/optimism/l2geth v0.0.0-20230612200230-50b04ade19e3
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-resty/resty/v2 v2.10.0
