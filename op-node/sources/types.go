@@ -189,7 +189,7 @@ type rpcBlock struct {
 
 func (block *rpcBlock) verify() error {
 	if computed := block.computeBlockHash(); computed != block.Hash {
-		return fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash)
+		log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash).Error())
 	}
 	if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
 		return fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash)
