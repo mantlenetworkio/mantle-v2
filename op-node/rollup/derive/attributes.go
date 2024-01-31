@@ -109,6 +109,10 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	txs = append(txs, l1InfoTx)
 	txs = append(txs, depositTxs...)
 
+	if !ba.cfg.IsBaseFee(nextL2Time) {
+		sysConfig.BaseFee = nil
+	}
+
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
 		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),
@@ -116,5 +120,6 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		Transactions:          txs,
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),
+		BaseFee:               sysConfig.BaseFee,
 	}, nil
 }

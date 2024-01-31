@@ -130,6 +130,7 @@ func (l *BatchSubmitter) appendNextRollupData(ctx context.Context) (bool, error)
 func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 	var retry int32
 	l.metr.RecordRollupRetry(0)
+	l.metr.RecordDaRetry(0)
 	for {
 		//it means that all the txData has been rollup
 		if len(l.state.daPendingTxData) == 0 {
@@ -165,6 +166,7 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 				l.log.Error("failed to send init datastore transaction,need to try again", "retry time", retry, "err", err)
 				return err
 			}
+
 			receipt, err := l.handleInitDataStoreReceipt(cCtx, r)
 			if err != nil {
 				l.log.Error("failed to send confirm data transaction,need to try again", "retry time", retry, "err", err)
@@ -192,7 +194,12 @@ func (l *BatchSubmitter) isRetry(retry *int32) bool {
 	*retry = *retry + 1
 	l.metr.RecordRollupRetry(*retry)
 	if *retry > DaLoopRetryNum {
-		return false
+		l.log.Error("rollup failed by 10 attempts, need to re-store data to mantle da")
+		*retry = 0
+		l.state.params = nil
+		l.state.initStoreDataReceipt = nil
+		l.metr.RecordDaRetry(1)
+		return true
 	}
 	time.Sleep(5 * time.Second)
 	return true
@@ -488,6 +495,7 @@ func (l *BatchSubmitter) recordConfirmedEigenDATx(receipt *types.Receipt) {
 	l.state.params = nil
 	l.state.initStoreDataReceipt = nil
 	l.state.metr.RecordRollupRetry(0)
+	l.state.metr.RecordDaRetry(0)
 }
 
 func (l *BatchSubmitter) getMantleDANodesNumber() (int, error) {

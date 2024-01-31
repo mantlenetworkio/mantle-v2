@@ -391,6 +391,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				Overhead:    eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleOverhead))),
 				Scalar:      eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleScalar))),
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
+				BaseFee:     d.L2GenesisBlockBaseFeePerGas.ToInt(),
 			},
 		},
 		BlockTime:                  d.L2BlockTime,

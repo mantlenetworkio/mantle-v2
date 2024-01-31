@@ -24,6 +24,7 @@ import (
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
 
 // NewConfig creates a Config from the provided flags or environment variables.
@@ -63,6 +64,8 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
 	}
 
+	syncConfig := NewSyncConfig(ctx)
+
 	cfg := &node.Config{
 		L1:     l1Endpoint,
 		L2:     l2Endpoint,
@@ -93,6 +96,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		},
+		Sync: *syncConfig,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -182,6 +186,9 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
 	if err := json.NewDecoder(file).Decode(&rollupConfig); err != nil {
 		return nil, fmt.Errorf("failed to decode rollup config: %w", err)
 	}
+
+	initMantleUpgradeConfig(&rollupConfig)
+
 	return &rollupConfig, nil
 }
 
@@ -206,10 +213,21 @@ func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig
 	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
 	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
 	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
+	mantleDaIndexerSocket := ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name)
+	mantleDAIndexerEnable := ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name)
 	return datastore.MantleDataStoreConfig{
 		RetrieverSocket:          retrieverSocket,
 		RetrieverTimeout:         retrieverTimeout,
 		GraphProvider:            graphProvider,
 		DataStorePollingDuration: dataStorePollingDuration,
+		MantleDaIndexerSocket:    mantleDaIndexerSocket,
+		MantleDAIndexerEnable:    mantleDAIndexerEnable,
 	}, nil
+}
+
+func NewSyncConfig(ctx *cli.Context) *sync.Config {
+	return &sync.Config{
+		EngineSync:         ctx.Bool(flags.L2EngineSyncEnabled.Name),
+		SkipSyncStartCheck: ctx.Bool(flags.SkipSyncStartCheck.Name),
+	}
 }

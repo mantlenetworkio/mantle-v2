@@ -10,6 +10,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+)
+
+const (
+	unsafeL2PayloadsChannelBufferSize = 4096
 )
 
 type Metrics interface {
@@ -62,6 +67,7 @@ type DerivationPipeline interface {
 	UnsafeL2Head() eth.L2BlockRef
 	Origin() eth.L1BlockRef
 	EngineReady() bool
+	EngineSyncTarget() eth.L2BlockRef
 }
 
 type L1StateIface interface {
@@ -107,13 +113,13 @@ type AltSync interface {
 }
 
 // NewDriver composes an events handler that tracks L1 state, triggers L2 derivation, and optionally sequences new L2 blocks.
-func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, daSyncer DaSource, altSync AltSync, network Network, log log.Logger, snapshotLog log.Logger, metrics Metrics) *Driver {
+func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, daSyncer DaSource, altSync AltSync, network Network, log log.Logger, snapshotLog log.Logger, metrics Metrics, syncCfg *sync.Config) *Driver {
 	l1 = NewMeteredL1Fetcher(l1, metrics)
 	l1State := NewL1State(log, metrics)
 	sequencerConfDepth := NewConfDepth(driverCfg.SequencerConfDepth, l1State.L1Head, l1)
 	findL1Origin := NewL1OriginSelector(log, cfg, sequencerConfDepth)
 	verifConfDepth := NewConfDepth(driverCfg.VerifierConfDepth, l1State.L1Head, l1)
-	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l2, daSyncer, metrics)
+	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l2, daSyncer, metrics, syncCfg)
 	attrBuilder := derive.NewFetchingAttributesBuilder(cfg, l1, l2)
 	engine := derivationPipeline
 	meteredEngine := NewMeteredEngine(cfg, engine, metrics, log)
@@ -139,7 +145,7 @@ func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, da
 		l1HeadSig:        make(chan eth.L1BlockRef, 10),
 		l1SafeSig:        make(chan eth.L1BlockRef, 10),
 		l1FinalizedSig:   make(chan eth.L1BlockRef, 10),
-		unsafeL2Payloads: make(chan *eth.ExecutionPayload, 10),
+		unsafeL2Payloads: make(chan *eth.ExecutionPayload, unsafeL2PayloadsChannelBufferSize),
 		altSync:          altSync,
 	}
 }

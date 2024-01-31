@@ -20,6 +20,7 @@ contract EchidnaFuzzOptimismPortal {
             _scalar: 10000,
             _batcherHash: bytes32(0),
             _gasLimit: 30_000_000,
+            _baseFee: 1_000_000_000,
             _unsafeBlockSigner: address(0),
             _config: rcfg
         });

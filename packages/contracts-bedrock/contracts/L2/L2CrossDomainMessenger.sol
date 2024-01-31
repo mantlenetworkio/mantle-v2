@@ -109,6 +109,43 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     }
 
     /**
+     * @inheritdoc CrossDomainMessenger
+     */
+    function sendMessage(
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    ) external payable override {
+
+        // Triggers a message to the other messenger. Note that the amount of gas provided to the
+        // message is the amount of gas requested by the user PLUS the base gas value. We want to
+        // guarantee the property that the call to the target contract will always have at least
+        // the minimum gas limit specified by the user.
+        _sendMessage(
+            0,
+            OTHER_MESSENGER,
+            baseGas(_message, _minGasLimit),
+            abi.encodeWithSelector(
+                L1CrossDomainMessenger.relayMessage.selector,
+                messageNonce(),
+                msg.sender,
+                _target,
+                msg.value,
+                0,
+                _minGasLimit,
+                _message
+            )
+        );
+
+        emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
+        emit SentMessageExtension1(msg.sender, msg.value, 0);
+
+        unchecked {
+            ++msgNonce;
+        }
+    }
+
+    /**
      * @notice Relays a message that was sent by the other CrossDomainMessenger contract. Can only
      *         be executed via cross-chain call from the other messenger OR if the message was
      *         already received once and is currently being replayed.
@@ -219,6 +256,9 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _mntValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        if (_ethValue != 0) {
+            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target, 0);
+        }
 
         if (success && ethSuccess) {
             successfulMessages[versionedHash] = true;

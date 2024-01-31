@@ -82,7 +82,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeCall(
-                L2Messenger.sendMessage,
+                IL2CrossDomainMessenger(address(L2Messenger)).sendMessage,
                 (
                     0,
                     address(otherBridge),
@@ -168,7 +168,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeCall(
-                L2Messenger.sendMessage,
+                IL2CrossDomainMessenger(address(L2Messenger)).sendMessage,
                 (
                     0,
                     address(otherBridge),
@@ -408,4 +408,13 @@ contract NonCompliantERC721 {
     function supportsInterface(bytes4) external pure returns (bool) {
         return false;
     }
+}
+
+interface IL2CrossDomainMessenger {
+    function sendMessage(
+        uint256 _ethAmount,
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    ) external payable;
 }
