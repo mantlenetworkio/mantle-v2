@@ -3,9 +3,9 @@ package eth
 import (
 	"math/big"
 
+	"github.com/ethereum-optimism/optimism/op-node/hashcache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -43,7 +43,7 @@ type NumberAndHash interface {
 
 func ToBlockID(b NumberAndHash) BlockID {
 	return BlockID{
-		Hash:   ethclient.BlockHashCache[b.Hash()],
+		Hash:   hashcache.OpNodeBlockHashCache[b.Hash()],
 		Number: b.NumberU64(),
 	}
 }
