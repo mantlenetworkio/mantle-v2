@@ -12,6 +12,9 @@ COPY ./.git /app/.git
 WORKDIR /app/op-chain-ops
 
 RUN make op-migrate
+RUN make check-migration
+RUN make check-migration-quick
+
 
 FROM alpine:3.15
 

@@ -1,3 +1,9 @@
+check-migration:
+	go build -o ./bin/check-migration ./cmd/check-migration/main.go
+
+check-migration-quick:
+	go build -o ./bin/check-migration-quick ./cmd/check-migration/main.go
+
 op-migrate:
 	go build -o ./bin/op-migrate ./cmd/op-migrate/main.go
 
