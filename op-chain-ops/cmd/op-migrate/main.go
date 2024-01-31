@@ -170,6 +170,7 @@ func main() {
 			} else {
 				return fmt.Errorf("invalid l1StartingBlockTag in deploy config: %v", tag)
 			}
+			log.Info("blockInfo", "blockNumber", block.Number().String(), "blockHash", block.Hash().String(), "cachedBlockHash", ethclient.BlockHashCache[block.Hash()].String())
 			if err != nil {
 				return err
 			}

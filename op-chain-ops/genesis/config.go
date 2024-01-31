@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
@@ -378,7 +379,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 	return &rollup.Config{
 		Genesis: rollup.Genesis{
 			L1: eth.BlockID{
-				Hash:   l1StartBlock.Hash(),
+				Hash:   ethclient.BlockHashCache[l1StartBlock.Hash()],
 				Number: l1StartBlock.NumberU64(),
 			},
 			L2: eth.BlockID{
@@ -521,7 +522,7 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"number":         block.Number(),
 		"timestamp":      block.Time(),
 		"basefee":        block.BaseFee(),
-		"hash":           block.Hash(),
+		"hash":           ethclient.BlockHashCache[block.Hash()],
 		"sequenceNumber": 0,
 		"batcherHash":    config.BatchSenderAddress.Hash(),
 		"l1FeeOverhead":  config.GasPriceOracleOverhead,
