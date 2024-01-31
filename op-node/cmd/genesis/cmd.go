@@ -1,6 +1,7 @@
 package genesis
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -61,7 +62,8 @@ var Subcommands = cli.Commands{
 			}
 
 			l1StartBlock := l1Genesis.ToBlock()
-			l2Genesis, err := genesis.BuildL2DeveloperGenesis(config, l1StartBlock)
+
+			l2Genesis, err := genesis.BuildL2DeveloperGenesis(config, l1StartBlock, nil)
 			if err != nil {
 				return err
 			}
@@ -142,9 +144,13 @@ var Subcommands = cli.Commands{
 			if err != nil {
 				return fmt.Errorf("error getting l1 start block: %w", err)
 			}
-
+			rpcBlock, err := genesis.BlockCall(context.Background(), ctx.String("l1-rpc"), "eth_getBlockByNumber", config.L1StartingBlockTag.BlockNumber.Int64())
+			if !bytes.Equal(l1StartBlock.Hash().Bytes(), rpcBlock.Hash.Bytes()) {
+				fmt.Sprintf("rpc hash and calculate hash not equal, rpcHash %s, calculateHash %s", rpcBlock.Hash.String(), l1StartBlock.Hash().String())
+				fmt.Println("passing rpcBlock...")
+			}
 			// Build the developer L2 genesis block
-			l2Genesis, err := genesis.BuildL2DeveloperGenesis(config, l1StartBlock)
+			l2Genesis, err := genesis.BuildL2DeveloperGenesis(config, l1StartBlock, rpcBlock)
 			if err != nil {
 				return fmt.Errorf("error creating l2 developer genesis: %w", err)
 			}

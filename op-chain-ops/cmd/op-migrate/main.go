@@ -174,6 +174,7 @@ func main() {
 				return err
 			}
 
+			log.Info("show block.Hash write to rollup.json", block.Hash().String())
 			dbCache := ctx.Int("db-cache")
 			dbHandles := ctx.Int("db-handles")
 			ldb, err := db.Open(ctx.String("db-path"), dbCache, dbHandles)

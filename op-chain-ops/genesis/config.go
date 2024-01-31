@@ -494,7 +494,7 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 
 // NewL2StorageConfig will create a StorageConfig given an instance of a
 // Hardhat and a DeployConfig.
-func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.StorageConfig, error) {
+func NewL2StorageConfig(config *DeployConfig, block *types.Block, rpcBlock *RpcBlock) (state.StorageConfig, error) {
 	storage := make(state.StorageConfig)
 
 	if block.Number() == nil {
@@ -517,16 +517,30 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
 		"owner":      config.GasPriceOracleOwner,
 	}
-	storage["L1Block"] = state.StorageValues{
-		"number":         block.Number(),
-		"timestamp":      block.Time(),
-		"basefee":        block.BaseFee(),
-		"hash":           block.Hash(),
-		"sequenceNumber": 0,
-		"batcherHash":    config.BatchSenderAddress.Hash(),
-		"l1FeeOverhead":  config.GasPriceOracleOverhead,
-		"l1FeeScalar":    config.GasPriceOracleScalar,
+	if rpcBlock != nil {
+		storage["L1Block"] = state.StorageValues{
+			"number":         rpcBlock.Number,
+			"timestamp":      rpcBlock.Time,
+			"basefee":        rpcBlock.BaseFee,
+			"hash":           rpcBlock.Hash,
+			"sequenceNumber": 0,
+			"batcherHash":    config.BatchSenderAddress.Hash(),
+			"l1FeeOverhead":  config.GasPriceOracleOverhead,
+			"l1FeeScalar":    config.GasPriceOracleScalar,
+		}
+	} else {
+		storage["L1Block"] = state.StorageValues{
+			"number":         block.Number(),
+			"timestamp":      block.Time(),
+			"basefee":        block.BaseFee(),
+			"hash":           block.Hash(),
+			"sequenceNumber": 0,
+			"batcherHash":    config.BatchSenderAddress.Hash(),
+			"l1FeeOverhead":  config.GasPriceOracleOverhead,
+			"l1FeeScalar":    config.GasPriceOracleScalar,
+		}
 	}
+
 	storage["LegacyERC20MNT"] = state.StorageValues{
 		"_name":   "Mantle Token",
 		"_symbol": "MNT",

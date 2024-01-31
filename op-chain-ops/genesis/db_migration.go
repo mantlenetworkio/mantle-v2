@@ -109,7 +109,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 	// untrusted and must be verified explicitly before we can use it.
 
 	// Generate and verify the configuration for storage variables to be set on L2.
-	storage, err := NewL2StorageConfig(config, l1Block)
+	storage, err := NewL2StorageConfig(config, l1Block, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create storage config: %w", err)
 	}
