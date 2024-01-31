@@ -2,10 +2,12 @@ package sources
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/holiman/uint256"
 
@@ -148,6 +150,13 @@ func (hdr *rpcHeader) checkPostMerge() error {
 
 func (hdr *rpcHeader) computeBlockHash() common.Hash {
 	gethHeader := hdr.createGethHeader()
+
+	marshaledHdr, err := json.MarshalIndent(gethHeader, "", "  ")
+	if err != nil {
+		log.Info("computeBlockHash error", "err", err.Error())
+	}
+	log.Info("gethHeader", "header", string(marshaledHdr))
+
 	return gethHeader.Hash()
 }
 
@@ -156,12 +165,16 @@ func (hdr *rpcHeader) createGethHeader() *types.Header {
 	if hdr.BlobGasUsed != nil {
 		blobGasUsedTemp := uint64(*hdr.BlobGasUsed)
 		blobGasUsed = &blobGasUsedTemp
+		log.Info("createGethHeader", "blobGasUsed", *blobGasUsed)
 	}
 	var excessBlobGas *uint64
 	if hdr.BlobGasUsed != nil {
 		excessBlobGasTemp := uint64(*hdr.ExcessBlobGas)
 		excessBlobGas = &excessBlobGasTemp
+		log.Info("createGethHeader", "excessBlobGas", *excessBlobGas)
 	}
+
+	log.Info("createGethHeader", "parentBeaconBlockRoot", hdr.ParentBeaconRoot.String())
 
 	return &types.Header{
 		ParentHash:      hdr.ParentHash,
@@ -194,6 +207,11 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 			return nil, err
 		}
 	}
+	marshaledHdr, err := json.MarshalIndent(hdr, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	log.Info("rpcHeader", "header", string(marshaledHdr))
 	if !trustCache {
 		if computed := hdr.computeBlockHash(); computed != hdr.Hash {
 			return nil, fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash)
