@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/optimism/l2geth/log"
+	"github.com/ethereum-optimism/optimism/op-node/hashcache"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/holiman/uint256"
 
@@ -176,7 +177,7 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 		if computed != hdr.Hash {
 			log.Error("rpcHeader Info", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash).Error())
 		}
-		OpNodeBlockHashCache[computed] = hdr.Hash
+		hashcache.OpNodeBlockHashCache[computed] = hdr.Hash
 	}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
