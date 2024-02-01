@@ -9,15 +9,14 @@ import (
 	"github.com/ethereum-optimism/optimism/l2geth/log"
 	"github.com/ethereum-optimism/optimism/op-node/hashcache"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/holiman/uint256"
 
+	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
-
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 )
 
 type BatchCallContextFn func(ctx context.Context, b []rpc.BatchElem) error
@@ -198,9 +197,9 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 	}
 	if !trustCache {
 		computed := hdr.computeBlockHash()
-		if computed != hdr.Hash {
-			log.Error("rpcHeader Info", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash).Error())
-		}
+		//if computed != hdr.Hash {
+		log.Error("rpcHeader Info", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash).Error())
+		//}
 		hashcache.OpNodeBlockHashCache[computed] = hdr.Hash
 	}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
@@ -213,13 +212,16 @@ type rpcBlock struct {
 
 func (block *rpcBlock) verify() error {
 	computed := block.computeBlockHash()
-	if computed != block.Hash {
-		log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash).Error())
-	}
+	//if computed != block.Hash {
+	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash).Error())
+	//}
+	log.Info("rpcBlock verify", "result", fmt.Sprintf("computed %s, RPC said %s", computed.String(), block.Hash.String()))
 	hashcache.OpNodeBlockHashCache[computed] = block.Hash
-	if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
-		log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash).Error())
-	}
+	//if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
+	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash).Error())
+	//}
+	computedTxHash := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil))
+	log.Error("rpcBlock verify", "result", fmt.Sprintf("computed txhash %s, RPC said %s", computedTxHash.String(), block.TxHash.String()))
 	return nil
 }
 
@@ -229,11 +231,11 @@ func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInf
 			return nil, nil, err
 		}
 	}
-	if !trustCache {
-		if err := block.verify(); err != nil {
-			return nil, nil, err
-		}
+	//if !trustCache {
+	if err := block.verify(); err != nil {
+		return nil, nil, err
 	}
+	//}
 
 	// verify the header data
 	info, err := block.rpcHeader.Info(trustCache, mustBePostMerge)
@@ -248,11 +250,11 @@ func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload,
 	if err := block.checkPostMerge(); err != nil {
 		return nil, err
 	}
-	if !trustCache {
-		if err := block.verify(); err != nil {
-			return nil, err
-		}
+	//if !trustCache {
+	if err := block.verify(); err != nil {
+		return nil, err
 	}
+	//}
 	var baseFee uint256.Int
 	baseFee.SetFromBig((*big.Int)(block.BaseFee))
 
