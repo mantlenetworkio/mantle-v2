@@ -667,7 +667,8 @@ github.com/mailgun/raymond/v2 v2.0.46 h1:aOYHhvTpF5USySJ0o7cpPno/Uh2I5qg2115K25A
 github.com/mailgun/raymond/v2 v2.0.46/go.mod h1:lsgvL50kgt1ylcFJYZiULi5fjPBkkhNfj4KA0W54Z18=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/mantlenetworkio/op-geth v0.5.0-6/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
+github.com/mantlenetworkio/op-geth v0.5.1-0.20240201073803-236278dac2b8 h1:QIiiIcGyNe6qa00W5NrzOYoCXcIYfVVxFya5msssH+A=
+github.com/mantlenetworkio/op-geth v0.5.1-0.20240201073803-236278dac2b8/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
 github.com/mantlenetworkio/op-geth v1.101105.2-0.20230502202351-9cc072e922f6/go.mod h1:X9t7oeerFMU9/zMIjZKT/jbIca+O05QqtBTLjL+XVeA=
 github.com/mantlenetworkio/op-geth v1.101200.2-rc.1.0.20230908180308-3cea832f24c3/go.mod h1:gRnPb21PoKcHm3kHqj9BQlQkwmhOGUvQoGEbC7z852Q=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd h1:HvFwW+cm9bCbZ/+vuGNq7CRWXql8c0y8nGeYpqmpvmk=

@@ -170,7 +170,7 @@ func main() {
 			} else {
 				return fmt.Errorf("invalid l1StartingBlockTag in deploy config: %v", tag)
 			}
-			log.Info("blockInfo", "blockNumber", block.Number().String(), "blockHash", block.Hash().String(), "cachedBlockHash", ethclient.BlockHashCache[block.Hash()].String())
+			log.Info("blockInfo", "blockNumber", block.Number().String(), "blockHash", block.Hash().String(), "cachedBlockHash", ethclient.GetBlockHashCache(block.Hash()).String())
 			if err != nil {
 				return err
 			}
@@ -231,7 +231,7 @@ func main() {
 					Number:        block.NumberU64(),
 					Time:          block.Time(),
 					BaseFee:       block.BaseFee(),
-					BlockHash:     ethclient.BlockHashCache[block.Hash()],
+					BlockHash:     ethclient.GetBlockHashCache(block.Hash()),
 					BatcherAddr:   config.BatchSenderAddress,
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
 					L1FeeScalar:   eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleScalar))),

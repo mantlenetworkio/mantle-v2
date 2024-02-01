@@ -12,13 +12,13 @@ func init() {
 }
 
 func SetCacheBlockHash(hash common.Hash, cacheHash common.Hash) {
-	log.Info("SetCacheBlockHash", "hash", hash.String(), "cacheHash", cacheHash.String())
+	log.Info("op-node hash cache SetCacheBlockHash", "hash", hash.String(), "cacheHash", cacheHash.String())
 	OpNodeBlockHashCache[hash] = cacheHash
 }
 
 func GetCacheBlockHash(hash common.Hash) common.Hash {
 	cacheBlockHash, ok := OpNodeBlockHashCache[hash]
-	log.Info("GetCacheBlockHash", "hash", hash.String(), "cacheHash", cacheBlockHash.String())
+	log.Info("op-node hash cache GetCacheBlockHash", "hash", hash.String(), "cacheHash", cacheBlockHash.String())
 	if !ok {
 		return hash
 	}
