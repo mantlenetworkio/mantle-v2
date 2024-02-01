@@ -174,7 +174,7 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 	if !trustCache {
 		computed := hdr.computeBlockHash()
 		//if computed != hdr.Hash {
-		log.Error("rpcHeader Info", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, hdr.Hash).Error())
+		log.Info("rpcHeader Info", "result", fmt.Sprintf("verify block hash: computed %s but RPC said %s", computed, hdr.Hash))
 		//}
 		hashcache.OpNodeBlockHashCache[computed] = hdr.Hash
 	}
