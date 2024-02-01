@@ -43,13 +43,9 @@ type NumberAndHash interface {
 }
 
 func ToBlockID(b NumberAndHash) BlockID {
-	log.Info("ToBlockID", "blockHash", b.Hash().String(), "cacheBlockHash", hashcache.OpNodeBlockHashCache[b.Hash()])
-	cacheBlockHash, ok := hashcache.OpNodeBlockHashCache[b.Hash()]
-	if !ok {
-		cacheBlockHash = b.Hash()
-	}
+	log.Info("ToBlockID", "blockHash", b.Hash().String(), "cacheBlockHash", hashcache.GetCacheBlockHash(b.Hash()))
 	return BlockID{
-		Hash:   cacheBlockHash,
+		Hash:   hashcache.GetCacheBlockHash(b.Hash()),
 		Number: b.NumberU64(),
 	}
 }
