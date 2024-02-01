@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum-optimism/optimism/op-node/hashcache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -148,7 +147,7 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 		Number:         block.NumberU64(),
 		Time:           block.Time(),
 		BaseFee:        block.BaseFee(),
-		BlockHash:      hashcache.GetCacheBlockHash(block.Hash()),
+		BlockHash:      block.Hash(),
 		SequenceNumber: seqNumber,
 		BatcherAddr:    sysCfg.BatcherAddr,
 		L1FeeOverhead:  sysCfg.Overhead,
@@ -160,7 +159,7 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 	}
 
 	source := L1InfoDepositSource{
-		L1BlockHash: hashcache.GetCacheBlockHash(block.Hash()),
+		L1BlockHash: block.Hash(),
 		SeqNumber:   seqNumber,
 	}
 	// Set a very large gas limit with `IsSystemTransaction` to ensure
