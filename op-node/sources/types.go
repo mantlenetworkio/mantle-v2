@@ -11,7 +11,6 @@ import (
 	"github.com/holiman/uint256"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/l1blockhashcache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -201,7 +200,6 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 		//}
 		computed := hdr.computeBlockHash()
 		log.Info("rpcHeader Info", "result", fmt.Sprintf("verify block hash: computed %s but RPC said %s", computed, hdr.Hash))
-		l1blockhashcache.SetCacheBlockHash(computed, hdr.Hash)
 	}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
@@ -212,17 +210,18 @@ type rpcBlock struct {
 }
 
 func (block *rpcBlock) verify() error {
-	computed := block.computeBlockHash()
-	//if computed != block.Hash {
-	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash).Error())
+	//if computed := block.computeBlockHash(); computed != block.Hash {
+	//	return fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash)
 	//}
-	log.Info("rpcBlock verify", "result", fmt.Sprintf("computed %s, RPC said %s", computed.String(), block.Hash.String()))
-	l1blockhashcache.SetCacheBlockHash(computed, block.Hash)
 	//if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
-	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash).Error())
+	//	return fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash)
 	//}
+	computed := block.computeBlockHash()
+	log.Info("rpcBlock verify",
+		"result", fmt.Sprintf("computed %s, RPC said %s", computed.String(), block.Hash.String()))
 	computedTxHash := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil))
-	log.Error("rpcBlock verify", "result", fmt.Sprintf("computed txhash %s, RPC said %s", computedTxHash.String(), block.TxHash.String()))
+	log.Info("rpcBlock verify",
+		"result", fmt.Sprintf("computed txhash %s, RPC said %s", computedTxHash.String(), block.TxHash.String()))
 	return nil
 }
 
@@ -232,11 +231,11 @@ func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInf
 			return nil, nil, err
 		}
 	}
-	//if !trustCache {
-	if err := block.verify(); err != nil {
-		return nil, nil, err
+	if !trustCache {
+		if err := block.verify(); err != nil {
+			return nil, nil, err
+		}
 	}
-	//}
 
 	// verify the header data
 	info, err := block.rpcHeader.Info(trustCache, mustBePostMerge)
@@ -251,11 +250,11 @@ func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload,
 	if err := block.checkPostMerge(); err != nil {
 		return nil, err
 	}
-	//if !trustCache {
-	if err := block.verify(); err != nil {
-		return nil, err
+	if !trustCache {
+		if err := block.verify(); err != nil {
+			return nil, err
+		}
 	}
-	//}
 	var baseFee uint256.Int
 	baseFee.SetFromBig((*big.Int)(block.BaseFee))
 

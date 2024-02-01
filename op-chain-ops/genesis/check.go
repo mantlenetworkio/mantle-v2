@@ -213,12 +213,12 @@ func PostCheckUntouchables(udb state.Database, currDB *state.StateDB, prevRoot c
 		code := currDB.GetCode(addr)
 		hash := crypto.Keccak256Hash(code)
 		// only set 5001[testnet] to a specific hash, align all the others the same
-		expHash := UntouchableCodeHashes[addr][l2ChainID]
-		if expHash.String() == "" {
-			expHash = common.HexToHash("0xb517d2b0eab292baad6e3dab9d68340c5846207b9ccbd2a2c7df8eb9913d0d35")
+		expHash, ok := UntouchableCodeHashes[addr][l2ChainID]
+		if !ok { // for qa network
+			expHash = UntouchableCodeHashes[addr][0]
 		}
 		if hash != expHash {
-			return fmt.Errorf("expected code hash for %s to be %s, but got %s，l1ChainID %d, addr: %s", addr, expHash, hash, l2ChainID, addr)
+			return fmt.Errorf("expected code hash for %s to be %s, but got %s", addr, expHash, hash)
 		}
 		log.Info("checked code hash", "address", addr, "hash", hash)
 
@@ -453,8 +453,8 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 	}
 
 	log.Info("checking legacy mnt fixed storage slots")
-	legacySlot := LegacyMNTCheckSlots[l2ChainID]
-	if legacySlot == nil {
+	legacySlot, ok := LegacyMNTCheckSlots[l2ChainID]
+	if !ok {
 		legacySlot = LegacyMNTCheckSlots[0]
 	}
 	for slot, expValue := range legacySlot {
@@ -477,10 +477,6 @@ func PostCheckLegacyMNT(prevDB, migratedDB *state.StateDB, migrationData crossdo
 		}
 
 		// Ignore fixed slots.
-		//legacySlot = LegacyMNTCheckSlots[l2ChainID]
-		//if legacySlot == nil {
-		//	legacySlot = LegacyMNTCheckSlots[0]
-		//}
 		if _, ok := legacySlot[key]; ok {
 			return true
 		}
