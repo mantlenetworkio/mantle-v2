@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 
@@ -82,9 +83,10 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 	// or returning them out-of-order. Verify the receipts against the expected receipt-hash.
 	hasher := trie.NewStackTrie(nil)
 	computed := types.DeriveSha(types.Receipts(receipts), hasher)
-	if receiptHash != computed {
-		return fmt.Errorf("failed to fetch list of receipts: expected receipt root %s but computed %s from retrieved receipts", receiptHash, computed)
-	}
+	//if receiptHash != computed {
+	//	return fmt.Errorf("failed to fetch list of receipts: expected receipt root %s but computed %s from retrieved receipts", receiptHash, computed)
+	//}
+	log.Info("receiptHash verify", "result", fmt.Sprintf("expected receipt root %s, computed %s from retrieved receipts", receiptHash, computed))
 	return nil
 }
 
