@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/hashcache"
+	"github.com/ethereum-optimism/optimism/op-node/l1blockhashcache"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -31,7 +32,7 @@ func WatchHeadChanges(ctx context.Context, src NewHeadSource, fn HeadSignalFn) (
 			select {
 			case header := <-headChanges:
 				fn(ctx, L1BlockRef{
-					Hash:       hashcache.GetCacheBlockHash(header.Hash()),
+					Hash:       l1blockhashcache.GetCacheBlockHash(header.Hash()),
 					Number:     header.Number.Uint64(),
 					ParentHash: header.ParentHash,
 					Time:       header.Time,

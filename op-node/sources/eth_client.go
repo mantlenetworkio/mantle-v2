@@ -203,8 +203,7 @@ type hashID common.Hash
 func (h hashID) Arg() any { return common.Hash(h) }
 func (h hashID) CheckID(id eth.BlockID) error {
 	if common.Hash(h) != id.Hash {
-		log.Error("CheckID", "expected block hash", common.Hash(h), "got block hash", id)
-		//return fmt.Errorf("expected block hash %s but got block %s", common.Hash(h), id)
+		return fmt.Errorf("expected block hash %s but got block %s", common.Hash(h), id)
 	}
 	return nil
 }
@@ -221,7 +220,7 @@ func (n numberID) CheckID(id eth.BlockID) error {
 }
 
 func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, error) {
-	log.Info("headerCall", "method", method, "id", id.Arg())
+	log.Info("headerCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var header *rpcHeader
 	err := s.client.CallContext(ctx, &header, method, id.Arg(), false) // headers are just blocks without txs
 	if err != nil {
@@ -230,7 +229,6 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if header == nil {
 		return nil, ethereum.NotFound
 	}
-	log.Info("headerCall", "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	info, err := header.Info(s.trustRPC, s.mustBePostMerge)
 	if err != nil {
 		return nil, err
@@ -243,13 +241,12 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 }
 
 func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, types.Transactions, error) {
-	log.Info("blockCall", "method", method, "id", id.Arg())
+	log.Info("blockCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Info("blockCall", "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	if block == nil {
 		return nil, nil, ethereum.NotFound
 	}
@@ -266,13 +263,12 @@ func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID)
 }
 
 func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockID) (*eth.ExecutionPayload, error) {
-	log.Info("payloadCall", "method", method, "id", id.Arg())
+	log.Info("payloadCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("payloadCall", "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	if block == nil {
 		return nil, ethereum.NotFound
 	}
@@ -298,9 +294,9 @@ func (s *EthClient) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 func (s *EthClient) InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error) {
-	//if header, ok := s.headersCache.Get(hash); ok {
-	//	return header.(eth.BlockInfo), nil
-	//}
+	if header, ok := s.headersCache.Get(hash); ok {
+		return header.(eth.BlockInfo), nil
+	}
 	return s.headerCall(ctx, "eth_getBlockByHash", hashID(hash))
 }
 
@@ -315,11 +311,11 @@ func (s *EthClient) InfoByLabel(ctx context.Context, label eth.BlockLabel) (eth.
 }
 
 func (s *EthClient) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error) {
-	//if header, ok := s.headersCache.Get(hash); ok {
-	//	if txs, ok := s.transactionsCache.Get(hash); ok {
-	//		return header.(eth.BlockInfo), txs.(types.Transactions), nil
-	//	}
-	//}
+	if header, ok := s.headersCache.Get(hash); ok {
+		if txs, ok := s.transactionsCache.Get(hash); ok {
+			return header.(eth.BlockInfo), txs.(types.Transactions), nil
+		}
+	}
 	return s.blockCall(ctx, "eth_getBlockByHash", hashID(hash))
 }
 

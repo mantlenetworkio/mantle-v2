@@ -1,4 +1,4 @@
-package hashcache
+package l1blockhashcache
 
 import (
 	"github.com/ethereum/go-ethereum/common"
