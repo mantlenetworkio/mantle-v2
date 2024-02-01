@@ -148,7 +148,7 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 		Number:         block.NumberU64(),
 		Time:           block.Time(),
 		BaseFee:        block.BaseFee(),
-		BlockHash:      hashcache.OpNodeBlockHashCache[block.Hash()],
+		BlockHash:      hashcache.GetCacheBlockHash(block.Hash()),
 		SequenceNumber: seqNumber,
 		BatcherAddr:    sysCfg.BatcherAddr,
 		L1FeeOverhead:  sysCfg.Overhead,
@@ -160,7 +160,7 @@ func L1InfoDeposit(seqNumber uint64, block eth.BlockInfo, sysCfg eth.SystemConfi
 	}
 
 	source := L1InfoDepositSource{
-		L1BlockHash: hashcache.OpNodeBlockHashCache[block.Hash()],
+		L1BlockHash: hashcache.GetCacheBlockHash(block.Hash()),
 		SeqNumber:   seqNumber,
 	}
 	// Set a very large gas limit with `IsSystemTransaction` to ensure

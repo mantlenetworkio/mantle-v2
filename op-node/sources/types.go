@@ -176,7 +176,7 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 		//if computed != hdr.Hash {
 		log.Info("rpcHeader Info", "result", fmt.Sprintf("verify block hash: computed %s but RPC said %s", computed, hdr.Hash))
 		//}
-		hashcache.OpNodeBlockHashCache[computed] = hdr.Hash
+		hashcache.SetCacheBlockHash(computed, hdr.Hash)
 	}
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
@@ -192,7 +192,7 @@ func (block *rpcBlock) verify() error {
 	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash).Error())
 	//}
 	log.Info("rpcBlock verify", "result", fmt.Sprintf("computed %s, RPC said %s", computed.String(), block.Hash.String()))
-	hashcache.OpNodeBlockHashCache[computed] = block.Hash
+	hashcache.SetCacheBlockHash(computed, block.Hash)
 	//if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
 	//	log.Error("rpcBlock verify", "err", fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash).Error())
 	//}
