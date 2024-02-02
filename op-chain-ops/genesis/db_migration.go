@@ -34,7 +34,7 @@ type MigrationResult struct {
 }
 
 // MigrateDB will migrate an l2geth legacy Optimism database to a Bedrock database.
-func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, migrationData *crossdomain.MigrationData, commit, noCheck bool) (*MigrationResult, error) {
+func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, migrationData *crossdomain.MigrationData, cache int, commit, noCheck bool) (*MigrationResult, error) {
 	// Grab the hash of the tip of the legacy chain.
 	hash := rawdb.ReadHeadHeaderHash(ldb)
 	log.Info("Reading chain tip from database", "hash", hash)
@@ -86,7 +86,7 @@ func MigrateDB(ldb ethdb.Database, config *DeployConfig, l1Block *types.Block, m
 		// Set up the backing store.
 		underlyingDB := state.NewDatabaseWithConfig(ldb, &trie.Config{
 			Preimages: true,
-			Cache:     1024,
+			Cache:     cache,
 		})
 
 		// Open up the state database.

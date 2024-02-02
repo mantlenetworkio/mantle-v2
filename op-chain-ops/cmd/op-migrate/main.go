@@ -198,7 +198,7 @@ func main() {
 			//}
 
 			// Perform the migration
-			res, err := genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
+			res, err := genesis.MigrateDB(ldb, config, block, &migrationData, dbCache, !dryRun, noCheck)
 			if err != nil {
 				return err
 			}
