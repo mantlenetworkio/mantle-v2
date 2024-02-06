@@ -138,12 +138,18 @@ func (b *BaseRPCClient) Close() {
 func (b *BaseRPCClient) CallContext(ctx context.Context, result any, method string, args ...any) error {
 	cCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	log.Info("CallContext", "method", method)
 	return b.c.CallContext(cCtx, result, method, args...)
 }
 
 func (b *BaseRPCClient) BatchCallContext(ctx context.Context, batch []rpc.BatchElem) error {
 	cCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
+	log.Info("BatchCallContext")
+	for idx, item := range batch {
+		log.Info("BatchCall Item", "idx", idx, "method", item.Method, "")
+	}
+
 	return b.c.BatchCallContext(cCtx, batch)
 }
 

@@ -153,7 +153,7 @@ func (s *EthClient) OnReceiptsMethodErr(m ReceiptsFetchingMethod, err error) {
 		s.log.Warn("failed to use selected RPC method for receipt fetching, temporarily falling back to alternatives",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods, "err", err)
 	} else {
-		s.log.Debug("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
+		s.log.Info("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods&^m, "err", err)
 	}
 }
