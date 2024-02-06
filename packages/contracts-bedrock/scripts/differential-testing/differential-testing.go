@@ -147,18 +147,20 @@ func main() {
 		checkOk(ok)
 		from := common.HexToAddress(args[3])
 		to := common.HexToAddress(args[4])
-		mint, ok := new(big.Int).SetString(args[5], 10)
+		mntValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		value, ok := new(big.Int).SetString(args[6], 10)
+		mntTxValue, ok := new(big.Int).SetString(args[6], 10)
 		checkOk(ok)
 		ethValue, ok := new(big.Int).SetString(args[7], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[8], 10)
+		ethTxValue, ok := new(big.Int).SetString(args[8], 10)
 		checkOk(ok)
-		data := common.FromHex(args[9])
+		gasLimit, ok := new(big.Int).SetString(args[9], 10)
+		checkOk(ok)
+		data := common.FromHex(args[10])
 
 		// Create deposit transaction
-		depositTx := makeDepositTx(from, to, value, mint, ethValue, gasLimit, false, data, l1BlockHash, logIndex)
+		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, ethTxValue, gasLimit, false, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()
@@ -182,14 +184,16 @@ func main() {
 		checkOk(ok)
 		ethValue, ok := new(big.Int).SetString(args[5], 10)
 		checkOk(ok)
-		gasLimit, ok := new(big.Int).SetString(args[6], 10)
+		ethTxValue, ok := new(big.Int).SetString(args[6], 10)
 		checkOk(ok)
-		isCreate := args[7] == "true"
-		data := common.FromHex(args[8])
-		l1BlockHash := common.HexToHash(args[9])
-		logIndex, ok := new(big.Int).SetString(args[10], 10)
+		gasLimit, ok := new(big.Int).SetString(args[7], 10)
 		checkOk(ok)
-		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
+		isCreate := args[8] == "true"
+		data := common.FromHex(args[9])
+		l1BlockHash := common.HexToHash(args[10])
+		logIndex, ok := new(big.Int).SetString(args[11], 10)
+		checkOk(ok)
+		depositTx := makeDepositTx(from, to, mntValue, mntTxValue, ethValue, ethTxValue, gasLimit, isCreate, data, l1BlockHash, logIndex)
 
 		// RLP encode deposit transaction
 		encoded, err := types.NewTx(&depositTx).MarshalBinary()

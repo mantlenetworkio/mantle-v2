@@ -25,16 +25,17 @@ library Encoding {
         returns (bytes memory)
     {
         bytes32 source = Hashing.hashDepositSource(_tx.l1BlockHash, _tx.logIndex);
-        bytes[] memory raw = new bytes[](9);
+        bytes[] memory raw = new bytes[](10);
         raw[0] = RLPWriter.writeBytes(abi.encodePacked(source));
         raw[1] = RLPWriter.writeAddress(_tx.from);
         raw[2] = _tx.isCreation ? RLPWriter.writeBytes("") : RLPWriter.writeAddress(_tx.to);
-        raw[3] = RLPWriter.writeUint(_tx.mint);
-        raw[4] = RLPWriter.writeUint(_tx.mntValue);
+        raw[3] = RLPWriter.writeUint(_tx.mntValue);
+        raw[4] = RLPWriter.writeUint(_tx.mntTxValue);
         raw[5] = RLPWriter.writeUint(uint256(_tx.gasLimit));
         raw[6] = RLPWriter.writeBool(false);
         raw[7] = RLPWriter.writeUint(_tx.ethValue);
         raw[8] = RLPWriter.writeBytes(_tx.data);
+        raw[9] = RLPWriter.writeUint(_tx.ethTxValue);
         return abi.encodePacked(uint8(0x7e), RLPWriter.writeList(raw));
     }
 

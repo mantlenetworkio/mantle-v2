@@ -41,7 +41,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     /**
      * @notice Version of the deposit event.
      */
-    uint256 internal constant DEPOSIT_VERSION = 0;
+    uint256 internal constant DEPOSIT_VERSION = 1;
 
     /**
      * @notice The L2 gas limit set when eth is deposited using the receive() function.
@@ -216,7 +216,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     // solhint-disable-next-line ordering
     receive() external payable {
-        depositTransaction(0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
+        depositTransaction(msg.value, 0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
     /**
@@ -440,6 +440,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
+     * @param _ethTxValue BVM_ETH value to send to the recipient.
      * @param _mntValue   Mint MNT amount to from address on L2
      * @param _to         Target address on L2.
      * @param _mntTxValue MNT value to send to the recipient.
@@ -448,6 +449,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @param _data       Data to trigger the recipient with.
      */
     function depositTransaction(
+        uint256 _ethTxValue,
         uint256 _mntValue,
         address _to,
         uint256 _mntTxValue,
@@ -494,6 +496,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
             _mntValue,
             _mntTxValue,
             msg.value,
+            _ethTxValue,
             _gasLimit,
             _isCreation,
             _data

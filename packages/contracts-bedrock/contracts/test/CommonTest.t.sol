@@ -79,6 +79,7 @@ contract CommonTest is Test {
         uint256 _mntValue,
         uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -86,8 +87,8 @@ contract CommonTest is Test {
         emit TransactionDeposited(
             _from,
             _to,
-            0,
-            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
+            1,
+            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _ethTxValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -663,25 +664,27 @@ contract FFIInterface is Test {
     function hashDepositTransaction(
         address _from,
         address _to,
-        uint256 _mint,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](11);
+        string[] memory cmds = new string[](12);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashDepositTransaction";
         cmds[2] = "0x0000000000000000000000000000000000000000000000000000000000000000";
         cmds[3] = vm.toString(_logIndex);
         cmds[4] = vm.toString(_from);
         cmds[5] = vm.toString(_to);
-        cmds[6] = vm.toString(_mint);
-        cmds[7] = vm.toString(_value);
+        cmds[6] = vm.toString(_mntValue);
+        cmds[7] = vm.toString(_mntTxValue);
         cmds[8] = vm.toString(_ethValue);
-        cmds[9] = vm.toString(_gas);
-        cmds[10] = vm.toString(_data);
+        cmds[9] = vm.toString(_ethTxValue);
+        cmds[10] = vm.toString(_gas);
+        cmds[11] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -691,19 +694,20 @@ contract FFIInterface is Test {
         external
         returns (bytes memory)
     {
-        string[] memory cmds = new string[](12);
+        string[] memory cmds = new string[](13);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeDepositTransaction";
         cmds[2] = vm.toString(txn.from);
         cmds[3] = vm.toString(txn.to);
         cmds[4] = vm.toString(txn.mntValue);
-        cmds[5] = vm.toString(txn.mint);
+        cmds[5] = vm.toString(txn.mntTxValue);
         cmds[6] = vm.toString(txn.ethValue);
-        cmds[7] = vm.toString(txn.gasLimit);
-        cmds[8] = vm.toString(txn.isCreation);
-        cmds[9] = vm.toString(txn.data);
-        cmds[10] = vm.toString(txn.l1BlockHash);
-        cmds[11] = vm.toString(txn.logIndex);
+        cmds[7] = vm.toString(txn.ethTxValue);
+        cmds[8] = vm.toString(txn.gasLimit);
+        cmds[9] = vm.toString(txn.isCreation);
+        cmds[10] = vm.toString(txn.data);
+        cmds[11] = vm.toString(txn.l1BlockHash);
+        cmds[12] = vm.toString(txn.logIndex);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));
