@@ -236,6 +236,7 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
 		return nil, fmt.Errorf("fetched block header does not match requested ID: %w", err)
 	}
+	log.Info("headerCall", "number", header.Number, "blockHash", header.Hash.String(), "parentHash", header.ParentHash.String())
 	s.headersCache.Add(info.Hash(), info)
 	return info, nil
 }
@@ -257,6 +258,7 @@ func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID)
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
 		return nil, nil, fmt.Errorf("fetched block data does not match requested ID: %w", err)
 	}
+	log.Info("blockCall", "number", info.NumberU64(), "blockHash", info.Hash().String(), "parentHash", info.ParentHash().String())
 	s.headersCache.Add(info.Hash(), info)
 	s.transactionsCache.Add(info.Hash(), txs)
 	return info, txs, nil
@@ -279,6 +281,7 @@ func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockI
 	if err := id.CheckID(payload.ID()); err != nil {
 		return nil, fmt.Errorf("fetched payload does not match requested ID: %w", err)
 	}
+	log.Info("payloadCall", "number", block.Number.String(), "blockHash", block.Hash.String(), "parentHash", block.ParentHash.String())
 	s.payloadsCache.Add(payload.BlockHash, payload)
 	return payload, nil
 }
