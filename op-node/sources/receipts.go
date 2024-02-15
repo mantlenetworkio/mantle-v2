@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 
@@ -51,6 +52,9 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 			return fmt.Errorf("receipt %d has invalid gas used metadata: %d, expected %d", i, r.GasUsed, expected)
 		}
 		for j, log := range r.Logs {
+			if log.TxHash != txHashes[i] {
+				return fmt.Errorf("log %d of tx %s has unexpected tx hash %s", log.Index, txHashes[i], log.TxHash)
+			}
 			if log.Index != logIndex {
 				return fmt.Errorf("log %d (%d of tx %d) has unexpected log index %d", logIndex, j, i, log.Index)
 			}
@@ -62,9 +66,6 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 			}
 			if log.BlockNumber != block.Number {
 				return fmt.Errorf("log %d of block %d has unexpected block number %d", log.Index, block.Number, log.BlockNumber)
-			}
-			if log.TxHash != txHashes[i] {
-				return fmt.Errorf("log %d of tx %s has unexpected tx hash %s", log.Index, txHashes[i], log.TxHash)
 			}
 			if log.Removed {
 				return fmt.Errorf("canonical log (%d) must never be removed due to reorg", log.Index)
@@ -389,6 +390,19 @@ func (job *receiptsFetchingJob) runFetcher(ctx context.Context) error {
 		return err
 	}
 	if err := validateReceipts(job.block, job.receiptHash, job.txHashes, result); err != nil {
+		for index, item := range result {
+			log.Info("Tx index issue: BatchCallContext Result",
+				"index", index,
+				"blockNumber", item.BlockNumber,
+				"blockHash", item.BlockHash.String(),
+				"transactionIndex", item.TransactionIndex,
+				"txHash", item.TxHash.String())
+		}
+		for index, item := range job.txHashes {
+			log.Info("Tx index issue: Job.txHashes",
+				"index", index,
+				"txHash", item.String())
+		}
 		job.fetcher.Reset() // if results are fetched but invalid, try restart all the fetching to try and get valid data.
 		return err
 	}
