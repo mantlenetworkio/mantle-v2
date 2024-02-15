@@ -34,10 +34,10 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 	cumulativeGas := uint64(0)
 	for i, r := range receipts {
 		if r == nil { // on reorgs or other cases the receipts may disappear before they can be retrieved.
-			return fmt.Errorf("receipt of tx %d returns nil on retrieval", i)
+			return fmt.Errorf("Tx index issue: receipt of tx %d returns nil on retrieval", i)
 		}
 		if r.TransactionIndex != uint(i) {
-			return fmt.Errorf("receipt %d has unexpected tx index %d", i, r.TransactionIndex)
+			return fmt.Errorf("Tx index issue: receipt %d has unexpected tx index %d", i, r.TransactionIndex)
 		}
 		if r.BlockNumber == nil {
 			return fmt.Errorf("receipt %d has unexpected nil block number, expected %d", i, block.Number)
