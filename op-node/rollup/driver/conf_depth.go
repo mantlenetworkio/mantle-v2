@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // confDepth is an util that wraps the L1 input fetcher used in the pipeline,
@@ -32,6 +33,7 @@ func (c *confDepth) L1BlockRefByNumber(ctx context.Context, num uint64) (eth.L1B
 
 	// Don't apply the conf depth is l1Head is empty (as it is during the startup case before the l1State is initialized).
 	l1Head := c.l1Head()
+	log.Info("Tx index issue: confDepth L1BlockRefByNumber", "l1HeadNumber", l1Head.Number, "num", num)
 	if l1Head == (eth.L1BlockRef{}) {
 		return c.L1Fetcher.L1BlockRefByNumber(ctx, num)
 	}

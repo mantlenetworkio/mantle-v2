@@ -92,6 +92,7 @@ func (s *L1Client) L1BlockRefByLabel(ctx context.Context, label eth.BlockLabel) 
 // L1BlockRefByNumber returns an [eth.L1BlockRef] for the given block number.
 // Notice, we cannot cache a block reference by number because L1 re-orgs can invalidate the cached block reference.
 func (s *L1Client) L1BlockRefByNumber(ctx context.Context, num uint64) (eth.L1BlockRef, error) {
+	log.Info("Tx index issue: L1Client L1BlockRefByNumber", "num", num)
 	info, err := s.InfoByNumber(ctx, num)
 	if err != nil {
 		return eth.L1BlockRef{}, fmt.Errorf("failed to fetch header by num %d: %w", num, err)

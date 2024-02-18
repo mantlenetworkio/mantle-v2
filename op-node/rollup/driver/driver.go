@@ -116,6 +116,7 @@ type AltSync interface {
 func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, daSyncer DaSource, altSync AltSync, network Network, log log.Logger, snapshotLog log.Logger, metrics Metrics, syncCfg *sync.Config) *Driver {
 	l1 = NewMeteredL1Fetcher(l1, metrics)
 	l1State := NewL1State(log, metrics)
+	log.Info("Tx index issue: NewDriver Conformation Number", "sequencerConfDepth", driverCfg.SequencerConfDepth, "verifierConfDepth", driverCfg.VerifierConfDepth)
 	sequencerConfDepth := NewConfDepth(driverCfg.SequencerConfDepth, l1State.L1Head, l1)
 	findL1Origin := NewL1OriginSelector(log, cfg, sequencerConfDepth)
 	verifConfDepth := NewConfDepth(driverCfg.VerifierConfDepth, l1State.L1Head, l1)
