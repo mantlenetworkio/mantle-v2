@@ -362,6 +362,13 @@ func (l *L2OutputSubmitter) loop() {
 		select {
 		case <-ticker.C:
 			output, shouldPropose, err := l.FetchNextOutputInfo(ctx)
+			l.log.Info("OutputInfo",
+				"l1_origin_hash", output.BlockRef.L1Origin.Hash,
+				"l1_origin_number", output.BlockRef.L1Origin.Number,
+				"l2_safe", output.Status.SafeL2,
+				"l2_finalized", output.Status.FinalizedL2,
+				"allow_non_finalized", l.allowNonFinalized,
+				"shouldPropose", shouldPropose)
 			if err != nil {
 				break
 			}
@@ -370,6 +377,14 @@ func (l *L2OutputSubmitter) loop() {
 			}
 
 			cCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			l.log.Info(
+				"proposeL2Output",
+				"OutputRoot ", output.OutputRoot,
+				"BlockRefHash", output.BlockRef.Hash,
+				"BlockRefNumber", output.BlockRef.Number,
+				"CurrentL1Hash", output.Status.CurrentL1.Hash,
+				"CurrentL1.Number", output.Status.CurrentL1.Number,
+			)
 			if err := l.sendTransaction(cCtx, output); err != nil {
 				l.log.Error("Failed to send proposal transaction", "err", err)
 				cancel()
