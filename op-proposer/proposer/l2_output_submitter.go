@@ -2,6 +2,7 @@ package proposer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli"
@@ -334,6 +336,7 @@ func (l *L2OutputSubmitter) sendTransaction(ctx context.Context, output *eth.Out
 	if err != nil {
 		return err
 	}
+	l.log.Info("sendTransaction", "txData", hexutil.Encode(data))
 	receipt, err := l.txMgr.Send(ctx, txmgr.TxCandidate{
 		TxData:   data,
 		To:       &l.l2ooContractAddr,
@@ -362,13 +365,6 @@ func (l *L2OutputSubmitter) loop() {
 		select {
 		case <-ticker.C:
 			output, shouldPropose, err := l.FetchNextOutputInfo(ctx)
-			l.log.Info("OutputInfo",
-				"l1_origin_hash", output.BlockRef.L1Origin.Hash,
-				"l1_origin_number", output.BlockRef.L1Origin.Number,
-				"l2_safe", output.Status.SafeL2,
-				"l2_finalized", output.Status.FinalizedL2,
-				"allow_non_finalized", l.allowNonFinalized,
-				"shouldPropose", shouldPropose)
 			if err != nil {
 				break
 			}
@@ -376,6 +372,8 @@ func (l *L2OutputSubmitter) loop() {
 				break
 			}
 
+			outputStr, _ := json.MarshalIndent(output, "", "  ")
+			l.log.Info("OutputInfo", "outputStr", string(outputStr))
 			cCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			l.log.Info(
 				"proposeL2Output",
