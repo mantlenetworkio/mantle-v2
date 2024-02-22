@@ -518,7 +518,7 @@ contract L2StandardBridge is StandardBridge, Semver {
     function bridgeMNT(
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable {
+    ) public payable onlyEOA {
         _initiateBridgeMNT(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
