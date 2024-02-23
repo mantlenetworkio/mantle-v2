@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.19
 
-replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v0.5.1-0.20240206055344-4d05b2cd9a2b
+replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v0.5.0-7
 
 replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
 
