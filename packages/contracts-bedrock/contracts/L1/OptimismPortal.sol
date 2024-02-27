@@ -174,7 +174,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @notice Initializer.
      */
     function initialize(bool _paused) public initializer {
-        l2Sender = Constants.DEFAULT_L2_SENDER;
+        if (l2Sender == address(0)) {
+            l2Sender = Constants.DEFAULT_L2_SENDER;
+        }
         paused = _paused;
         __ResourceMetering_init();
     }

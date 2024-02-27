@@ -536,7 +536,13 @@ abstract contract CrossDomainMessenger is
      */
     // solhint-disable-next-line func-name-mixedcase
     function __CrossDomainMessenger_init() internal onlyInitializing {
-        xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        // We only want to set the xDomainMsgSender to the default value if it hasn't been initialized yet,
+        // meaning that this is a fresh contract deployment.
+        // This prevents resetting the xDomainMsgSender to the default value during an upgrade, which would enable
+        // a reentrant withdrawal to sandwhich the upgrade replay a withdrawal twice.
+        if (xDomainMsgSender == address(0)) {
+            xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        }
     }
 
     /**
