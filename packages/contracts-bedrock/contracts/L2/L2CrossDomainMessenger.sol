@@ -76,6 +76,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable override {
+        require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
         if (_ethAmount != 0) {
             IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
         }
@@ -116,7 +117,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         bytes calldata _message,
         uint32 _minGasLimit
     ) external payable override {
-
+        require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
