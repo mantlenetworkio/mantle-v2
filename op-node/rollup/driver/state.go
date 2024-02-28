@@ -197,6 +197,7 @@ func (s *Driver) eventLoop() {
 		if len(sequencerCh) > 0 { // empty if not already drained before resetting
 			<-sequencerCh
 		}
+		s.log.Info("sequencerTimer", "delay", delay)
 		sequencerTimer.Reset(delay)
 		// Without this sleep, even if delay is 0,  sequencerCh will not be ready in the following select judge.
 		// As a result, during deriving a batch blocks, producing new block will be stopped.
@@ -249,6 +250,7 @@ func (s *Driver) eventLoop() {
 
 		select {
 		case <-sequencerCh:
+			s.log.Info("sequencerCh Start")
 			payload, err := s.sequencer.RunNextSequencerAction(ctx)
 			if err != nil {
 				s.log.Error("Sequencer critical error", "err", err)
@@ -263,7 +265,9 @@ func (s *Driver) eventLoop() {
 				}
 			}
 			planSequencerAction() // schedule the next sequencer action to keep the sequencing looping
+			s.log.Info("sequencerCh End")
 		case <-altSyncTicker.C:
+			s.log.Info("altSyncTicker.C Start")
 			// Check if there is a gap in the current unsafe payload queue.
 			ctx, cancel := context.WithTimeout(ctx, time.Second*2)
 			err := s.checkForGapInUnsafeQueue(ctx)
@@ -271,7 +275,9 @@ func (s *Driver) eventLoop() {
 			if err != nil {
 				s.log.Warn("failed to check for unsafe L2 blocks to sync", "err", err)
 			}
+			s.log.Info("altSyncTicker.C End")
 		case payload := <-s.unsafeL2Payloads:
+			s.log.Info("unsafeL2Payloads Start")
 			s.snapshot("New unsafe payload")
 			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
 			s.derivation.AddUnsafePayload(payload)
@@ -283,21 +289,31 @@ func (s *Driver) eventLoop() {
 				s.metrics.RecordReceivedUnsafePayload(payload)
 			}
 			reqStep()
+			s.log.Info("unsafeL2Payloads End")
 
 		case newL1Head := <-s.l1HeadSig:
+			s.log.Info("l1HeadSig Start")
 			s.l1State.HandleNewL1HeadBlock(newL1Head)
 			reqStep() // a new L1 head may mean we have the data to not get an EOF again.
+			s.log.Info("l1HeadSig End")
 		case newL1Safe := <-s.l1SafeSig:
+			s.log.Info("l1SafeSig Start")
 			s.l1State.HandleNewL1SafeBlock(newL1Safe)
+			s.log.Info("l1SafeSig End")
 			// no step, justified L1 information does not do anything for L2 derivation or status
 		case newL1Finalized := <-s.l1FinalizedSig:
+			s.log.Info("l1FinalizedSig Start")
 			s.l1State.HandleNewL1FinalizedBlock(newL1Finalized)
 			s.derivation.Finalize(newL1Finalized)
 			reqStep() // we may be able to mark more L2 data as finalized now
+			s.log.Info("l1FinalizedSig End")
 		case <-delayedStepReq:
+			s.log.Info("delayedStepReq Start")
 			delayedStepReq = nil
 			step()
+			s.log.Info("delayedStepReq End")
 		case <-stepReqCh:
+			s.log.Info("stepReqCh Start")
 			s.metrics.SetDerivationIdle(false)
 			s.log.Debug("Derivation process step", "onto_origin", s.derivation.Origin(), "attempts", stepAttempts)
 			err := s.derivation.Step(context.Background())
@@ -307,45 +323,58 @@ func (s *Driver) eventLoop() {
 				s.log.Debug("Derivation process went idle", "progress", s.derivation.Origin(), "err", err)
 				stepAttempts = 0
 				s.metrics.SetDerivationIdle(true)
+				s.log.Info("stepReqCh End")
 				continue
 			} else if err != nil && errors.Is(err, derive.EngineP2PSyncing) {
 				s.log.Debug("Derivation process went idle because the engine is syncing", "progress", s.derivation.Origin(), "sync_target", s.derivation.EngineSyncTarget(), "err", err)
 				stepAttempts = 0
 				s.metrics.SetDerivationIdle(true)
+				s.log.Info("stepReqCh End")
 				continue
 			} else if err != nil && errors.Is(err, derive.ErrReset) {
 				// If the pipeline corrupts, e.g. due to a reorg, simply reset it
 				s.log.Warn("Derivation pipeline is reset", "err", err)
 				s.derivation.Reset()
 				s.metrics.RecordPipelineReset()
+				s.log.Info("stepReqCh End")
 				continue
 			} else if err != nil && errors.Is(err, derive.ErrTemporary) {
 				s.log.Warn("Derivation process temporary error", "attempts", stepAttempts, "err", err)
 				reqStep()
+				s.log.Info("stepReqCh End")
 				continue
 			} else if err != nil && errors.Is(err, derive.ErrCritical) {
 				s.log.Error("Derivation process critical error", "err", err)
+				s.log.Info("stepReqCh End")
 				return
 			} else if err != nil && errors.Is(err, derive.NotEnoughData) {
 				stepAttempts = 0 // don't do a backoff for this error
 				reqStep()
+				s.log.Info("stepReqCh End")
 				continue
 			} else if err != nil {
 				s.log.Error("Derivation process error", "attempts", stepAttempts, "err", err)
 				reqStep()
+				s.log.Info("stepReqCh End")
 				continue
 			} else {
 				stepAttempts = 0
 				reqStep() // continue with the next step if we can
+				s.log.Info("stepReqCh End")
 			}
 		case respCh := <-s.stateReq:
+			s.log.Info("stateReq Start")
 			respCh <- struct{}{}
+			s.log.Info("stateReq End")
 		case respCh := <-s.forceReset:
+			s.log.Info("forceReset Start")
 			s.log.Warn("Derivation pipeline is manually reset")
 			s.derivation.Reset()
 			s.metrics.RecordPipelineReset()
 			close(respCh)
+			s.log.Info("forceReset End")
 		case resp := <-s.startSequencer:
+			s.log.Info("startSequencer Start")
 			unsafeHead := s.derivation.UnsafeL2Head().Hash
 			if !s.driverConfig.SequencerStopped {
 				resp.err <- errors.New("sequencer already running")
@@ -357,7 +386,9 @@ func (s *Driver) eventLoop() {
 				close(resp.err)
 				planSequencerAction() // resume sequencing
 			}
+			s.log.Info("startSequencer End")
 		case respCh := <-s.stopSequencer:
+			s.log.Info("stopSequencer Start")
 			if s.driverConfig.SequencerStopped {
 				respCh <- hashAndError{err: errors.New("sequencer not running")}
 			} else {
@@ -365,6 +396,7 @@ func (s *Driver) eventLoop() {
 				s.driverConfig.SequencerStopped = true
 				respCh <- hashAndError{hash: s.derivation.UnsafeL2Head().Hash}
 			}
+			s.log.Info("stopSequencer End")
 		case <-s.done:
 			return
 		}
