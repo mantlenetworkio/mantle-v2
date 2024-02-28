@@ -125,13 +125,13 @@ func main() {
 				Usage: "Path to write text file of L2ToL1MessagePasser storage",
 			},
 			&cli.BoolFlag{
-				Name:  "need_proven",
-				Value: true,
+				Name:  "need-proven",
+				Value: false,
 				Usage: "True ,need to execute proven transaction",
 			},
 			&cli.BoolFlag{
-				Name:  "need_finalized",
-				Value: true,
+				Name:  "need-finalized",
+				Value: false,
 				Usage: "True, need to execute finalized transaction",
 			},
 		},
