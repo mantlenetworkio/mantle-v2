@@ -164,7 +164,7 @@ func PostCheckMigratedDB(
 	}
 	log.Info("checked predeploy storage")
 
-	if err := PostCheckUntouchables(underlyingDB, db, prevHeader.Root, l1ChainID); err != nil {
+	if err := PostCheckUntouchables(underlyingDB, db, prevHeader.Root, l2ChainID); err != nil {
 		return err
 	}
 	log.Info("checked untouchables")
