@@ -49,15 +49,15 @@ func NewEngineClient(client client.RPC, log log.Logger, metrics caching.Metrics,
 // 3. Other types of `error`: temporary RPC errors, like timeouts.
 func (s *EngineClient) ForkchoiceUpdate(ctx context.Context, fc *eth.ForkchoiceState, attributes *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error) {
 	e := s.log.New("state", fc, "attr", attributes)
-	e.Trace("Sharing forkchoice-updated signal")
+	e.Info("Sharing forkchoice-updated signal")
 	fcCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 	var result eth.ForkchoiceUpdatedResult
 	err := s.client.CallContext(fcCtx, &result, "engine_forkchoiceUpdatedV1", fc, attributes)
 	if err == nil {
-		e.Trace("Shared forkchoice-updated signal")
+		e.Info("Shared forkchoice-updated signal")
 		if attributes != nil { // block building is optional, we only get a payload ID if we are building a block
-			e.Trace("Received payload id", "payloadId", result.PayloadID)
+			e.Info("Received payload id", "payloadId", result.PayloadID)
 		}
 		return &result, nil
 	} else {
@@ -83,13 +83,13 @@ func (s *EngineClient) ForkchoiceUpdate(ctx context.Context, fc *eth.ForkchoiceS
 // and this type of error is kept separate from the returned `error` used for RPC errors, like timeouts.
 func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPayload) (*eth.PayloadStatusV1, error) {
 	e := s.log.New("block_hash", payload.BlockHash)
-	e.Trace("sending payload for execution")
+	e.Info("sending payload for execution")
 
 	execCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 	var result eth.PayloadStatusV1
 	err := s.client.CallContext(execCtx, &result, "engine_newPayloadV1", payload)
-	e.Trace("Received payload execution result", "status", result.Status, "latestValidHash", result.LatestValidHash, "message", result.ValidationError)
+	e.Info("Received payload execution result", "status", result.Status, "latestValidHash", result.LatestValidHash, "message", result.ValidationError)
 	if err != nil {
 		e.Error("Payload execution failed", "err", err)
 		return nil, fmt.Errorf("failed to execute payload: %w", err)
@@ -103,7 +103,7 @@ func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPay
 // 2. Other types of `error`: temporary RPC errors, like timeouts.
 func (s *EngineClient) GetPayload(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
 	e := s.log.New("payload_id", payloadId)
-	e.Trace("getting payload")
+	e.Info("getting payload")
 	var result eth.ExecutionPayload
 	err := s.client.CallContext(ctx, &result, "engine_getPayloadV1", payloadId)
 	if err != nil {
@@ -122,6 +122,6 @@ func (s *EngineClient) GetPayload(ctx context.Context, payloadId eth.PayloadID) 
 		}
 		return nil, err
 	}
-	e.Trace("Received payload")
+	e.Info("Received payload")
 	return &result, nil
 }
