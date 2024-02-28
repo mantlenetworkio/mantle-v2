@@ -191,36 +191,39 @@ func main() {
 				return err
 			}
 
-			//dryRun := ctx.Bool("dry-run")
-			//noCheck := ctx.Bool("no-check")
-			//if noCheck {
-			//	panic("must run with check on")
-			//}
-			//
-			//// Perform the migration
-			//res, err := genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
-			//if err != nil {
-			//	return err
-			//}
+			postCheckOnly := ctx.Bool("post-check-only")
+			dryRun := ctx.Bool("dry-run")
+			noCheck := ctx.Bool("no-check")
 
-			hash := rawdb.ReadHeadHeaderHash(ldb)
-			log.Info("Reading chain tip from database", "hash", hash)
+			var res *genesis.MigrationResult
+			if !postCheckOnly {
+				if noCheck {
+					panic("must run with check on")
+				}
+				// Perform the migration
+				res, err = genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
+				if err != nil {
+					return err
+				}
+			} else {
+				hash := rawdb.ReadHeadHeaderHash(ldb)
+				log.Info("Reading chain tip from database", "hash", hash)
 
-			// Grab the header number.
-			num := rawdb.ReadHeaderNumber(ldb, hash)
-			if num == nil {
-				return fmt.Errorf("cannot find header number for %s", hash)
-			}
+				// Grab the header number.
+				num := rawdb.ReadHeaderNumber(ldb, hash)
+				if num == nil {
+					return fmt.Errorf("cannot find header number for %s", hash)
+				}
+				// Grab the full header.
+				bedrockBlock := rawdb.ReadHeader(ldb, hash, *num)
+				log.Info("Read header from database", "number", *num)
 
-			// Grab the full header.
-			bedrockBlock := rawdb.ReadHeader(ldb, hash, *num)
-			log.Info("Read header from database", "number", *num)
-
-			// Create the result of the migration.
-			res := &genesis.MigrationResult{
-				TransitionHeight:    bedrockBlock.Number.Uint64(),
-				TransitionTimestamp: bedrockBlock.Time,
-				TransitionBlockHash: bedrockBlock.Hash(),
+				// Create the result of the migration.
+				res = &genesis.MigrationResult{
+					TransitionHeight:    bedrockBlock.Number.Uint64(),
+					TransitionTimestamp: bedrockBlock.Time,
+					TransitionBlockHash: bedrockBlock.Hash(),
+				}
 			}
 
 			// Close the database handle
