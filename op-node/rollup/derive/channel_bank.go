@@ -140,6 +140,9 @@ func (cb *ChannelBank) Read() (data []byte, err error) {
 // consistency around channel bank pruning which depends upon the order
 // of operations.
 func (cb *ChannelBank) NextData(ctx context.Context) ([]byte, error) {
+	defer func() {
+		log.Info("--- NextFrame")
+	}()
 	// Do the read from the channel bank first
 	data, err := cb.Read()
 	if err == io.EOF {

@@ -66,6 +66,9 @@ func (bq *BatchQueue) NextBatch(ctx context.Context, safeL2Head eth.L2BlockRef) 
 	// runs, this is consistent.
 	originBehind := bq.prev.Origin().Number < safeL2Head.L1Origin.Number
 
+	defer func() {
+		log.Info("--- NextBatch")
+	}()
 	// Advance origin if needed
 	// Note: The entire pipeline has the same origin
 	// We just don't accept batches prior to the L1 origin of the L2 safe head

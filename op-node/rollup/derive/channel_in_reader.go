@@ -61,6 +61,9 @@ func (cr *ChannelInReader) NextChannel() {
 // It returns io.EOF when it cannot make any more progress.
 // It will return a temporary error if it needs to be called again to advance some internal state.
 func (cr *ChannelInReader) NextBatch(ctx context.Context) (*BatchData, error) {
+	defer func() {
+		log.Info("---- NextData")
+	}()
 	if cr.nextBatchFn == nil {
 		if data, err := cr.prev.NextData(ctx); err == io.EOF {
 			return nil, io.EOF

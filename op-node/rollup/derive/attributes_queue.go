@@ -52,6 +52,7 @@ func (aq *AttributesQueue) NextAttributes(ctx context.Context, l2SafeHead eth.L2
 	// Get a batch if we need it
 	if aq.batch == nil {
 		batch, err := aq.prev.NextBatch(ctx, l2SafeHead)
+		log.Info("----- NextAttributes ")
 		if err != nil {
 			return nil, err
 		}

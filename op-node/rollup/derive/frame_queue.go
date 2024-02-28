@@ -34,6 +34,9 @@ func (fq *FrameQueue) Origin() eth.L1BlockRef {
 }
 
 func (fq *FrameQueue) NextFrame(ctx context.Context) (Frame, error) {
+	defer func() {
+		log.Info("----- NextFrame-NextData")
+	}()
 	// Find more frames if we need to
 	if len(fq.frames) == 0 {
 		if data, err := fq.prev.NextData(ctx); err != nil {

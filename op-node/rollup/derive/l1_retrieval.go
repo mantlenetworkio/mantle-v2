@@ -46,6 +46,9 @@ func (l1r *L1Retrieval) Origin() eth.L1BlockRef {
 // If there is data, it pushes it to the next stage.
 // If there is no more data open ourselves if we are closed or close ourselves if we are open
 func (l1r *L1Retrieval) NextData(ctx context.Context) ([]byte, error) {
+	defer func() {
+		log.Info("---- l1r open data")
+	}()
 	if l1r.datas == nil {
 		next, err := l1r.prev.NextL1Block(ctx)
 		if err == io.EOF {
