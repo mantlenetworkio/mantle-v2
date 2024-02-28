@@ -44,8 +44,10 @@ library Types {
      * @custom:field from        Address of the sender of the transaction.
      * @custom:field to          Address of the recipient of the transaction.
      * @custom:field isCreation  True if the transaction is a contract creation.
-     * @custom:field value       Value to send to the recipient.
-     * @custom:field mint        Amount of ETH to mint.
+     * @custom:field mntValue    Amount of MNT to mint.
+     * @custom:field mntTxValue  Value to send to the recipient.
+     * @custom:field ethValue    Amount of ETH to mint.
+     * @custom:field ethTxValue  Value to send to the recipient.
      * @custom:field gasLimit    Gas limit of the transaction.
      * @custom:field data        Data of the transaction.
      * @custom:field l1BlockHash Hash of the block the transaction was submitted in.
@@ -56,8 +58,9 @@ library Types {
         address to;
         bool isCreation;
         uint256 mntValue;
-        uint256 mint;
+        uint256 mntTxValue;
         uint256 ethValue;
+        uint256 ethTxValue;
         uint64 gasLimit;
         bytes data;
         bytes32 l1BlockHash;
