@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -190,16 +191,36 @@ func main() {
 				return err
 			}
 
-			dryRun := ctx.Bool("dry-run")
-			noCheck := ctx.Bool("no-check")
-			if noCheck {
-				panic("must run with check on")
+			//dryRun := ctx.Bool("dry-run")
+			//noCheck := ctx.Bool("no-check")
+			//if noCheck {
+			//	panic("must run with check on")
+			//}
+			//
+			//// Perform the migration
+			//res, err := genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
+			//if err != nil {
+			//	return err
+			//}
+
+			hash := rawdb.ReadHeadHeaderHash(ldb)
+			log.Info("Reading chain tip from database", "hash", hash)
+
+			// Grab the header number.
+			num := rawdb.ReadHeaderNumber(ldb, hash)
+			if num == nil {
+				return fmt.Errorf("cannot find header number for %s", hash)
 			}
 
-			// Perform the migration
-			res, err := genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
-			if err != nil {
-				return err
+			// Grab the full header.
+			bedrockBlock := rawdb.ReadHeader(ldb, hash, *num)
+			log.Info("Read header from database", "number", *num)
+
+			// Create the result of the migration.
+			res := &genesis.MigrationResult{
+				TransitionHeight:    bedrockBlock.Number.Uint64(),
+				TransitionTimestamp: bedrockBlock.Time,
+				TransitionBlockHash: bedrockBlock.Hash(),
 			}
 
 			// Close the database handle
