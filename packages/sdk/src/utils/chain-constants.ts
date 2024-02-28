@@ -16,7 +16,6 @@ export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [L2ChainID.MANTLE_HARDHAT_DEVNET]: 2 as const,
   [L2ChainID.MANTLE_V2_LOCAL_DEVNET]: 2 as const,
   [L2ChainID.MANTLE_SEPOLIA_TESTNET]: 12 as const,
-
 }
 
 export const CHAIN_BLOCK_TIMES: {
@@ -117,9 +116,9 @@ export const CONTRACT_ADDRESSES: {
       BondManager: '0xeBE3f28BbFa7bB8f2C066C1A792073203B985e27' as const,
       Rollup:
         process.env.Rollup ||
-        ('0x9faB987C9C469EB23Da31B7848B28aCf30905eA8' as const),
-      OptimismPortal: process.env.OptimismPortal || '0x0000000000000000000000000000000000000000' as const,
-      L2OutputOracle: process.env.L2OutputOracle || '0x0000000000000000000000000000000000000000' as const,
+        ('0x95d82F64C84A69338e7DE18612AcC86C50eB57D6' as const),
+      OptimismPortal: process.env.OptimismPortal || '0x2eD00c9eefD29Ba89F5134ba4aeE695e42702DcC' as const,
+      L2OutputOracle: process.env.L2OutputOracle || '0x70dd17020ae9EFcDD2b7c306AfDC0D98c906d7AD' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
