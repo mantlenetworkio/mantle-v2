@@ -139,6 +139,7 @@ func (d *Sequencer) PlanNextSequencerAction() time.Duration {
 	// We may have to wait till the next sequencing action, e.g. upon an error.
 	// If the head changed we need to respond and will not delay the sequencing.
 	if delay := d.nextAction.Sub(now); delay > 0 && buildingOnto.Hash == head.Hash {
+		d.log.Info("PlanNextSequencerAction", "nextAction", d.nextAction, "now", now, "delay", delay)
 		return delay
 	}
 
