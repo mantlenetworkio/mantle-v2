@@ -80,6 +80,8 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 	if cfg.MantleDaSwitch {
 		log.Info("Derived by mantle da", "MantleDaSwitch", cfg.MantleDaSwitch)
 		_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
+		log.Info("get receipts success", "bloch hash", block.Hash)
+
 		if err != nil {
 			log.Error("Fetch txs by hash fail", "err", err)
 			// Here is the original return method keeping op-stack
@@ -127,8 +129,10 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 // otherwise it returns a temporary error if fetching the block returns an error.
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
+		log.Info("start to get receipts ")
 		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
 			if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
+				log.Info("end to get receipts ")
 				ds.open = true
 				ds.data = dataFromMantleDa(ds.cfg, receipts, ds.syncer, ds.metrics, log.New("origin", ds.id))
 			} else if errors.Is(err, ethereum.NotFound) {
@@ -179,6 +183,10 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 }
 
 func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) []eth.Data {
+	defer func() {
+		log.Info("dataFromMantleDa end")
+	}()
+
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
