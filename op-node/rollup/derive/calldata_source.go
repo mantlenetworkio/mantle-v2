@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -179,6 +180,9 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 }
 
 func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) []eth.Data {
+	defer func() {
+		log.Info("----------- end to loop receipts ", time.Now())
+	}()
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
@@ -202,6 +206,7 @@ func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 		},
 	}
 	var dataStoreData = make(map[string]interface{})
+	log.Info("------- start to loop receipts ", "time", time.Now())
 	for _, receipt := range receipts {
 		for _, rLog := range receipt.Logs {
 			if strings.ToLower(rLog.Address.String()) != strings.ToLower(config.DataLayrServiceManagerAddr) {
