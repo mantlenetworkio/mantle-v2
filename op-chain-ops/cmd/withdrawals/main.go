@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mattn/go-isatty"
+	"github.com/urfave/cli/v2"
 	"math/big"
 	"os"
 	"strings"
-	"time"
-
-	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
@@ -720,23 +718,23 @@ func proveWithdrawalTransaction(c *contracts, cl *util.Clients, opts *bind.Trans
 
 	log.Info("withdrawal proved", "tx-hash", tx.Hash(), "withdrawal-hash", hash)
 
-	block, err := cl.L1Client.BlockByHash(context.Background(), receipt.BlockHash)
-	if err != nil {
-		return err
-	}
-	initialTime := block.Time()
-	for {
-		log.Info("waiting for finalization")
-		if block.Time() >= initialTime+finalizationPeriod.Uint64() {
-			log.Info("can be finalized")
-			break
-		}
-		time.Sleep(1 * time.Second)
-		block, err = cl.L1Client.BlockByNumber(context.Background(), nil)
-		if err != nil {
-			return err
-		}
-	}
+	//block, err := cl.L1Client.BlockByHash(context.Background(), receipt.BlockHash)
+	//if err != nil {
+	//	return err
+	//}
+	//initialTime := block.Time()
+	//for {
+	//	log.Info("waiting for finalization")
+	//	if block.Time() >= initialTime+finalizationPeriod.Uint64() {
+	//		log.Info("can be finalized")
+	//		break
+	//	}
+	//	time.Sleep(1 * time.Second)
+	//	block, err = cl.L1Client.BlockByNumber(context.Background(), nil)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 
