@@ -214,10 +214,14 @@ func getMedian(nums []float64) float64 {
 		}
 	}
 	sort.Float64s(nonZeros)
-	if len(nonZeros) == 0 {
+	n := len(nonZeros)
+	if n == 0 {
 		return 0
 	}
-	return nonZeros[len(nonZeros)/2]
+	if n%2 == 0 {
+		return (nonZeros[n/2-1] + nonZeros[n/2]) / 2
+	}
+	return nonZeros[n/2]
 }
 
 func getMax(a, b float64) float64 {
