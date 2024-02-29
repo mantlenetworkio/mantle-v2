@@ -141,8 +141,8 @@ func main() {
 				return err
 			}
 
-			need_proven := ctx.Bool("need_proven")
-			need_finalized := ctx.Bool("need_finalized")
+			need_proven := ctx.Bool("need-proven")
+			need_finalized := ctx.Bool("need-finalized")
 
 			// initialize the contract bindings
 			contracts, err := newContracts(ctx, clients.L1Client, clients.L2Client)
@@ -950,7 +950,7 @@ func createOutput(
 		return nil, bindings.TypesOutputRootProof{}, nil, err
 	}
 
-	log.Debug(
+	log.Info(
 		"L2 output",
 		"index", l2OutputIndex,
 		"root", common.Bytes2Hex(l2Output.OutputRoot[:]),
@@ -963,6 +963,11 @@ func createOutput(
 	if err != nil {
 		return nil, bindings.TypesOutputRootProof{}, nil, err
 	}
+	log.Info(
+		"header",
+		"root", header.Root.Hex(),
+		"hash", header.Hash().Hex(),
+		"l2block", l2Output.L2BlockNumber)
 
 	// get the storage proof for the withdrawal's storage slot
 	proof, err := clients.L2GethClient.GetProof(context.Background(), predeploys.L2ToL1MessagePasserAddr, []string{slot.String()}, blockNumber)
