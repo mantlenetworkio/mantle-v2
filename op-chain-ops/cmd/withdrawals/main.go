@@ -970,7 +970,7 @@ func createOutput(
 		"l2block", l2Output.L2BlockNumber)
 
 	// get the storage proof for the withdrawal's storage slot
-	proof, err := clients.L2GethClient.GetProof(context.Background(), predeploys.L2ToL1MessagePasserAddr, []string{slot.String()}, blockNumber)
+	proof, err := clients.L2GethClient.GetProof(context.Background(), predeploys.L2ToL1MessagePasserAddr, []string{slot.String()}, l2Output.L2BlockNumber)
 
 	if err != nil {
 		return nil, bindings.TypesOutputRootProof{}, nil, err
