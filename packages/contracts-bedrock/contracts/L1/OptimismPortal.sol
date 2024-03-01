@@ -162,7 +162,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         bool _paused,
         SystemConfig _config,
         address _l1MNT
-    ) Semver(1, 6, 0) {
+    ) Semver(1, 7, 0) {
         L2_ORACLE = _l2Oracle;
         GUARDIAN = _guardian;
         SYSTEM_CONFIG = _config;
