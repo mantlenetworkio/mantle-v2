@@ -41,7 +41,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     /**
      * @notice Version of the deposit event.
      */
-    uint256 internal constant DEPOSIT_VERSION = 0;
+    uint256 internal constant DEPOSIT_VERSION = 1;
 
     /**
      * @notice The L2 gas limit set when eth is deposited using the receive() function.
@@ -216,7 +216,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      */
     // solhint-disable-next-line ordering
     receive() external payable {
-        depositTransaction(0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
+        depositTransaction(msg.value, 0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
     /**
@@ -417,6 +417,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         if (_tx.mntValue>0){
             l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         }
+        require(_tx.target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
         // Reset the l2Sender back to the default value.
         l2Sender = Constants.DEFAULT_L2_SENDER;
@@ -428,7 +429,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if (success && l1mntSuccess == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if ((success == false || l1mntSuccess == false) && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }
@@ -439,6 +440,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         address will be aliased when retrieved using `tx.origin` or `msg.sender`. Consider
      *         using the CrossDomainMessenger contracts for a simpler developer experience.
      *
+     * @param _ethTxValue BVM_ETH value to send to the recipient.
      * @param _mntValue   Mint MNT amount to from address on L2
      * @param _to         Target address on L2.
      * @param _mntTxValue MNT value to send to the recipient.
@@ -447,6 +449,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @param _data       Data to trigger the recipient with.
      */
     function depositTransaction(
+        uint256 _ethTxValue,
         uint256 _mntValue,
         address _to,
         uint256 _mntTxValue,
@@ -493,6 +496,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
             _mntValue,
             _mntTxValue,
             msg.value,
+            _ethTxValue,
             _gasLimit,
             _isCreation,
             _data

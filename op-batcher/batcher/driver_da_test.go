@@ -70,6 +70,7 @@ func TestTxAggregator(t *testing.T) {
 			log:           log,
 			RollupMaxSize: 100,
 			GraphClient:   graphClient,
+			metr:          metrics.NewMetrics("default"),
 		},
 		txMgr: nil,
 		state: m,

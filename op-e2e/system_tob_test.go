@@ -323,7 +323,7 @@ func TestMixedDepositValidity(t *testing.T) {
 		} else {
 			transferValue = new(big.Int).Mul(common.Big2, transactor.ExpectedL2Balance) // trigger a revert by trying to transfer our current balance * 2
 		}
-		tx, err := depositContract.DepositTransaction(transactor.Account.L1Opts, big.NewInt(0), toAddr, transferValue, 100_000, false, nil)
+		tx, err := depositContract.DepositTransaction(transactor.Account.L1Opts, transactor.Account.L1Opts.Value, big.NewInt(0), toAddr, transferValue, 100_000, false, nil)
 		require.Nil(t, err, "with deposit tx")
 
 		// Wait for the deposit tx to appear in L1.

@@ -90,6 +90,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
 
     function test_depositTransaction_benchmark() external {
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            NON_ZERO_VALUE,
             ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
@@ -102,6 +103,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
     function test_depositTransaction_benchmark_1() external {
         setPrevBaseFee(vm, address(op), 1 gwei);
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            NON_ZERO_VALUE,
             ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,

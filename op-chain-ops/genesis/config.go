@@ -488,6 +488,9 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 	immutable["LegacyERC20MNT"] = immutables.ImmutableValues{
 		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
+	immutable["L2ToL1MessagePasser"] = immutables.ImmutableValues{
+		"L1_MNT_ADDRESS": config.L1MantleToken,
+	}
 
 	return immutable, nil
 }

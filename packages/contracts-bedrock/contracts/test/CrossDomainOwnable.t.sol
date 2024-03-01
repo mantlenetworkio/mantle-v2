@@ -54,6 +54,7 @@ contract CrossDomainOwnableThroughPortal_Test is Portal_Initializer {
 
         vm.prank(alice);
         op.depositTransaction({
+            _ethTxValue : 0,
             _mntValue : 0,
             _to: address(setter),
             _mntTxValue: 0,

@@ -59,7 +59,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint64 _gasLimit,
         bytes memory _data
     ) internal override {
-        PORTAL.depositTransaction{value: msg.value}(_mntAmount, _to, _mntAmount, _gasLimit, false, _data);
+        PORTAL.depositTransaction{value: msg.value}(msg.value, _mntAmount, _to, _mntAmount, _gasLimit, false, _data);
     }
 
     /**
@@ -246,17 +246,16 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
 
             return;
         }
-        bool mntSuccess = true;
         if (_mntValue!=0){
-            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target, _mntValue);
+            IERC20(L1_MNT_ADDRESS).approve(_target, _mntValue);
         }
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _ethValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
         if (_mntValue!=0){
-            mntSuccess = IERC20(L1_MNT_ADDRESS).approve(_target, 0);
+            IERC20(L1_MNT_ADDRESS).approve(_target, 0);
         }
-        if (success && mntSuccess) {
+        if (success) {
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {
