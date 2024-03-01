@@ -146,6 +146,7 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 		log.Error("get lastest datastore fail", "err", err)
 		return nil, err
 	}
+	log.Info("get last dataStore success", "dataStoreId", dataStore.StoreNumber)
 
 	if !dataStore.Confirmed && dataStoreId < lastDataStore.StoreNumber {
 		log.Warn("this batch is not confirmed in mantle da,but new batch is confirmed,data corruption exists,need to skip this dataStoreId ", "dataStore id", dataStoreId, "latest dataStore id", lastDataStore.StoreNumber)

@@ -236,9 +236,10 @@ func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 					continue
 				}
 				if dataStoreData != nil {
-					dataStoreId := dataStoreData["dataStoreId"].(uint32)
+					nextDataStoreId := dataStoreData["dataStoreId"].(uint32)
+					dataStoreId := nextDataStoreId - 1
 					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
-					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId - 1)
+					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
 					if err != nil {
 						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
 						return out, err
