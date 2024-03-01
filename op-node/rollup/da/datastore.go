@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"strconv"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 )
 
