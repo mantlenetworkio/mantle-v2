@@ -177,10 +177,12 @@ abstract contract ResourceMetering is Initializable {
      */
     // solhint-disable-next-line func-name-mixedcase
     function __ResourceMetering_init() internal onlyInitializing {
-        params = ResourceParams({
-            prevBaseFee: 1 gwei,
-            prevBoughtGas: 0,
-            prevBlockNum: uint64(block.number)
-        });
+        if (params.prevBlockNum == 0) {
+            params = ResourceParams({
+                prevBaseFee: 1 gwei,
+                prevBoughtGas: 0,
+                prevBlockNum: uint64(block.number)
+            });
+        }
     }
 }
