@@ -35,7 +35,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      * @param _portal Address of the OptimismPortal contract on this network.
      */
     constructor(OptimismPortal _portal, address l1mnt)
-        Semver(1, 4, 0)
+        Semver(1, 5, 0)
         CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER)
     {
         PORTAL = _portal;
@@ -256,6 +256,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
             IERC20(L1_MNT_ADDRESS).approve(_target, 0);
         }
         if (success) {
+            require(!successfulMessages[versionedHash], "versionedHash has already be marked as successful");
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {

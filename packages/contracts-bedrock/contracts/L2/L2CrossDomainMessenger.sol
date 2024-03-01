@@ -30,7 +30,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
      * @param _l1CrossDomainMessenger Address of the L1CrossDomainMessenger contract.
      */
     constructor(address _l1CrossDomainMessenger)
-        Semver(1, 4, 0)
+        Semver(1, 5, 0)
         CrossDomainMessenger(_l1CrossDomainMessenger)
     {
         initialize();
@@ -261,6 +261,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
 
         if (success && ethSuccess) {
+            require(!successfulMessages[versionedHash], "versionedHash has already be marked as successful");
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {
