@@ -162,7 +162,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         bool _paused,
         SystemConfig _config,
         address _l1MNT
-    ) Semver(1, 6, 0) {
+    ) Semver(1, 7, 0) {
         L2_ORACLE = _l2Oracle;
         GUARDIAN = _guardian;
         SYSTEM_CONFIG = _config;
@@ -174,7 +174,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @notice Initializer.
      */
     function initialize(bool _paused) public initializer {
-        l2Sender = Constants.DEFAULT_L2_SENDER;
+        if (l2Sender == address(0)) {
+            l2Sender = Constants.DEFAULT_L2_SENDER;
+        }
         paused = _paused;
         __ResourceMetering_init();
     }
@@ -413,7 +415,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool l1mntSuccess = false;
+        bool l1mntSuccess = true;
         if (_tx.mntValue>0){
             l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         }

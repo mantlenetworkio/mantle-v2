@@ -98,7 +98,7 @@ contract L1ERC721Bridge is ERC721Bridge, Semver {
 
         // Lock token into bridge
         deposits[_localToken][_remoteToken][_tokenId] = true;
-        IERC721(_localToken).transferFrom(_from, address(this), _tokenId);
+        IERC721(_localToken).safeTransferFrom(_from, address(this), _tokenId);
 
         // Send calldata into L2
         MESSENGER.sendMessage(0, OTHER_BRIDGE, message, _minGasLimit);
