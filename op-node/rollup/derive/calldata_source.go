@@ -34,6 +34,8 @@ type L1TransactionFetcher interface {
 
 type MantleDaSyncer interface {
 	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
+	IsDaIndexer() bool
 }
 
 // DataSourceFactory readers raw transactions from a given block & then filters for
@@ -239,7 +241,12 @@ func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 					nextDataStoreId := dataStoreData["dataStoreId"].(uint32)
 					dataStoreId := nextDataStoreId - 1
 					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
-					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId)
+					var daFrames []byte
+					if syncer.IsDaIndexer() {
+						daFrames, err = syncer.RetrievalFramesFromDaIndexer(dataStoreId)
+					} else {
+						daFrames, err = syncer.RetrievalFramesFromDa(dataStoreId)
+					}
 					if err != nil {
 						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
 						return out, err
