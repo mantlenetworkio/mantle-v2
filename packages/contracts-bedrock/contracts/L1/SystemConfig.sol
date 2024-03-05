@@ -77,6 +77,11 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     uint256 public baseFee;
 
     /**
+     * @notice Reserve extra slots (to a total of 50) in the storage layout for future upgrades.
+     */
+    uint256[49] private __gap;
+
+    /**
      * @notice Emitted when configuration is updated
      *
      * @param version    SystemConfig version.

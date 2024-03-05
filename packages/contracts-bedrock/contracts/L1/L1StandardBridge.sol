@@ -706,8 +706,13 @@ contract L1StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).mint(_to, _amount);
         } else {
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
+
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransfer(_to, _amount);
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 sentAmount = balanceBefore - balanceAfter;
+
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - sentAmount;
         }
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
@@ -817,8 +822,11 @@ contract L1StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).burn(_from, _amount);
         } else {
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 receivedAmount = balanceAfter - balanceBefore;
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + receivedAmount;
         }
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
