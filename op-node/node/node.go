@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p/core/peer"
-	
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -140,6 +140,13 @@ func (n *OpNode) initL1(ctx context.Context, cfg *Config) error {
 		}
 		return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewL1Head)
 	})
+
+	if fallbackClient, ok := l1Node.(*sources.FallbackClient); ok {
+		fallbackClient.RegisterSubscribeFunc(func() (event.Subscription, error) {
+			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewL1Head)
+		}, &n.l1HeadsSub)
+		fallbackClient.RegisterMetrics(n.metrics)
+	}
 	go func() {
 		err, ok := <-n.l1HeadsSub.Err()
 		if !ok {
