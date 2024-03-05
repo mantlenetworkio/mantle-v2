@@ -74,6 +74,7 @@ type Metricer interface {
 	ClientPayloadByNumberEvent(num uint64, resultCode byte, duration time.Duration)
 	ServerPayloadByNumberEvent(num uint64, resultCode byte, duration time.Duration)
 	PayloadsQuarantineSize(n int)
+	RecordL1UrlSwitchEvent()
 }
 
 // Metrics tracks all the metrics for the op-node.
@@ -141,6 +142,8 @@ type Metrics struct {
 	ChannelInputBytes prometheus.Counter
 
 	ParseDataStoreId prometheus.Gauge
+
+	L1UrlSwitchEvent *EventMetrics
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
@@ -425,6 +428,7 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "sequencer_sealing_total",
 			Help:      "Number of sequencer block sealing jobs",
 		}),
+		L1UrlSwitchEvent: NewEventMetrics(factory, ns, "l1_url_switch", "L1 URL switch events"),
 
 		registry: registry,
 		factory:  factory,
@@ -680,6 +684,10 @@ func (m *Metrics) RecordParseDataStoreId(dataStoreId uint32) {
 	m.ParseDataStoreId.Set(float64(dataStoreId))
 }
 
+func (m *Metrics) RecordL1UrlSwitchEvent() {
+	m.L1UrlSwitchEvent.RecordEvent()
+}
+
 type noopMetricer struct{}
 
 var NoopMetrics Metricer = new(noopMetricer)
@@ -787,4 +795,7 @@ func (n *noopMetricer) RecordChannelInputBytes(int) {
 }
 
 func (n *noopMetricer) RecordParseDataStoreId(dataStoreId uint32) {
+}
+
+func (m *noopMetricer) RecordL1UrlSwitchEvent() {
 }

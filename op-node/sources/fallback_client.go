@@ -142,7 +142,7 @@ func (l *FallbackClient) switchCurrentRpc() {
 		return
 	}
 	if l.metrics != nil {
-		// l.metrics.RecordL1UrlSwitchEvent()
+		l.metrics.RecordL1UrlSwitchEvent()
 	}
 	for {
 		l.currentIndex++
@@ -197,6 +197,7 @@ func (l *FallbackClient) reSubscribeNewRpc(url string) error {
 		l.log.Error("can not subscribe new url", "url", url, "err", err)
 		return err
 	} else {
+		// log.Info("reSubscribeNewRpc", "l1HeadsSub", l.l1HeadsSub, "subscriptionNew", subscriptionNew)
 		*l.l1HeadsSub = subscriptionNew
 	}
 	return nil

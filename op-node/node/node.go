@@ -143,6 +143,7 @@ func (n *OpNode) initL1(ctx context.Context, cfg *Config) error {
 
 	if fallbackClient, ok := l1Node.(*sources.FallbackClient); ok {
 		fallbackClient.RegisterSubscribeFunc(func() (event.Subscription, error) {
+			log.Info("resubscribing after failed L1 subscription")
 			return eth.WatchHeadChanges(n.resourcesCtx, n.l1Source, n.OnNewL1Head)
 		}, &n.l1HeadsSub)
 		fallbackClient.RegisterMetrics(n.metrics)
