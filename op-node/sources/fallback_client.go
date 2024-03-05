@@ -69,6 +69,7 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 			case <-fallbackClient.isClose:
 				return
 			default:
+				// log.Info("FallbackClient lastMinuteFail", "lastMinuteFail", fallbackClient.lastMinuteFail.Load())
 				if fallbackClient.lastMinuteFail.Load() >= threshold {
 					fallbackClient.switchCurrentRpc()
 				}
@@ -99,6 +100,7 @@ func (l *FallbackClient) CallContext(ctx context.Context, result any, method str
 }
 
 func (l *FallbackClient) handleErr(err error) {
+	l.log.Error("FallbackClient handleErr", "err", err)
 	if errors.Is(err, rpc.ErrNoResult) {
 		return
 	}
@@ -129,6 +131,7 @@ func (l *FallbackClient) EthSubscribe(ctx context.Context, channel any, args ...
 }
 
 func (l *FallbackClient) switchCurrentRpc() {
+	// l.log.Info("FallbackClient switchCurrentRpc", "l.currentIndex", l.currentIndex, "l.urlList", l.urlList, "lastMinuteFail", l.lastMinuteFail.Load())
 	if l.currentIndex >= len(l.urlList) {
 		l.log.Error("the fallback client has tried all urls, but all failed")
 		return
@@ -158,6 +161,7 @@ func (l *FallbackClient) switchCurrentRpc() {
 
 func (l *FallbackClient) switchCurrentRpcLogic() error {
 	url := l.urlList[l.currentIndex]
+	// l.log.Info("FallbackClient switchCurrentRpcLogic", "url", url)
 	newRpc, err := l.rpcInitFunc(url)
 	if err != nil {
 		return fmt.Errorf("the fallback client init RPC failed,url:%s, err:%w", url, err)

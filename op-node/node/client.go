@@ -182,8 +182,10 @@ func (cfg *L1EndpointConfig) Setup(ctx context.Context, log log.Logger, rollupCf
 		opts = append(opts, client.WithRateLimit(cfg.RateLimit, cfg.BatchSize))
 	}
 
+	log.Info("L1NodeAddr", "L1NodeAddr", cfg.L1NodeAddr)
 	isMultiUrl, urlList := MultiUrlParse(cfg.L1NodeAddr)
 	if isMultiUrl {
+		log.Info("Using fallback client for L1 RPC", "urls", urlList)
 		return fallbackClientWrap(ctx, log, urlList, cfg, rollupCfg, opts...)
 	}
 

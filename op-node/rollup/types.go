@@ -164,7 +164,7 @@ func (cfg *Config) CheckL1GenesisBlockHash(ctx context.Context, client L1Client)
 		return err
 	}
 	if l1GenesisBlockRef.Hash != cfg.Genesis.L1.Hash {
-		return fmt.Errorf("incorrect L1 genesis block hash %d, expected %d", cfg.Genesis.L1.Hash, l1GenesisBlockRef.Hash)
+		return fmt.Errorf("incorrect L1 genesis block hash %s, expected %s", cfg.Genesis.L1.Hash.String(), l1GenesisBlockRef.Hash.String())
 	}
 	return nil
 }
