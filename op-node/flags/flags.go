@@ -37,7 +37,7 @@ var (
 	FallbackTicker = cli.DurationFlag{
 		Name:   "fallback-ticker",
 		Usage:  "Ticker for the fallback client to check the health of the current RPC (unit: second)",
-		Value:  60,
+		Value:  60 * time.Second,
 		EnvVar: prefixEnvVar("FALLBACK_TICKER"),
 	}
 	L2EngineAddr = cli.StringFlag{
