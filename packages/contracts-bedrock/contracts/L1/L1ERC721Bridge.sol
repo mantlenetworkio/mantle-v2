@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import { ERC721Bridge } from "../universal/ERC721Bridge.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { L2ERC721Bridge } from "../L2/L2ERC721Bridge.sol";
 import { Semver } from "../universal/Semver.sol";
 
@@ -12,7 +13,7 @@ import { Semver } from "../universal/Semver.sol";
  *         make it possible to transfer ERC721 tokens from Ethereum to Optimism. This contract
  *         acts as an escrow for ERC721 tokens deposited into L2.
  */
-contract L1ERC721Bridge is ERC721Bridge, Semver {
+contract L1ERC721Bridge is ERC721Bridge, IERC721Receiver, Semver {
     /**
      * @notice Mapping of L1 token to L2 token to ID to boolean, indicating if the given L1 token
      *         by ID was deposited for a given L2 token.
@@ -103,5 +104,17 @@ contract L1ERC721Bridge is ERC721Bridge, Semver {
         // Send calldata into L2
         MESSENGER.sendMessage(0, OTHER_BRIDGE, message, _minGasLimit);
         emit ERC721BridgeInitiated(_localToken, _remoteToken, _from, _to, _tokenId, _extraData);
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }
