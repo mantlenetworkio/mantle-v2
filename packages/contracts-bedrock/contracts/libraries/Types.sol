@@ -45,9 +45,9 @@ library Types {
      * @custom:field to          Address of the recipient of the transaction.
      * @custom:field isCreation  True if the transaction is a contract creation.
      * @custom:field mntValue    Amount of MNT to mint.
-     * @custom:field mntTxValue  MNT value to send to the recipient.
+     * @custom:field mntTxValue  MNT Value to send to the recipient.
      * @custom:field ethValue    Amount of ETH to mint.
-     * @custom:field ethTxValue  ETH value to send to the recipient.
+     * @custom:field ethTxValue  ETH Value to send to the recipient.
      * @custom:field gasLimit    Gas limit of the transaction.
      * @custom:field data        Data of the transaction.
      * @custom:field l1BlockHash Hash of the block the transaction was submitted in.

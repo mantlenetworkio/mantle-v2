@@ -22,13 +22,13 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
     {}
 
     /**
-     * @notice Returns the ETH balance of the target account. Overrides the base behavior of the
+     * @notice Returns the MNT balance of the target account. Overrides the base behavior of the
      *         contract to preserve the invariant that the balance within this contract always
      *         matches the balance in the state trie.
      *
      * @param _who Address of the account to query.
      *
-     * @return The ETH balance of the target account.
+     * @return The MNT balance of the target account.
      */
     function balanceOf(address _who) public view virtual override returns (uint256) {
         return _who.balance;

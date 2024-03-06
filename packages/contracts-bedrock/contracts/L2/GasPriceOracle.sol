@@ -82,7 +82,7 @@ contract GasPriceOracle is Semver {
      */
     // slither-disable-next-line external-function
     function setTokenRatio(uint256 _tokenRatio) external onlyOperator {
-        uint256 previousTokenRatio = _tokenRatio;
+        uint256 previousTokenRatio = tokenRatio;
         tokenRatio = _tokenRatio;
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
     }

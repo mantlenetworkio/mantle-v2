@@ -18,7 +18,7 @@ library Burn {
     /**
      * Consumes a given amount of gas.
      *
-     * @param _amount Amount of gas to burn.
+     * @param _amount Amount of gas to consume.
      */
     function gas(uint256 _amount) internal view {
         uint256 i = 0;
