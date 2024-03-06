@@ -59,7 +59,7 @@ contract GasPriceOracle is Semver {
     * @param _operator New operator
      */
     // slither-disable-next-line external-function
-    function setOperator(address _operator) public onlyOwner {
+    function setOperator(address _operator) external onlyOwner {
         address previousOperator = operator;
         operator = _operator;
         emit OperatorUpdated(previousOperator, operator);
@@ -69,7 +69,7 @@ contract GasPriceOracle is Semver {
      * @dev Transfers ownership of the contract to a new account (`_owner`).
      * Can only be called by the current owner.
      */
-    function transferOwnership(address _owner) public onlyOwner {
+    function transferOwnership(address _owner) external onlyOwner {
         require(_owner != address(0), "new owner is the zero address");
         address previousOwner = owner;
         owner = _owner;
@@ -81,7 +81,7 @@ contract GasPriceOracle is Semver {
     * @param _tokenRatio New tokenRatio
      */
     // slither-disable-next-line external-function
-    function setTokenRatio(uint256 _tokenRatio) public onlyOperator {
+    function setTokenRatio(uint256 _tokenRatio) external onlyOperator {
         uint256 previousTokenRatio = _tokenRatio;
         tokenRatio = _tokenRatio;
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);

@@ -26,7 +26,7 @@ contract PortalSender {
      * @notice Sends balance of this contract to the OptimismPortal.
                 on the Mantle Mainnet, this function will donate ETH and MNT
      */
-    function donate() public {
+    function donate() external {
         uint256 totalAmount = IERC20(PORTAL.L1_MNT_ADDRESS()).balanceOf(address(this));
         bool succ = IERC20(PORTAL.L1_MNT_ADDRESS()).transfer(address(PORTAL),totalAmount);
         require(succ,"donate mnt failed");
