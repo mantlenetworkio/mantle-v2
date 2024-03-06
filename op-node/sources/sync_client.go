@@ -121,7 +121,7 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end eth.L2BlockR
 
 	for i := start.Number + 1; i < endNum; i++ {
 		if len(s.requests) == requestsChannelBufferSize {
-			return nil
+			return fmt.Errorf("sync client requests channel is full, cannot schedule more requests")
 		}
 		select {
 		case s.requests <- i:
