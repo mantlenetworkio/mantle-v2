@@ -319,7 +319,7 @@ contract Messenger_Initializer is Portal_Initializer {
 
         vm.etch(
             Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-            address(new L2CrossDomainMessenger(address(L1Messenger))).code
+            address(new L2CrossDomainMessenger(address(L1Messenger), address(l1MNT))).code
         );
 
         L2Messenger.initialize();

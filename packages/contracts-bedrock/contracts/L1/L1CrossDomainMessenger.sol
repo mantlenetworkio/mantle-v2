@@ -29,11 +29,11 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     OptimismPortal public immutable PORTAL;
 
     /**
-     * @notice Address of the MNT on L1.
+     * @notice Address of the Mantle Token on L1.
      */
     address public immutable L1_MNT_ADDRESS;
     /**
-     * @custom:semver 1.4.0
+     * @custom:semver 1.5.0
      *
      * @param _portal Address of the OptimismPortal contract on this network.
      */
@@ -75,6 +75,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
+        require(_target != Predeploys.BVM_ETH, "target must not be BVM_ETH on L2");
+
         if (_mntAmount!=0){
             IERC20(L1_MNT_ADDRESS).safeTransferFrom(msg.sender, address(this), _mntAmount);
             bool success = IERC20(L1_MNT_ADDRESS).approve(address(PORTAL), _mntAmount);
@@ -118,6 +120,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
+        require(_target != Predeploys.BVM_ETH, "target must not be BVM_ETH on L2");
+
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least

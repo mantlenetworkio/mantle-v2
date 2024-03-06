@@ -24,15 +24,22 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
     using SafeERC20 for IERC20;
+
     /**
-     * @custom:semver 1.4.0
+     * @notice Address of the Mantle Token on L1.
+     */
+    address public immutable L1_MNT_ADDRESS;
+
+    /**
+     * @custom:semver 1.5.0
      *
      * @param _l1CrossDomainMessenger Address of the L1CrossDomainMessenger contract.
      */
-    constructor(address _l1CrossDomainMessenger)
+    constructor(address _l1CrossDomainMessenger, address l1mnt)
         Semver(1, 5, 0)
         CrossDomainMessenger(_l1CrossDomainMessenger)
     {
+        L1_MNT_ADDRESS = l1mnt;
         initialize();
     }
 
@@ -77,6 +84,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
+        require(_target != L1_MNT_ADDRESS, "target must not be MNT address on L1");
         if (_ethAmount != 0) {
             IERC20(Predeploys.BVM_ETH).safeTransferFrom(msg.sender, address(this), _ethAmount);
         }
@@ -118,6 +126,8 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
         uint32 _minGasLimit
     ) external payable override {
         require(_target!=tx.origin || msg.value==0, "once target is an EOA, msg.value must be zero");
+        require(_target != L1_MNT_ADDRESS, "target must not be MNT address on L1");
+
         // Triggers a message to the other messenger. Note that the amount of gas provided to the
         // message is the amount of gas requested by the user PLUS the base gas value. We want to
         // guarantee the property that the call to the target contract will always have at least
