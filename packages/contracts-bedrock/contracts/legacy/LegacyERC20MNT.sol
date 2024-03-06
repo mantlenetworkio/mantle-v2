@@ -36,7 +36,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Mints some amount of ETH.
+     * @notice Mints some amount of MNT.
      */
     function mint(address, uint256) public virtual override {
         revert("LegacyERC20MNT: mint is disabled");
@@ -44,7 +44,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Burns some amount of ETH.
+     * @notice Burns some amount of MNT.
      */
     function burn(address, uint256) public virtual override {
         revert("LegacyERC20MNT: burn is disabled");
@@ -52,7 +52,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Transfers some amount of ETH.
+     * @notice Transfers some amount of MNT.
      */
     function transfer(address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: transfer is disabled");
@@ -60,7 +60,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Approves a spender to spend some amount of ETH.
+     * @notice Approves a spender to spend some amount of MNT.
      */
     function approve(address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: approve is disabled");

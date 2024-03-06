@@ -16,7 +16,7 @@ library Burn {
     }
 
     /**
-     * Burns a given amount of gas.
+     * Consumes a given amount of gas.
      *
      * @param _amount Amount of gas to burn.
      */
@@ -31,8 +31,8 @@ library Burn {
 
 /**
  * @title Burner
- * @notice Burner self-destructs on creation and sends all ETH to itself, removing all ETH given to
- *         the contract from the circulating supply. Self-destructing is the only way to remove ETH
+ * @notice Burner self-destructs on creation and sends all MNT to itself, removing all MNT given to
+ *         the contract from the circulating supply. Self-destructing is the only way to remove MNT
  *         from the circulating supply.
  */
 contract Burner {
