@@ -22,6 +22,9 @@ abstract contract CrossDomainOwnable3 is Ownable {
     /**
      * @notice Emits when ownership of the contract is transferred. Includes the
      *         isLocal field in addition to the standard `Ownable` OwnershipTransferred event.
+     * @param previousOwner The previous owner of the contract.
+     * @param newOwner   The new owner of the contract.
+     * @param isLocal Configures the locality of the ownership.
      */
     event OwnershipTransferred(
         address indexed previousOwner,

@@ -28,6 +28,9 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
      */
     OptimismPortal public immutable PORTAL;
 
+    /**
+     * @notice Address of the MNT on L1.
+     */
     address public immutable L1_MNT_ADDRESS;
     /**
      * @custom:semver 1.4.0
