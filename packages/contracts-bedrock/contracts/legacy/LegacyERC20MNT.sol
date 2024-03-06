@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
+
 /**
  * @custom:legacy
  * @custom:proxied
@@ -17,9 +18,9 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
     /**
      * @notice Initializes the contract as an Optimism Mintable ERC20.
      */
-    constructor(address _l1mnt)
-        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT")
-    {}
+    constructor(
+        address _l1mnt
+    ) OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT") {}
 
     /**
      * @notice Returns the ETH balance of the target account. Overrides the base behavior of the
@@ -36,7 +37,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Mints some amount of ETH.
+     * @notice Mints some amount of MNT.
      */
     function mint(address, uint256) public virtual override {
         revert("LegacyERC20MNT: mint is disabled");
@@ -44,7 +45,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Burns some amount of ETH.
+     * @notice Burns some amount of MNT.
      */
     function burn(address, uint256) public virtual override {
         revert("LegacyERC20MNT: burn is disabled");
@@ -52,7 +53,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Transfers some amount of ETH.
+     * @notice Transfers some amount of MNT.
      */
     function transfer(address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: transfer is disabled");
@@ -60,7 +61,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
 
     /**
      * @custom:blocked
-     * @notice Approves a spender to spend some amount of ETH.
+     * @notice Approves a spender to spend some amount of MNT.
      */
     function approve(address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: approve is disabled");
@@ -70,11 +71,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
      * @custom:blocked
      * @notice Transfers funds from some sender account.
      */
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public virtual override returns (bool) {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: transferFrom is disabled");
     }
 
