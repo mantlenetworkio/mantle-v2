@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,6 +9,8 @@ import (
 	"fmt"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/exp/slices"
+	"io"
 	"math/big"
 	"os"
 	"strings"
@@ -66,6 +69,18 @@ type suspiciousWithdrawal struct {
 	Trace      callFrame                     `json:"trace"`
 	Index      int                           `json:"index"`
 	Reason     string                        `json:"reason"`
+}
+
+type TypesOutputProposal struct {
+	OutputRoot    [32]byte
+	Timestamp     *big.Int
+	L2BlockNumber *big.Int
+}
+
+type cache struct {
+	Output      bindings.TypesOutputProposal
+	OutputIndex *big.Int
+	Header      *types.Header
 }
 
 func main() {
@@ -132,6 +147,15 @@ func main() {
 				Value: false,
 				Usage: "True, need to execute finalized transaction",
 			},
+			&cli.BoolFlag{
+				Name:  "pre-check-relay",
+				Value: false,
+				Usage: "True, find withdrawals have been relayed,and output file",
+			},
+			&cli.StringFlag{
+				Name:  "relayed-out",
+				Usage: "Path to write text file of withdrawals have been relayed",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			clients, err := util.NewClients(ctx)
@@ -141,7 +165,11 @@ func main() {
 
 			need_proven := ctx.Bool("need-proven")
 			need_finalized := ctx.Bool("need-finalized")
+			preCheckRdelay := ctx.Bool("pre-check-relay")
+			relayedOdut := ctx.String("relayed-out")
+			storegg := ctx.String("storage-out")
 
+			log.Debug("-----", "need-proven", need_proven, "need-finalized", need_finalized, "relay", preCheckRdelay, "relay_out", relayedOdut, "storage", storegg)
 			// initialize the contract bindings
 			contracts, err := newContracts(ctx, clients.L1Client, clients.L2Client)
 			if err != nil {
@@ -184,6 +212,10 @@ func main() {
 			if !bytes.Equal(bedrockStartingBlock.Extra(), genesis.BedrockTransitionBlockExtraData) {
 				return errors.New("genesis block mismatch")
 			}
+			l2OutputCatch, err := GetOutPutCache(contracts.L2OutputOracle, bedrockStartingBlockNumber, clients)
+			if err != nil {
+				return err
+			}
 
 			outfile := ctx.String("bad-withdrawals-out")
 			f, err := os.OpenFile(outfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
@@ -222,6 +254,27 @@ func main() {
 					}
 				}
 			}
+			//pre check relay
+			preCheckRelay := ctx.Bool("pre-check-relay")
+			var relayFile *os.File
+			defer relayFile.Close()
+			relayed := make([]string, 0)
+			if preCheckRelay {
+				log.Info("start to pre check relay")
+
+				relayedOut := ctx.String("relayed-out")
+				if relayedOut == "" {
+					return fmt.Errorf("pre check relay %t,must config relayed out path", preCheckRelay)
+				}
+				relayFile, err = os.OpenFile(relayedOut, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o644)
+				if err != nil {
+					return err
+				}
+				relayed, err = ReadRelayedData(relayFile)
+				if err != nil {
+					return err
+				}
+			}
 
 			// iterate over all of the withdrawals and submit them
 			for i, wd := range wds {
@@ -244,6 +297,10 @@ func main() {
 				if err != nil {
 					return err
 				}
+				if slices.Contains(relayed, legacyXdmHash.String()) {
+					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex(), "preCheckRelay", preCheckRelay)
+					continue
+				}
 
 				// check to see if the withdrawal has already been successfully
 				// relayed or received
@@ -260,6 +317,12 @@ func main() {
 				// their execution and should be replayed
 				if isSuccess {
 					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex())
+					if preCheckRelay {
+						line := fmt.Sprintf("%s\n", legacyXdmHash.String())
+						relayFile.WriteString(line)
+					}
+				}
+				if preCheckRelay {
 					continue
 				}
 
@@ -318,7 +381,7 @@ func main() {
 					// if it has not been proven, then prove it
 					if proven.Timestamp.Cmp(common.Big0) == 0 {
 						log.Info("Proving withdrawal to OptimismPortal")
-						if err := proveWithdrawalTransaction(contracts, clients, opts, withdrawal, bedrockStartingBlockNumber, period); err != nil {
+						if err := proveWithdrawalTransaction(contracts, clients, opts, withdrawal, bedrockStartingBlockNumber, period, l2OutputCatch); err != nil {
 							return err
 						}
 					} else {
@@ -522,7 +585,6 @@ func callStorageRange(c *util.Clients, addr common.Address) (state.Storage, erro
 	hash := header.Hash()
 	keyStart := hexutil.Bytes(common.Hash{}.Bytes())
 	maxResult := 1000
-
 	ret := make(state.Storage)
 
 	for {
@@ -684,8 +746,8 @@ func handleFinalizeERC20Withdrawal(args []any, receipt *types.Receipt, l1Standar
 // proveWithdrawalTransaction will build the data required for proving a
 // withdrawal and then send the transaction and make sure that it is included
 // and successful and then wait for the finalization period to elapse.
-func proveWithdrawalTransaction(c *contracts, cl *util.Clients, opts *bind.TransactOpts, withdrawal *crossdomain.Withdrawal, bn, finalizationPeriod *big.Int) error {
-	l2OutputIndex, outputRootProof, trieNodes, err := createOutput(withdrawal, c.L2OutputOracle, bn, cl)
+func proveWithdrawalTransaction(c *contracts, cl *util.Clients, opts *bind.TransactOpts, withdrawal *crossdomain.Withdrawal, bn, finalizationPeriod *big.Int, l2outputCatch *cache) error {
+	l2OutputIndex, outputRootProof, trieNodes, err := createOutput(withdrawal, c.L2OutputOracle, bn, cl, l2outputCatch)
 	if err != nil {
 		return err
 	}
@@ -930,6 +992,7 @@ func createOutput(
 	oracle *bindings.L2OutputOracle,
 	blockNumber *big.Int,
 	clients *util.Clients,
+	l2outputCatch *cache,
 ) (*big.Int, bindings.TypesOutputRootProof, [][]byte, error) {
 	// compute the storage slot that the withdrawal is stored in
 	slot, err := withdrawal.StorageSlot()
@@ -937,38 +1000,8 @@ func createOutput(
 		return nil, bindings.TypesOutputRootProof{}, nil, err
 	}
 
-	// find the output index that the withdrawal was committed to in
-	l2OutputIndex, err := oracle.GetL2OutputIndexAfter(&bind.CallOpts{}, blockNumber)
-	if err != nil {
-		return nil, bindings.TypesOutputRootProof{}, nil, err
-	}
-	// fetch the output the commits to the withdrawal using the index
-	l2Output, err := oracle.GetL2Output(&bind.CallOpts{}, l2OutputIndex)
-	if err != nil {
-		return nil, bindings.TypesOutputRootProof{}, nil, err
-	}
-
-	log.Info(
-		"L2 output",
-		"index", l2OutputIndex,
-		"root", common.Bytes2Hex(l2Output.OutputRoot[:]),
-		"l2-blocknumber", l2Output.L2BlockNumber,
-		"timestamp", l2Output.Timestamp,
-	)
-
-	// get the block header committed to in the output
-	header, err := clients.L2Client.HeaderByNumber(context.Background(), l2Output.L2BlockNumber)
-	if err != nil {
-		return nil, bindings.TypesOutputRootProof{}, nil, err
-	}
-	log.Info(
-		"header",
-		"root", header.Root.Hex(),
-		"hash", header.Hash().Hex(),
-		"l2block", l2Output.L2BlockNumber)
-
 	// get the storage proof for the withdrawal's storage slot
-	proof, err := clients.L2GethClient.GetProof(context.Background(), predeploys.L2ToL1MessagePasserAddr, []string{slot.String()}, l2Output.L2BlockNumber)
+	proof, err := clients.L2GethClient.GetProof(context.Background(), predeploys.L2ToL1MessagePasserAddr, []string{slot.String()}, l2outputCatch.Output.L2BlockNumber)
 
 	if err != nil {
 		return nil, bindings.TypesOutputRootProof{}, nil, err
@@ -984,9 +1017,9 @@ func createOutput(
 	// create an output root proof
 	outputRootProof := bindings.TypesOutputRootProof{
 		Version:                  [32]byte{},
-		StateRoot:                header.Root,
+		StateRoot:                l2outputCatch.Header.Root,
 		MessagePasserStorageRoot: proof.StorageHash,
-		LatestBlockhash:          header.Hash(),
+		LatestBlockhash:          l2outputCatch.Header.Hash(),
 	}
 
 	// Compute the output root locally
@@ -997,8 +1030,8 @@ func createOutput(
 	}
 
 	// ensure that the locally computed hash matches
-	if l2Output.OutputRoot != localOutputRootHash {
-		return nil, bindings.TypesOutputRootProof{}, nil, fmt.Errorf("mismatch in output root hashes, got 0x%x expected 0x%x", localOutputRootHash, l2Output.OutputRoot)
+	if l2outputCatch.Output.OutputRoot != localOutputRootHash {
+		return nil, bindings.TypesOutputRootProof{}, nil, fmt.Errorf("mismatch in output root hashes, got 0x%x expected 0x%x", localOutputRootHash, l2outputCatch.Output.OutputRoot)
 	}
 	log.Info(
 		"output root proof",
@@ -1009,7 +1042,7 @@ func createOutput(
 		"trie-node-count", len(trieNodes),
 	)
 
-	return l2OutputIndex, outputRootProof, trieNodes, nil
+	return l2outputCatch.OutputIndex, outputRootProof, trieNodes, nil
 }
 
 // writeSuspicious will create a suspiciousWithdrawal and then append it to a
@@ -1036,4 +1069,64 @@ func writeSuspicious(
 	}
 	_, err = f.WriteString(string(data) + "\n")
 	return err
+}
+
+func ReadRelayedData(file *os.File) ([]string, error) {
+	rd := bufio.NewReader(file)
+	relayed := make([]string, 0)
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		line = strings.TrimPrefix(line, "\n")
+		line = strings.TrimSuffix(line, "\n")
+		if line == "" {
+			continue
+		}
+		relayed = append(relayed, line)
+	}
+	return relayed, nil
+}
+
+func GetOutPutCache(oracle *bindings.L2OutputOracle,
+	blockNumber *big.Int,
+	clients *util.Clients) (*cache, error) {
+	// find the output index that the withdrawal was committed to in
+	l2OutputIndex, err := oracle.GetL2OutputIndexAfter(&bind.CallOpts{}, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	// fetch the output the commits to the withdrawal using the index
+	l2Output, err := oracle.GetL2Output(&bind.CallOpts{}, l2OutputIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info(
+		"L2 output",
+		"index", l2OutputIndex,
+		"root", common.Bytes2Hex(l2Output.OutputRoot[:]),
+		"l2-blocknumber", l2Output.L2BlockNumber,
+		"timestamp", l2Output.Timestamp,
+	)
+
+	// get the block header committed to in the output
+	header, err := clients.L2Client.HeaderByNumber(context.Background(), l2Output.L2BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	log.Info(
+		"header",
+		"root", header.Root.Hex(),
+		"hash", header.Hash().Hex(),
+		"l2block", l2Output.L2BlockNumber)
+	return &cache{
+		Header:      header,
+		Output:      l2Output,
+		OutputIndex: l2OutputIndex,
+	}, nil
 }
