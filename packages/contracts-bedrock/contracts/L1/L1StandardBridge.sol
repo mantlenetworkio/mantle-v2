@@ -863,8 +863,9 @@ contract L1StandardBridge is StandardBridge, Semver {
     ) internal override {
         require(msg.value==0, "L1StandardBridge: deposit MNT should not include ETH value.");
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(_from, address(this), _amount);
-        bool success = IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
-        require(success, "L1StandardBridge: approve for L1 MNT failed.");
+        // L1StandardBridge: approve for L1 MNT either reverts or returns true, there is no case in
+        // which its result value is false.
+        IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.

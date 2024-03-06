@@ -250,18 +250,19 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, Semver {
 
             return;
         }
-        bool ethSuccess = true;
         if (_ethValue != 0) {
-            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target, _ethValue);
+            // The ethSuccess variable of approve is either true or the approve function reverted.
+            // It will never be false whenever its value is evaluated.
+            IERC20(Predeploys.BVM_ETH).approve(_target, _ethValue);
         }
         xDomainMsgSender = _sender;
         bool success = SafeCall.call(_target, gasleft() - RELAY_RESERVED_GAS, _mntValue, _message);
         xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
         if (_ethValue != 0) {
-            ethSuccess = IERC20(Predeploys.BVM_ETH).approve(_target, 0);
+            IERC20(Predeploys.BVM_ETH).approve(_target, 0);
         }
 
-        if (success && ethSuccess) {
+        if (success) {
             require(!successfulMessages[versionedHash], "versionedHash has already be marked as successful");
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
