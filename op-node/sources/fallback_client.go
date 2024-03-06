@@ -105,13 +105,16 @@ func (l *FallbackClient) CallContext(ctx context.Context, result any, method str
 func (l *FallbackClient) handleErr(err error) {
 	l.log.Error("FallbackClient handleErr", "err", err)
 	if errors.Is(err, rpc.ErrNoResult) {
+		l.log.Error("FallbackClient handleErr: rpc.ErrNoResult")
 		return
 	}
 	if errors.Is(err, ethereum.NotFound) {
+		l.log.Error("FallbackClient handleErr: ethereum.NotFound")
 		return
 	}
 	var targetErr rpc.Error
 	if errors.As(err, &targetErr) {
+		l.log.Error("FallbackClient handleErr: errors.As(err, &targetErr)")
 		return
 	}
 	l.lastMinuteFail.Add(1)
