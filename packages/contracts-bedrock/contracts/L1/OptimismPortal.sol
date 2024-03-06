@@ -415,9 +415,10 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool l1mntSuccess = true;
         if (_tx.mntValue>0){
-            l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
+            // The l1mntSuccess variable of transfer is either true or the transfer call reverted.
+            // It will never be false.
+            IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         }
         require(_tx.target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
@@ -426,12 +427,12 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
 
         // All withdrawals are immediately finalized. Replayability can
         // be achieved through contracts built on top of this contract
-        emit WithdrawalFinalized(withdrawalHash, success && l1mntSuccess);
+        emit WithdrawalFinalized(withdrawalHash, success);
 
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if ((success == false || l1mntSuccess == false) && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if (success == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }
