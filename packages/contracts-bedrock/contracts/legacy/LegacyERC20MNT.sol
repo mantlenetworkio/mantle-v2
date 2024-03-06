@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
-
 /**
  * @custom:legacy
  * @custom:proxied
@@ -18,9 +17,9 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
     /**
      * @notice Initializes the contract as an Optimism Mintable ERC20.
      */
-    constructor(
-        address _l1mnt
-    ) OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT") {}
+    constructor(address _l1mnt)
+        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT")
+    {}
 
     /**
      * @notice Returns the ETH balance of the target account. Overrides the base behavior of the
@@ -71,7 +70,11 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
      * @custom:blocked
      * @notice Transfers funds from some sender account.
      */
-    function transferFrom(address, address, uint256) public virtual override returns (bool) {
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) public virtual override returns (bool) {
         revert("LegacyERC20MNT: transferFrom is disabled");
     }
 
