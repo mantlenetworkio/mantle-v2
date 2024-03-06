@@ -522,6 +522,20 @@ contract L2StandardBridge is StandardBridge, Semver {
         _initiateBridgeMNT(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
+    /**
+     * @notice Sends MNT to a receiver's address on the other chain. Note that if MNT is sent to a
+     *         smart contract and the call fails, the MNT will be temporarily locked in the
+     *         StandardBridge on the other chain until the call is replayed. If the call cannot be
+     *         replayed with any amount of gas (call always reverts), then the MNT will be
+     *         permanently locked in the StandardBridge on the other chain. MNT will also
+     *         be locked if the receiver is the other bridge, because finalizeBridgeETH will revert
+     *         in that case.
+     * @param Address of the receiver.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
     function bridgeMNTTo(
         address _to,
         uint32 _minGasLimit,
