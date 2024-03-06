@@ -10,6 +10,7 @@ import { Types } from "../libraries/Types.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { SecureMerkleTrie } from "../libraries/trie/SecureMerkleTrie.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -209,6 +210,22 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     function minimumGasLimit(uint64 _byteCount) public pure returns (uint64) {
         return _byteCount * 16 + 21000;
     }
+    /**
+     * @notice Only allow EOAs to call the functions. Note that this is not safe against contracts
+     *         calling code within their constructors, but also doesn't really matter since we're
+     *         just trying to prevent users accidentally depositing with smart contract wallets.
+     */
+    modifier onlyEOA() {
+        require(
+            !Address.isContract(msg.sender),
+            "StandardBridge: function can only be called from an EOA"
+        );
+        require(
+            msg.sender==tx.origin,
+            "StandardBridge: msg sender must equal to tx origin"
+        );
+        _;
+    }
 
     /**
      * @notice Accepts value so that users can send ETH directly to this contract and have the
@@ -217,7 +234,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         otherwise any deposited funds will be lost due to address aliasing.
      */
     // solhint-disable-next-line ordering
-    receive() external payable {
+    receive() external payable onlyEOA {
         depositTransaction(msg.value, 0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
