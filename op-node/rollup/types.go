@@ -233,7 +233,7 @@ func (cfg *Config) Check() error {
 	if cfg.Genesis.SystemConfig.GasLimit == 0 {
 		return ErrMissingGasLimit
 	}
-	if cfg.Genesis.SystemConfig.BaseFee.Cmp(big.NewInt(0)) < 1 {
+	if cfg.Genesis.SystemConfig.BaseFee == nil || cfg.Genesis.SystemConfig.BaseFee.Cmp(big.NewInt(0)) < 1 {
 		return ErrMissingBaseFee
 	}
 	if cfg.BatchInboxAddress == (common.Address{}) {
