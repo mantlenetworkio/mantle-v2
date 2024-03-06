@@ -31,7 +31,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
      * @return The ETH balance of the target account.
      */
     function balanceOf(address _who) public view virtual override returns (uint256) {
-        return address(_who).balance;
+        return _who.balance;
     }
 
     /**
