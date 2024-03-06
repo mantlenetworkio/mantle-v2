@@ -40,13 +40,15 @@ type FallbackClient struct {
 	ctx               context.Context
 	isClose           chan struct{}
 	metrics           metrics.Metricer
+	threshold         int64
 }
 
-const threshold int64 = 10
+// const threshold int64 = 10
 
 // NewFallbackClient returns a new FallbackClient. l1ChainId and l1Block are used to check
 // whether the newly switched rpc is legal.
-func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, log log.Logger, l1ChainId *big.Int, l1Block eth.BlockID, rpcInitFunc func(url string) (client.RPC, error)) client.RPC {
+func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, log log.Logger, l1ChainId *big.Int, l1Block eth.BlockID, rpcInitFunc func(url string) (client.RPC, error), threshold int64, ticker time.Duration) client.RPC {
+	log.Info("NewFallbackClient", "threshold", threshold, "ticker", ticker)
 	fallbackClient := &FallbackClient{
 		ctx:          ctx,
 		firstRpc:     rpc,
@@ -57,10 +59,11 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 		l1ChainId:    l1ChainId,
 		l1Block:      l1Block,
 		isClose:      make(chan struct{}),
+		threshold:    threshold,
 	}
 	fallbackClient.currentRpc.Store(&rpc)
 	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(ticker * time.Second)
 		for {
 			select {
 			case <-ticker.C:
@@ -138,7 +141,7 @@ func (l *FallbackClient) switchCurrentRpc() {
 	}
 	l.mx.Lock()
 	defer l.mx.Unlock()
-	if l.lastMinuteFail.Load() <= threshold {
+	if l.lastMinuteFail.Load() <= l.threshold {
 		return
 	}
 	if l.metrics != nil {
