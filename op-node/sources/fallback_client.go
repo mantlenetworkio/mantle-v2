@@ -63,7 +63,7 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 	}
 	fallbackClient.currentRpc.Store(&rpc)
 	go func() {
-		ticker := time.NewTicker(ticker * time.Second)
+		ticker := time.NewTicker(ticker)
 		for {
 			select {
 			case <-ticker.C:
