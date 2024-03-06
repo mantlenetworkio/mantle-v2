@@ -40,11 +40,6 @@ abstract contract FeeVault {
     uint256 public totalProcessed;
 
     /**
-     * @notice Reserve extra slots (to a total of 50) in the storage layout for future upgrades.
-     */
-    uint256[49] private __gap;
-
-    /**
      * @param _recipient           Wallet that will receive the fees on L1.
      * @param _minWithdrawalAmount Minimum balance before a withdrawal can be triggered.
      */
