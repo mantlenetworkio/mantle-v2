@@ -279,6 +279,11 @@ func main() {
 			for i, wd := range wds {
 				log.Info("Processing withdrawal", "index", i)
 
+				if preCheckRelay {
+					if i < len(relayed) {
+						continue
+					}
+				}
 				// migrate the withdrawal
 				withdrawal, err := crossdomain.MigrateWithdrawal(wd, &l1xdmAddr, l2ChainID)
 				if err != nil {
