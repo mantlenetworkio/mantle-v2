@@ -256,16 +256,15 @@ func main() {
 			}
 			//pre check relay
 			preCheckRelay := ctx.Bool("pre-check-relay")
+			relayedOut := ctx.String("relayed-out")
 			var relayFile *os.File
 			defer relayFile.Close()
 			relayed := make([]string, 0)
-			if preCheckRelay {
-				log.Info("start to pre check relay")
 
-				relayedOut := ctx.String("relayed-out")
-				if relayedOut == "" {
-					return fmt.Errorf("pre check relay %t,must config relayed out path", preCheckRelay)
-				}
+			if preCheckRelay && relayedOut == "" {
+				return fmt.Errorf("pre check relay %t,must config relayed out path", preCheckRelay)
+			}
+			if relayedOut != "" {
 				relayFile, err = os.OpenFile(relayedOut, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o644)
 				if err != nil {
 					return err
