@@ -72,7 +72,7 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 			case <-fallbackClient.isClose:
 				return
 			default:
-				// log.Info("FallbackClient lastMinuteFail", "lastMinuteFail", fallbackClient.lastMinuteFail.Load())
+				log.Info("FallbackClient lastMinuteFail", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentIndex", fallbackClient.currentIndex, "urlList", fallbackClient.urlList, "threshold", threshold)
 				if fallbackClient.lastMinuteFail.Load() >= threshold {
 					fallbackClient.switchCurrentRpc()
 				}
@@ -115,6 +115,7 @@ func (l *FallbackClient) handleErr(err error) {
 		return
 	}
 	l.lastMinuteFail.Add(1)
+	l.log.Error("FallbackClient handleErr ensure", "err", err)
 }
 
 func (l *FallbackClient) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error {
