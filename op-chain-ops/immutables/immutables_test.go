@@ -11,6 +11,9 @@ import (
 
 func TestBuildOptimism(t *testing.T) {
 	results, err := immutables.BuildOptimism(immutables.ImmutableConfig{
+		"L2ToL1MessagePasser": {
+			"L1_MNT_ADDRESS": common.HexToAddress("0x1234567890123456789012345678901234567890"),
+		},
 		"L2StandardBridge": {
 			"otherBridge":    common.HexToAddress("0x1234567890123456789012345678901234567890"),
 			"L1_MNT_ADDRESS": common.HexToAddress("0x1234567890123456789012345678901234567890"),
