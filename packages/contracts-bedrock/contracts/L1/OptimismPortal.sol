@@ -29,7 +29,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @notice Represents a proven withdrawal.
      *
      * @custom:field outputRoot    Root of the L2 output this was proven against.
-     * @custom:field timestamp     Timestamp at whcih the withdrawal was proven.
+     * @custom:field timestamp     Timestamp at which the withdrawal was proven.
      * @custom:field l2OutputIndex Index of the output this was proven against.
      */
     struct ProvenWithdrawal {
@@ -69,9 +69,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     address public immutable L1_MNT_ADDRESS;
 
     /**
-     * @notice Address of the L2 account which initiated a withdrawal in this transaction. If the
-     *         of this variable is the default L2 sender address, then we are NOT inside of a call
-     *         to finalizeWithdrawalTransaction.
+     * @notice Address of the L2 account which initiated a withdrawal in this transaction. If the value
+     *         of this variable is the default L2 sender address, then we are NOT inside of a call to
+     *         finalizeWithdrawalTransaction.
      */
     address public l2Sender;
 
