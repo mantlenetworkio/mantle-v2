@@ -112,11 +112,10 @@ func (l *FallbackClient) handleErr(err error) {
 		l.log.Error("FallbackClient handleErr: ethereum.NotFound")
 		return
 	}
-	var targetErr rpc.Error
-	if errors.As(err, &targetErr) {
-		l.log.Error("FallbackClient handleErr: errors.As(err, &targetErr)")
-		return
-	}
+	// var targetErr rpc.Error
+	// if errors.As(err, &targetErr) {
+	// 	return
+	// }
 	l.lastMinuteFail.Add(1)
 	l.log.Error("FallbackClient handleErr ensure", "err", err)
 }
