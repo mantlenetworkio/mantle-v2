@@ -152,6 +152,10 @@ type L1EndpointConfig struct {
 	// It is recommended to use websockets or IPC for efficient following of the changing block.
 	// Setting this to 0 disables polling.
 	HttpPollInterval time.Duration
+
+	// RPC switch management configuration
+	FallbackThreshold int64
+	FallbackTicker    time.Duration
 }
 
 var _ L1EndpointSetup = (*L1EndpointConfig)(nil)
@@ -205,7 +209,7 @@ func fallbackClientWrap(ctx context.Context, logger log.Logger, urlList []string
 	}
 	l1Node = sources.NewFallbackClient(ctx, l1Node, urlList, logger, rollupCfg.L1ChainID, rollupCfg.Genesis.L1, func(url string) (client.RPC, error) {
 		return client.NewRPC(ctx, logger, url, opts...)
-	})
+	}, cfg.FallbackThreshold, cfg.FallbackTicker)
 	rpcCfg := sources.L1ClientDefaultConfig(rollupCfg, cfg.L1TrustRPC, cfg.L1RPCKind)
 	rpcCfg.MaxRequestsPerBatch = cfg.BatchSize
 	return l1Node, rpcCfg, nil

@@ -28,6 +28,18 @@ var (
 		Value:  "http://127.0.0.1:8545",
 		EnvVar: prefixEnvVar("L1_ETH_RPC"),
 	}
+	FallbackThreshold = cli.Int64Flag{
+		Name:   "fallback-threshold",
+		Usage:  "Threshold for the number of failed requests to trigger a fallback",
+		Value:  10,
+		EnvVar: prefixEnvVar("FALLBACK_THRESHOLD"),
+	}
+	FallbackTicker = cli.DurationFlag{
+		Name:   "fallback-ticker",
+		Usage:  "Ticker for the fallback client to check the health of the current RPC (unit: second)",
+		Value:  60,
+		EnvVar: prefixEnvVar("FALLBACK_TICKER"),
+	}
 	L2EngineAddr = cli.StringFlag{
 		Name:   "l2",
 		Usage:  "Address of L2 Engine JSON-RPC endpoints to use (engine and eth namespace required)",
@@ -264,6 +276,8 @@ var requiredFlags = []cli.Flag{
 }
 
 var optionalFlags = []cli.Flag{
+	FallbackThreshold,
+	FallbackTicker,
 	RollupConfig,
 	Network,
 	L1TrustRPC,
