@@ -113,7 +113,7 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 	}
 
 	for i := uint64(0); i <= count; i++ {
-		// ignore dev L1's L1_MANTLE_TOEKN address for 0x6900000000000000000000000000000000000020 and the 20 for hexadecimal means 32 in 10 hex.
+		// ignore dev L1's L1_MANTLE_TOKEN address for 0x6900000000000000000000000000000000000020 and the 20 for hexadecimal means 32 in 10 hex.
 		if i == uint64(32) && namespace == bigL1PredeployNamespace {
 			bigAddr := new(big.Int).Or(namespace, new(big.Int).SetUint64(i))
 			addr := common.BigToAddress(bigAddr)

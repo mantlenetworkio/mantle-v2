@@ -16,7 +16,7 @@ library Burn {
     }
 
     /**
-     * Burns a given amount of gas.
+     * Consumes a given amount of gas.
      *
      * @param _amount Amount of gas to consume.
      */

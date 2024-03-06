@@ -163,6 +163,16 @@ abstract contract CrossDomainMessenger is
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
 
     /**
+     * @notice BASE gas reserved for Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_BASE_GAS = 800;
+
+    /**
+     * @notice Extra gas reserved for per-byte in Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_GAS_PER_BYTE = 2;
+
+    /**
      * @notice Address of the paired CrossDomainMessenger contract on the other chain.
      */
     address public immutable OTHER_MESSENGER;
@@ -517,6 +527,8 @@ abstract contract CrossDomainMessenger is
             RELAY_CONSTANT_OVERHEAD +
             // Calldata overhead
             (uint64(_message.length) * MIN_GAS_CALLDATA_OVERHEAD) +
+            // Hash message
+            (uint64(_message.length) * HASH_MESSAGE_GAS_PER_BYTE) + HASH_MESSAGE_BASE_GAS +
             // Dynamic overhead (EIP-150)
             ((_minGasLimit * MIN_GAS_DYNAMIC_OVERHEAD_NUMERATOR) /
                 MIN_GAS_DYNAMIC_OVERHEAD_DENOMINATOR) +

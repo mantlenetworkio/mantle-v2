@@ -73,7 +73,8 @@ library Types {
      * @custom:field nonce    Nonce of the withdrawal transaction
      * @custom:field sender   Address of the sender of the transaction.
      * @custom:field target   Address of the recipient of the transaction.
-     * @custom:field value    Value to send to the recipient.
+     * @custom:field mntValue MNT value to send to the recipient.
+     * @custom:field ethValue ETH value to send to the recipient.
      * @custom:field gasLimit Gas limit of the transaction.
      * @custom:field data     Data of the transaction.
      */

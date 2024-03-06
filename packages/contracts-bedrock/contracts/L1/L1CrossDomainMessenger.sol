@@ -170,7 +170,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     ) external payable override {
         (, uint16 version) = Encoding.decodeVersionedNonce(_nonce);
         require(
-            version < 2,
+            version <= MESSAGE_VERSION,
             "CrossDomainMessenger: only version 0 or 1 messages are supported at this time"
         );
 
