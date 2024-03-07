@@ -39,7 +39,7 @@ type MantleDataStore struct {
 	GraphqlClient *graphql.Client
 }
 
-func NewMantleDataStore(ctx context.Context, cfg *MantleDataStoreConfig) (*MantleDataStore, error) {
+func NewMantleDataStore(ctx context.Context, cfg *MantleDataStoreConfig) *MantleDataStore {
 	graphClient := graphView.NewGraphClient(cfg.GraphProvider, nil)
 	graphqlClient := graphql.NewClient(graphClient.GetEndpoint(), nil)
 	mDatastore := &MantleDataStore{
@@ -48,7 +48,7 @@ func NewMantleDataStore(ctx context.Context, cfg *MantleDataStoreConfig) (*Mantl
 		GraphClient:   graphClient,
 		GraphqlClient: graphqlClient,
 	}
-	return mDatastore, nil
+	return mDatastore
 }
 
 func (mda *MantleDataStore) getDataStoreById(dataStoreId uint32) (*graphView.DataStore, error) {
@@ -114,8 +114,9 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
 	}
-	log.Debug("Get reply data success", "replyLength", len(reply.GetData()))
-	return reply.GetData(), nil
+	replyData := reply.GetData()
+	log.Debug("Get reply data success", "replyLength", len(replyData))
+	return replyData, nil
 }
 
 func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error) {
@@ -188,8 +189,9 @@ func (mda *MantleDataStore) RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]
 		log.Error("frames is nil ,waiting da indexer syncing")
 		return nil, fmt.Errorf("frames is nil,maybe da indexer is syncing,need to try again,dataStore id %d", dataStoreId)
 	}
-	log.Debug("Get reply data success", "replyLength", len(reply.GetData()))
-	return reply.GetData(), nil
+	replyData := reply.GetData()
+	log.Debug("Get reply data from mantle da success", "replyLength", len(replyData))
+	return replyData, nil
 }
 
 func (mda *MantleDataStore) IsDaIndexer() bool {

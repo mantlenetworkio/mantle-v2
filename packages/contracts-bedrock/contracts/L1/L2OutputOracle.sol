@@ -181,7 +181,7 @@ contract L2OutputOracle is Initializable, Semver {
         uint256 _l2BlockNumber,
         bytes32 _l1BlockHash,
         uint256 _l1BlockNumber
-    ) external payable {
+    ) external {
         require(
             msg.sender == PROPOSER,
             "L2OutputOracle: only the proposer address can propose new outputs"

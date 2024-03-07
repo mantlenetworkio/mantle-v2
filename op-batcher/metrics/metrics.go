@@ -74,7 +74,7 @@ type Metrics struct {
 	info prometheus.GaugeVec
 	up   prometheus.Gauge
 
-	// label by openend, closed, fully_submitted, timed_out
+	// label by opened, closed, fully_submitted, timed_out
 	channelEvs opmetrics.EventVec
 
 	pendingBlocksCount        prometheus.GaugeVec
@@ -272,7 +272,7 @@ const (
 	TxStageFailed    = "failed"
 
 	TxInitDataSubmitted    = "init_data_submitted"
-	TxConfirmDataSubmiited = "confirm_data_submitted"
+	TxConfirmDataSubmitted = "confirm_data_submitted"
 	TxInitDataSuccess      = "init_data_success"
 	TxConfirmDataSuccess   = "confirm_data_success"
 	TxInitDataFailed       = "init_data_failed"
@@ -373,7 +373,7 @@ func (m *Metrics) RecordBatchTxInitDataFailed() {
 }
 
 func (m *Metrics) RecordBatchTxConfirmDataSubmitted() {
-	m.batcherTxEvs.Record(TxConfirmDataSubmiited)
+	m.batcherTxEvs.Record(TxConfirmDataSubmitted)
 }
 
 func (m *Metrics) RecordBatchTxConfirmDataSuccess() {

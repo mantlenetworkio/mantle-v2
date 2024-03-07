@@ -157,13 +157,16 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 			} else {
 				return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 			}
-		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil { // fetch data from EOA
-			ds.open = true
-			ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
-		} else if errors.Is(err, ethereum.NotFound) {
-			return nil, NewResetError(fmt.Errorf("failed to open eoa calldata source: %w", err))
 		} else {
-			return nil, NewTemporaryError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			_, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash)
+			if err == nil { // fetch data from EOA
+				ds.open = true
+				ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
+			} else if errors.Is(err, ethereum.NotFound) {
+				return nil, NewResetError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			} else {
+				return nil, NewTemporaryError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			}
 		}
 	}
 	if len(ds.data) == 0 {

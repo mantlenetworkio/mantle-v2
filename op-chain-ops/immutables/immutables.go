@@ -80,6 +80,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			Name: "L2CrossDomainMessenger",
 			Args: []interface{}{
 				immutable["L2CrossDomainMessenger"]["otherMessenger"],
+				immutable["L2CrossDomainMessenger"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -181,7 +182,11 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 		if !ok {
 			return nil, fmt.Errorf("invalid type for otherMessenger")
 		}
-		_, tx, _, err = bindings.DeployL2CrossDomainMessenger(opts, backend, otherMessenger)
+		L1MNT, ok := deployment.Args[1].(common.Address)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for L1 MNT")
+		}
+		_, tx, _, err = bindings.DeployL2CrossDomainMessenger(opts, backend, otherMessenger, L1MNT)
 	case "L2StandardBridge":
 		otherBridge, ok := deployment.Args[0].(common.Address)
 		if !ok {

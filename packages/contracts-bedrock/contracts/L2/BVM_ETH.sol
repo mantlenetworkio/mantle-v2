@@ -21,6 +21,12 @@ contract BVM_ETH is OptimismMintableERC20 {
     OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, address(0), "Ether", "WETH")
     {}
 
+    /**
+     * @notice Allows the StandardBridge on this network to mint tokens.
+     *
+     * @param _to   Address of the receiver.
+     * @param _amount Amount of tokens to mint.
+     */
     function mint(address _to, uint256 _amount)
         public
         virtual
@@ -30,7 +36,7 @@ contract BVM_ETH is OptimismMintableERC20 {
     }
 
     /**
- * @notice A modifier that only allows the L2_TO_L1_MESSAGE_PASSER to call
+     * @notice A modifier that only allows the L2_TO_L1_MESSAGE_PASSER to call
      */
     modifier onlyL2Passer() {
         require(msg.sender == Predeploys.L2_TO_L1_MESSAGE_PASSER, "OptimismMintableERC20: only L2MessagePasser can burn");
