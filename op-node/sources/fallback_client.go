@@ -116,7 +116,7 @@ func (l *FallbackClient) handleErr(err error) {
 }
 
 func (l *FallbackClient) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error {
-	l.log.Info("FallbackClient BatchCallContext", "batch", b, "currentUrl", l.urlList[l.currentIndex])
+	l.log.Info("FallbackClient BatchCallContext", "currentUrl", l.urlList[l.currentIndex], "l.currentIndex", l.currentIndex, "urls", l.urlList)
 
 	err := (*l.currentRpc.Load()).BatchCallContext(ctx, b)
 	if err != nil {
@@ -183,7 +183,7 @@ func (l *FallbackClient) switchCurrentRpcLogic() error {
 			return err
 		}
 	}
-	l.log.Info("switched current rpc to new url", "url", url)
+	l.log.Info("switched current rpc to new url", "url", url, "l.currentIndex", l.currentIndex, "urls", l.urlList)
 	if !l.isInFallbackState {
 		l.isInFallbackState = true
 		l.recoverIfFirstRpcHealth()
