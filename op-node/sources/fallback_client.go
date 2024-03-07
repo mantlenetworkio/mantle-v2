@@ -116,6 +116,8 @@ func (l *FallbackClient) handleErr(err error) {
 }
 
 func (l *FallbackClient) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error {
+	l.log.Info("FallbackClient BatchCallContext", "batch", b, "currentUrl", l.urlList[l.currentIndex])
+
 	err := (*l.currentRpc.Load()).BatchCallContext(ctx, b)
 	if err != nil {
 		l.handleErr(err)

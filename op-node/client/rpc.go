@@ -72,6 +72,7 @@ func WithRateLimit(rateLimit float64, burst int) RPCOption {
 
 // NewRPC returns the correct client.RPC instance for a given RPC url.
 func NewRPC(ctx context.Context, lgr log.Logger, addr string, opts ...RPCOption) (RPC, error) {
+	lgr.Info("dialing RPC", "addr", addr)
 	var cfg rpcConfig
 	for i, opt := range opts {
 		if err := opt(&cfg); err != nil {
@@ -95,6 +96,8 @@ func NewRPC(ctx context.Context, lgr log.Logger, addr string, opts ...RPCOption)
 	if httpRegex.MatchString(addr) {
 		wrapped = NewPollingClient(ctx, lgr, wrapped, WithPollRate(cfg.httpPollInterval))
 	}
+
+	lgr.Info("dialing RPC succeeded", "addr", addr, "wrapped", wrapped)
 
 	return wrapped, nil
 }

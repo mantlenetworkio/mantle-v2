@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
@@ -210,7 +211,11 @@ func (dp *DerivationPipeline) Step(ctx context.Context) error {
 	// Now step the engine queue. It will pull earlier data as needed.
 	if err := dp.eng.Step(ctx); err == io.EOF {
 		// If every stage has returned io.EOF, try to advance the L1 Origin
-		return dp.traversal.AdvanceL1Block(ctx)
+		startTime := time.Now()
+		err := dp.traversal.AdvanceL1Block(ctx)
+		endTime := time.Now()
+		log.Info("L1 traversal step", "duration", endTime.Sub(startTime))
+		return err
 	} else if errors.Is(err, EngineP2PSyncing) {
 		return err
 	} else if err != nil {
