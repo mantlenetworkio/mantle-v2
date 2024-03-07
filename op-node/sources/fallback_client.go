@@ -47,8 +47,11 @@ type FallbackClient struct {
 
 // NewFallbackClient returns a new FallbackClient. l1ChainId and l1Block are used to check
 // whether the newly switched rpc is legal.
-func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, log log.Logger, l1ChainId *big.Int, l1Block eth.BlockID, rpcInitFunc func(url string) (client.RPC, error), threshold int64, ticker time.Duration) client.RPC {
-	log.Info("NewFallbackClient", "threshold", threshold, "ticker", ticker)
+func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, log log.Logger, l1ChainId *big.Int,
+	l1Block eth.BlockID, rpcInitFunc func(url string) (client.RPC, error), threshold int64,
+	tickerTime time.Duration) client.RPC {
+
+	log.Info("NewFallbackClient", "threshold", threshold, "tickerTime", tickerTime)
 	fallbackClient := &FallbackClient{
 		ctx:          ctx,
 		firstRpc:     rpc,
@@ -59,16 +62,16 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 		l1ChainId:    l1ChainId,
 		l1Block:      l1Block,
 		isClose:      make(chan struct{}),
-		threshold:    threshold,
+		threshold:    2,
 	}
 	fallbackClient.currentRpc.Store(&rpc)
 	go func() {
-		ticker := time.NewTicker(ticker)
+		ticker := time.NewTicker(1 * time.Minute)
 		for {
 			select {
 			case <-ticker.C:
-				log.Debug("FallbackClient clear lastMinuteFail 0")
 				fallbackClient.lastMinuteFail.Store(0)
+				log.Info("reset lastMinuteFail to 0", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentUrl", urlList[fallbackClient.currentIndex])
 			case <-fallbackClient.isClose:
 				return
 			default:
@@ -112,10 +115,6 @@ func (l *FallbackClient) handleErr(err error) {
 		l.log.Error("FallbackClient handleErr: ethereum.NotFound")
 		return
 	}
-	// var targetErr rpc.Error
-	// if errors.As(err, &targetErr) {
-	// 	return
-	// }
 	l.lastMinuteFail.Add(1)
 	l.log.Error("FallbackClient handleErr ensure", "err", err)
 }
@@ -137,7 +136,6 @@ func (l *FallbackClient) EthSubscribe(ctx context.Context, channel any, args ...
 }
 
 func (l *FallbackClient) switchCurrentRpc() {
-	// l.log.Info("FallbackClient switchCurrentRpc", "l.currentIndex", l.currentIndex, "l.urlList", l.urlList, "lastMinuteFail", l.lastMinuteFail.Load())
 	if l.currentIndex >= len(l.urlList) {
 		l.log.Error("the fallback client has tried all urls, but all failed")
 		return
@@ -167,7 +165,6 @@ func (l *FallbackClient) switchCurrentRpc() {
 
 func (l *FallbackClient) switchCurrentRpcLogic() error {
 	url := l.urlList[l.currentIndex]
-	// l.log.Info("FallbackClient switchCurrentRpcLogic", "url", url)
 	newRpc, err := l.rpcInitFunc(url)
 	if err != nil {
 		return fmt.Errorf("the fallback client init RPC failed,url:%s, err:%w", url, err)
@@ -203,7 +200,6 @@ func (l *FallbackClient) reSubscribeNewRpc(url string) error {
 		l.log.Error("can not subscribe new url", "url", url, "err", err)
 		return err
 	} else {
-		// log.Info("reSubscribeNewRpc", "l1HeadsSub", l.l1HeadsSub, "subscriptionNew", subscriptionNew)
 		*l.l1HeadsSub = subscriptionNew
 	}
 	return nil
