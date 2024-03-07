@@ -533,7 +533,7 @@ contract L2StandardBridge is StandardBridge, Semver {
      *         permanently locked in the StandardBridge on the other chain. MNT will also
      *         be locked if the receiver is the other bridge, because finalizeBridgeETH will revert
      *         in that case.
-     * @param Address of the receiver.
+     * @param _to Address of the receiver.
      * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
      * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
      *                     not be triggered with this data, but it will be emitted and can be used
