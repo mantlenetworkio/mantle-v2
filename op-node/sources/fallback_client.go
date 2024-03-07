@@ -62,15 +62,16 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 		l1ChainId:    l1ChainId,
 		l1Block:      l1Block,
 		isClose:      make(chan struct{}),
-		threshold:    threshold,
+		threshold:    2,
 	}
 	fallbackClient.currentRpc.Store(&rpc)
 	go func() {
-		ticker := time.NewTicker(tickerTime)
+		ticker := time.NewTicker(1 * time.Minute)
 		for {
 			select {
 			case <-ticker.C:
 				fallbackClient.lastMinuteFail.Store(0)
+				log.Info("reset lastMinuteFail to 0", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentUrl", urlList[fallbackClient.currentIndex])
 			case <-fallbackClient.isClose:
 				return
 			default:
