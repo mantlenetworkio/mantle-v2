@@ -24,7 +24,7 @@ contract BVM_ETH is OptimismMintableERC20 {
     /**
      * @notice Allows the StandardBridge on this network to mint tokens.
      *
-     * @param _from   Address to mint tokens from.
+     * @param _to   Address of the receiver.
      * @param _amount Amount of tokens to mint.
      */
     function mint(address _to, uint256 _amount)
