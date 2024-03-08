@@ -59,7 +59,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	if l2Parent.L1Origin.Number != epoch.Number {
 		info, receipts, err := ba.l1.FetchReceipts(ctx, epoch.Hash)
 		if err != nil {
-			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info and receipts: %w", err))
+			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info and receipts,epoch %s, err: %w", epoch.String(), err))
 		}
 		if l2Parent.L1Origin.Hash != info.ParentHash() {
 			return nil, NewResetError(
@@ -86,7 +86,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		}
 		info, err := ba.l1.InfoByHash(ctx, epoch.Hash)
 		if err != nil {
-			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info: %w", err))
+			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info, epock: %s, err %w", epoch.String(), err))
 		}
 		l1Info = info
 		depositTxs = nil
