@@ -70,8 +70,8 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 		for {
 			select {
 			case <-ticker.C:
+				log.Info("NewFallbackClient ticker", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentUrl", urlList[fallbackClient.currentIndex])
 				fallbackClient.lastMinuteFail.Store(0)
-				log.Info("reset lastMinuteFail to 0", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentUrl", urlList[fallbackClient.currentIndex])
 			case <-fallbackClient.isClose:
 				return
 			default:
