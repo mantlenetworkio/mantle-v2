@@ -10,6 +10,7 @@ import { Types } from "../libraries/Types.sol";
 import { Hashing } from "../libraries/Hashing.sol";
 import { SecureMerkleTrie } from "../libraries/trie/SecureMerkleTrie.sol";
 import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 import { Semver } from "../universal/Semver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -29,7 +30,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @notice Represents a proven withdrawal.
      *
      * @custom:field outputRoot    Root of the L2 output this was proven against.
-     * @custom:field timestamp     Timestamp at whcih the withdrawal was proven.
+     * @custom:field timestamp     Timestamp at which the withdrawal was proven.
      * @custom:field l2OutputIndex Index of the output this was proven against.
      */
     struct ProvenWithdrawal {
@@ -70,7 +71,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
 
     /**
      * @notice Address of the L2 account which initiated a withdrawal in this transaction. If the
-     *         of this variable is the default L2 sender address, then we are NOT inside of a call
+     *         value of this variable is the default L2 sender address, then we are NOT inside of a call
      *         to finalizeWithdrawalTransaction.
      */
     address public l2Sender;
@@ -162,7 +163,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         bool _paused,
         SystemConfig _config,
         address _l1MNT
-    ) Semver(1, 6, 0) {
+    ) Semver(1, 7, 0) {
         L2_ORACLE = _l2Oracle;
         GUARDIAN = _guardian;
         SYSTEM_CONFIG = _config;
@@ -174,7 +175,9 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      * @notice Initializer.
      */
     function initialize(bool _paused) public initializer {
-        l2Sender = Constants.DEFAULT_L2_SENDER;
+        if (l2Sender == address(0)) {
+            l2Sender = Constants.DEFAULT_L2_SENDER;
+        }
         paused = _paused;
         __ResourceMetering_init();
     }
@@ -207,6 +210,22 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
     function minimumGasLimit(uint64 _byteCount) public pure returns (uint64) {
         return _byteCount * 16 + 21000;
     }
+    /**
+     * @notice Only allow EOAs to call the functions. Note that this is not safe against contracts
+     *         calling code within their constructors, but also doesn't really matter since we're
+     *         just trying to prevent users accidentally depositing with smart contract wallets.
+     */
+    modifier onlyEOA() {
+        require(
+            !Address.isContract(msg.sender),
+            "StandardBridge: function can only be called from an EOA"
+        );
+        require(
+            msg.sender==tx.origin,
+            "StandardBridge: msg sender must equal to tx origin"
+        );
+        _;
+    }
 
     /**
      * @notice Accepts value so that users can send ETH directly to this contract and have the
@@ -215,7 +234,7 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
      *         otherwise any deposited funds will be lost due to address aliasing.
      */
     // solhint-disable-next-line ordering
-    receive() external payable {
+    receive() external payable onlyEOA {
         depositTransaction(msg.value, 0, msg.sender, 0, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
 
@@ -413,9 +432,10 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
         //   2. The amount of gas provided to the execution context of the target is at least the
         //      gas limit specified by the user. If there is not enough gas in the current context
         //      to accomplish this, `callWithMinGas` will revert.
-        bool l1mntSuccess = false;
         if (_tx.mntValue>0){
-            l1mntSuccess = IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
+            // The l1mntSuccess variable of transfer is either true or the transfer call reverted.
+            // It will never be false.
+            IERC20(L1_MNT_ADDRESS).transfer(_tx.target, _tx.mntValue);
         }
         require(_tx.target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.ethValue, _tx.data);
@@ -424,12 +444,12 @@ contract OptimismPortal is Initializable, ResourceMetering, Semver {
 
         // All withdrawals are immediately finalized. Replayability can
         // be achieved through contracts built on top of this contract
-        emit WithdrawalFinalized(withdrawalHash, success && l1mntSuccess);
+        emit WithdrawalFinalized(withdrawalHash, success);
 
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
         // be sufficient to execute the sub call.
-        if ((success == false || l1mntSuccess == false) && tx.origin == Constants.ESTIMATION_ADDRESS) {
+        if (success == false && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert("OptimismPortal: withdrawal failed");
         }
     }

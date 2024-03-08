@@ -209,10 +209,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		return err
 	}
 
-	n.daSyncer, err = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
-	if err != nil {
-		return err
-	}
+	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
 
 	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync)
 

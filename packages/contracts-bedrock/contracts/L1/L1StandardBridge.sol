@@ -9,7 +9,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
 import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
-import { L1CrossDomainMessenger } from "./L1CrossDomainMessenger.sol";
 
 /**
  * @custom:proxied
@@ -706,8 +705,13 @@ contract L1StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).mint(_to, _amount);
         } else {
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
+
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransfer(_to, _amount);
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 sentAmount = balanceBefore - balanceAfter;
+
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - sentAmount;
         }
 
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
@@ -817,8 +821,11 @@ contract L1StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).burn(_from, _amount);
         } else {
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 receivedAmount = balanceAfter - balanceBefore;
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + receivedAmount;
         }
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
@@ -863,8 +870,9 @@ contract L1StandardBridge is StandardBridge, Semver {
     ) internal override {
         require(msg.value==0, "L1StandardBridge: deposit MNT should not include ETH value.");
         IERC20(L1_MNT_ADDRESS).safeTransferFrom(_from, address(this), _amount);
-        bool success = IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
-        require(success, "L1StandardBridge: approve for L1 MNT failed.");
+        // L1StandardBridge: approve for L1 MNT either reverts or returns true, there is no case in
+        // which its result value is false.
+        IERC20(L1_MNT_ADDRESS).approve(address(MESSENGER), _amount);
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
         // contracts may override this function in order to emit legacy events as well.

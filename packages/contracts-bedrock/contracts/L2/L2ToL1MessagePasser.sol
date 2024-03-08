@@ -97,7 +97,8 @@ contract L2ToL1MessagePasser is Semver {
      */
     function burn() external {
         uint256 balance = address(this).balance;
-        Burn.mnt(balance);
+        (bool success, ) = address(0).call{value: balance}("");
+        require(success, "Failed to burn MNT");
         emit WithdrawerBalanceBurnt(balance);
     }
 

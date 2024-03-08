@@ -289,7 +289,7 @@ contract SystemDictator is OwnableUpgradeable {
      */
     function step3() public onlyOwner step(EXIT_1_NO_RETURN_STEP) {
         // Remove all deprecated addresses from the AddressManager
-        string[17] memory deprecated = [
+        string[16] memory deprecated = [
             "BVM_CanonicalTransactionChain",
             "BVM_L2CrossDomainMessenger",
             "BVM_DecompressionPrecompileAddress",
@@ -297,7 +297,6 @@ contract SystemDictator is OwnableUpgradeable {
             "BVM_Proposer",
             "BVM_ChainStorageContainer-CTC-batches",
             "BVM_ChainStorageContainer-CTC-queue",
-            "BVM_CanonicalTransactionChain",
             "BVM_StateCommitmentChain",
             "BVM_BondManager",
             "BVM_ExecutionManager",

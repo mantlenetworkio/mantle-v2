@@ -2,12 +2,15 @@ package crossdomain_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/deployer"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/immutables"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
 	"github.com/stretchr/testify/require"
 
@@ -93,10 +96,22 @@ func setL2CrossDomainMessenger(db vm.StateDB) error {
 // setL2ToL1MessagePasser will set the L2ToL1MessagePasser into a state
 // db that represents L2. This must be set so the L2CrossDomainMessenger
 // can call it as part of "sendMessage"
-func setL2ToL1MessagePasser(db vm.StateDB) error {
-	bytecode, err := bindings.GetDeployedBytecode("L2ToL1MessagePasser")
+func setL2ToL1MessagePasser(db vm.StateDB, l1MntToken common.Address) error {
+	deployments := []deployer.Constructor{
+		{
+			Name: "L2ToL1MessagePasser",
+			Args: []interface{}{
+				l1MntToken,
+			},
+		},
+	}
+	result, err := immutables.BuildL2(deployments)
 	if err != nil {
 		return err
+	}
+	bytecode, ok := result["L2ToL1MessagePasser"]
+	if !ok {
+		return fmt.Errorf("failed to build L2ToL1MessagePasser bytecode")
 	}
 
 	db.CreateAccount(predeploys.L2ToL1MessagePasserAddr)
@@ -123,7 +138,7 @@ func sendCrossDomainMessage(
 	opts, err := bind.NewKeyedTransactorWithChainID(testKey, chainID)
 	require.Nil(t, err)
 
-	tx, err := l2xdm.SendMessage(opts, message.EthValue, message.Target, message.Message, message.MinGasLimit)
+	tx, err := l2xdm.SendMessage0(opts, message.EthValue, message.Target, message.Message, message.MinGasLimit)
 	require.Nil(t, err)
 	backend.Commit()
 
@@ -178,7 +193,7 @@ func TestGetPendingWithdrawals(t *testing.T) {
 	L2db.CreateAccount(testAccount)
 	L2db.AddBalance(testAccount, big.NewInt(10000000000000000))
 	// Set the L2ToL1MessagePasser in the L2 state
-	err := setL2ToL1MessagePasser(L2db)
+	err := setL2ToL1MessagePasser(L2db, common.HexToAddress("0x3c3a81e81dc49A522A592e7622A7E711c06bf354"))
 	require.Nil(t, err)
 	// Set the L2CrossDomainMessenger in the L2 state
 	err = setL2CrossDomainMessenger(L2db)

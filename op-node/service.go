@@ -59,10 +59,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	datastoreConfig, err := NewMantleDataStoreConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
-	}
+	datastoreConfig := NewMantleDataStoreConfig(ctx)
 
 	syncConfig := NewSyncConfig(ctx)
 
@@ -210,7 +207,7 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	return logger, nil
 }
 
-func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig, error) {
+func NewMantleDataStoreConfig(ctx *cli.Context) datastore.MantleDataStoreConfig {
 	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
 	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
 	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
@@ -224,7 +221,7 @@ func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig
 		DataStorePollingDuration: dataStorePollingDuration,
 		MantleDaIndexerSocket:    mantleDaIndexerSocket,
 		MantleDAIndexerEnable:    mantleDAIndexerEnable,
-	}, nil
+	}
 }
 
 func NewSyncConfig(ctx *cli.Context) *sync.Config {

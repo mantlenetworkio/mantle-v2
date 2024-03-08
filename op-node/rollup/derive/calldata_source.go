@@ -34,6 +34,8 @@ type L1TransactionFetcher interface {
 
 type MantleDaSyncer interface {
 	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
+	IsDaIndexer() bool
 }
 
 // DataSourceFactory readers raw transactions from a given block & then filters for
@@ -94,9 +96,24 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 				batcherAddr: batcherAddr,
 			}
 		} else {
-			return &DataSource{
-				open: true,
-				data: dataFromMantleDa(cfg, receipts, syncer, metrics, log.New("origin", block)),
+			data, err := dataFromMantleDa(cfg, receipts, syncer, metrics, log.New("origin", block))
+			if err != nil {
+				return &DataSource{
+					open:        false,
+					id:          block,
+					cfg:         cfg,
+					fetcher:     fetcher,
+					syncer:      syncer,
+					metrics:     metrics,
+					log:         log,
+					batcherAddr: batcherAddr,
+				}
+			} else {
+				return &DataSource{
+					open: true,
+					data: data,
+				}
+
 			}
 		}
 	}
@@ -129,20 +146,27 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
 		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
 			if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
+				data, err := dataFromMantleDa(ds.cfg, receipts, ds.syncer, ds.metrics, log.New("origin", ds.id))
+				if err != nil {
+					return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+				}
 				ds.open = true
-				ds.data = dataFromMantleDa(ds.cfg, receipts, ds.syncer, ds.metrics, log.New("origin", ds.id))
+				ds.data = data
 			} else if errors.Is(err, ethereum.NotFound) {
 				return nil, NewResetError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 			} else {
 				return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 			}
-		} else if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil { // fetch data from EOA
-			ds.open = true
-			ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
-		} else if errors.Is(err, ethereum.NotFound) {
-			return nil, NewResetError(fmt.Errorf("failed to open eoa calldata source: %w", err))
 		} else {
-			return nil, NewTemporaryError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			_, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash)
+			if err == nil { // fetch data from EOA
+				ds.open = true
+				ds.data = DataFromEVMTransactions(ds.cfg, ds.batcherAddr, txs, log.New("origin", ds.id))
+			} else if errors.Is(err, ethereum.NotFound) {
+				return nil, NewResetError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			} else {
+				return nil, NewTemporaryError(fmt.Errorf("failed to open eoa calldata source: %w", err))
+			}
 		}
 	}
 	if len(ds.data) == 0 {
@@ -178,17 +202,17 @@ func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, 
 	return out
 }
 
-func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) []eth.Data {
+func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) ([]eth.Data, error) {
 	var out []eth.Data
 	abiUint32, err := abi.NewType("uint32", "uint32", nil)
 	if err != nil {
 		log.Error("Abi new uint32 type error", "err", err)
-		return out
+		return out, err
 	}
 	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
 	if err != nil {
 		log.Error("Abi new bytes32 type error", "err", err)
-		return out
+		return out, err
 	}
 	confirmDataStoreArgs := abi.Arguments{
 		{
@@ -217,25 +241,35 @@ func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer Man
 					continue
 				}
 				if dataStoreData != nil {
-					dataStoreId := dataStoreData["dataStoreId"].(uint32)
+					nextDataStoreId := dataStoreData["dataStoreId"].(uint32)
+					dataStoreId := nextDataStoreId - 1
 					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
-					daFrames, err := syncer.RetrievalFramesFromDa(dataStoreId - 1)
+					var daFrames []byte
+					if syncer.IsDaIndexer() {
+						daFrames, err = syncer.RetrievalFramesFromDaIndexer(dataStoreId)
+					} else {
+						daFrames, err = syncer.RetrievalFramesFromDa(dataStoreId)
+					}
 					if err != nil {
 						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
-						continue
+						return out, err
+					}
+					//skip this dataStore id
+					if daFrames == nil {
+						return out, nil
 					}
 					log.Info("Retrieval frames from mantle da success", "daFrames length", len(daFrames), "dataStoreId", dataStoreId)
 					err = rlp.DecodeBytes(daFrames, &out)
 					if err != nil {
-						log.Error("Decode retrieval frames in error", "err", err)
+						log.Error("Decode retrieval frames in error,skip wrong data", "err", err, "skip datastore id", dataStoreId)
 						continue
 					}
 					metrics.RecordParseDataStoreId(dataStoreId)
 					log.Info("Decode bytes success", "out length", len(out), "dataStoreId", dataStoreId)
 				}
-				return out
+				return out, nil
 			}
 		}
 	}
-	return out
+	return out, nil
 }

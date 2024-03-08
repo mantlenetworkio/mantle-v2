@@ -71,10 +71,7 @@ func runDerivation(logger log.Logger, cfg *rollup.Config, l2Cfg *params.ChainCon
 		return fmt.Errorf("failed to create oracle-backed L2 chain: %w", err)
 	}
 	l2Source := l2.NewOracleEngine(cfg, logger, engineBackend)
-	daSyncer, err := da.NewMantleDataStore(context.Background(), daCfg)
-	if err != nil {
-		return fmt.Errorf("failed to create mantle data store: %w", err)
-	}
+	daSyncer := da.NewMantleDataStore(context.Background(), daCfg)
 	logger.Info("Starting derivation")
 	d := cldr.NewDriver(logger, cfg, l1Source, l2Source, daSyncer, l2ClaimBlockNum)
 	for {

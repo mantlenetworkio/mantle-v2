@@ -154,13 +154,23 @@ abstract contract CrossDomainMessenger is
     /**
      * @notice Gas reserved for finalizing the execution of `relayMessage` after the safe call.
      */
-    uint64 public constant RELAY_RESERVED_GAS = 40_000;
+    uint64 public constant RELAY_RESERVED_GAS = 140_000;
 
     /**
      * @notice Gas reserved for the execution between the `hasMinGas` check and the external
      *         call in `relayMessage`.
      */
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
+
+    /**
+     * @notice BASE gas reserved for Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_BASE_GAS = 800;
+
+    /**
+     * @notice Extra gas reserved for per-byte in Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_GAS_PER_BYTE = 2;
 
     /**
      * @notice Address of the paired CrossDomainMessenger contract on the other chain.
@@ -517,6 +527,8 @@ abstract contract CrossDomainMessenger is
             RELAY_CONSTANT_OVERHEAD +
             // Calldata overhead
             (uint64(_message.length) * MIN_GAS_CALLDATA_OVERHEAD) +
+            // Hash message
+            (uint64(_message.length) * HASH_MESSAGE_GAS_PER_BYTE) + HASH_MESSAGE_BASE_GAS +
             // Dynamic overhead (EIP-150)
             ((_minGasLimit * MIN_GAS_DYNAMIC_OVERHEAD_NUMERATOR) /
                 MIN_GAS_DYNAMIC_OVERHEAD_DENOMINATOR) +
@@ -536,7 +548,13 @@ abstract contract CrossDomainMessenger is
      */
     // solhint-disable-next-line func-name-mixedcase
     function __CrossDomainMessenger_init() internal onlyInitializing {
-        xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        // We only want to set the xDomainMsgSender to the default value if it hasn't been initialized yet,
+        // meaning that this is a fresh contract deployment.
+        // This prevents resetting the xDomainMsgSender to the default value during an upgrade, which would enable
+        // a reentrant withdrawal to sandwhich the upgrade replay a withdrawal twice.
+        if (xDomainMsgSender == address(0)) {
+            xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        }
     }
 
     /**

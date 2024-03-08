@@ -312,6 +312,7 @@ var optionalFlags = []cli.Flag{
 	SkipSyncStartCheck,
 	MantleDaIndexerSocketFlag,
 	MantleDAIndexerEnableFlag,
+	RPCEnableAdmin,
 }
 
 // Flags contains the list of configuration options available to the binary.

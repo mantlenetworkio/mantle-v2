@@ -41,12 +41,14 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 	} else {
 		seqBytes, err := hex.DecodeString(cfg.HsmCreden)
 		if err != nil {
-			log.Crit("gasoracle", "decode hsm creden fail", err.Error())
+			log.Warn("gasoracle", "decode hsm creden fail", err.Error())
+			return nil, err
 		}
 		apikey := option.WithCredentialsJSON(seqBytes)
 		client, err := kms.NewKeyManagementClient(context.Background(), apikey)
 		if err != nil {
-			log.Crit("gasoracle", "create signer error", err.Error())
+			log.Warn("gasoracle", "create signer error", err.Error())
+			return nil, err
 		}
 		mk := &bsscore.ManagedKey{
 			KeyName:      cfg.HsmAPIName,
@@ -55,7 +57,8 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 		}
 		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), cfg.l2ChainID)
 		if err != nil {
-			log.Crit("gasoracle", "create signer error", err.Error())
+			log.Warn("gasoracle", "create signer error", err.Error())
+			return nil, err
 		}
 	}
 	// Once https://github.com/ethereum/go-ethereum/pull/23062 is released

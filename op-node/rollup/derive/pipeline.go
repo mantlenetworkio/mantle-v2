@@ -32,6 +32,8 @@ type L1Fetcher interface {
 
 type DaSyncer interface {
 	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
+	IsDaIndexer() bool
 }
 
 // ResettableEngineControl wraps EngineControl with reset-functionality,
