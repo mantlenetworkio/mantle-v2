@@ -153,7 +153,7 @@ func (s *EthClient) OnReceiptsMethodErr(m ReceiptsFetchingMethod, err error) {
 		s.log.Warn("failed to use selected RPC method for receipt fetching, temporarily falling back to alternatives",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods, "err", err)
 	} else {
-		s.log.Debug("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
+		s.log.Info("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods&^m, "err", err)
 	}
 }
@@ -220,6 +220,7 @@ func (n numberID) CheckID(id eth.BlockID) error {
 }
 
 func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, error) {
+	log.Info("headerCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var header *rpcHeader
 	err := s.client.CallContext(ctx, &header, method, id.Arg(), false) // headers are just blocks without txs
 	if err != nil {
@@ -235,11 +236,13 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
 		return nil, fmt.Errorf("fetched block header does not match requested ID: %w", err)
 	}
+	log.Info("headerCall", "number", header.Number, "blockHash", header.Hash.String(), "parentHash", header.ParentHash.String())
 	s.headersCache.Add(info.Hash(), info)
 	return info, nil
 }
 
 func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, types.Transactions, error) {
+	log.Info("blockCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
@@ -255,12 +258,14 @@ func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID)
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
 		return nil, nil, fmt.Errorf("fetched block data does not match requested ID: %w", err)
 	}
+	log.Info("blockCall", "number", info.NumberU64(), "blockHash", info.Hash().String(), "parentHash", info.ParentHash().String())
 	s.headersCache.Add(info.Hash(), info)
 	s.transactionsCache.Add(info.Hash(), txs)
 	return info, txs, nil
 }
 
 func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockID) (*eth.ExecutionPayload, error) {
+	log.Info("payloadCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
@@ -276,6 +281,7 @@ func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockI
 	if err := id.CheckID(payload.ID()); err != nil {
 		return nil, fmt.Errorf("fetched payload does not match requested ID: %w", err)
 	}
+	log.Info("payloadCall", "number", block.Number.String(), "blockHash", block.Hash.String(), "parentHash", block.ParentHash.String())
 	s.payloadsCache.Add(payload.BlockHash, payload)
 	return payload, nil
 }

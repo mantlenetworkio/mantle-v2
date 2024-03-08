@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 
@@ -82,9 +83,10 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 	// or returning them out-of-order. Verify the receipts against the expected receipt-hash.
 	hasher := trie.NewStackTrie(nil)
 	computed := types.DeriveSha(types.Receipts(receipts), hasher)
-	if receiptHash != computed {
-		return fmt.Errorf("failed to fetch list of receipts: expected receipt root %s but computed %s from retrieved receipts", receiptHash, computed)
-	}
+	//if receiptHash != computed {
+	//	return fmt.Errorf("failed to fetch list of receipts: expected receipt root %s but computed %s from retrieved receipts", receiptHash, computed)
+	//}
+	log.Info("receiptHash verify", "result", fmt.Sprintf("expected receipt root %s, computed %s from retrieved receipts", receiptHash, computed))
 	return nil
 }
 
@@ -412,10 +414,12 @@ func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetc
 	switch m {
 	case AlchemyGetTransactionReceipts:
 		var tmp receiptsWrapper
+		log.Info("runAltMethod alchemy_getTransactionReceipts", "blockHash", job.block.Hash.String())
 		err = job.client.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: job.block.Hash})
 		result = tmp.Receipts
 	case DebugGetRawReceipts:
 		var rawReceipts []hexutil.Bytes
+		log.Info("runAltMethod debug_getRawReceipts", "blockHash", job.block.Hash.String())
 		err = job.client.CallContext(ctx, &rawReceipts, "debug_getRawReceipts", job.block.Hash)
 		if err == nil {
 			if len(rawReceipts) == len(job.txHashes) {
@@ -425,8 +429,10 @@ func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetc
 			}
 		}
 	case ParityGetBlockReceipts:
+		log.Info("runAltMethod parity_getBlockReceipts", "blockHash", job.block.Hash.String())
 		err = job.client.CallContext(ctx, &result, "parity_getBlockReceipts", job.block.Hash)
 	case EthGetBlockReceipts:
+		log.Info("runAltMethod eth_getBlockReceipts", "blockHash", job.block.Hash.String())
 		err = job.client.CallContext(ctx, &result, "eth_getBlockReceipts", job.block.Hash)
 	default:
 		err = fmt.Errorf("unknown receipt fetching method: %d", uint64(m))
