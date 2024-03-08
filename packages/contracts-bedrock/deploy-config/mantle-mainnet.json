@@ -29,7 +29,7 @@
   "controller": "0x2A2954F3989a83Cc43DD58B0f038D5F276f21333",
   "finalizationPeriodSeconds": 604800,
   "numDeployConfirmations": 2,
-  "fundDevAccounts": true,
+  "fundDevAccounts": false,
   "l2GenesisBlockBaseFeePerGas": "0x1312D00",
   "gasPriceOracleOwner": "0x2F44BD2a54aC3fB20cd7783cF94334069641daC9",
   "gasPriceOracleTokenRatio": 4000,
