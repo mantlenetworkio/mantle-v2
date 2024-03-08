@@ -51,7 +51,7 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 	l1Block eth.BlockID, rpcInitFunc func(url string) (client.RPC, error), threshold int64,
 	tickerTime time.Duration) client.RPC {
 
-	log.Info("NewFallbackClient", "threshold", threshold, "tickerTime", tickerTime)
+	log.Info("NewFallbackClient init", "threshold", threshold, "tickerTime", tickerTime, "equals", tickerTime == 1*time.Minute)
 	fallbackClient := &FallbackClient{
 		ctx:          ctx,
 		firstRpc:     rpc,
@@ -62,11 +62,11 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 		l1ChainId:    l1ChainId,
 		l1Block:      l1Block,
 		isClose:      make(chan struct{}),
-		threshold:    2,
+		threshold:    threshold,
 	}
 	fallbackClient.currentRpc.Store(&rpc)
 	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(tickerTime)
 		for {
 			select {
 			case <-ticker.C:
@@ -75,6 +75,7 @@ func NewFallbackClient(ctx context.Context, rpc client.RPC, urlList []string, lo
 			case <-fallbackClient.isClose:
 				return
 			default:
+				log.Info("NewFallbackClient default", "lastMinuteFail", fallbackClient.lastMinuteFail.Load(), "currentUrl", urlList[fallbackClient.currentIndex])
 				if fallbackClient.lastMinuteFail.Load() >= threshold {
 					fallbackClient.switchCurrentRpc()
 				}
@@ -105,13 +106,17 @@ func (l *FallbackClient) CallContext(ctx context.Context, result any, method str
 }
 
 func (l *FallbackClient) handleErr(err error) {
-	l.log.Error("FallbackClient handleErr", "err", err)
+	var rpcNoResultErr, notFoundErr bool
 	if errors.Is(err, rpc.ErrNoResult) {
-		l.log.Error("rpc.ErrNoResult", "err", err)
-		return
+		rpcNoResultErr = true
 	}
 	if errors.Is(err, ethereum.NotFound) {
-		l.log.Error("ethereum.NotFound", "err", err)
+		notFoundErr = true
+	}
+
+	l.log.Error("FallbackClient handleErr", "err", err, "rpcNoResultErr", rpcNoResultErr, "notFoundErr", notFoundErr, "currentUrl", l.urlList[l.currentIndex])
+
+	if rpcNoResultErr || notFoundErr {
 		return
 	}
 	l.lastMinuteFail.Add(1)
@@ -122,7 +127,7 @@ func (l *FallbackClient) BatchCallContext(ctx context.Context, b []rpc.BatchElem
 	if len(b) > 0 {
 		method = b[0].Method
 	}
-	l.log.Info("FallbackClient BatchCallContext", "method", method, "currentUrl", l.urlList[l.currentIndex], "l.currentIndex", l.currentIndex, "urls", l.urlList)
+	l.log.Info("FallbackClient BatchCallContext", "method", method, "currentUrl", l.urlList[l.currentIndex])
 
 	err := (*l.currentRpc.Load()).BatchCallContext(ctx, b)
 	if err != nil {

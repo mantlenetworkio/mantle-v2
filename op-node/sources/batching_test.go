@@ -125,14 +125,14 @@ func (tc *batchTestCase) Run(t *testing.T) {
 		}
 		tc.On("getSingle", new(string), "testing_foobar", ec.id).Once().Run(makeSingleMock(ec)).Return([]error{ret})
 	}
-	iter := NewIterativeBatchCall[int, *string](keys, makeTestRequest, tc, tc.batchSize)
+	iter := NewIterativeBatchCall[int, *string](keys, makeTestRequest, tc.batchSize)
 	for i, bc := range tc.batchCalls {
 		ctx := context.Background()
 		if bc.makeCtx != nil {
 			ctx = bc.makeCtx()
 		}
 
-		err := iter.Fetch(ctx)
+		err := iter.Fetch(ctx, tc)
 		if err == io.EOF {
 			require.Equal(t, i, len(tc.batchCalls)-1, "EOF only on last call")
 		} else {
@@ -146,7 +146,7 @@ func (tc *batchTestCase) Run(t *testing.T) {
 	}
 	for i, ec := range tc.singleCalls {
 		ctx := context.Background()
-		err := iter.Fetch(ctx)
+		err := iter.Fetch(ctx, tc)
 		if err == io.EOF {
 			require.Equal(t, i, len(tc.singleCalls)-1, "EOF only on last call")
 		} else {
@@ -168,7 +168,7 @@ func (tc *batchTestCase) Run(t *testing.T) {
 	out2, err := iter.Result()
 	require.NoError(t, err)
 	require.Equal(t, out, out2, "cached result should match")
-	require.Equal(t, io.EOF, iter.Fetch(context.Background()), "fetch after completion should EOF")
+	require.Equal(t, io.EOF, iter.Fetch(context.Background(), tc), "fetch after completion should EOF")
 
 	tc.AssertExpectations(t)
 }

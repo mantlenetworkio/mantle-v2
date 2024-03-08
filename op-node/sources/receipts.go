@@ -332,7 +332,6 @@ type receiptsFetchingJob struct {
 
 	requester ReceiptsRequester
 
-	client       rpcClient
 	maxBatchSize int
 
 	block       eth.BlockID
@@ -344,11 +343,10 @@ type receiptsFetchingJob struct {
 	result types.Receipts
 }
 
-func NewReceiptsFetchingJob(requester ReceiptsRequester, client rpcClient, maxBatchSize int, block eth.BlockID,
+func NewReceiptsFetchingJob(requester ReceiptsRequester, maxBatchSize int, block eth.BlockID,
 	receiptHash common.Hash, txHashes []common.Hash) *receiptsFetchingJob {
 	return &receiptsFetchingJob{
 		requester:    requester,
-		client:       client,
 		maxBatchSize: maxBatchSize,
 		block:        block,
 		receiptHash:  receiptHash,
@@ -365,19 +363,18 @@ type ReceiptsRequester interface {
 
 // runFetcher retrieves the result by continuing previous batched receipt fetching work,
 // and starting this work if necessary.
-func (job *receiptsFetchingJob) runFetcher(ctx context.Context) error {
+func (job *receiptsFetchingJob) runFetcher(ctx context.Context, client rpcClient) error {
 	if job.fetcher == nil {
 		// start new work
 		job.fetcher = NewIterativeBatchCall[common.Hash, *types.Receipt](
 			job.txHashes,
 			makeReceiptRequest,
-			job.client,
 			job.maxBatchSize,
 		)
 	}
 	// Fetch all receipts
 	for {
-		if err := job.fetcher.Fetch(ctx); err == io.EOF {
+		if err := job.fetcher.Fetch(ctx, client); err == io.EOF {
 			break
 		} else if err != nil {
 			return err
@@ -405,17 +402,17 @@ type receiptsWrapper struct {
 
 // runAltMethod retrieves the result by fetching all receipts at once,
 // using the given non-standard receipt fetching method.
-func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetchingMethod) error {
+func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetchingMethod, client rpcClient) error {
 	var result []*types.Receipt
 	var err error
 	switch m {
 	case AlchemyGetTransactionReceipts:
 		var tmp receiptsWrapper
-		err = job.client.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: job.block.Hash})
+		err = client.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: job.block.Hash})
 		result = tmp.Receipts
 	case DebugGetRawReceipts:
 		var rawReceipts []hexutil.Bytes
-		err = job.client.CallContext(ctx, &rawReceipts, "debug_getRawReceipts", job.block.Hash)
+		err = client.CallContext(ctx, &rawReceipts, "debug_getRawReceipts", job.block.Hash)
 		if err == nil {
 			if len(rawReceipts) == len(job.txHashes) {
 				result, err = eth.DecodeRawReceipts(job.block, rawReceipts, job.txHashes)
@@ -424,9 +421,9 @@ func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetc
 			}
 		}
 	case ParityGetBlockReceipts:
-		err = job.client.CallContext(ctx, &result, "parity_getBlockReceipts", job.block.Hash)
+		err = client.CallContext(ctx, &result, "parity_getBlockReceipts", job.block.Hash)
 	case EthGetBlockReceipts:
-		err = job.client.CallContext(ctx, &result, "eth_getBlockReceipts", job.block.Hash)
+		err = client.CallContext(ctx, &result, "eth_getBlockReceipts", job.block.Hash)
 	default:
 		err = fmt.Errorf("unknown receipt fetching method: %d", uint64(m))
 	}
@@ -447,7 +444,7 @@ func (job *receiptsFetchingJob) runAltMethod(ctx context.Context, m ReceiptsFetc
 // and fetching may be continued/re-attempted by calling Fetch again.
 // The job caches the result, so repeated Fetches add no additional cost.
 // Fetch is safe to be called concurrently, and will lock to avoid duplicate work or internal inconsistency.
-func (job *receiptsFetchingJob) Fetch(ctx context.Context) (types.Receipts, error) {
+func (job *receiptsFetchingJob) Fetch(ctx context.Context, client rpcClient) (types.Receipts, error) {
 	job.m.Lock()
 	defer job.m.Unlock()
 
@@ -458,11 +455,11 @@ func (job *receiptsFetchingJob) Fetch(ctx context.Context) (types.Receipts, erro
 	m := job.requester.PickReceiptsMethod(uint64(len(job.txHashes)))
 
 	if m == EthGetTransactionReceiptBatch {
-		if err := job.runFetcher(ctx); err != nil {
+		if err := job.runFetcher(ctx, client); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := job.runAltMethod(ctx, m); err != nil {
+		if err := job.runAltMethod(ctx, m, client); err != nil {
 			return nil, err
 		}
 	}

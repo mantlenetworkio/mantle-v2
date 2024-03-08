@@ -174,15 +174,29 @@ func (ic *InstrumentedRPCClient) Close() {
 }
 
 func (ic *InstrumentedRPCClient) CallContext(ctx context.Context, result any, method string, args ...any) error {
-	return instrument1(ic.m, method, func() error {
-		return ic.c.CallContext(ctx, result, method, args...)
-	})
+	record := ic.m.RecordRPCClientRequest(method)
+	err := ic.c.CallContext(ctx, result, method, args...)
+	record(err)
+	return err
 }
 
 func (ic *InstrumentedRPCClient) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error {
-	return instrumentBatch(ic.m, func() error {
-		return ic.c.BatchCallContext(ctx, b)
-	}, b)
+	ic.m.RPCClientRequestsTotal.WithLabelValues(metrics.BatchMethod).Inc()
+	for _, elem := range b {
+		ic.m.RPCClientRequestsTotal.WithLabelValues(elem.Method).Inc()
+	}
+	timer := prometheus.NewTimer(ic.m.RPCClientRequestDurationSeconds.WithLabelValues(metrics.BatchMethod))
+	defer timer.ObserveDuration()
+
+	// Track response times for batch requests separately.
+	if err := ic.c.BatchCallContext(ctx, b); err != nil {
+		ic.m.RecordRPCClientResponse(metrics.BatchMethod, err)
+		return err
+	}
+	for _, elem := range b {
+		ic.m.RecordRPCClientResponse(elem.Method, elem.Error)
+	}
+	return nil
 }
 
 func (ic *InstrumentedRPCClient) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
