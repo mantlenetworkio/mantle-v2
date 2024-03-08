@@ -50,14 +50,14 @@ func makeTestRequest(i int) (*string, rpc.BatchElem) {
 	}
 }
 
-func (tc *batchTestCase) GetBatch(ctx context.Context, b []rpc.BatchElem) error {
+func (tc *batchTestCase) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 	return tc.Mock.MethodCalled("getBatch", b).Get(0).([]error)[0]
 }
 
-func (tc *batchTestCase) GetSingle(ctx context.Context, result any, method string, args ...any) error {
+func (tc *batchTestCase) CallContext(ctx context.Context, result any, method string, args ...any) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -125,7 +125,7 @@ func (tc *batchTestCase) Run(t *testing.T) {
 		}
 		tc.On("getSingle", new(string), "testing_foobar", ec.id).Once().Run(makeSingleMock(ec)).Return([]error{ret})
 	}
-	iter := NewIterativeBatchCall[int, *string](keys, makeTestRequest, tc.GetBatch, tc.GetSingle, tc.batchSize)
+	iter := NewIterativeBatchCall[int, *string](keys, makeTestRequest, tc, tc.batchSize)
 	for i, bc := range tc.batchCalls {
 		ctx := context.Background()
 		if bc.makeCtx != nil {

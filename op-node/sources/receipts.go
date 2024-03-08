@@ -371,8 +371,7 @@ func (job *receiptsFetchingJob) runFetcher(ctx context.Context) error {
 		job.fetcher = NewIterativeBatchCall[common.Hash, *types.Receipt](
 			job.txHashes,
 			makeReceiptRequest,
-			job.client.BatchCallContext,
-			job.client.CallContext,
+			job.client,
 			job.maxBatchSize,
 		)
 	}

@@ -23,8 +23,7 @@ type IterativeBatchCall[K any, V any] struct {
 	batchSize    int
 
 	makeRequest func(K) (V, rpc.BatchElem)
-	getBatch    BatchCallContextFn
-	getSingle   CallContextFn
+	client      rpcClient
 
 	requestsValues []V
 	scheduled      chan rpc.BatchElem
@@ -35,8 +34,7 @@ type IterativeBatchCall[K any, V any] struct {
 func NewIterativeBatchCall[K any, V any](
 	requestsKeys []K,
 	makeRequest func(K) (V, rpc.BatchElem),
-	getBatch BatchCallContextFn,
-	getSingle CallContextFn,
+	client rpcClient,
 	batchSize int) *IterativeBatchCall[K, V] {
 
 	if len(requestsKeys) < batchSize {
@@ -48,8 +46,7 @@ func NewIterativeBatchCall[K any, V any](
 
 	out := &IterativeBatchCall[K, V]{
 		completed:    0,
-		getBatch:     getBatch,
-		getSingle:    getSingle,
+		client:       client,
 		requestsKeys: requestsKeys,
 		batchSize:    batchSize,
 		makeRequest:  makeRequest,
@@ -133,12 +130,12 @@ func (ibc *IterativeBatchCall[K, V]) Fetch(ctx context.Context) error {
 
 	if ibc.batchSize == 1 {
 		first := batch[0]
-		if err := ibc.getSingle(ctx, &first.Result, first.Method, first.Args...); err != nil {
+		if err := ibc.client.CallContext(ctx, &first.Result, first.Method, first.Args...); err != nil {
 			ibc.scheduled <- first
 			return err
 		}
 	} else {
-		if err := ibc.getBatch(ctx, batch); err != nil {
+		if err := ibc.client.BatchCallContext(ctx, batch); err != nil {
 			for _, r := range batch {
 				ibc.scheduled <- r
 			}
