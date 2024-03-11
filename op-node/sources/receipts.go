@@ -464,15 +464,23 @@ func (job *receiptsFetchingJob) Fetch(ctx context.Context) (types.Receipts, erro
 
 	m := job.requester.PickReceiptsMethod(uint64(len(job.txHashes)))
 
+	log.Info("receiptsFetchingJob Start", "txHashesCount", len(job.txHashes), "block", job.block.String())
+	for _, item := range job.txHashes {
+		log.Info("receiptsFetchingJob", "txHash", item.String())
+	}
+
 	if m == EthGetTransactionReceiptBatch {
+		log.Info("receiptsFetchingJob runFetcher")
 		if err := job.runFetcher(ctx); err != nil {
 			return nil, err
 		}
 	} else {
+		log.Info("receiptsFetchingJob runAltMethod")
 		if err := job.runAltMethod(ctx, m); err != nil {
 			return nil, err
 		}
 	}
+	log.Info("receiptsFetchingJob End")
 
 	return job.result, nil
 }

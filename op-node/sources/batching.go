@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ethereum-optimism/optimism/l2geth/log"
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/ethereum/go-ethereum/rpc"
@@ -134,6 +135,7 @@ func (ibc *IterativeBatchCall[K, V]) Fetch(ctx context.Context) error {
 	if ibc.batchSize == 1 {
 		first := batch[0]
 		if err := ibc.getSingle(ctx, &first.Result, first.Method, first.Args...); err != nil {
+			log.Info("getSingle", "errMsg", err.Error())
 			ibc.scheduled <- first
 			return err
 		}
@@ -142,6 +144,7 @@ func (ibc *IterativeBatchCall[K, V]) Fetch(ctx context.Context) error {
 			for _, r := range batch {
 				ibc.scheduled <- r
 			}
+			log.Info("getSingle", "errMsg", err.Error())
 			return fmt.Errorf("failed batch-retrieval: %w", err)
 		}
 	}
