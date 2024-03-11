@@ -204,9 +204,27 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
 
+type rpcTransaction struct {
+	RpcHash common.Hash `json:"hash"`
+	types.Transaction
+}
+
+type rpcTransactions []*rpcTransaction
+
+func (rpcTxs rpcTransactions) ToTxs() types.Transactions {
+	if rpcTxs == nil {
+		return nil
+	}
+	var txs types.Transactions
+	for _, item := range rpcTxs {
+		txs = append(txs, &item.Transaction)
+	}
+	return txs
+}
+
 type rpcBlock struct {
 	rpcHeader
-	Transactions []*types.Transaction `json:"transactions"`
+	Transactions rpcTransactions `json:"transactions"`
 }
 
 func (block *rpcBlock) verify() error {
@@ -219,13 +237,13 @@ func (block *rpcBlock) verify() error {
 	computed := block.computeBlockHash()
 	log.Info("rpcBlock verify",
 		"result", fmt.Sprintf("computed %s, RPC said %s", computed.String(), block.Hash.String()))
-	computedTxHash := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil))
+	computedTxHash := types.DeriveSha(types.Transactions(block.Transactions.ToTxs()), trie.NewStackTrie(nil))
 	log.Info("rpcBlock verify",
 		"result", fmt.Sprintf("computed txhash %s, RPC said %s", computedTxHash.String(), block.TxHash.String()))
 	return nil
 }
 
-func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo, types.Transactions, error) {
+func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo, rpcTransactions, error) {
 	if mustBePostMerge {
 		if err := block.checkPostMerge(); err != nil {
 			return nil, nil, err
