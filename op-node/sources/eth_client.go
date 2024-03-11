@@ -265,7 +265,7 @@ func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID)
 	}
 	log.Info("blockCall", "number", info.NumberU64(), "blockHash", info.Hash().String(), "parentHash", info.ParentHash().String())
 	s.headersCache.Add(info.Hash(), info)
-	s.transactionsCache.Add(info.Hash(), txs)
+	s.transactionsCache.Add(info.Hash(), txs.ToTxs())
 	return info, txs.ToTxs(), txHashs, nil
 }
 
