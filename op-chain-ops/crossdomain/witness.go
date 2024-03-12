@@ -141,6 +141,83 @@ func ReadWitnessData(path string) ([]*SentMessage, OVMETHAddresses, error) {
 	return witnesses, addresses, nil
 }
 
+// ReadWitnessData will read messages and addresses from a raw l2geth state
+// dump file.
+func ReadWitnessDataCatch(path string) ([]*SentMessage, OVMETHAddresses, MSGES, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("cannot open witness data file: %w", err)
+	}
+	defer f.Close()
+
+	rd := bufio.NewReader(f)
+	var witnesses []*SentMessage
+	addresses := make(map[common.Address]bool)
+	msges := make(map[common.Hash]string)
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, nil, nil, err
+		}
+		line = strings.TrimPrefix(line, "\n")
+		line = strings.TrimSuffix(line, "\n")
+		if line == "" {
+			continue
+		}
+		splits := strings.Split(line, "|")
+		if len(splits) < 2 {
+			return nil, nil, nil, fmt.Errorf("invalid line: %s", line)
+		}
+
+		switch splits[0] {
+		case "MSG":
+			if len(splits) != 3 {
+				return nil, nil, nil, fmt.Errorf("invalid line: %s", line)
+			}
+
+			msg := splits[2]
+			// Make sure that the witness data has a 0x prefix
+			if !strings.HasPrefix(msg, "0x") {
+				msg = "0x" + msg
+			}
+
+			msgB := hexutil.MustDecode(msg)
+
+			// Skip any errors
+			calldata, err := decodeWitnessCalldata(msgB)
+			if err != nil {
+				log.Warn("cannot decode witness calldata", "err", err)
+				continue
+			}
+			sendMes := &SentMessage{
+				Who: common.HexToAddress(splits[1]),
+				Msg: calldata,
+			}
+			wd, err := sendMes.ToLegacyWithdrawal()
+			if err != nil {
+				log.Warn("in witness , cannot to withdrawal", "err", err)
+				continue
+			}
+			hashC, err := wd.Hash()
+			if err != nil {
+				log.Warn("in witness , cannot get hash from withdrawal", "err", err)
+				continue
+			}
+			msges[hashC] = line
+			witnesses = append(witnesses, sendMes)
+		case "ETH":
+			addresses[common.HexToAddress(splits[1])] = true
+		default:
+			return nil, nil, nil, fmt.Errorf("invalid line: %s", line)
+		}
+	}
+
+	return witnesses, addresses, msges, nil
+}
+
 // ToLegacyWithdrawal will convert a SentMessageJSON to a LegacyWithdrawal
 // struct. This is useful because the LegacyWithdrawal struct has helper
 // functions on it that can compute the withdrawal hash and the storage slot.
@@ -159,6 +236,8 @@ func (s *SentMessage) ToLegacyWithdrawal() (*LegacyWithdrawal, error) {
 // OVMETHAddresses represents a list of addresses that interacted with
 // the ERC20 representation of ether in the pre-bedrock system.
 type OVMETHAddresses map[common.Address]bool
+
+type MSGES map[common.Hash]string
 
 // NewAddresses will read an addresses.json file from the filesystem.
 func NewAddresses(path string) (OVMETHAddresses, error) {

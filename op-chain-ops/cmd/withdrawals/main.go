@@ -156,6 +156,10 @@ func main() {
 				Name:  "relayed-out",
 				Usage: "Path to write text file of withdrawals have been relayed",
 			},
+			&cli.StringFlag{
+				Name:  "un-relayed-out",
+				Usage: "Path to write text file of withdrawals have not been relayed",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			clients, err := util.NewClients(ctx)
@@ -187,34 +191,38 @@ func main() {
 			}
 
 			// create the set of withdrawals
-			wds, err := newWithdrawals(ctx, l1ChainID)
+			wds, msgs, err := newWithdrawals(ctx, l1ChainID)
 			if err != nil {
 				return err
 			}
 
-			period, err := contracts.L2OutputOracle.FINALIZATIONPERIODSECONDS(&bind.CallOpts{})
-			if err != nil {
-				return err
-			}
+			var period *big.Int
+			var l2OutputCatch *cache
+			var bedrockStartingBlockNumber *big.Int
+			if contracts.L2OutputOracle != nil {
+				period, err = contracts.L2OutputOracle.FINALIZATIONPERIODSECONDS(&bind.CallOpts{})
+				if err != nil {
+					return err
+				}
+				bedrockStartingBlockNumber, err := contracts.L2OutputOracle.StartingBlockNumber(&bind.CallOpts{})
+				if err != nil {
+					return err
+				}
 
-			bedrockStartingBlockNumber, err := contracts.L2OutputOracle.StartingBlockNumber(&bind.CallOpts{})
-			if err != nil {
-				return err
-			}
+				bedrockStartingBlock, err := clients.L2Client.BlockByNumber(context.Background(), bedrockStartingBlockNumber)
+				if err != nil {
+					return err
+				}
 
-			bedrockStartingBlock, err := clients.L2Client.BlockByNumber(context.Background(), bedrockStartingBlockNumber)
-			if err != nil {
-				return err
-			}
+				log.Info("Withdrawal config", "finalization-period", period, "bedrock-starting-block-number", bedrockStartingBlockNumber, "bedrock-starting-block-hash", bedrockStartingBlock.Hash().Hex())
 
-			log.Info("Withdrawal config", "finalization-period", period, "bedrock-starting-block-number", bedrockStartingBlockNumber, "bedrock-starting-block-hash", bedrockStartingBlock.Hash().Hex())
-
-			if !bytes.Equal(bedrockStartingBlock.Extra(), genesis.BedrockTransitionBlockExtraData) {
-				return errors.New("genesis block mismatch")
-			}
-			l2OutputCatch, err := GetOutPutCache(contracts.L2OutputOracle, bedrockStartingBlockNumber, clients)
-			if err != nil {
-				return err
+				if !bytes.Equal(bedrockStartingBlock.Extra(), genesis.BedrockTransitionBlockExtraData) {
+					return errors.New("genesis block mismatch")
+				}
+				l2OutputCatch, err = GetOutPutCache(contracts.L2OutputOracle, bedrockStartingBlockNumber, clients)
+				if err != nil {
+					return err
+				}
 			}
 
 			outfile := ctx.String("bad-withdrawals-out")
@@ -257,14 +265,18 @@ func main() {
 			//pre check relay
 			preCheckRelay := ctx.Bool("pre-check-relay")
 			relayedOut := ctx.String("relayed-out")
+			unRelayedOut := ctx.String("un-relayed-out")
 			var relayFile *os.File
 			defer relayFile.Close()
+			var unRelayFile *os.File
+			defer unRelayFile.Close()
 			relayed := make([]string, 0)
+			unRelayed := make([]string, 0)
 
-			if preCheckRelay && relayedOut == "" {
-				return fmt.Errorf("pre check relay %t,must config relayed out path", preCheckRelay)
+			if preCheckRelay && relayedOut == "" && unRelayedOut == "" {
+				return fmt.Errorf("pre check relay %t,must config relayed out and un relayed path", preCheckRelay)
 			}
-			if relayedOut != "" {
+			if preCheckRelay {
 				relayFile, err = os.OpenFile(relayedOut, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o644)
 				if err != nil {
 					return err
@@ -273,14 +285,32 @@ func main() {
 				if err != nil {
 					return err
 				}
+				unRelayFile, err = os.OpenFile(unRelayedOut, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o644)
+				if err != nil {
+					return err
+				}
+				unRelayed, err = ReadRelayedData(unRelayFile)
+				if err != nil {
+					return err
+				}
 			}
 
 			// iterate over all of the withdrawals and submit them
 			for i, wd := range wds {
 				log.Info("Processing withdrawal", "index", i)
+				wdHash, err := wd.Hash()
+				if err != nil {
+					return err
+				}
+				line, _ := msgs[wdHash]
 
 				if preCheckRelay {
-					if i < len(relayed) {
+					if slices.Contains(relayed, line) {
+						log.Info("Message already relayed", "index", i, "line", line, "preCheckRelay", preCheckRelay)
+						continue
+					}
+					if slices.Contains(unRelayed, line) {
+						log.Info("Message un relayed", "index", i, "line", line, "preCheckRelay", preCheckRelay)
 						continue
 					}
 				}
@@ -301,10 +331,6 @@ func main() {
 				if err != nil {
 					return err
 				}
-				if slices.Contains(relayed, legacyXdmHash.String()) {
-					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex(), "preCheckRelay", preCheckRelay)
-					continue
-				}
 
 				// check to see if the withdrawal has already been successfully
 				// relayed or received
@@ -322,8 +348,13 @@ func main() {
 				if isSuccess {
 					log.Info("Message already relayed", "index", i, "withdrawal_legacy_hash", legacyXdmHash.Hex())
 					if preCheckRelay {
-						line := fmt.Sprintf("%s\n", legacyXdmHash.String())
+						line := fmt.Sprintf("%s\n", line)
 						relayFile.WriteString(line)
+					}
+				} else {
+					if preCheckRelay {
+						line := fmt.Sprintf("%s\n", line)
+						unRelayFile.WriteString(line)
 					}
 				}
 				if preCheckRelay {
@@ -846,15 +877,22 @@ type contracts struct {
 // newContracts will create a contracts struct with the contract bindings
 // preconfigured
 func newContracts(ctx *cli.Context, l1Backend, l2Backend bind.ContractBackend) (*contracts, error) {
-	optimismPortalAddress := ctx.String("optimism-portal-address")
-	if len(optimismPortalAddress) == 0 {
-		return nil, errors.New("OptimismPortal address not configured")
-	}
-	optimismPortalAddr := common.HexToAddress(optimismPortalAddress)
 
-	portal, err := bindings.NewOptimismPortal(optimismPortalAddr, l1Backend)
-	if err != nil {
-		return nil, err
+	preCheckRdelay := ctx.Bool("pre-check-relay")
+	var portal *bindings.OptimismPortal
+	var err error
+	var optimismPortalAddr common.Address
+	if !preCheckRdelay {
+		optimismPortalAddress := ctx.String("optimism-portal-address")
+		if len(optimismPortalAddress) == 0 {
+			return nil, errors.New("OptimismPortal address not configured")
+		}
+		optimismPortalAddr = common.HexToAddress(optimismPortalAddress)
+
+		portal, err = bindings.NewOptimismPortal(optimismPortalAddr, l1Backend)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	l1xdmAddress := ctx.String("l1-crossdomain-messenger-address")
@@ -868,13 +906,17 @@ func newContracts(ctx *cli.Context, l1Backend, l2Backend bind.ContractBackend) (
 		return nil, err
 	}
 
-	l2OracleAddr, err := portal.L2ORACLE(&bind.CallOpts{})
-	if err != nil {
-		return nil, err
-	}
-	oracle, err := bindings.NewL2OutputOracle(l2OracleAddr, l1Backend)
-	if err != nil {
-		return nil, err
+	var oracle *bindings.L2OutputOracle
+	var l2OracleAddr common.Address
+	if portal != nil {
+		l2OracleAddr, err = portal.L2ORACLE(&bind.CallOpts{})
+		if err != nil {
+			return nil, err
+		}
+		oracle, err = bindings.NewL2OutputOracle(l2OracleAddr, l1Backend)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	log.Info(
@@ -892,7 +934,7 @@ func newContracts(ctx *cli.Context, l1Backend, l2Backend bind.ContractBackend) (
 }
 
 // newWithdrawals will create a set of legacy withdrawals
-func newWithdrawals(ctx *cli.Context, l1ChainID *big.Int) ([]*crossdomain.LegacyWithdrawal, error) {
+func newWithdrawals(ctx *cli.Context, l1ChainID *big.Int) ([]*crossdomain.LegacyWithdrawal, map[common.Hash]string, error) {
 	ovmMsgs := ctx.String("ovm-messages")
 	evmMsgs := ctx.String("evm-messages")
 	witnessFile := ctx.String("witness-file")
@@ -903,7 +945,7 @@ func newWithdrawals(ctx *cli.Context, l1ChainID *big.Int) ([]*crossdomain.Legacy
 	if ovmMsgs != "" {
 		ovmMessages, err = crossdomain.NewSentMessageFromJSON(ovmMsgs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -915,18 +957,19 @@ func newWithdrawals(ctx *cli.Context, l1ChainID *big.Int) ([]*crossdomain.Legacy
 	}
 
 	var evmMessages []*crossdomain.SentMessage
+	var msges map[common.Hash]string
 	if witnessFile != "" {
-		evmMessages, _, err = crossdomain.ReadWitnessData(witnessFile)
+		evmMessages, _, msges, err = crossdomain.ReadWitnessDataCatch(witnessFile)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else if evmMsgs != "" {
 		evmMessages, err = crossdomain.NewSentMessageFromJSON(evmMsgs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
-		return nil, errors.New("must provide either witness file or evm messages")
+		return nil, nil, errors.New("must provide either witness file or evm messages")
 	}
 
 	migrationData := crossdomain.MigrationData{
@@ -936,14 +979,14 @@ func newWithdrawals(ctx *cli.Context, l1ChainID *big.Int) ([]*crossdomain.Legacy
 
 	wds, _, err := migrationData.ToWithdrawals()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(wds) == 0 {
-		return nil, errors.New("no withdrawals")
+		return nil, nil, errors.New("no withdrawals")
 	}
 	log.Info("Converted migration data to withdrawals successfully", "count", len(wds))
 
-	return wds, nil
+	return wds, msges, nil
 }
 
 // newTransactor creates a new transact context given a cli context
