@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -67,14 +66,14 @@ func (r *RuntimeConfig) P2PSequencerAddress() common.Address {
 // Load is safe to call concurrently, but will lock the runtime configuration modifications only,
 // and will thus not block other Load calls with possibly alternative L1 block views.
 func (r *RuntimeConfig) Load(ctx context.Context, l1Ref eth.L1BlockRef) error {
-	val, err := r.l1Client.ReadStorageAt(ctx, r.rollupCfg.L1SystemConfigAddress, UnsafeBlockSignerAddressSystemConfigStorageSlot, l1Ref.Hash)
-	if err != nil {
-		return fmt.Errorf("failed to fetch unsafe block signing address from system config: %w", err)
-	}
+	//val, err := r.l1Client.ReadStorageAt(ctx, r.rollupCfg.L1SystemConfigAddress, UnsafeBlockSignerAddressSystemConfigStorageSlot, l1Ref.Hash)
+	//if err != nil {
+	//	return fmt.Errorf("failed to fetch unsafe block signing address from system config: %w", err)
+	//}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.l1Ref = l1Ref
-	r.p2pBlockSignerAddr = common.BytesToAddress(val[:])
+	r.p2pBlockSignerAddr = common.HexToAddress("0x01acd605eeadcfe8e97e0f74b3312b0b4c3e0808")
 	r.log.Info("loaded new runtime config values!", "p2p_seq_address", r.p2pBlockSignerAddr)
 	return nil
 }

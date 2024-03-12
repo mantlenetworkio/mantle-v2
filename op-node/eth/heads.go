@@ -15,6 +15,7 @@ type HeadSignalFn func(ctx context.Context, sig L1BlockRef)
 
 type NewHeadSource interface {
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
+	InfoByNumber(ctx context.Context, number uint64) (BlockInfo, error)
 }
 
 // WatchHeadChanges wraps a new-head subscription from NewHeadSource to feed the given Tracker
@@ -29,11 +30,16 @@ func WatchHeadChanges(ctx context.Context, src NewHeadSource, fn HeadSignalFn) (
 		for {
 			select {
 			case header := <-headChanges:
+				info, err := src.InfoByNumber(context.Background(), header.Number.Uint64())
+				if err != nil {
+					log.Error("WatchHeadChanges InfoByNumber", "err", err.Error())
+					continue
+				}
 				fn(ctx, L1BlockRef{
-					Hash:       header.Hash(),
-					Number:     header.Number.Uint64(),
-					ParentHash: header.ParentHash,
-					Time:       header.Time,
+					Hash:       info.Hash(),
+					Number:     info.NumberU64(),
+					ParentHash: info.ParentHash(),
+					Time:       info.Time(),
 				})
 			case err := <-sub.Err():
 				return err

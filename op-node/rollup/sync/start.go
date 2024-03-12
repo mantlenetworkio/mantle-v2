@@ -110,7 +110,7 @@ func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain
 	}
 
 	lgr.Info("Loaded current L2 heads", "unsafe", result.Unsafe, "safe", result.Safe, "finalized", result.Finalized,
-		"unsafe_origin", result.Unsafe.L1Origin, "safe_origin", result.Safe.L1Origin)
+		"unsafe_origin", result.Unsafe.L1Origin, "unsafe_origin_parentHash", result.Unsafe.ParentHash, "safe_origin", result.Safe.L1Origin, "safe_origin_parentHash", result.Safe.ParentHash)
 
 	// Remember original unsafe block to determine reorg depth
 	prevUnsafe := result.Unsafe
@@ -137,7 +137,7 @@ func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain
 				// Exit, find-sync start should start over, to move to an available L1 chain with block-by-number / not-found case.
 				return nil, fmt.Errorf("failed to retrieve L1 block: %w", err)
 			}
-			lgr.Info("Walking back L1Block by hash", "curr", l1Block, "next", b, "l2block", n)
+			lgr.Info("Walking back L1Block by hash", "curr", l1Block, "next", b, "nextParentHash", b.ParentHash, "l2block", n)
 			l1Block = b
 			ahead = false
 		} else if l1Block == (eth.L1BlockRef{}) || n.L1Origin.Hash != l1Block.Hash {
@@ -149,7 +149,7 @@ func FindL2Heads(ctx context.Context, cfg *rollup.Config, l1 L1Chain, l2 L2Chain
 			}
 			l1Block = b
 			ahead = notFound
-			lgr.Info("Walking back L1Block by number", "curr", l1Block, "next", b, "l2block", n)
+			lgr.Info("Walking back L1Block by number", "curr", l1Block, "next", b, "nextParentHash", b.ParentHash, "l2block", n)
 		}
 
 		lgr.Trace("walking sync start", "l2block", n)

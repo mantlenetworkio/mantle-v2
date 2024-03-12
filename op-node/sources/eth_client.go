@@ -153,7 +153,7 @@ func (s *EthClient) OnReceiptsMethodErr(m ReceiptsFetchingMethod, err error) {
 		s.log.Warn("failed to use selected RPC method for receipt fetching, temporarily falling back to alternatives",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods, "err", err)
 	} else {
-		s.log.Debug("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
+		s.log.Info("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
 			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods&^m, "err", err)
 	}
 }
@@ -220,6 +220,7 @@ func (n numberID) CheckID(id eth.BlockID) error {
 }
 
 func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, error) {
+	log.Info("headerCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var header *rpcHeader
 	err := s.client.CallContext(ctx, &header, method, id.Arg(), false) // headers are just blocks without txs
 	if err != nil {
@@ -235,32 +236,41 @@ func (s *EthClient) headerCall(ctx context.Context, method string, id rpcBlockID
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
 		return nil, fmt.Errorf("fetched block header does not match requested ID: %w", err)
 	}
+	log.Info("headerCall", "number", header.Number, "blockHash", header.Hash.String(), "parentHash", header.ParentHash.String())
 	s.headersCache.Add(info.Hash(), info)
 	return info, nil
 }
 
-func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, types.Transactions, error) {
+func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID) (eth.BlockInfo, types.Transactions, []common.Hash, error) {
+	log.Info("blockCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if block == nil {
-		return nil, nil, ethereum.NotFound
+		return nil, nil, nil, ethereum.NotFound
 	}
 	info, txs, err := block.Info(s.trustRPC, s.mustBePostMerge)
+	var txHashs []common.Hash
+	for idx, tx := range txs {
+		log.Info("blockCall", "idx", idx, "txHash", tx.RpcHash.String(), "txHash", tx.Hash().String())
+		txHashs = append(txHashs, tx.RpcHash)
+	}
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := id.CheckID(eth.ToBlockID(info)); err != nil {
-		return nil, nil, fmt.Errorf("fetched block data does not match requested ID: %w", err)
+		return nil, nil, nil, fmt.Errorf("fetched block data does not match requested ID: %w", err)
 	}
+	log.Info("blockCall", "number", info.NumberU64(), "blockHash", info.Hash().String(), "parentHash", info.ParentHash().String())
 	s.headersCache.Add(info.Hash(), info)
-	s.transactionsCache.Add(info.Hash(), txs)
-	return info, txs, nil
+	s.transactionsCache.Add(info.Hash(), txs.ToTxs())
+	return info, txs.ToTxs(), txHashs, nil
 }
 
 func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockID) (*eth.ExecutionPayload, error) {
+	log.Info("payloadCall", "method", method, "id", id.Arg(), "trustRPC", s.trustRPC, "mustBePostMerge", s.mustBePostMerge)
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
@@ -276,6 +286,7 @@ func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockI
 	if err := id.CheckID(payload.ID()); err != nil {
 		return nil, fmt.Errorf("fetched payload does not match requested ID: %w", err)
 	}
+	log.Info("payloadCall", "number", block.Number.String(), "blockHash", block.Hash.String(), "parentHash", block.ParentHash.String())
 	s.payloadsCache.Add(payload.BlockHash, payload)
 	return payload, nil
 }
@@ -307,23 +318,35 @@ func (s *EthClient) InfoByLabel(ctx context.Context, label eth.BlockLabel) (eth.
 	return s.headerCall(ctx, "eth_getBlockByNumber", label)
 }
 
+func (s *EthClient) InfoAndTxsByHashNew(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, []common.Hash, error) {
+	if header, ok := s.headersCache.Get(hash); ok {
+		if txs, ok := s.transactionsCache.Get(hash); ok {
+			return header.(eth.BlockInfo), txs.(types.Transactions), nil, nil
+		}
+	}
+	return s.blockCall(ctx, "eth_getBlockByHash", hashID(hash))
+}
+
 func (s *EthClient) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error) {
 	if header, ok := s.headersCache.Get(hash); ok {
 		if txs, ok := s.transactionsCache.Get(hash); ok {
 			return header.(eth.BlockInfo), txs.(types.Transactions), nil
 		}
 	}
-	return s.blockCall(ctx, "eth_getBlockByHash", hashID(hash))
+	x, y, _, z := s.blockCall(ctx, "eth_getBlockByHash", hashID(hash))
+	return x, y, z
 }
 
 func (s *EthClient) InfoAndTxsByNumber(ctx context.Context, number uint64) (eth.BlockInfo, types.Transactions, error) {
 	// can't hit the cache when querying by number due to reorgs.
-	return s.blockCall(ctx, "eth_getBlockByNumber", numberID(number))
+	x, y, _, h := s.blockCall(ctx, "eth_getBlockByNumber", numberID(number))
+	return x, y, h
 }
 
 func (s *EthClient) InfoAndTxsByLabel(ctx context.Context, label eth.BlockLabel) (eth.BlockInfo, types.Transactions, error) {
 	// can't hit the cache when querying the head due to reorgs / changes.
-	return s.blockCall(ctx, "eth_getBlockByNumber", label)
+	x, y, _, h := s.blockCall(ctx, "eth_getBlockByNumber", label)
+	return x, y, h
 }
 
 func (s *EthClient) PayloadByHash(ctx context.Context, hash common.Hash) (*eth.ExecutionPayload, error) {
@@ -345,7 +368,7 @@ func (s *EthClient) PayloadByLabel(ctx context.Context, label eth.BlockLabel) (*
 // It verifies the receipt hash in the block header against the receipt hash of the fetched receipts
 // to ensure that the execution engine did not fail to return any receipts.
 func (s *EthClient) FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error) {
-	info, txs, err := s.InfoAndTxsByHash(ctx, blockHash)
+	info, txs, _, err := s.InfoAndTxsByHashNew(ctx, blockHash)
 	if err != nil {
 		return nil, nil, err
 	}

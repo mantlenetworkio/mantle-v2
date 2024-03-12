@@ -155,6 +155,7 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
+	l.Info("BatchSubmitter Config", "NetworkTimeout", cfg.NetworkTimeout.String())
 	return &BatchSubmitter{
 		Config: cfg,
 		txMgr:  cfg.TxManager,
@@ -290,7 +291,9 @@ func (l *BatchSubmitter) loadBlockIntoState(ctx context.Context, blockNumber uin
 func (l *BatchSubmitter) calculateL2BlockRangeToStore(ctx context.Context) (eth.BlockID, eth.BlockID, error) {
 	ctx, cancel := context.WithTimeout(ctx, l.NetworkTimeout)
 	defer cancel()
+	l.log.Info("BatchSubmitter SyncStatus start")
 	syncStatus, err := l.RollupNode.SyncStatus(ctx)
+	l.log.Info("BatchSubmitter SyncStatus end")
 	// Ensure that we have the sync status
 	if err != nil {
 		return eth.BlockID{}, eth.BlockID{}, fmt.Errorf("failed to get sync status: %w", err)
@@ -476,7 +479,9 @@ func (l *BatchSubmitter) recordConfirmedTx(id txID, receipt *types.Receipt) {
 func (l *BatchSubmitter) l1Tip(ctx context.Context) (eth.L1BlockRef, error) {
 	tctx, cancel := context.WithTimeout(ctx, l.NetworkTimeout)
 	defer cancel()
+	l.log.Info("BatchSubmitter gettingLatestL1Block start")
 	head, err := l.L1Client.HeaderByNumber(tctx, nil)
+	l.log.Info("BatchSubmitter gettingLatestL1Block end")
 	if err != nil {
 		return eth.L1BlockRef{}, fmt.Errorf("getting latest L1 block: %w", err)
 	}

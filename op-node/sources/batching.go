@@ -7,9 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/go-multierror"
-
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 // IterativeBatchCall batches many RPC requests with safe and easy parallelization.
@@ -134,6 +135,7 @@ func (ibc *IterativeBatchCall[K, V]) Fetch(ctx context.Context) error {
 	if ibc.batchSize == 1 {
 		first := batch[0]
 		if err := ibc.getSingle(ctx, &first.Result, first.Method, first.Args...); err != nil {
+			log.Info("getSingle", "errMsg", err.Error())
 			ibc.scheduled <- first
 			return err
 		}
@@ -142,6 +144,7 @@ func (ibc *IterativeBatchCall[K, V]) Fetch(ctx context.Context) error {
 			for _, r := range batch {
 				ibc.scheduled <- r
 			}
+			log.Info("getSingle", "errMsg", err.Error())
 			return fmt.Errorf("failed batch-retrieval: %w", err)
 		}
 	}

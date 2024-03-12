@@ -171,6 +171,7 @@ func main() {
 			} else {
 				return fmt.Errorf("invalid l1StartingBlockTag in deploy config: %v", tag)
 			}
+			log.Info("blockInfo", "blockNumber", block.Number().String(), "blockHash", block.Hash().String(), "cachedBlockHash", ethclient.GetBlockHashCache(block.Hash()).String())
 			if err != nil {
 				return err
 			}
@@ -201,7 +202,7 @@ func main() {
 					panic("must run with check on")
 				}
 				// Perform the migration
-				res, err = genesis.MigrateDB(ldb, config, block, &migrationData, !dryRun, noCheck)
+				res, err = genesis.MigrateDB(ldb, config, block, &migrationData, dbCache, !dryRun, noCheck)
 				if err != nil {
 					return err
 				}
@@ -248,7 +249,7 @@ func main() {
 					Number:        block.NumberU64(),
 					Time:          block.Time(),
 					BaseFee:       block.BaseFee(),
-					BlockHash:     block.Hash(),
+					BlockHash:     ethclient.GetBlockHashCache(block.Hash()),
 					BatcherAddr:   config.BatchSenderAddress,
 					L1FeeOverhead: eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleOverhead))),
 					L1FeeScalar:   eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleScalar))),
