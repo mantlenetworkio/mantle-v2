@@ -154,13 +154,13 @@ abstract contract CrossDomainMessenger is
     /**
      * @notice Gas reserved for finalizing the execution of `relayMessage` after the safe call.
      */
-    uint64 public constant RELAY_RESERVED_GAS = 140_000;
+    uint64 public constant RELAY_RESERVED_GAS = 90_000;
 
     /**
      * @notice Gas reserved for the execution between the `hasMinGas` check and the external
      *         call in `relayMessage`.
      */
-    uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
+    uint64 public constant RELAY_GAS_CHECK_BUFFER = 55_000;
 
     /**
      * @notice BASE gas reserved for Hashing.hashCrossDomainMessage
