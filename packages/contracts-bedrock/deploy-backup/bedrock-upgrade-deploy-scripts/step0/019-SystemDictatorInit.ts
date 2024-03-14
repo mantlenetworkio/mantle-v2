@@ -197,7 +197,7 @@ const deployFn: DeployFunction = async (hre) => {
         return (
           (await SystemDictatorProxy.callStatic.admin({
             from: ethers.constants.AddressZero,
-          })).toLowerCase() === hre.deployConfig.controller
+          })).toLowerCase() === hre.deployConfig.controller.toLowerCase()
         )
       },
       30000,
