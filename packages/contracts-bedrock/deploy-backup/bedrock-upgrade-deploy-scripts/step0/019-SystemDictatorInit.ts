@@ -153,31 +153,31 @@ const deployFn: DeployFunction = async (hre) => {
     console.log("Live SystemDictator configuration")
     console.log(JSON.stringify(dictatorConfig, null, 2))
 
-    // for (const [outerConfigKey, outerConfigValue] of Object.entries(config)) {
-    //   for (const [innerConfigKey, innerConfigValue] of Object.entries(
-    //     outerConfigValue
-    //   )) {
-    //     let have = dictatorConfig[outerConfigKey][innerConfigKey]
-    //     let want = innerConfigValue as any
-    //
-    //     if (ethers.utils.isAddress(want)) {
-    //       want = want.toLowerCase()
-    //       have = have.toLowerCase()
-    //     } else if (typeof want === 'number') {
-    //       want = ethers.BigNumber.from(want)
-    //       have = ethers.BigNumber.from(have)
-    //       assert(
-    //         want.eq(have),
-    //         `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
-    //       )
-    //       continue
-    //     }
-    //     assert(
-    //       want === have,
-    //       `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
-    //     )
-    //   }
-    // }
+    for (const [outerConfigKey, outerConfigValue] of Object.entries(config)) {
+      for (const [innerConfigKey, innerConfigValue] of Object.entries(
+        outerConfigValue
+      )) {
+        let have = dictatorConfig[outerConfigKey][innerConfigKey]
+        let want = innerConfigValue as any
+
+        if (ethers.utils.isAddress(want)) {
+          want = want.toLowerCase()
+          have = have.toLowerCase()
+          assert(
+            want === have,
+            `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
+          )
+        // } else if (typeof want === 'number') {
+        //   want = ethers.BigNumber.from(want)
+        //   have = ethers.BigNumber.from(have)
+        //   assert(
+        //     want.eq(have),
+        //     `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
+        //   )
+        //   continue
+        }
+      }
+    }
   }
 
   // Update the owner if necessary.
