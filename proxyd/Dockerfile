@@ -1,4 +1,4 @@
-FROM golang:1.18.0-alpine3.15 as builder
+FROM golang:1.21.1-alpine3.18 as builder
 
 ARG GITCOMMIT=docker
 ARG GITDATE=docker
