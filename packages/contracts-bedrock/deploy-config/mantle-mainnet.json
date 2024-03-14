@@ -34,7 +34,7 @@
   "gasPriceOracleOwner": "0x5a021DC06A9630bb56099b8aEdfaDC2dEa7eB317",
   "gasPriceOracleTokenRatio": 4000,
   "gasPriceOracleOverhead": 188,
-  "gasPriceOracleScalar": 50000,
+  "gasPriceOracleScalar": 10000,
   "governanceTokenSymbol": "MNT",
   "governanceTokenName": "Mantle",
   "governanceTokenOwner": "0x4e59e778a0fb77fBb305637435C62FaeD9aED40f",
