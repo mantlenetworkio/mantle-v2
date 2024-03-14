@@ -2,16 +2,16 @@ package da
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"strconv"
 	"time"
 
+	mdar "github.com/ethereum-optimism/optimism/op-node/rollup/da/interfaceRetrieverServer"
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	mdar "github.com/ethereum-optimism/optimism/op-node/rollup/da/interfaceRetrieverServer"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -97,7 +97,9 @@ func (mda *MantleDataStore) getLatestDataStoreId() (*graphView.DataStore, error)
 
 func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, error) {
 	log.Info("sync block data from mantle da retriever")
-	conn, err := grpc.Dial(mda.Cfg.RetrieverSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	creds := credentials.NewTLS(tlsConfig)
+	conn, err := grpc.Dial(mda.Cfg.RetrieverSocket, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Error("Connect to da retriever fail", "err", err)
 		return nil, err
@@ -105,11 +107,15 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 	defer conn.Close()
 
 	client := mdar.NewDataRetrievalClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), mda.Cfg.RetrieverTimeout)
+	defer cancel()
+
 	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
 	request := &mdar.FramesAndDataRequest{
 		DataStoreId: dataStoreId,
 	}
-	reply, err := client.RetrieveFramesAndData(mda.Ctx, request, opt)
+	reply, err := client.RetrieveFramesAndData(ctx, request, opt)
 	if err != nil {
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
@@ -159,19 +165,24 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 
 func (mda *MantleDataStore) RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error) {
 	log.Info("sync block data from mantle da indexer")
-	conn, err := grpc.Dial(mda.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	creds := credentials.NewTLS(tlsConfig)
+	conn, err := grpc.Dial(mda.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Error("Connect to mantle da index retriever fail", "err", err)
 		return nil, err
 	}
 	defer conn.Close()
 
+	ctx, cancel := context.WithTimeout(context.Background(), mda.Cfg.RetrieverTimeout)
+	defer cancel()
+
 	client := mdar.NewDataRetrievalClient(conn)
 	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
 	request := &mdar.FramesAndDataRequest{
 		DataStoreId: dataStoreId,
 	}
-	reply, err := client.RetrieveFramesAndData(mda.Ctx, request, opt)
+	reply, err := client.RetrieveFramesAndData(ctx, request, opt)
 	if err != nil {
 		log.Error("Retrieve frames and data fail", "err", err)
 		return nil, err
