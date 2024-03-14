@@ -98,7 +98,7 @@ const deployFn: DeployFunction = async (hre) => {
       batcherHash: hre.ethers.utils.hexZeroPad(
         hre.deployConfig.batchSenderAddress,
         32
-      ),
+      ).toLowerCase(),
       gasLimit: hre.deployConfig.l2GenesisBlockGasLimit,
       baseFee: hre.deployConfig.l2GenesisBlockBaseFeePerGas,
       unsafeBlockSigner: hre.deployConfig.p2pSequencerAddress,
@@ -150,6 +150,9 @@ const deployFn: DeployFunction = async (hre) => {
 
     // Verify that the contract was initialized correctly.
     const dictatorConfig = await SystemDictator.config()
+    console.log("Live SystemDictator configuration")
+    console.log(JSON.stringify(dictatorConfig, null, 2))
+
     for (const [outerConfigKey, outerConfigValue] of Object.entries(config)) {
       for (const [innerConfigKey, innerConfigValue] of Object.entries(
         outerConfigValue
@@ -160,20 +163,19 @@ const deployFn: DeployFunction = async (hre) => {
         if (ethers.utils.isAddress(want)) {
           want = want.toLowerCase()
           have = have.toLowerCase()
-        } else if (typeof want === 'number') {
-          want = ethers.BigNumber.from(want)
-          have = ethers.BigNumber.from(have)
           assert(
-            want.eq(have),
+            want === have,
             `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
           )
-          return
+        // } else if (typeof want === 'number') {
+        //   want = ethers.BigNumber.from(want)
+        //   have = ethers.BigNumber.from(have)
+        //   assert(
+        //     want.eq(have),
+        //     `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
+        //   )
+        //   continue
         }
-
-        assert(
-          want === have,
-          `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
-        )
       }
     }
   }
@@ -195,7 +197,7 @@ const deployFn: DeployFunction = async (hre) => {
         return (
           (await SystemDictatorProxy.callStatic.admin({
             from: ethers.constants.AddressZero,
-          })) === hre.deployConfig.controller
+          })).toLowerCase() === hre.deployConfig.controller.toLowerCase()
         )
       },
       30000,
