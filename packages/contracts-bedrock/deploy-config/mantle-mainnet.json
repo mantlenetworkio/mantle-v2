@@ -26,7 +26,7 @@
   "proxyAdminOwner": "0x4e59e778a0fb77fBb305637435C62FaeD9aED40f",
   "finalSystemOwner": "0x4e59e778a0fb77fBb305637435C62FaeD9aED40f",
   "portalGuardian": "0x2F44BD2a54aC3fB20cd7783cF94334069641daC9",
-  "controller": "0x5a021DC06A9630bb56099b8aEdfaDC2dEa7eB317",
+  "controller": "0x4e59e778a0fb77fBb305637435C62FaeD9aED40f",
   "finalizationPeriodSeconds": 604800,
   "numDeployConfirmations": 2,
   "fundDevAccounts": false,
