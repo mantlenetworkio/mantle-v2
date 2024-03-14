@@ -98,7 +98,7 @@ const deployFn: DeployFunction = async (hre) => {
       batcherHash: hre.ethers.utils.hexZeroPad(
         hre.deployConfig.batchSenderAddress,
         32
-      ),
+      ).toLowerCase(),
       gasLimit: hre.deployConfig.l2GenesisBlockGasLimit,
       baseFee: hre.deployConfig.l2GenesisBlockBaseFeePerGas,
       unsafeBlockSigner: hre.deployConfig.p2pSequencerAddress,
@@ -167,9 +167,8 @@ const deployFn: DeployFunction = async (hre) => {
             want.eq(have),
             `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
           )
-          return
+          continue
         }
-
         assert(
           want === have,
           `incorrect config for ${outerConfigKey}.${innerConfigKey}. Want: ${want}, have: ${have}`
@@ -195,7 +194,7 @@ const deployFn: DeployFunction = async (hre) => {
         return (
           (await SystemDictatorProxy.callStatic.admin({
             from: ethers.constants.AddressZero,
-          })) === hre.deployConfig.controller
+          })).toLowerCase() === hre.deployConfig.controller
         )
       },
       30000,
