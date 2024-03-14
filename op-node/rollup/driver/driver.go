@@ -53,6 +53,8 @@ type L2Chain interface {
 
 type DaSource interface {
 	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
+	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
+	IsDaIndexer() bool
 }
 
 type DerivationPipeline interface {

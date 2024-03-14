@@ -118,8 +118,8 @@ func (w *Withdrawal) Decode(data []byte) error {
 	w.Nonce = nonce
 	w.Sender = &sender
 	w.Target = &target
-	w.ETHValue = ethValue
 	w.MNTValue = mntValue
+	w.ETHValue = ethValue
 	w.GasLimit = gasLimit
 	w.Data = hexutil.Bytes(msgData)
 	return nil
@@ -159,8 +159,8 @@ func (w *Withdrawal) WithdrawalTransaction() bindings.TypesWithdrawalTransaction
 		Nonce:    w.Nonce,
 		Sender:   *w.Sender,
 		Target:   *w.Target,
-		EthValue: w.ETHValue,
 		MntValue: w.MNTValue,
+		EthValue: w.ETHValue,
 		GasLimit: w.GasLimit,
 		Data:     []byte(w.Data),
 	}

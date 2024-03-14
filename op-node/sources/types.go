@@ -110,6 +110,15 @@ type rpcHeader struct {
 	// WithdrawalsRoot was added by EIP-4895 and is ignored in legacy headers.
 	WithdrawalsRoot *common.Hash `json:"withdrawalsRoot"`
 
+	// BlobGasUsed was added by EIP-4844 and is ignored in legacy headers.
+	BlobGasUsed *hexutil.Uint64 `json:"blobGasUsed" rlp:"optional"`
+
+	// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
+	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas" rlp:"optional"`
+
+	// ParentBeaconRoot was added by EIP-4788 and is ignored in legacy headers.
+	ParentBeaconRoot *common.Hash `json:"parentBeaconBlockRoot" rlp:"optional"`
+
 	// untrusted info included by RPC, may have to be checked
 	Hash common.Hash `json:"hash"`
 }
@@ -143,6 +152,17 @@ func (hdr *rpcHeader) computeBlockHash() common.Hash {
 }
 
 func (hdr *rpcHeader) createGethHeader() *types.Header {
+	var blobGasUsed *uint64
+	if hdr.BlobGasUsed != nil {
+		blobGasUsedTemp := uint64(*hdr.BlobGasUsed)
+		blobGasUsed = &blobGasUsedTemp
+	}
+	var excessBlobGas *uint64
+	if hdr.BlobGasUsed != nil {
+		excessBlobGasTemp := uint64(*hdr.ExcessBlobGas)
+		excessBlobGas = &excessBlobGasTemp
+	}
+
 	return &types.Header{
 		ParentHash:      hdr.ParentHash,
 		UncleHash:       hdr.UncleHash,
@@ -161,6 +181,10 @@ func (hdr *rpcHeader) createGethHeader() *types.Header {
 		Nonce:           hdr.Nonce,
 		BaseFee:         (*big.Int)(hdr.BaseFee),
 		WithdrawalsHash: hdr.WithdrawalsRoot,
+
+		BlobGasUsed:      blobGasUsed,
+		ExcessBlobGas:    excessBlobGas,
+		ParentBeaconRoot: hdr.ParentBeaconRoot,
 	}
 }
 

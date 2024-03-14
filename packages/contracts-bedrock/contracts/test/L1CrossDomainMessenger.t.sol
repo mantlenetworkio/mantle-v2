@@ -42,6 +42,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
                 0,
+                0,
                 Predeploys.L2_CROSS_DOMAIN_MESSENGER,
                 0,
                 L1Messenger.baseGas(hex"ff", 100),
@@ -63,6 +64,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         emitTransactionDeposited(
             AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger)),
             Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+            0,
             0,
             0,
             0,
@@ -98,6 +100,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
             abi.encodeWithSelector(
                 OptimismPortal.depositTransaction.selector,
                 0,
+                0,
                 Predeploys.L2_CROSS_DOMAIN_MESSENGER,
                 0,
                 L1Messenger.baseGas(hex"ff", 100),
@@ -119,6 +122,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         emitTransactionDeposited(
             AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger)),
             Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+            0,
             0,
             0,
             0,
