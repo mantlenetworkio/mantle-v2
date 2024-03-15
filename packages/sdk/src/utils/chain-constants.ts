@@ -97,9 +97,9 @@ export const CONTRACT_ADDRESSES: {
       BondManager: '0x31aBe1c466C2A8b95fd84258dD1471472979B650' as const,
       Rollup:
         process.env.Rollup ||
-        ('0xD1328C9167e0693B689b5aa5a024379d4e437858' as const),
-      OptimismPortal: '0x0000000000000000000000000000000000000000' as const,
-      L2OutputOracle: '0x0000000000000000000000000000000000000000' as const,
+        ('0x242a33ca49C564caFC9C83C700b79f1074c42A0D' as const),
+      OptimismPortal: '0xc54cb22944F2bE476E02dECfCD7e3E7d3e15A8Fb' as const,
+      L2OutputOracle: '0x31d543e7BE1dA6eFDc2206Ef7822879045B9f481' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
