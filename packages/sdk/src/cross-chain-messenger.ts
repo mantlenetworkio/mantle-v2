@@ -358,6 +358,15 @@ export class CrossChainMessenger {
       } catch (err) {
         // No problem, not a message with value.
       }
+      try {
+        ;[, , mntValue] =
+          this.contracts.l1.L1StandardBridge.interface.decodeFunctionData(
+            'finalizeMantleWithdrawal',
+            resolved.message
+          )
+      } catch (error) {
+        // No problem, not a message with value.
+      }
     }
 
     return {
