@@ -1178,7 +1178,7 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 
 	prev := &fakeAttributesQueue{origin: refA}
 
-	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F)
+	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F, &sync.Config{})
 	eq.unsafeHead = refA2
 	eq.safeHead = refA0
 	eq.finalized = refA0
@@ -1186,7 +1186,7 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 	eq.AddUnsafePayload(payloadA1)
 
 	err := eq.Step(context.Background())
-	require.NoError(t, err)
+	require.Equal(t, EngineP2PSyncing, err)
 
 	require.Nil(t, eq.unsafePayloads.Peek(), "should pop the unsafe payload because it is too old")
 	fmt.Println(eq.unsafePayloads.Peek())

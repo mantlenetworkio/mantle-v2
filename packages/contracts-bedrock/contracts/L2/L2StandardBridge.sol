@@ -232,7 +232,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         // contracts may override this function in order to emit legacy events as well.
         _emitETHBridgeInitiated(_from, _to, _amount, _extraData);
 
-        MESSENGER.sendMessage{value: msg.value}(
+        MESSENGER.sendMessage(
             _amount,
             address(OTHER_BRIDGE),
             abi.encodeWithSelector(
@@ -324,8 +324,11 @@ contract L2StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).burn(_from, _amount);
         } else {
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 receivedAmount = balanceAfter - balanceBefore;
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + receivedAmount;
         }
 
         // Emit the correct events. By default this will be ERC20BridgeInitiated, but child
@@ -518,10 +521,24 @@ contract L2StandardBridge is StandardBridge, Semver {
     function bridgeMNT(
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public payable {
+    ) public payable onlyEOA {
         _initiateBridgeMNT(msg.sender, msg.sender, msg.value, _minGasLimit, _extraData);
     }
 
+    /**
+     * @notice Sends MNT to a receiver's address on the other chain. Note that if MNT is sent to a
+     *         smart contract and the call fails, the MNT will be temporarily locked in the
+     *         StandardBridge on the other chain until the call is replayed. If the call cannot be
+     *         replayed with any amount of gas (call always reverts), then the MNT will be
+     *         permanently locked in the StandardBridge on the other chain. MNT will also
+     *         be locked if the receiver is the other bridge, because finalizeBridgeETH will revert
+     *         in that case.
+     * @param _to Address of the receiver.
+     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
+     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
+     *                     not be triggered with this data, but it will be emitted and can be used
+     *                     to identify the transaction.
+     */
     function bridgeMNTTo(
         address _to,
         uint32 _minGasLimit,
@@ -653,8 +670,11 @@ contract L2StandardBridge is StandardBridge, Semver {
 
             OptimismMintableERC20(_localToken).mint(_to, _amount);
         } else {
-            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
+            uint256 balanceBefore = IERC20(_localToken).balanceOf(address(this));
             IERC20(_localToken).safeTransfer(_to, _amount);
+            uint256 balanceAfter = IERC20(_localToken).balanceOf(address(this));
+            uint256 sentAmount = balanceBefore - balanceAfter;
+            deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - sentAmount;
         }
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.
@@ -682,8 +702,7 @@ contract L2StandardBridge is StandardBridge, Semver {
         require(_to != address(this), "StandardBridge: cannot send to self");
         require(_to != address(MESSENGER), "StandardBridge: cannot send to messenger");
 
-
-        bool success = SafeCall.call(_to, gasleft(), _amount, _extraData);
+        bool success = SafeCall.call(_to, gasleft(), _amount, hex"");
         require(success, "StandardBridge: MNT transfer failed");
         // Emit the correct events. By default this will be ERC20BridgeFinalized, but child
         // contracts may override this function in order to emit legacy events as well.

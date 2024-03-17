@@ -127,9 +127,10 @@ contract Hashing_hashDepositTransaction_Test is CommonTest {
     function testDiff_hashDepositTransaction_succeeds(
         address _from,
         address _to,
-        uint256 _mint,
         uint256 _mntValue,
+        uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
@@ -141,15 +142,16 @@ contract Hashing_hashDepositTransaction_Test is CommonTest {
                     _to,
                     false, // isCreate
                     _mntValue,
-                    _mint,
+                    _mntTxValue,
                     _ethValue,
+                    _ethTxValue,
                     _gas,
                     _data,
                     bytes32(uint256(0)),
                     _logIndex
                 )
             ),
-            ffi.hashDepositTransaction(_from, _to, _mint, _mntValue, _ethValue, _gas, _data, _logIndex)
+            ffi.hashDepositTransaction(_from, _to, _mntValue, _mntTxValue, _ethValue, _ethTxValue, _gas, _data, _logIndex)
         );
     }
 }

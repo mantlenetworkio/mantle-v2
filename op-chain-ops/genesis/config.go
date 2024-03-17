@@ -391,6 +391,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 				Overhead:    eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleOverhead))),
 				Scalar:      eth.Bytes32(common.BigToHash(new(big.Int).SetUint64(d.GasPriceOracleScalar))),
 				GasLimit:    uint64(d.L2GenesisBlockGasLimit),
+				BaseFee:     d.L2GenesisBlockBaseFeePerGas.ToInt(),
 			},
 		},
 		BlockTime:                  d.L2BlockTime,
@@ -466,6 +467,7 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 	}
 	immutable["L2CrossDomainMessenger"] = immutables.ImmutableValues{
 		"otherMessenger": config.L1CrossDomainMessengerProxy,
+		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 	immutable["L2ERC721Bridge"] = immutables.ImmutableValues{
 		"messenger":   predeploys.L2CrossDomainMessengerAddr,
@@ -485,6 +487,9 @@ func NewL2ImmutableConfig(config *DeployConfig) (immutables.ImmutableConfig, err
 		"recipient": config.BaseFeeVaultRecipient,
 	}
 	immutable["LegacyERC20MNT"] = immutables.ImmutableValues{
+		"L1_MNT_ADDRESS": config.L1MantleToken,
+	}
+	immutable["L2ToL1MessagePasser"] = immutables.ImmutableValues{
 		"L1_MNT_ADDRESS": config.L1MantleToken,
 	}
 

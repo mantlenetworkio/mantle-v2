@@ -17,9 +17,9 @@ jobs:
           submodules: recursive
           token: ${{ secrets.NEW_PAT }}
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          golang-version: 1.19
+          go-version: "1.19.9"
       - name: Setup Node
         uses: actions/setup-node@v3
         with:

@@ -154,13 +154,23 @@ abstract contract CrossDomainMessenger is
     /**
      * @notice Gas reserved for finalizing the execution of `relayMessage` after the safe call.
      */
-    uint64 public constant RELAY_RESERVED_GAS = 40_000;
+    uint64 public constant RELAY_RESERVED_GAS = 90_000;
 
     /**
      * @notice Gas reserved for the execution between the `hasMinGas` check and the external
      *         call in `relayMessage`.
      */
-    uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
+    uint64 public constant RELAY_GAS_CHECK_BUFFER = 55_000;
+
+    /**
+     * @notice BASE gas reserved for Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_BASE_GAS = 800;
+
+    /**
+     * @notice Extra gas reserved for per-byte in Hashing.hashCrossDomainMessage
+     */
+    uint64 public constant HASH_MESSAGE_GAS_PER_BYTE = 2;
 
     /**
      * @notice Address of the paired CrossDomainMessenger contract on the other chain.
@@ -282,6 +292,49 @@ abstract contract CrossDomainMessenger is
         // the minimum gas limit specified by the user.
         _sendMessage(
             _otherSideNativeTokenAmount,
+            OTHER_MESSENGER,
+            baseGas(_message, _minGasLimit),
+            abi.encodeWithSelector(
+                this.relayMessage.selector,
+                messageNonce(),
+                msg.sender,
+                _target,
+                0,
+                msg.value,
+                _minGasLimit,
+                _message
+            )
+        );
+
+        emit SentMessage(_target, msg.sender, _message, messageNonce(), _minGasLimit);
+        emit SentMessageExtension1(msg.sender, _otherSideNativeTokenAmount, msg.value);
+
+        unchecked {
+            ++msgNonce;
+        }
+    }
+
+    /**
+* @notice Sends a message to some target address on the other chain. Note that if the call
+     *         always reverts, then the message will be unrelayable, and any ETH sent will be
+     *         permanently locked. The same will occur if the target on the other chain is
+     *         considered unsafe (see the _isUnsafeTarget() function).
+     *
+     * @param _target                       Target contract or wallet address.
+     * @param _message                      Message to trigger the target address with.
+     * @param _minGasLimit                  Minimum gas limit that the message can be executed with.
+     */
+    function sendMessage(
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    ) external payable virtual {
+        // Triggers a message to the other messenger. Note that the amount of gas provided to the
+        // message is the amount of gas requested by the user PLUS the base gas value. We want to
+        // guarantee the property that the call to the target contract will always have at least
+        // the minimum gas limit specified by the user.
+        _sendMessage(
+            0,
             OTHER_MESSENGER,
             baseGas(_message, _minGasLimit),
             abi.encodeWithSelector(
@@ -474,6 +527,8 @@ abstract contract CrossDomainMessenger is
             RELAY_CONSTANT_OVERHEAD +
             // Calldata overhead
             (uint64(_message.length) * MIN_GAS_CALLDATA_OVERHEAD) +
+            // Hash message
+            (uint64(_message.length) * HASH_MESSAGE_GAS_PER_BYTE) + HASH_MESSAGE_BASE_GAS +
             // Dynamic overhead (EIP-150)
             ((_minGasLimit * MIN_GAS_DYNAMIC_OVERHEAD_NUMERATOR) /
                 MIN_GAS_DYNAMIC_OVERHEAD_DENOMINATOR) +
@@ -493,7 +548,13 @@ abstract contract CrossDomainMessenger is
      */
     // solhint-disable-next-line func-name-mixedcase
     function __CrossDomainMessenger_init() internal onlyInitializing {
-        xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        // We only want to set the xDomainMsgSender to the default value if it hasn't been initialized yet,
+        // meaning that this is a fresh contract deployment.
+        // This prevents resetting the xDomainMsgSender to the default value during an upgrade, which would enable
+        // a reentrant withdrawal to sandwhich the upgrade replay a withdrawal twice.
+        if (xDomainMsgSender == address(0)) {
+            xDomainMsgSender = Constants.DEFAULT_L2_SENDER;
+        }
     }
 
     /**

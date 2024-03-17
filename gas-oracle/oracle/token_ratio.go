@@ -41,12 +41,14 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 	} else {
 		seqBytes, err := hex.DecodeString(cfg.HsmCreden)
 		if err != nil {
-			log.Crit("gasoracle", "decode hsm creden fail", err.Error())
+			log.Warn("gasoracle", "decode hsm creden fail", err.Error())
+			return nil, err
 		}
 		apikey := option.WithCredentialsJSON(seqBytes)
 		client, err := kms.NewKeyManagementClient(context.Background(), apikey)
 		if err != nil {
-			log.Crit("gasoracle", "create signer error", err.Error())
+			log.Warn("gasoracle", "create signer error", err.Error())
+			return nil, err
 		}
 		mk := &bsscore.ManagedKey{
 			KeyName:      cfg.HsmAPIName,
@@ -55,7 +57,8 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 		}
 		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), cfg.l2ChainID)
 		if err != nil {
-			log.Crit("gasoracle", "create signer error", err.Error())
+			log.Warn("gasoracle", "create signer error", err.Error())
+			return nil, err
 		}
 	}
 	// Once https://github.com/ethereum/go-ethereum/pull/23062 is released
@@ -108,7 +111,9 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 		ometrics.GasOracleStats.L1BaseFeeGauge.Update(l1BaseFee.Int64())
 
 		// NOTE this will return base multiple with coin ratio
-		latestRatio := tokenRatio.TokenRatio()
+		latestRatio := tokenRatio.TokenRatio() * cfg.tokenRatioScalar
+		ometrics.GasOracleStats.TokenRatioGauge.Update(tokenRatio.TokenRatio())
+		ometrics.GasOracleStats.TokenRatioWithScalarGauge.Update(latestRatio)
 		if !isDifferenceSignificant(lastTokenRatio.Uint64(), uint64(latestRatio), cfg.tokenRatioSignificanceFactor) {
 			log.Warn("non significant tokenRatio update", "former", lastTokenRatio, "current", latestRatio)
 			return nil
@@ -136,7 +141,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			return fmt.Errorf("cannot update tokenRatio: %w", err)
 		}
 		log.Info("TokenRatio transaction already sent", "hash", tx.Hash().Hex(), "tokenRatio", int64(latestRatio))
-		ometrics.GasOracleStats.TokenRatioGauge.Update(latestRatio)
+		ometrics.GasOracleStats.TokenRatioOnchainGauge.Update(latestRatio)
 
 		if cfg.waitForReceipt {
 			// Wait for the receipt

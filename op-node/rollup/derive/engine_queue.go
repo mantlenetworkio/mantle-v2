@@ -85,6 +85,8 @@ const finalityLookback = 4*32 + 1
 // We do not want to do this too often, since it requires fetching a L1 block by number, so no cache data.
 const finalityDelay = 64
 
+const tryNextUnsafePayloadBatchSize = 128
+
 type FinalityData struct {
 	// The last L2 block that was fully derived and inserted into the L2 engine while processing this L1 block.
 	L2Block eth.L2BlockRef
@@ -248,9 +250,18 @@ func (eq *EngineQueue) Step(ctx context.Context) error {
 	}
 	// Trying unsafe payload should be done before safe attributes
 	// It allows the unsafe head can move forward while the long-range consolidation is in progress.
-	if eq.unsafePayloads.Len() > 0 {
-		if err := eq.tryNextUnsafePayload(ctx); err != io.EOF {
-			return err
+	unsafePayloadsLen := eq.unsafePayloads.Len()
+	eq.log.Debug("Pending unsafe payloads", "length", unsafePayloadsLen)
+	if unsafePayloadsLen > 0 {
+		for i := 0; i < tryNextUnsafePayloadBatchSize && i < unsafePayloadsLen; i++ {
+			err := eq.tryNextUnsafePayload(ctx)
+			if err == nil {
+				continue
+			} else if err == io.EOF {
+				break
+			} else {
+				return err
+			}
 		}
 		// EOF error means we can't process the next unsafe payload. Then we should process next safe attributes.
 	}

@@ -91,12 +91,12 @@ contract L2StandardBridge_Test is Bridge_Initializer {
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L2Messenger));
         emit SentMessageExtension1(address(L2Bridge), 100, 0);
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.expectCall(
             address(L2Messenger),
             100,
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                selector,
                 0,
                 address(L1Bridge),
                 message,
@@ -215,6 +215,7 @@ contract PreBridgeERC20 is Bridge_Initializer {
         deal(_l2Token, alice, 100, true);
         assertEq(ERC20(_l2Token).balanceOf(alice), 100);
         uint256 nonce = L2Messenger.messageNonce();
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         bytes memory message = abi.encodeWithSelector(
             L1StandardBridge.finalizeBridgeERC20.selector,
             address(L1Token),
@@ -269,7 +270,7 @@ contract PreBridgeERC20 is Bridge_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                selector,
                 0,
                 address(L1Bridge),
                 message,
@@ -445,7 +446,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
         // SentMessageExtension1 event emitted by the CrossDomainMessenger
         vm.expectEmit(true, true, true, true, address(L2Messenger));
         emit SentMessageExtension1(address(L2Bridge), 0, 0);
-
+        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         if (_isLegacy) {
             vm.expectCall(
                 address(L2Bridge),
@@ -476,7 +477,7 @@ contract PreBridgeERC20To is Bridge_Initializer {
         vm.expectCall(
             address(L2Messenger),
             abi.encodeWithSelector(
-                L2CrossDomainMessenger.sendMessage.selector,
+                selector,
                 0,
                 address(L1Bridge),
                 message,

@@ -90,6 +90,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
 
     function test_depositTransaction_benchmark() external {
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            NON_ZERO_VALUE,
             ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
@@ -102,6 +103,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
     function test_depositTransaction_benchmark_1() external {
         setPrevBaseFee(vm, address(op), 1 gwei);
         op.depositTransaction{ value: NON_ZERO_VALUE }(
+            NON_ZERO_VALUE,
             ZERO_VALUE,
             NON_ZERO_ADDRESS,
             ZERO_VALUE,
@@ -122,7 +124,7 @@ contract GasBenchMark_OptimismPortal is Portal_Initializer {
 }
 
 contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
-    function test_sendMessage_benchmark_0() external {
+    function test_sendMessage_benchmark_0_0() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 1 gwei);
         // The amount of data typically sent during a bridge deposit.
@@ -132,7 +134,17 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
 
-    function test_sendMessage_benchmark_1() external {
+    function test_sendMessage_benchmark_0_1() external {
+        vm.pauseGasMetering();
+        setPrevBaseFee(vm, address(op), 1 gwei);
+        // The amount of data typically sent during a bridge deposit.
+        bytes
+        memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        vm.resumeGasMetering();
+        L1Messenger.sendMessage(bob, data, uint32(100));
+    }
+
+    function test_sendMessage_benchmark_1_0() external {
         vm.pauseGasMetering();
         setPrevBaseFee(vm, address(op), 10 gwei);
         // The amount of data typically sent during a bridge deposit.
@@ -141,7 +153,19 @@ contract GasBenchMark_L1CrossDomainMessenger is Messenger_Initializer {
         vm.resumeGasMetering();
         L1Messenger.sendMessage(0, bob, data, uint32(100));
     }
+
+    function test_sendMessage_benchmark_1_1() external {
+        vm.pauseGasMetering();
+        setPrevBaseFee(vm, address(op), 10 gwei);
+        // The amount of data typically sent during a bridge deposit.
+        bytes
+        memory data = hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        vm.resumeGasMetering();
+        L1Messenger.sendMessage(bob, data, uint32(100));
+    }
 }
+
+
 
 contract GasBenchMark_L1StandardBridge_Deposit is Bridge_Initializer {
     function setUp() public virtual override {

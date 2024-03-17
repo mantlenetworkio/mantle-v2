@@ -80,6 +80,7 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 			Name: "L2CrossDomainMessenger",
 			Args: []interface{}{
 				immutable["L2CrossDomainMessenger"]["otherMessenger"],
+				immutable["L2CrossDomainMessenger"]["L1_MNT_ADDRESS"],
 			},
 		},
 		{
@@ -91,6 +92,9 @@ func BuildOptimism(immutable ImmutableConfig) (DeploymentResults, error) {
 		},
 		{
 			Name: "L2ToL1MessagePasser",
+			Args: []interface{}{
+				immutable["L2ToL1MessagePasser"]["L1_MNT_ADDRESS"],
+			},
 		},
 		{
 			Name: "SequencerFeeVault",
@@ -178,7 +182,11 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 		if !ok {
 			return nil, fmt.Errorf("invalid type for otherMessenger")
 		}
-		_, tx, _, err = bindings.DeployL2CrossDomainMessenger(opts, backend, otherMessenger)
+		L1MNT, ok := deployment.Args[1].(common.Address)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for L1 MNT")
+		}
+		_, tx, _, err = bindings.DeployL2CrossDomainMessenger(opts, backend, otherMessenger, L1MNT)
 	case "L2StandardBridge":
 		otherBridge, ok := deployment.Args[0].(common.Address)
 		if !ok {
@@ -190,8 +198,11 @@ func l2Deployer(backend *backends.SimulatedBackend, opts *bind.TransactOpts, dep
 		}
 		_, tx, _, err = bindings.DeployL2StandardBridge(opts, backend, otherBridge, L1MNT)
 	case "L2ToL1MessagePasser":
-		// No arguments required for L2ToL1MessagePasser
-		_, tx, _, err = bindings.DeployL2ToL1MessagePasser(opts, backend)
+		L1MNT, ok := deployment.Args[0].(common.Address)
+		if !ok {
+			return nil, fmt.Errorf("invalid type for L1 MNT")
+		}
+		_, tx, _, err = bindings.DeployL2ToL1MessagePasser(opts, backend, L1MNT)
 	case "SequencerFeeVault":
 		recipient, ok := deployment.Args[0].(common.Address)
 		if !ok {

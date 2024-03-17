@@ -52,6 +52,8 @@ type Metricer interface {
 
 	RecordRollupRetry(time int32)
 
+	RecordDaRetry(time int32)
+
 	RecordDaNonSignerPubkeys(num int)
 
 	RecordInitReferenceBlockNumber(dataStoreId uint32)
@@ -72,7 +74,7 @@ type Metrics struct {
 	info prometheus.GaugeVec
 	up   prometheus.Gauge
 
-	// label by openend, closed, fully_submitted, timed_out
+	// label by opened, closed, fully_submitted, timed_out
 	channelEvs opmetrics.EventVec
 
 	pendingBlocksCount        prometheus.GaugeVec
@@ -90,6 +92,7 @@ type Metrics struct {
 	channelOutputBytesTotal prometheus.Counter
 
 	rollupRetryCount   prometheus.Gauge
+	daRetry            prometheus.Gauge
 	daNonSignerPubkeys prometheus.Gauge
 
 	recordReferenceBlockNumber prometheus.Gauge
@@ -202,6 +205,12 @@ func NewMetrics(procName string) *Metrics {
 			Help:      "Number of retries after rollup failure.",
 		}),
 
+		daRetry: factory.NewGauge(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "da_retry",
+			Help:      "Mantle Da has problem.",
+		}),
+
 		daNonSignerPubkeys: factory.NewGauge(prometheus.GaugeOpts{
 			Namespace: ns,
 			Name:      "da_no_sign_key_count",
@@ -263,7 +272,7 @@ const (
 	TxStageFailed    = "failed"
 
 	TxInitDataSubmitted    = "init_data_submitted"
-	TxConfirmDataSubmiited = "confirm_data_submitted"
+	TxConfirmDataSubmitted = "confirm_data_submitted"
 	TxInitDataSuccess      = "init_data_success"
 	TxConfirmDataSuccess   = "confirm_data_success"
 	TxInitDataFailed       = "init_data_failed"
@@ -364,7 +373,7 @@ func (m *Metrics) RecordBatchTxInitDataFailed() {
 }
 
 func (m *Metrics) RecordBatchTxConfirmDataSubmitted() {
-	m.batcherTxEvs.Record(TxConfirmDataSubmiited)
+	m.batcherTxEvs.Record(TxConfirmDataSubmitted)
 }
 
 func (m *Metrics) RecordBatchTxConfirmDataSuccess() {
@@ -377,6 +386,10 @@ func (m *Metrics) RecordBatchTxConfirmDataFailed() {
 
 func (m *Metrics) RecordRollupRetry(retryCount int32) {
 	m.rollupRetryCount.Set(float64(retryCount))
+}
+
+func (m *Metrics) RecordDaRetry(retryCount int32) {
+	m.daRetry.Set(float64(retryCount))
 }
 
 func (m *Metrics) RecordDaNonSignerPubkeys(num int) {

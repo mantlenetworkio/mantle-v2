@@ -59,10 +59,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	datastoreConfig, err := NewMantleDataStoreConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mantle datastore config: %w", err)
-	}
+	datastoreConfig := NewMantleDataStoreConfig(ctx)
 
 	syncConfig := NewSyncConfig(ctx)
 
@@ -186,6 +183,9 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
 	if err := json.NewDecoder(file).Decode(&rollupConfig); err != nil {
 		return nil, fmt.Errorf("failed to decode rollup config: %w", err)
 	}
+
+	initMantleUpgradeConfig(&rollupConfig)
+
 	return &rollupConfig, nil
 }
 
@@ -205,17 +205,21 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	return logger, nil
 }
 
-func NewMantleDataStoreConfig(ctx *cli.Context) (datastore.MantleDataStoreConfig, error) {
+func NewMantleDataStoreConfig(ctx *cli.Context) datastore.MantleDataStoreConfig {
 	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
 	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
 	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
 	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
+	mantleDaIndexerSocket := ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name)
+	mantleDAIndexerEnable := ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name)
 	return datastore.MantleDataStoreConfig{
 		RetrieverSocket:          retrieverSocket,
 		RetrieverTimeout:         retrieverTimeout,
 		GraphProvider:            graphProvider,
 		DataStorePollingDuration: dataStorePollingDuration,
-	}, nil
+		MantleDaIndexerSocket:    mantleDaIndexerSocket,
+		MantleDAIndexerEnable:    mantleDAIndexerEnable,
+	}
 }
 
 func NewSyncConfig(ctx *cli.Context) *sync.Config {

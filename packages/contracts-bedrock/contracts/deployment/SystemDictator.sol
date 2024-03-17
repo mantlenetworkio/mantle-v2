@@ -80,6 +80,7 @@ contract SystemDictator is OwnableUpgradeable {
         uint256 scalar;
         bytes32 batcherHash;
         uint64 gasLimit;
+        uint256 baseFee;
         address unsafeBlockSigner;
         ResourceMetering.ResourceConfig resourceConfig;
     }
@@ -182,7 +183,7 @@ contract SystemDictator is OwnableUpgradeable {
                     PortalSender(zero),
                     SystemConfig(zero)
                 ),
-                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, zero, rcfg)
+                SystemConfigConfig(zero, 0, 0, bytes32(0), 0, 0, zero, rcfg)
             )
         );
     }
@@ -249,6 +250,7 @@ contract SystemDictator is OwnableUpgradeable {
                     config.systemConfigConfig.scalar,
                     config.systemConfigConfig.batcherHash,
                     config.systemConfigConfig.gasLimit,
+                    config.systemConfigConfig.baseFee,
                     config.systemConfigConfig.unsafeBlockSigner,
                     config.systemConfigConfig.resourceConfig
                 )
@@ -287,7 +289,7 @@ contract SystemDictator is OwnableUpgradeable {
      */
     function step3() public onlyOwner step(EXIT_1_NO_RETURN_STEP) {
         // Remove all deprecated addresses from the AddressManager
-        string[17] memory deprecated = [
+        string[16] memory deprecated = [
             "BVM_CanonicalTransactionChain",
             "BVM_L2CrossDomainMessenger",
             "BVM_DecompressionPrecompileAddress",
@@ -295,7 +297,6 @@ contract SystemDictator is OwnableUpgradeable {
             "BVM_Proposer",
             "BVM_ChainStorageContainer-CTC-batches",
             "BVM_ChainStorageContainer-CTC-queue",
-            "BVM_CanonicalTransactionChain",
             "BVM_StateCommitmentChain",
             "BVM_BondManager",
             "BVM_ExecutionManager",

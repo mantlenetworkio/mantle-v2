@@ -79,6 +79,7 @@ contract CommonTest is Test {
         uint256 _mntValue,
         uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gasLimit,
         bool _isCreation,
         bytes memory _data
@@ -86,8 +87,8 @@ contract CommonTest is Test {
         emit TransactionDeposited(
             _from,
             _to,
-            0,
-            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _gasLimit, _isCreation, _data)
+            1,
+            abi.encodePacked(_mntValue, _mntTxValue, _ethValue, _ethTxValue, _gasLimit, _isCreation, _data)
         );
     }
 }
@@ -112,6 +113,9 @@ contract L2OutputOracle_Initializer is CommonTest {
     // Test data
     uint256 initL1Time;
 
+    L1MantleToken internal l1MNTImpl;
+    L1MantleToken internal l1MNT;
+
     event OutputProposed(
         bytes32 indexed outputRoot,
         uint256 indexed l2OutputIndex,
@@ -128,6 +132,12 @@ contract L2OutputOracle_Initializer is CommonTest {
 
     function setUp() public virtual override {
         super.setUp();
+
+        vm.prank(multisig);
+        l1MNTImpl = new L1MantleToken();
+        l1MNT = L1MantleToken(address(l1MNTImpl));
+        vm.label(address(l1MNT), "L1MantleToken");
+
         guardian = makeAddr("guardian");
 
         // By default the first block has timestamp and number zero, which will cause underflows in the
@@ -155,7 +165,7 @@ contract L2OutputOracle_Initializer is CommonTest {
         vm.label(address(oracle), "L2OutputOracle");
 
         // Set the L2ToL1MessagePasser at the correct address
-        vm.etch(Predeploys.L2_TO_L1_MESSAGE_PASSER, address(new L2ToL1MessagePasser()).code);
+        vm.etch(Predeploys.L2_TO_L1_MESSAGE_PASSER, address(new L2ToL1MessagePasser(address(l1MNT))).code);
 
         vm.label(Predeploys.L2_TO_L1_MESSAGE_PASSER, "L2ToL1MessagePasser");
     }
@@ -164,26 +174,9 @@ contract L2OutputOracle_Initializer is CommonTest {
 contract MNTToken_Initializer is L2OutputOracle_Initializer {
     using stdStorage for StdStorage;
 
-    // Test target
-    L1MantleToken internal l1MNTImpl;
-    L1MantleToken internal l1MNT;
-
 
     function setUp() public virtual override {
         super.setUp();
-
-
-        vm.prank(multisig);
-        l1MNTImpl = new L1MantleToken();
-//        Proxy proxy = new Proxy(multisig);
-//        vm.prank(multisig);
-//        proxy.upgradeToAndCall(
-//            address(l1MNTImpl),
-//            abi.encodeWithSelector(L1MantleToken.initialize.selector, 1000000 * 10 ** 18, multisig)
-//        );
-
-        l1MNT = L1MantleToken(address(l1MNTImpl));
-        vm.label(address(l1MNT), "L1MantleToken");
     }
 
     function dealL1MNT(address _target,uint256 _amount) public {
@@ -237,6 +230,7 @@ contract Portal_Initializer is BVMETH_Initializer {
             _scalar: 10000,
             _batcherHash: bytes32(0),
             _gasLimit: 30_000_000,
+            _baseFee: 1_000_000_000,
             _unsafeBlockSigner: address(0),
             _config: config
         });
@@ -325,7 +319,7 @@ contract Messenger_Initializer is Portal_Initializer {
 
         vm.etch(
             Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-            address(new L2CrossDomainMessenger(address(L1Messenger))).code
+            address(new L2CrossDomainMessenger(address(L1Messenger), address(l1MNT))).code
         );
 
         L2Messenger.initialize();
@@ -670,25 +664,27 @@ contract FFIInterface is Test {
     function hashDepositTransaction(
         address _from,
         address _to,
-        uint256 _mint,
-        uint256 _value,
+        uint256 _mntValue,
+        uint256 _mntTxValue,
         uint256 _ethValue,
+        uint256 _ethTxValue,
         uint64 _gas,
         bytes memory _data,
         uint64 _logIndex
     ) external returns (bytes32) {
-        string[] memory cmds = new string[](11);
+        string[] memory cmds = new string[](12);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "hashDepositTransaction";
         cmds[2] = "0x0000000000000000000000000000000000000000000000000000000000000000";
         cmds[3] = vm.toString(_logIndex);
         cmds[4] = vm.toString(_from);
         cmds[5] = vm.toString(_to);
-        cmds[6] = vm.toString(_mint);
-        cmds[7] = vm.toString(_value);
+        cmds[6] = vm.toString(_mntValue);
+        cmds[7] = vm.toString(_mntTxValue);
         cmds[8] = vm.toString(_ethValue);
-        cmds[9] = vm.toString(_gas);
-        cmds[10] = vm.toString(_data);
+        cmds[9] = vm.toString(_ethTxValue);
+        cmds[10] = vm.toString(_gas);
+        cmds[11] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -698,19 +694,20 @@ contract FFIInterface is Test {
         external
         returns (bytes memory)
     {
-        string[] memory cmds = new string[](12);
+        string[] memory cmds = new string[](13);
         cmds[0] = "scripts/differential-testing/differential-testing";
         cmds[1] = "encodeDepositTransaction";
         cmds[2] = vm.toString(txn.from);
         cmds[3] = vm.toString(txn.to);
         cmds[4] = vm.toString(txn.mntValue);
-        cmds[5] = vm.toString(txn.mint);
+        cmds[5] = vm.toString(txn.mntTxValue);
         cmds[6] = vm.toString(txn.ethValue);
-        cmds[7] = vm.toString(txn.gasLimit);
-        cmds[8] = vm.toString(txn.isCreation);
-        cmds[9] = vm.toString(txn.data);
-        cmds[10] = vm.toString(txn.l1BlockHash);
-        cmds[11] = vm.toString(txn.logIndex);
+        cmds[7] = vm.toString(txn.ethTxValue);
+        cmds[8] = vm.toString(txn.gasLimit);
+        cmds[9] = vm.toString(txn.isCreation);
+        cmds[10] = vm.toString(txn.data);
+        cmds[11] = vm.toString(txn.l1BlockHash);
+        cmds[12] = vm.toString(txn.logIndex);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));

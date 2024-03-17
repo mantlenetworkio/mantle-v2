@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/mantlenetworkio/lithosphere/synchronizer/mantle-da/common/interfaces/interfaceRetrieverServer";
+package interfaceRetrieverServer;
+
+service DataRetrieval {
+	rpc RetrieveFramesAndData(FramesAndDataRequest) returns (FramesAndDataReply) {}
+	rpc RetrieveLastConfirmDataStoreId(LastDataStoreIdRequest) returns (LastDataStoreIdReply) {}
+	// rpc RetrieveFrames() returns () {}
+	// rpc RetrieveData() returns () {}
+}
+
+message FramesAndDataRequest {
+	uint32 DataStoreId = 1;
+}
+
+message FramesAndDataReply {
+	bytes Data = 1;
+	repeated bytes Frames = 2;
+}
+
+message LastDataStoreIdRequest {
+}
+
+message LastDataStoreIdReply {
+	uint32 DataStoreId = 1;
+}

@@ -33,9 +33,9 @@ const (
 	TxNotInMempoolTimeoutFlagName     = "txmgr.not-in-mempool-timeout"
 	ReceiptQueryIntervalFlagName      = "txmgr.receipt-query-interval"
 	EnableHsmFlagName                 = "enable-hsm"
-	HsmCredenFlagName                 = "hsm-address"
-	HsmAddressFlagName                = "hsm-api-name"
-	HsmAPINameFlagName                = "hsm-creden"
+	HsmCredenFlagName                 = "hsm-creden"
+	HsmAddressFlagName                = "hsm-address"
+	HsmAPINameFlagName                = "hsm-api-name"
 )
 
 var (

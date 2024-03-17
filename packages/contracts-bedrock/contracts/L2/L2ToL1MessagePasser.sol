@@ -31,6 +31,11 @@ contract L2ToL1MessagePasser is Semver {
     uint16 public constant MESSAGE_VERSION = 1;
 
     /**
+     * @notice MNT Token Address on Ethereum
+     */
+    address public immutable L1_MNT_ADDRESS;
+
+    /**
      * @notice Includes the message hashes for all withdrawals
      */
     mapping(bytes32 => bool) public sentMessages;
@@ -66,14 +71,16 @@ contract L2ToL1MessagePasser is Semver {
     /**
      * @notice Emitted when the balance of this contract is burned.
      *
-     * @param amount Amount of ETh that was burned.
+     * @param amount Amount of MNT that was burned.
      */
     event WithdrawerBalanceBurnt(uint256 indexed amount);
 
     /**
      * @custom:semver 1.0.0
      */
-    constructor() Semver(1, 0, 0) {}
+    constructor(address _l1mnt) Semver(1, 0, 0) {
+        L1_MNT_ADDRESS = _l1mnt;
+    }
 
     /**
      * @notice Allows users to withdraw MNT by sending directly to this contract.
@@ -83,14 +90,15 @@ contract L2ToL1MessagePasser is Semver {
     }
 
     /**
-     * @notice Removes all ETH held by this contract from the state. Used to prevent the amount of
-     *         ETH on L2 inflating when ETH is withdrawn. Currently only way to do this is to
+     * @notice Removes all MNT held by this contract from the state. Used to prevent the amount of
+     *         MNT on L2 inflating when MNT is withdrawn. Currently only way to do this is to
      *         create a contract and self-destruct it to itself. Anyone can call this function. Not
      *         incentivized since this function is very cheap.
      */
     function burn() external {
         uint256 balance = address(this).balance;
-        Burn.mnt(balance);
+        (bool success, ) = address(0).call{value: balance}("");
+        require(success, "Failed to burn MNT");
         emit WithdrawerBalanceBurnt(balance);
     }
 
@@ -108,6 +116,7 @@ contract L2ToL1MessagePasser is Semver {
         uint256 _gasLimit,
         bytes memory _data
     ) public payable {
+        require(_target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         if (_ethValue != 0) {
             OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
         }
