@@ -314,6 +314,15 @@ func main() {
 						continue
 					}
 				}
+				//hh, err := wd.Hash()
+				//
+				//if hh.String() == "0x604ed87106e489132e5b1ed5c4e3144d8aea19ea2f3223689692d6e377fef1a4" {
+				//	log.Info("-------- wd", "hash", hh.String())
+				//	log.Info("line", "l", line)
+				//	log.Info("----------")
+				//	break
+				//}
+
 				// migrate the withdrawal
 				withdrawal, err := crossdomain.MigrateWithdrawal(wd, &l1xdmAddr, l2ChainID)
 				if err != nil {
@@ -325,6 +334,15 @@ func main() {
 				if err != nil {
 					return err
 				}
+
+				//if hash.String() == "0x604ed87106e489132e5b1ed5c4e3144d8aea19ea2f3223689692d6e377fef1a4" {
+				//	log.Info("-------- wd", "hash", hash.String())
+				//	log.Info("line", "l", line)
+				//
+				//	log.Info("----------")
+				//	break
+				//}
+				//continue
 
 				lcdm := wd.CrossDomainMessage()
 				legacyXdmHash, err := lcdm.Hash()
@@ -804,6 +822,7 @@ func proveWithdrawalTransaction(c *contracts, cl *util.Clients, opts *bind.Trans
 	if err != nil {
 		return err
 	}
+	log.Info("tx hash", "tx-hash", tx.Hash().String(), "withdrawal-hash", hash.String())
 
 	receipt, err := bind.WaitMined(context.Background(), cl.L1Client, tx)
 	if err != nil {
@@ -813,7 +832,7 @@ func proveWithdrawalTransaction(c *contracts, cl *util.Clients, opts *bind.Trans
 		return errors.New("withdrawal proof unsuccessful")
 	}
 
-	log.Info("withdrawal proved", "tx-hash", tx.Hash(), "withdrawal-hash", hash)
+	log.Info("withdrawal proved", "tx-hash", tx.Hash().String(), "withdrawal-hash", hash.String())
 
 	//block, err := cl.L1Client.BlockByHash(context.Background(), receipt.BlockHash)
 	//if err != nil {
