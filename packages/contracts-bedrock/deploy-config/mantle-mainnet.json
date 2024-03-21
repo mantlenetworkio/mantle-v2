@@ -9,12 +9,10 @@
   "batchInboxAddress": "0xff00000000000000000000000000000000000000",
   "batchSenderAddress": "0x2f40D796917ffB642bD2e2bdD2C762A5e40fd749",
   "l2OutputOracleSubmissionInterval": 1800,
-
-  "l2OutputOracleStartingBlockNumber": 0,
-  "l2OutputOracleStartingTimestamp": -1,
-  "l1StartingBlockTag": "latest",
+  "l2OutputOracleStartingBlockNumber": 61171946,
+  "l2OutputOracleStartingTimestamp": 1710474204,
+  "l1StartingBlockTag": "0x614050145039f11a778f1bd3c85ce2c1f3989492dbc544911fab9a7247e81ca4",
   "l1MantleToken": "0x3c3a81e81dc49a522a592e7622a7e711c06bf354",
-
   "l2OutputOracleProposer": "0x6667961f5e9C98A76a48767522150889703Ed77D",
   "l2OutputOracleChallenger": "0x2F44BD2a54aC3fB20cd7783cF94334069641daC9",
   "l2GenesisBlockGasLimit": "0x2E90EDD000",
