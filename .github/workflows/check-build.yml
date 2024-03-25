@@ -39,6 +39,7 @@ jobs:
           unset NVM_DIR
           sudo apt update
           sudo apt install -y build-essential  coreutils libuv1 libudev-dev libusb-1.0-0-dev
+          export NODE_OPTIONS="--max-old-space-size=4096"
           make build
       - name: UNITEST
         id: unitest
