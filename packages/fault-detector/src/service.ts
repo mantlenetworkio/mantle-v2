@@ -137,6 +137,7 @@ export class FaultDetector extends BaseServiceV2<Options, Metrics, State> {
       BondManager: ethers.constants.AddressZero,
       OptimismPortal: ethers.constants.AddressZero,
       L2OutputOracle: ethers.constants.AddressZero,
+      Rollup: ethers.constants.AddressZero,
     }
 
     const chainType = this.options.bedrock ? 'bedrock' : 'legacy'
