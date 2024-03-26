@@ -1,7 +1,7 @@
 {
-  "name": "@eth-optimism/contracts-periphery",
-  "version": "1.0.7",
-  "description": "[Optimism] External (out-of-protocol) L1 and L2 smart contracts for Optimism",
+  "name": "@mantleio/contracts-periphery",
+  "version": "0.1.0",
+  "description": "[Mantle] External (out-of-protocol) L1 and L2 smart contracts for Mantle",
   "main": "dist/index",
   "types": "dist/index",
   "files": [
@@ -39,23 +39,23 @@
     "pre-commit": "lint-staged"
   },
   "keywords": [
-    "optimism",
+    "mantle",
     "ethereum",
     "contracts",
     "periphery",
     "solidity"
   ],
-  "homepage": "https://github.com/ethereum-optimism/optimism/tree/develop/packages/contracts-periphery#readme",
+  "homepage": "https://github.com/mantlenetworkio/mantle-v2/tree/develop/packages/contracts-periphery#readme",
   "license": "MIT",
-  "author": "Optimism PBC",
+  "author": "Mantle PBC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ethereum-optimism/optimism.git"
+    "url": "https://github.com/mantlenetworkio/mantle-v2.git"
   },
   "devDependencies": {
-    "@eth-optimism/contracts-bedrock": "0.13.2",
-    "@eth-optimism/core-utils": "^0.12.0",
-    "@eth-optimism/hardhat-deploy-config": "^0.2.6",
+    "@mantleio/contracts-bedrock": "0.1.0",
+    "@mantleio/core-utils": "0.2.0",
+    "@mantleio/hardhat-deploy-config": "0.2.0",
     "@ethersproject/hardware-wallets": "^5.7.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",

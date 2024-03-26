@@ -127,7 +127,7 @@ Get the number of queue elements which have not yet been included.
 ### getQueueElement
 
 ```solidity
-function getQueueElement(uint256 _index) external view returns (struct Lib_OVMCodec.QueueElement _element)
+function getQueueElement(uint256 _index) external view returns (struct Lib_BVMCodec.QueueElement _element)
 ```
 
 Gets the queue element at a particular index.
@@ -144,7 +144,7 @@ Gets the queue element at a particular index.
 
 | Name | Type | Description |
 |---|---|---|
-| _element | Lib_OVMCodec.QueueElement | Queue element at the given index.
+| _element | Lib_BVMCodec.QueueElement | Queue element at the given index.
 
 ### getQueueLength
 
@@ -197,6 +197,28 @@ Retrieves the total number of elements submitted.
 |---|---|---|
 | _totalElements | uint256 | Total submitted elements.
 
+### resetIndex
+
+```solidity
+function resetIndex(uint256 _batchIndex, uint40 _totalElement, uint40 _batchSize, uint40 _nextqIndex, uint40 _numQueuedTransactions, uint40 _timestamp, uint40 _blockNumber) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _batchIndex | uint256 | undefined
+| _totalElement | uint40 | undefined
+| _batchSize | uint40 | undefined
+| _nextqIndex | uint40 | undefined
+| _numQueuedTransactions | uint40 | undefined
+| _timestamp | uint40 | undefined
+| _blockNumber | uint40 | undefined
+
 ### setGasParams
 
 ```solidity
@@ -217,6 +239,28 @@ Allows the Burn Admin to update the parameters which determine the amount of gas
 
 
 ## Events
+
+### CTCBatchReset
+
+```solidity
+event CTCBatchReset(uint256 indexed _batchIndex, uint40 _nextqIndex, uint40 _totalElement, uint40 _batchSize, uint40 _numQueuedTransactions, uint40 _timestamp, uint40 _blockNumber)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _batchIndex `indexed` | uint256 | undefined |
+| _nextqIndex  | uint40 | undefined |
+| _totalElement  | uint40 | undefined |
+| _batchSize  | uint40 | undefined |
+| _numQueuedTransactions  | uint40 | undefined |
+| _timestamp  | uint40 | undefined |
+| _blockNumber  | uint40 | undefined |
 
 ### L2GasParamsUpdated
 
@@ -275,7 +319,7 @@ event SequencerBatchAppended(uint256 _startingQueueIndex, uint256 _numQueueEleme
 ### TransactionBatchAppended
 
 ```solidity
-event TransactionBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, uint256 _batchSize, uint256 _prevTotalElements, bytes _extraData)
+event TransactionBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, uint256 _batchSize, uint256 _prevTotalElements, bytes _signature, bytes _extraData)
 ```
 
 
@@ -290,6 +334,7 @@ event TransactionBatchAppended(uint256 indexed _batchIndex, bytes32 _batchRoot, 
 | _batchRoot  | bytes32 | undefined |
 | _batchSize  | uint256 | undefined |
 | _prevTotalElements  | uint256 | undefined |
+| _signature  | bytes | undefined |
 | _extraData  | bytes | undefined |
 
 ### TransactionEnqueued

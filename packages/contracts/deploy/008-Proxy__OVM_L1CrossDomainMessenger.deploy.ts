@@ -16,7 +16,7 @@ const deployFn: DeployFunction = async (hre) => {
 
   await deployAndVerifyAndThen({
     hre,
-    name: 'Proxy__OVM_L1CrossDomainMessenger',
+    name: 'Proxy__BVM_L1CrossDomainMessenger',
     contract: 'Lib_ResolvedDelegateProxy',
     iface: 'L1CrossDomainMessenger',
     args: [Lib_AddressManager.address, 'OVM_L1CrossDomainMessenger'],
@@ -24,6 +24,6 @@ const deployFn: DeployFunction = async (hre) => {
 }
 
 // This is kept during an upgrade. So no upgrade tag.
-deployFn.tags = ['Proxy__OVM_L1CrossDomainMessenger']
+deployFn.tags = ['Proxy__BVM_L1CrossDomainMessenger']
 
 export default deployFn

@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ethers, Overrides, BigNumber } from 'ethers'
+import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import { predeploys } from '@eth-optimism/contracts'
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import { predeploys } from '@mantleio/contracts'
+import { hexStringEquals } from '@mantleio/core-utils'
+import { getContractInterface } from '@mantleio/contracts-bedrock'
 
 import {
   NumberLike,
@@ -22,8 +23,19 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
     l2Token: AddressLike,
     signer: ethers.Signer
   ): Promise<BigNumber> {
-    throw new Error(`approval not necessary for ETH bridge`)
+    if (!(await this.supportsTokenPair(l1Token, l2Token))) {
+      throw new Error(`token pair not supported by bridge`)
+    }
+
+    const token = new Contract(
+      toAddress(l2Token),
+      getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+      this.messenger.l2Provider
+    )
+    return token.allowance(await signer.getAddress(), this.l2Bridge.address)
   }
+
+
 
   public async getDepositsByAddress(
     address: AddressLike,
@@ -45,7 +57,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
           from: event.args.from,
           to: event.args.to,
           l1Token: ethers.constants.AddressZero,
-          l2Token: predeploys.OVM_ETH,
+          l2Token: predeploys.BVM_ETH,
           amount: event.args.amount,
           data: event.args.extraData,
           logIndex: event.logIndex,
@@ -77,7 +89,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
         // Only find ETH withdrawals.
         return (
           hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
+          hexStringEquals(event.args.l2Token, predeploys.BVM_ETH)
         )
       })
       .map((event) => {
@@ -107,7 +119,7 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
     // Only support ETH deposits and withdrawals.
     return (
       hexStringEquals(toAddress(l1Token), ethers.constants.AddressZero) &&
-      hexStringEquals(toAddress(l2Token), predeploys.OVM_ETH)
+      hexStringEquals(toAddress(l2Token), predeploys.BVM_ETH)
     )
   }
 
@@ -119,8 +131,22 @@ export class ETHBridgeAdapter extends StandardBridgeAdapter {
       opts?: {
         overrides?: Overrides
       }
-    ): Promise<never> => {
-      throw new Error(`approvals not necessary for ETH bridge`)
+    ): Promise<TransactionRequest> => {
+      if (!(await this.supportsTokenPair(l1Token, l2Token))) {
+        throw new Error(`token pair not supported by bridge`)
+      }
+
+      const token = new Contract(
+        toAddress(l2Token),
+        getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+        this.messenger.l2Provider
+      )
+
+      return token.populateTransaction.approve(
+        this.l2Bridge.address,
+        amount,
+        opts?.overrides || {}
+      )
     },
 
     deposit: async (

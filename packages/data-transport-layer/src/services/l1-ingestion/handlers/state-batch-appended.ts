@@ -1,6 +1,6 @@
 /* Imports: External */
-import { StateBatchAppendedEvent } from '@eth-optimism/contracts/dist/types/contracts/L1/rollup/StateCommitmentChain'
-import { getContractFactory } from '@eth-optimism/contracts'
+import { StateBatchAppendedEvent } from '@mantleio/contracts/dist/types/contracts/L1/rollup/StateCommitmentChain'
+import { getContractFactory } from '@mantleio/contracts'
 import { BigNumber } from 'ethers'
 
 /* Imports: Internal */

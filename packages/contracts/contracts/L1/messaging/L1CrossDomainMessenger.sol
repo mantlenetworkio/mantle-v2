@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 /* Library Imports */
 import { AddressAliasHelper } from "../../standards/AddressAliasHelper.sol";
 import { Lib_AddressResolver } from "../../libraries/resolver/Lib_AddressResolver.sol";
-import { Lib_OVMCodec } from "../../libraries/codec/Lib_OVMCodec.sol";
+import { Lib_BVMCodec } from "../../libraries/codec/Lib_BVMCodec.sol";
 import { Lib_AddressManager } from "../../libraries/resolver/Lib_AddressManager.sol";
 import { Lib_SecureMerkleTrie } from "../../libraries/trie/Lib_SecureMerkleTrie.sol";
 import { Lib_DefaultValues } from "../../libraries/constants/Lib_DefaultValues.sol";
@@ -58,6 +58,7 @@ contract L1CrossDomainMessenger is
     mapping(bytes32 => bool) public successfulMessages;
 
     address internal xDomainMsgSender = Lib_DefaultValues.DEFAULT_XDOMAIN_SENDER;
+    address internal pauseOwner ;
 
     /***************
      * Constructor *
@@ -101,6 +102,29 @@ contract L1CrossDomainMessenger is
     }
 
     /**
+     * UnPause relaying.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    function setPauseOwner(address _pauseOwner) external onlyOwner {
+        pauseOwner = _pauseOwner;
+    }
+
+    function getPauseOwner() public view returns (address) {
+        return pauseOwner;
+    }
+
+    function pauseByPOwner() external {
+        require(
+            pauseOwner == msg.sender,
+            "msg.sender shoule be pauseowner."
+        );
+        _pause();
+    }
+
+    /**
      * Block a message.
      * @param _xDomainCalldataHash Hash of the message to block.
      */
@@ -139,9 +163,9 @@ contract L1CrossDomainMessenger is
         bytes memory _message,
         uint32 _gasLimit
     ) public {
-        address ovmCanonicalTransactionChain = resolve("CanonicalTransactionChain");
+        address bvmCanonicalTransactionChain = resolve("CanonicalTransactionChain");
         // Use the CTC queue length as nonce
-        uint40 nonce = ICanonicalTransactionChain(ovmCanonicalTransactionChain).getQueueLength();
+        uint40 nonce = ICanonicalTransactionChain(bvmCanonicalTransactionChain).getQueueLength();
 
         bytes memory xDomainCalldata = Lib_CrossDomainUtils.encodeXDomainCalldata(
             _target,
@@ -151,7 +175,7 @@ contract L1CrossDomainMessenger is
         );
 
         // slither-disable-next-line reentrancy-events
-        _sendXDomainMessage(ovmCanonicalTransactionChain, xDomainCalldata, _gasLimit);
+        _sendXDomainMessage(bvmCanonicalTransactionChain, xDomainCalldata, _gasLimit);
 
         // slither-disable-next-line reentrancy-events
         emit SentMessage(_target, msg.sender, _message, nonce, _gasLimit);
@@ -238,7 +262,7 @@ contract L1CrossDomainMessenger is
     ) public {
         // Verify that the message is in the queue:
         address canonicalTransactionChain = resolve("CanonicalTransactionChain");
-        Lib_OVMCodec.QueueElement memory element = ICanonicalTransactionChain(
+        Lib_BVMCodec.QueueElement memory element = ICanonicalTransactionChain(
             canonicalTransactionChain
         ).getQueueElement(_queueIndex);
 
@@ -297,13 +321,13 @@ contract L1CrossDomainMessenger is
         view
         returns (bool)
     {
-        IStateCommitmentChain ovmStateCommitmentChain = IStateCommitmentChain(
+        IStateCommitmentChain bvmStateCommitmentChain = IStateCommitmentChain(
             resolve("StateCommitmentChain")
         );
 
-        return (ovmStateCommitmentChain.insideFraudProofWindow(_proof.stateRootBatchHeader) ==
+        return (bvmStateCommitmentChain.insideFraudProofWindow(_proof.stateRootBatchHeader) ==
             false &&
-            ovmStateCommitmentChain.verifyStateCommitment(
+            bvmStateCommitmentChain.verifyStateCommitment(
                 _proof.stateRoot,
                 _proof.stateRootBatchHeader,
                 _proof.stateRootProof
@@ -343,7 +367,7 @@ contract L1CrossDomainMessenger is
             "Message passing predeploy has not been initialized or invalid proof provided."
         );
 
-        Lib_OVMCodec.EVMAccount memory account = Lib_OVMCodec.decodeEVMAccount(
+        Lib_BVMCodec.EVMAccount memory account = Lib_BVMCodec.decodeEVMAccount(
             encodedMessagePassingAccount
         );
 
@@ -360,7 +384,7 @@ contract L1CrossDomainMessenger is
      * Sends a cross domain message.
      * @param _canonicalTransactionChain Address of the CanonicalTransactionChain instance.
      * @param _message Message to send.
-     * @param _gasLimit OVM gas limit for the message.
+     * @param _gasLimit BVM gas limit for the message.
      */
     function _sendXDomainMessage(
         address _canonicalTransactionChain,

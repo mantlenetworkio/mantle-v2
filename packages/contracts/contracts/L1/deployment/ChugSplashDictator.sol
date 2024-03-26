@@ -6,7 +6,7 @@ import { iL1ChugSplashDeployer } from "../../chugsplash/interfaces/iL1ChugSplash
 
 /**
  * @title ChugSplashDictator
- * @dev Like the AddressDictator, but specifically for the Proxy__OVM_L1StandardBridge. We're
+ * @dev Like the AddressDictator, but specifically for the Proxy__BVM_L1StandardBridge. We're
  *      working on a generalized version of this but this is good enough for the moment.
  */
 contract ChugSplashDictator is iL1ChugSplashDeployer {
@@ -23,6 +23,8 @@ contract ChugSplashDictator is iL1ChugSplashDeployer {
     bytes32 public messengerSlotVal;
     bytes32 public bridgeSlotKey;
     bytes32 public bridgeSlotVal;
+    bytes32 public mantleAddressSlotKey;
+    bytes32 public mantleAddressSlotVal;
 
     /***************
      * Constructor *
@@ -35,7 +37,9 @@ contract ChugSplashDictator is iL1ChugSplashDeployer {
         bytes32 _messengerSlotKey,
         bytes32 _messengerSlotVal,
         bytes32 _bridgeSlotKey,
-        bytes32 _bridgeSlotVal
+        bytes32 _bridgeSlotVal,
+        bytes32 _mantleAddressSlotKey,
+        bytes32 _mantleAddressSlotVal
     ) {
         target = _target;
         finalOwner = _finalOwner;
@@ -44,6 +48,8 @@ contract ChugSplashDictator is iL1ChugSplashDeployer {
         messengerSlotVal = _messengerSlotVal;
         bridgeSlotKey = _bridgeSlotKey;
         bridgeSlotVal = _bridgeSlotVal;
+        mantleAddressSlotKey = _mantleAddressSlotKey;
+        mantleAddressSlotVal = _mantleAddressSlotVal;
     }
 
     /********************
@@ -56,6 +62,7 @@ contract ChugSplashDictator is iL1ChugSplashDeployer {
         target.setCode(_code);
         target.setStorage(messengerSlotKey, messengerSlotVal);
         target.setStorage(bridgeSlotKey, bridgeSlotVal);
+        target.setStorage(mantleAddressSlotKey, mantleAddressSlotVal);
         target.setOwner(finalOwner);
     }
 

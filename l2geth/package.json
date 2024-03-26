@@ -1,5 +1,5 @@
 {
-  "name": "@eth-optimism/l2geth",
+  "name": "@mantleio/l2geth",
   "version": "0.5.33",
   "private": true,
   "devDependencies": {}

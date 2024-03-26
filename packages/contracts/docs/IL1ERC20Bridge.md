@@ -72,6 +72,25 @@ function finalizeERC20Withdrawal(address _l1Token, address _l2Token, address _fr
 | _amount | uint256 | Amount of the ERC20 to deposit.
 | _data | bytes | Data provided by the sender on L2. This data is provided   solely as a convenience for external contracts. Aside from enforcing a maximum   length, these contracts provide no guarantees about its content.
 
+### finalizeMantleWithdrawal
+
+```solidity
+function finalizeMantleWithdrawal(address _from, address _to, uint256 _amount, bytes _data) external nonpayable
+```
+
+
+
+*Complete a mantle withdrawal from L2 to L1, and credit funds to the recipient&#39;s balance of the L1 ERC20 token. This call will fail if the initialized withdrawal from L2 has not been finalized.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _from | address | L2 address initiating the transfer.
+| _to | address | L1 address to credit the withdrawal to.
+| _amount | uint256 | Amount of the ERC20 to deposit.
+| _data | bytes | Data provided by the sender on L2. This data is provided   solely as a convenience for external contracts. Aside from enforcing a maximum   length, these contracts provide no guarantees about its content.
+
 ### l2TokenBridge
 
 ```solidity

@@ -6,7 +6,7 @@
 
 
 
-*Like the AddressDictator, but specifically for the Proxy__OVM_L1StandardBridge. We&#39;re      working on a generalized version of this but this is good enough for the moment.*
+*Like the AddressDictator, but specifically for the Proxy__BVM_L1StandardBridge. We&#39;re      working on a generalized version of this but this is good enough for the moment.*
 
 ## Methods
 
@@ -110,6 +110,40 @@ function isUpgrading() external view returns (bool)
 | Name | Type | Description |
 |---|---|---|
 | _0 | bool | undefined
+
+### mantleAddressSlotKey
+
+```solidity
+function mantleAddressSlotKey() external view returns (bytes32)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bytes32 | undefined
+
+### mantleAddressSlotVal
+
+```solidity
+function mantleAddressSlotVal() external view returns (bytes32)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bytes32 | undefined
 
 ### messengerSlotKey
 

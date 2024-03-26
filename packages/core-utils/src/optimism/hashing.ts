@@ -52,7 +52,8 @@ export type L2OutputOracleParameters = {
  * @param nonce     The cross domain message nonce
  * @param sender    The sender of the cross domain message
  * @param target    The target of the cross domain message
- * @param value     The value being sent with the cross domain message
+ * @param mntValue  The MNT value being sent with the cross domain message
+ * @param ethValue  The ETH value being sent with the cross domain message
  * @param gasLimit  The gas limit of the cross domain execution
  * @param data      The data passed along with the cross domain message
  */
@@ -60,7 +61,8 @@ export const hashCrossDomainMessage = (
   nonce: BigNumber,
   sender: string,
   target: string,
-  value: BigNumber,
+  mntValue: BigNumber,
+  ethValue: BigNumberish,
   gasLimit: BigNumber,
   data: string
 ) => {
@@ -72,7 +74,8 @@ export const hashCrossDomainMessage = (
       nonce,
       sender,
       target,
-      value,
+      mntValue,
+      ethValue,
       gasLimit,
       data
     )
@@ -103,7 +106,8 @@ export const hashCrossDomainMessagev0 = (
  * @param nonce     The cross domain message nonce
  * @param sender    The sender of the cross domain message
  * @param target    The target of the cross domain message
- * @param value     The value being sent with the cross domain message
+ * @param mntValue  The MNT value being sent with the cross domain message
+ * @param ethValue  The ETH value being sent with the cross domain message
  * @param gasLimit  The gas limit of the cross domain execution
  * @param data      The data passed along with the cross domain message
  */
@@ -111,12 +115,13 @@ export const hashCrossDomainMessagev1 = (
   nonce: BigNumber,
   sender: string,
   target: string,
-  value: BigNumberish,
+  mntValue: BigNumberish,
+  ethValue: BigNumberish,
   gasLimit: BigNumberish,
   data: string
 ) => {
   return keccak256(
-    encodeCrossDomainMessageV1(nonce, sender, target, value, gasLimit, data)
+    encodeCrossDomainMessageV1(nonce, sender, target, mntValue, ethValue, gasLimit, data)
   )
 }
 
@@ -126,7 +131,8 @@ export const hashCrossDomainMessagev1 = (
  * @param nonce     The cross domain message nonce
  * @param sender    The sender of the cross domain message
  * @param target    The target of the cross domain message
- * @param value     The value being sent with the cross domain message
+ * @param mntValue  The MNT value being sent with the cross domain message
+ * @param ethValue  The ETH value being sent with the cross domain message
  * @param gasLimit  The gas limit of the cross domain execution
  * @param data      The data passed along with the cross domain message
  */
@@ -134,16 +140,26 @@ export const hashWithdrawal = (
   nonce: BigNumber,
   sender: string,
   target: string,
-  value: BigNumber,
+  mntValue: BigNumber,
+  ethValue: BigNumber,
   gasLimit: BigNumber,
   data: string
 ): string => {
-  const types = ['uint256', 'address', 'address', 'uint256', 'uint256', 'bytes']
+  const types = [
+    'uint256',
+    'address',
+    'address',
+    'uint256',
+    'uint256',
+    'uint256',
+    'bytes',
+  ]
   const encoded = defaultAbiCoder.encode(types, [
     nonce,
     sender,
     target,
-    value,
+    mntValue,
+    ethValue,
     gasLimit,
     data,
   ])

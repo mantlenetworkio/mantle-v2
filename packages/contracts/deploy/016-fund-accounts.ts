@@ -1,5 +1,5 @@
 /* Imports: External */
-import { sleep } from '@eth-optimism/core-utils'
+import { sleep } from '@mantleio/core-utils'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 import { defaultHardhatNetworkHdAccountsConfigParams } from 'hardhat/internal/core/config/default-config'
 import { normalizeHardhatNetworkAccountsConfig } from 'hardhat/internal/core/providers/util'
@@ -16,7 +16,7 @@ const deployFn: DeployFunction = async (hre) => {
   if (await isHardhatNode(hre)) {
     const L1StandardBridge = await getContractFromArtifact(
       hre,
-      names.managed.contracts.Proxy__OVM_L1StandardBridge,
+      names.managed.contracts.Proxy__BVM_L1StandardBridge,
       {
         iface: 'L1StandardBridge',
       }

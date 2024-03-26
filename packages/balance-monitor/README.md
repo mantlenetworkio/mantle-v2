@@ -18,7 +18,7 @@ specified threshold.
 
 ## Alerts
 
-- `OPTIMISM-BALANCE-DANGER-[ACCOUNT_NAME]`
+- `MANTLE-BALANCE-DANGER-[ACCOUNT_NAME]`
   - Fired when the specified account balance is below the configured DANGER threshold
   - Severity is always set to "high"
   - Type is always set to "info"

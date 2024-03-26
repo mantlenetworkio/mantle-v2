@@ -1,75 +1,69 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
-  Provider,
   BlockTag,
+  Provider,
   TransactionReceipt,
-  TransactionResponse,
   TransactionRequest,
+  TransactionResponse,
 } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
+import {Signer} from '@ethersproject/abstract-signer'
+import {BigNumber, CallOverrides, ethers, Overrides, PayableOverrides,} from 'ethers'
 import {
-  ethers,
-  BigNumber,
-  Overrides,
-  CallOverrides,
-  PayableOverrides,
-} from 'ethers'
-import {
-  sleep,
-  remove0x,
-  toHexString,
-  toRpcHexString,
-  hashCrossDomainMessage,
+  BedrockCrossChainMessageProof,
+  BedrockOutputData,
+  decodeVersionedNonce,
   encodeCrossDomainMessageV0,
   encodeCrossDomainMessageV1,
-  BedrockOutputData,
-  BedrockCrossChainMessageProof,
-  decodeVersionedNonce,
   encodeVersionedNonce,
   getChainId,
-} from '@eth-optimism/core-utils'
-import { getContractInterface, predeploys } from '@eth-optimism/contracts'
+  hashCrossDomainMessage,
+  remove0x,
+  sleep,
+  toHexString,
+  toRpcHexString,
+} from '@mantleio/core-utils'
+import {getContractInterface, l1DevPredeploys, predeploys,} from '@mantleio/contracts'
 import * as rlp from 'rlp'
 
 import {
-  OEContracts,
-  OEContractsLike,
-  MessageLike,
-  MessageRequestLike,
-  TransactionLike,
   AddressLike,
-  NumberLike,
-  SignerOrProviderLike,
-  CrossChainMessage,
-  CrossChainMessageRequest,
-  CrossChainMessageProof,
-  MessageDirection,
-  MessageStatus,
-  TokenBridgeMessage,
-  MessageReceipt,
-  MessageReceiptStatus,
   BridgeAdapterData,
   BridgeAdapters,
+  CrossChainMessage,
+  CrossChainMessageProof,
+  CrossChainMessageRequest,
+  IBridgeAdapter,
+  LowLevelMessage,
+  MessageDirection,
+  MessageLike,
+  MessageReceipt,
+  MessageReceiptStatus,
+  MessageRequestLike,
+  MessageStatus,
+  NumberLike,
+  OEContracts,
+  OEContractsLike,
+  ProvenWithdrawal,
+  SignerOrProviderLike,
   StateRoot,
   StateRootBatch,
-  IBridgeAdapter,
-  ProvenWithdrawal,
-  LowLevelMessage,
+  TokenBridgeMessage,
+  TransactionLike,
 } from './interfaces'
 import {
-  toSignerOrProvider,
-  toNumber,
-  toTransactionHash,
+  CHAIN_BLOCK_TIMES,
   DeepPartial,
+  DEPOSIT_CONFIRMATION_BLOCKS,
   getAllOEContracts,
   getBridgeAdapters,
+  hashLowLevelMessage,
+  hashMessageHash,
   makeMerkleTreeProof,
   makeStateTrieProof,
-  hashLowLevelMessage,
   migratedWithdrawalGasLimit,
-  DEPOSIT_CONFIRMATION_BLOCKS,
-  CHAIN_BLOCK_TIMES,
-  hashMessageHash,
+  toNumber,
+  toSignerOrProvider,
+  toTransactionHash,
 } from './utils'
 
 export class CrossChainMessenger {
@@ -295,7 +289,9 @@ export class CrossChainMessenger {
       .map((log) => {
         // Try to pull out the value field, but only if the very next log is a SentMessageExtension1
         // event which was introduced in the Bedrock upgrade.
-        let value = ethers.BigNumber.from(0)
+        let _mntValue = ethers.BigNumber.from(0)
+        let _ethValue = ethers.BigNumber.from(0)
+
         const next = receipt.logs.find((l) => {
           return (
             l.logIndex === log.logIndex + 1 && l.address === messenger.address
@@ -304,7 +300,8 @@ export class CrossChainMessenger {
         if (next) {
           const nextParsed = messenger.interface.parseLog(next)
           if (nextParsed.name === 'SentMessageExtension1') {
-            value = nextParsed.args.value
+            _mntValue = nextParsed.args.mntValue
+            _ethValue = nextParsed.args.ethValue
           }
         }
 
@@ -316,7 +313,8 @@ export class CrossChainMessenger {
           sender: parsed.args.sender,
           message: parsed.args.message,
           messageNonce: parsed.args.messageNonce,
-          value,
+          mntValue: _mntValue,
+          ethValue: _ethValue,
           minGasLimit: parsed.args.gasLimit,
           logIndex: log.logIndex,
           blockNumber: log.blockNumber,
@@ -337,19 +335,22 @@ export class CrossChainMessenger {
     const resolved = await this.toCrossChainMessage(message)
 
     // Bedrock messages are already in the correct format.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     if (version.eq(1)) {
       return resolved
     }
 
-    let value = BigNumber.from(0)
+    let mntValue = BigNumber.from(0)
+    let ethValue = BigNumber.from(0)
+    mntValue = resolved.mntValue
+    ethValue = resolved.ethValue
     if (
       resolved.direction === MessageDirection.L2_TO_L1 &&
       resolved.sender === this.contracts.l2.L2StandardBridge.address &&
       resolved.target === this.contracts.l1.L1StandardBridge.address
     ) {
       try {
-        ;[, , value] =
+        ;[, , ethValue] =
           this.contracts.l1.L1StandardBridge.interface.decodeFunctionData(
             'finalizeETHWithdrawal',
             resolved.message
@@ -357,11 +358,21 @@ export class CrossChainMessenger {
       } catch (err) {
         // No problem, not a message with value.
       }
+      try {
+        ;[, , mntValue] =
+          this.contracts.l1.L1StandardBridge.interface.decodeFunctionData(
+            'finalizeMantleWithdrawal',
+            resolved.message
+          )
+      } catch (error) {
+        // No problem, not a message with value.
+      }
     }
 
     return {
       ...resolved,
-      value,
+      mntValue,
+      ethValue,
       minGasLimit: BigNumber.from(0),
       messageNonce: encodeVersionedNonce(
         BigNumber.from(0),
@@ -386,7 +397,7 @@ export class CrossChainMessenger {
     }
 
     // We may have to update the message if it's a legacy message.
-    const { version } = decodeVersionedNonce(resolved.messageNonce)
+    const {version} = decodeVersionedNonce(resolved.messageNonce)
     let updated: CrossChainMessage
     if (version.eq(0)) {
       updated = await this.toBedrockCrossChainMessage(resolved)
@@ -399,7 +410,8 @@ export class CrossChainMessenger {
       updated.messageNonce,
       updated.sender,
       updated.target,
-      updated.value,
+      updated.mntValue,
+      updated.ethValue,
       updated.minGasLimit,
       updated.message
     )
@@ -448,7 +460,8 @@ export class CrossChainMessenger {
       messageNonce,
       sender: this.contracts.l2.L2CrossDomainMessenger.address,
       target: this.contracts.l1.L1CrossDomainMessenger.address,
-      value: updated.value,
+      mntValue: updated.mntValue,
+      ethValue: updated.ethValue,
       minGasLimit: gasLimit,
       message: encoded,
     }
@@ -725,7 +738,8 @@ export class CrossChainMessenger {
       resolved.messageNonce,
       resolved.sender,
       resolved.target,
-      resolved.value,
+      resolved.mntValue,
+      resolved.ethValue,
       resolved.minGasLimit,
       resolved.message
     )
@@ -765,8 +779,8 @@ export class CrossChainMessenger {
       return {
         receiptStatus: MessageReceiptStatus.RELAYED_FAILED,
         transactionReceipt: await failedRelayedMessageEvents[
-          failedRelayedMessageEvents.length - 1
-        ].getTransactionReceipt(),
+        failedRelayedMessageEvents.length - 1
+          ].getTransactionReceipt(),
       }
     }
 
@@ -1027,12 +1041,12 @@ export class CrossChainMessenger {
       oracleVersion === '1.0.0'
         ? // The ABI in the SDK does not contain FINALIZATION_PERIOD_SECONDS
           // in OptimismPortal, so making an explicit call instead.
-          BigNumber.from(
-            await this.contracts.l1.OptimismPortal.provider.call({
-              to: this.contracts.l1.OptimismPortal.address,
-              data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
-            })
-          )
+        BigNumber.from(
+          await this.contracts.l1.OptimismPortal.provider.call({
+            to: this.contracts.l1.OptimismPortal.address,
+            data: '0xf4daa291', // FINALIZATION_PERIOD_SECONDS
+          })
+        )
         : await this.contracts.l1.L2OutputOracle.FINALIZATION_PERIOD_SECONDS()
     return challengePeriod.toNumber()
   }
@@ -1273,12 +1287,25 @@ export class CrossChainMessenger {
     }
 
     const stateBatchTransaction = await stateBatchAppendedEvent.getTransaction()
-    const [stateRoots] =
-      this.contracts.l1.StateCommitmentChain.interface.decodeFunctionData(
-        'appendStateBatch',
+    let stateRoots: any
+    try {
+      stateRoots =
+        this.contracts.l1.StateCommitmentChain.interface.decodeFunctionData(
+          'appendStateBatch',
+          stateBatchTransaction.data
+        )[0]
+    } catch (e) {
+      stateRoots = this.contracts.l1.Rollup.interface.decodeFunctionData(
+        'createAssertionWithStateBatch',
         stateBatchTransaction.data
-      )
-
+      )[2]
+    }
+    let signature: string
+    if (this.bedrock) {
+      signature = ''
+    } else {
+      signature = stateBatchAppendedEvent.args._signature
+    }
     return {
       blockNumber: stateBatchAppendedEvent.blockNumber,
       stateRoots,
@@ -1288,6 +1315,7 @@ export class CrossChainMessenger {
         batchSize: stateBatchAppendedEvent.args._batchSize,
         prevTotalElements: stateBatchAppendedEvent.args._prevTotalElements,
         extraData: stateBatchAppendedEvent.args._extraData,
+        signature,
       },
     }
   }
@@ -1314,7 +1342,7 @@ export class CrossChainMessenger {
     // We need to calculate the specific storage slot that demonstrates that this message was
     // actually included in the L2 chain. The following calculation is based on the fact that
     // messages are stored in the following mapping on L2:
-    // https://github.com/ethereum-optimism/optimism/blob/c84d3450225306abbb39b4e7d6d82424341df2be/packages/contracts/contracts/L2/predeploys/OVM_L2ToL1MessagePasser.sol#L23
+    // https://github.com/ethereum-optimism/optimism/blob/c84d3450225306abbb39b4e7d6d82424341df2be/packages/contracts/contracts/L2/predeploys/BVM_L2ToL1MessagePasser.sol#L23
     // You can read more about how Solidity storage slots are computed for mappings here:
     // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#mappings-and-dynamic-arrays
     const messageSlot = ethers.utils.keccak256(
@@ -1331,7 +1359,7 @@ export class CrossChainMessenger {
     const stateTrieProof = await makeStateTrieProof(
       this.l2Provider as ethers.providers.JsonRpcProvider,
       resolved.blockNumber,
-      this.contracts.l2.OVM_L2ToL1MessagePasser.address,
+      this.contracts.l2.BVM_L2ToL1MessagePasser.address,
       messageSlot
     )
 
@@ -1542,6 +1570,54 @@ export class CrossChainMessenger {
   ): Promise<TransactionResponse> {
     return (opts?.signer || this.l2Signer).sendTransaction(
       await this.populateTransaction.withdrawETH(amount, opts)
+    )
+  }
+
+  /**
+   * Deposits some MNT into the L2 chain.
+   *
+   * @param amount Amount of MNT to deposit (in wei).
+   * @param opts Additional options.
+   * @param opts.signer Optional signer to use to send the transaction.
+   * @param opts.recipient Optional address to receive the funds on L2. Defaults to sender.
+   * @param opts.l2GasLimit Optional gas limit to use for the transaction on L2.
+   * @param opts.overrides Optional transaction overrides.
+   * @returns Transaction response for the deposit transaction.
+   */
+  public async depositMNT(
+    amount: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      l2GasLimit?: NumberLike
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l1Signer).sendTransaction(
+      await this.populateTransaction.depositMNT(amount, opts)
+    )
+  }
+
+  /**
+   * Withdraws some MNT back to the L1 chain.
+   *
+   * @param amount Amount of MNT to withdraw.
+   * @param opts Additional options.
+   * @param opts.signer Optional signer to use to send the transaction.
+   * @param opts.recipient Optional address to receive the funds on L1. Defaults to sender.
+   * @param opts.overrides Optional transaction overrides.
+   * @returns Transaction response for the withdraw transaction.
+   */
+  public async withdrawMNT(
+    amount: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l2Signer).sendTransaction(
+      await this.populateTransaction.withdrawMNT(amount, opts)
     )
   }
 
@@ -1782,7 +1858,8 @@ export class CrossChainMessenger {
           withdrawal.messageNonce,
           withdrawal.sender,
           withdrawal.target,
-          withdrawal.value,
+          withdrawal.mntValue,
+          withdrawal.ethValue,
           withdrawal.minGasLimit,
           withdrawal.message,
         ],
@@ -1830,7 +1907,8 @@ export class CrossChainMessenger {
             withdrawal.messageNonce,
             withdrawal.sender,
             withdrawal.target,
-            withdrawal.value,
+            withdrawal.mntValue,
+            withdrawal.ethValue,
             withdrawal.minGasLimit,
             withdrawal.message,
           ],
@@ -1877,7 +1955,7 @@ export class CrossChainMessenger {
     ): Promise<TransactionRequest> => {
       return this.bridges.ETH.populateTransaction.deposit(
         ethers.constants.AddressZero,
-        predeploys.OVM_ETH,
+        predeploys.BVM_ETH,
         amount,
         opts
       )
@@ -1901,10 +1979,72 @@ export class CrossChainMessenger {
     ): Promise<TransactionRequest> => {
       return this.bridges.ETH.populateTransaction.withdraw(
         ethers.constants.AddressZero,
-        predeploys.OVM_ETH,
+        predeploys.BVM_ETH,
         amount,
         opts
       )
+    },
+
+    /**
+     * Generates a transaction for depositing some MNT into the L2 chain.
+     *
+     * @param amount Amount of MNT to deposit.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L2. Defaults to sender.
+     * @param opts.l2GasLimit Optional gas limit to use for the transaction on L2.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to deposit the MNT.
+     */
+    depositMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        l2GasLimit?: NumberLike
+        l1MNTAddr?: AddressLike
+        overrides?: PayableOverrides
+      }
+    ): Promise<TransactionRequest> => {
+      if (this.bedrock) {
+        return this.bridges.MNT.populateTransaction.deposit(
+          opts?.l1MNTAddr !== undefined
+            ? opts.l1MNTAddr
+            : l1DevPredeploys.L1_MNT,
+          ethers.constants.AddressZero,
+          amount,
+          opts
+        )
+      } else {
+        throw new Error(`call this function must require bedrock param is true`)
+      }
+    },
+
+    /**
+     * Generates a transaction for withdrawing some MNT back to the L1 chain.
+     *
+     * @param amount Amount of MNT to withdraw.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L1. Defaults to sender.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Transaction that can be signed and executed to withdraw the MNT.
+     */
+    withdrawMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        l1MNTAddr?: AddressLike
+        overrides?: Overrides
+      }
+    ): Promise<TransactionRequest> => {
+      if (this.bedrock) {
+        return this.bridges.MNT.populateTransaction.withdraw(
+          opts?.l1MNTAddr !== undefined ? opts.l1MNTAddr : l1DevPredeploys.L1_MNT,
+          ethers.constants.AddressZero,
+          amount,
+          opts
+        )
+      } else {
+        throw new Error(`call this function must require bedrock param is true`)
+      }
     },
 
     /**
@@ -2095,6 +2235,7 @@ export class CrossChainMessenger {
       )
     },
 
+
     /**
      * Estimates gas required to withdraw some ETH back to the L1 chain.
      *
@@ -2113,6 +2254,51 @@ export class CrossChainMessenger {
     ): Promise<BigNumber> => {
       return this.l2Provider.estimateGas(
         await this.populateTransaction.withdrawETH(amount, opts)
+      )
+    },
+
+
+    /**
+     * Estimates gas required to deposit some MNT into the L2 chain.
+     *
+     * @param amount Amount of MNT to deposit.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L2. Defaults to sender.
+     * @param opts.l2GasLimit Optional gas limit to use for the transaction on L2.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Gas estimate for the transaction.
+     */
+    depositMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        l2GasLimit?: NumberLike
+        overrides?: CallOverrides
+      }
+    ): Promise<BigNumber> => {
+      return this.l1Provider.estimateGas(
+        await this.populateTransaction.depositMNT(amount, opts)
+      )
+    },
+
+    /**
+     * Estimates gas required to withdraw some MNT back to the L1 chain.
+     *
+     * @param amount Amount of MNT to withdraw.
+     * @param opts Additional options.
+     * @param opts.recipient Optional address to receive the funds on L1. Defaults to sender.
+     * @param opts.overrides Optional transaction overrides.
+     * @returns Gas estimate for the transaction.
+     */
+    withdrawMNT: async (
+      amount: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        overrides?: CallOverrides
+      }
+    ): Promise<BigNumber> => {
+      return this.l2Provider.estimateGas(
+        await this.populateTransaction.withdrawMNT(amount, opts)
       )
     },
 

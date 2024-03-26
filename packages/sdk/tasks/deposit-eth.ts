@@ -7,7 +7,7 @@ import { Deployment } from 'hardhat-deploy/types'
 import {
   predeploys,
   getContractDefinition,
-} from '@eth-optimism/contracts-bedrock'
+} from '@mantleio/contracts-bedrock'
 import { providers, utils, ethers } from 'ethers'
 
 import {
@@ -107,7 +107,7 @@ task('deposit-eth', 'Deposits ether to L2.')
         )
       } catch (e) {
         Deployment__L1CrossDomainMessenger = await hre.deployments.get(
-          'Proxy__OVM_L1CrossDomainMessenger'
+          'Proxy__BVM_L1CrossDomainMessenger'
         )
       }
       let Deployment__L1StandardBridge: Deployment
@@ -117,7 +117,7 @@ task('deposit-eth', 'Deposits ether to L2.')
         )
       } catch (e) {
         Deployment__L1StandardBridge = await hre.deployments.get(
-          'Proxy__OVM_L1StandardBridge'
+          'Proxy__BVM_L1StandardBridge'
         )
       }
 

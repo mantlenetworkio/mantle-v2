@@ -51,9 +51,9 @@ task('withdraw-fees')
       console.log('Performing dry run of fee withdrawal...')
     }
 
-    const l2FeeVault = getContractFactory('OVM_SequencerFeeVault')
+    const l2FeeVault = getContractFactory('BVM_SequencerFeeVault')
       .connect(signer)
-      .attach(predeploys.OVM_SequencerFeeVault)
+      .attach(predeploys.BVM_SequencerFeeVault)
 
     const signerAddress = await signer.getAddress()
     const signerBalance = await provider.getBalance(signerAddress)
@@ -75,10 +75,10 @@ task('withdraw-fees')
     } else {
       const withdrawTx = await l2FeeVault.withdraw()
       console.log(
-        `Withdrawal complete: https://optimistic.etherscan.io/tx/${withdrawTx.hash}`
+        `Withdrawal complete: https://mantle.etherscan.io/tx/${withdrawTx.hash}`
       )
       console.log(
-        `Complete withdrawal in 1 week here: https://optimistic.etherscan.io/address/${predeploys.OVM_SequencerFeeVault}#withdrawaltxs`
+        `Complete withdrawal in 1 week here: https://mantle.etherscan.io/address/${predeploys.BVM_SequencerFeeVault}#withdrawaltxs`
       )
     }
   })

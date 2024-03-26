@@ -10,7 +10,7 @@ import { LedgerSigner } from '@ethersproject/hardware-wallets'
 import { getContractFactory } from '../src/contract-defs'
 import { predeploys } from '../src/predeploys'
 
-// Add accounts the the OVM_DeployerWhitelist
+// Add accounts the the BVM_DeployerWhitelist
 // npx hardhat whitelist --address 0x..
 task('whitelist')
   .addOptionalParam('address', 'Address to whitelist', undefined, types.string)
@@ -54,7 +54,7 @@ task('whitelist')
   .addOptionalParam(
     'contractAddress',
     'Address of DeployerWhitelist contract',
-    predeploys.OVM_DeployerWhitelist,
+    predeploys.BVM_DeployerWhitelist,
     types.string
   )
   .setAction(async (args) => {
@@ -81,7 +81,7 @@ task('whitelist')
       signer = new LedgerSigner(provider, 'default', args.ledgerPath)
     }
 
-    const deployerWhitelist = getContractFactory('OVM_DeployerWhitelist')
+    const deployerWhitelist = getContractFactory('BVM_DeployerWhitelist')
       .connect(signer)
       .attach(args.contractAddress)
 
@@ -92,7 +92,7 @@ task('whitelist')
       console.log(`Whitelist is disabled. Exiting early.`)
       return
     } else {
-      console.log(`OVM_DeployerWhitelist owner: ${owner}`)
+      console.log(`BVM_DeployerWhitelist owner: ${owner}`)
     }
 
     if (addr !== owner) {

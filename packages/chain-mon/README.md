@@ -1,4 +1,4 @@
-# @eth-optimism/chain-mon
+# @mantleio/chain-mon
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/develop/graph/badge.svg?token=0VTG7PG7YR&flag=chain-mon-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 

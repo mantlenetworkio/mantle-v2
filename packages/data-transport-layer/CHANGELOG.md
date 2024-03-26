@@ -12,7 +12,7 @@
 ### Patch Changes
 
 - Updated dependencies [fecd42d67]
-  - @eth-optimism/common-ts@0.8.1
+  - @mantleio/common-ts@0.8.1
 
 ## 0.5.53
 
@@ -20,14 +20,14 @@
 
 - Updated dependencies [0e179781b]
 - Updated dependencies [4ae94b412]
-  - @eth-optimism/common-ts@0.8.0
+  - @mantleio/common-ts@0.8.0
 
 ## 0.5.52
 
 ### Patch Changes
 
 - Updated dependencies [f04e5db2d]
-  - @eth-optimism/common-ts@0.7.1
+  - @mantleio/common-ts@0.7.1
 
 ## 0.5.51
 
@@ -47,8 +47,8 @@
 - Updated dependencies [c6c9c7dbf]
 - Updated dependencies [ffcee1013]
 - Updated dependencies [eceb0de1d]
-  - @eth-optimism/common-ts@0.7.0
-  - @eth-optimism/contracts@0.5.40
+  - @mantleio/common-ts@0.7.0
+  - @mantleio/contracts@0.5.40
 
 ## 0.5.49
 
@@ -64,18 +64,18 @@
 - Updated dependencies [c975c9620]
 - Updated dependencies [1d3c749a2]
 - Updated dependencies [136ea1785]
-  - @eth-optimism/contracts@0.5.39
-  - @eth-optimism/core-utils@0.12.0
-  - @eth-optimism/common-ts@0.6.8
+  - @mantleio/contracts@0.5.39
+  - @mantleio/core-utils@0.12.0
+  - @mantleio/common-ts@0.6.8
 
 ## 0.5.48
 
 ### Patch Changes
 
 - Updated dependencies [1e76cdb86]
-  - @eth-optimism/core-utils@0.11.0
-  - @eth-optimism/common-ts@0.6.7
-  - @eth-optimism/contracts@0.5.38
+  - @mantleio/core-utils@0.11.0
+  - @mantleio/common-ts@0.6.7
+  - @mantleio/contracts@0.5.38
 
 ## 0.5.47
 
@@ -85,8 +85,8 @@
 - Updated dependencies [ce7da914]
 - Updated dependencies [628affc7]
 - Updated dependencies [740e1bcc]
-  - @eth-optimism/common-ts@0.6.6
-  - @eth-optimism/contracts@0.5.37
+  - @mantleio/common-ts@0.6.6
+  - @mantleio/contracts@0.5.37
 
 ## 0.5.46
 
@@ -103,16 +103,16 @@
 - Updated dependencies [7215f4ce]
 - Updated dependencies [206f6033]
 - Updated dependencies [d7679ca4]
-  - @eth-optimism/common-ts@0.6.5
-  - @eth-optimism/contracts@0.5.36
-  - @eth-optimism/core-utils@0.10.1
+  - @mantleio/common-ts@0.6.5
+  - @mantleio/contracts@0.5.36
+  - @mantleio/core-utils@0.10.1
 
 ## 0.5.44
 
 ### Patch Changes
 
 - Updated dependencies [334a3eb0]
-  - @eth-optimism/contracts@0.5.35
+  - @mantleio/contracts@0.5.35
 
 ## 0.5.43
 
@@ -120,9 +120,9 @@
 
 - Updated dependencies [dbfea116]
 - Updated dependencies [299157e7]
-  - @eth-optimism/core-utils@0.10.0
-  - @eth-optimism/contracts@0.5.34
-  - @eth-optimism/common-ts@0.6.4
+  - @mantleio/core-utils@0.10.0
+  - @mantleio/contracts@0.5.34
+  - @mantleio/common-ts@0.6.4
 
 ## 0.5.42
 
@@ -130,7 +130,7 @@
 
 - Updated dependencies [0c2719f8]
 - Updated dependencies [a1a73e64]
-  - @eth-optimism/contracts@0.5.33
+  - @mantleio/contracts@0.5.33
 
 ## 0.5.41
 
@@ -139,9 +139,9 @@
 - Updated dependencies [0df744f6]
 - Updated dependencies [8ae39154]
 - Updated dependencies [dac4a9f0]
-  - @eth-optimism/core-utils@0.9.3
-  - @eth-optimism/common-ts@0.6.3
-  - @eth-optimism/contracts@0.5.32
+  - @mantleio/core-utils@0.9.3
+  - @mantleio/common-ts@0.6.3
+  - @mantleio/contracts@0.5.32
 
 ## 0.5.40
 
@@ -151,9 +151,9 @@
 - Updated dependencies [8d26459b]
 - Updated dependencies [4477fe9f]
 - Updated dependencies [1de4f48e]
-  - @eth-optimism/core-utils@0.9.2
-  - @eth-optimism/contracts@0.5.31
-  - @eth-optimism/common-ts@0.6.2
+  - @mantleio/core-utils@0.9.2
+  - @mantleio/contracts@0.5.31
+  - @mantleio/common-ts@0.6.2
 
 ## 0.5.39
 
@@ -162,9 +162,9 @@
 - 6e3449ba: Upgrade import path for new typechain
 - Updated dependencies [6e3449ba]
 - Updated dependencies [f9fee446]
-  - @eth-optimism/contracts@0.5.30
-  - @eth-optimism/core-utils@0.9.1
-  - @eth-optimism/common-ts@0.6.1
+  - @mantleio/contracts@0.5.30
+  - @mantleio/core-utils@0.9.1
+  - @mantleio/common-ts@0.6.1
 
 ## 0.5.38
 
@@ -172,9 +172,9 @@
 
 - Updated dependencies [700dcbb0]
 - Updated dependencies [3d1cb720]
-  - @eth-optimism/core-utils@0.9.0
-  - @eth-optimism/common-ts@0.6.0
-  - @eth-optimism/contracts@0.5.29
+  - @mantleio/core-utils@0.9.0
+  - @mantleio/common-ts@0.6.0
+  - @mantleio/contracts@0.5.29
 
 ## 0.5.37
 
@@ -182,7 +182,7 @@
 
 - Updated dependencies [cb71fcde]
 - Updated dependencies [10e41522]
-  - @eth-optimism/common-ts@0.5.0
+  - @mantleio/common-ts@0.5.0
 
 ## 0.5.36
 
@@ -193,9 +193,9 @@
 - Updated dependencies [c201f3f1]
 - Updated dependencies [29ff7462]
 - Updated dependencies [52b26878]
-  - @eth-optimism/contracts@0.5.28
-  - @eth-optimism/common-ts@0.4.0
-  - @eth-optimism/core-utils@0.8.7
+  - @mantleio/contracts@0.5.28
+  - @mantleio/common-ts@0.4.0
+  - @mantleio/core-utils@0.8.7
 
 ## 0.5.35
 
@@ -203,7 +203,7 @@
 
 - Updated dependencies [9ba869a7]
 - Updated dependencies [050859fd]
-  - @eth-optimism/common-ts@0.3.1
+  - @mantleio/common-ts@0.3.1
 
 ## 0.5.34
 
@@ -211,7 +211,7 @@
 
 - Updated dependencies [d9e39931]
 - Updated dependencies [84a8934c]
-  - @eth-optimism/common-ts@0.3.0
+  - @mantleio/common-ts@0.3.0
 
 ## 0.5.33
 
@@ -220,17 +220,17 @@
 - Updated dependencies [7c5ac36f]
 - Updated dependencies [3d4d988c]
 - Updated dependencies [9ecbf3e5]
-  - @eth-optimism/contracts@0.5.27
-  - @eth-optimism/common-ts@0.2.10
+  - @mantleio/contracts@0.5.27
+  - @mantleio/common-ts@0.2.10
 
 ## 0.5.32
 
 ### Patch Changes
 
 - Updated dependencies [17962ca9]
-  - @eth-optimism/core-utils@0.8.6
-  - @eth-optimism/common-ts@0.2.9
-  - @eth-optimism/contracts@0.5.26
+  - @mantleio/core-utils@0.8.6
+  - @mantleio/common-ts@0.2.9
+  - @mantleio/contracts@0.5.26
 
 ## 0.5.31
 
@@ -240,16 +240,16 @@
 - d18ae135: Updates all ethers versions in response to BN.js bug
 - Updated dependencies [f16383f2]
 - Updated dependencies [d18ae135]
-  - @eth-optimism/common-ts@0.2.8
-  - @eth-optimism/contracts@0.5.25
-  - @eth-optimism/core-utils@0.8.5
+  - @mantleio/common-ts@0.2.8
+  - @mantleio/contracts@0.5.25
+  - @mantleio/core-utils@0.8.5
 
 ## 0.5.30
 
 ### Patch Changes
 
 - Updated dependencies [b7a04acf]
-  - @eth-optimism/contracts@0.5.24
+  - @mantleio/contracts@0.5.24
 
 ## 0.5.29
 
@@ -257,7 +257,7 @@
 
 - 412688d5: Replace calls to getNetwork() with getChainId util
 - Updated dependencies [412688d5]
-  - @eth-optimism/contracts@0.5.23
+  - @mantleio/contracts@0.5.23
 
 ## 0.5.28
 
@@ -266,9 +266,9 @@
 - Updated dependencies [51adb389]
 - Updated dependencies [5cb3a5f7]
 - Updated dependencies [6b9fc055]
-  - @eth-optimism/contracts@0.5.22
-  - @eth-optimism/core-utils@0.8.4
-  - @eth-optimism/common-ts@0.2.7
+  - @mantleio/contracts@0.5.22
+  - @mantleio/core-utils@0.8.4
+  - @mantleio/common-ts@0.2.7
 
 ## 0.5.27
 
@@ -281,7 +281,7 @@
 ### Patch Changes
 
 - Updated dependencies [5818decb]
-  - @eth-optimism/contracts@0.5.21
+  - @mantleio/contracts@0.5.21
 
 ## 0.5.25
 
@@ -290,9 +290,9 @@
 - b57014d1: Update to typescript@4.6.2
 - Updated dependencies [d040a8d9]
 - Updated dependencies [b57014d1]
-  - @eth-optimism/contracts@0.5.20
-  - @eth-optimism/common-ts@0.2.6
-  - @eth-optimism/core-utils@0.8.3
+  - @mantleio/contracts@0.5.20
+  - @mantleio/common-ts@0.2.6
+  - @mantleio/core-utils@0.8.3
 
 ## 0.5.24
 
@@ -307,16 +307,16 @@
 - Updated dependencies [51673b90]
 - Updated dependencies [7a179003]
 - Updated dependencies [d9a51154]
-  - @eth-optimism/common-ts@0.2.5
-  - @eth-optimism/contracts@0.5.19
-  - @eth-optimism/core-utils@0.8.2
+  - @mantleio/common-ts@0.2.5
+  - @mantleio/contracts@0.5.19
+  - @mantleio/core-utils@0.8.2
 
 ## 0.5.23
 
 ### Patch Changes
 
 - Updated dependencies [f981b8da]
-  - @eth-optimism/common-ts@0.2.4
+  - @mantleio/common-ts@0.2.4
 
 ## 0.5.22
 
@@ -329,8 +329,8 @@
 - Updated dependencies [f7761058]
 - Updated dependencies [5ae15042]
 - Updated dependencies [5cd1e996]
-  - @eth-optimism/contracts@0.5.18
-  - @eth-optimism/common-ts@0.2.3
+  - @mantleio/contracts@0.5.18
+  - @mantleio/common-ts@0.2.3
 
 ## 0.5.21
 
@@ -339,8 +339,8 @@
 - Updated dependencies [b3f9bdef]
 - Updated dependencies [175ae0bf]
 - Updated dependencies [e53b5783]
-  - @eth-optimism/common-ts@0.2.2
-  - @eth-optimism/contracts@0.5.17
+  - @mantleio/common-ts@0.2.2
+  - @mantleio/contracts@0.5.17
 
 ## 0.5.20
 
@@ -353,8 +353,8 @@
 - Updated dependencies [b7c0a5ca]
 - Updated dependencies [5a6f539c]
 - Updated dependencies [27d8942e]
-  - @eth-optimism/contracts@0.5.16
-  - @eth-optimism/core-utils@0.8.1
+  - @mantleio/contracts@0.5.16
+  - @mantleio/core-utils@0.8.1
 
 ## 0.5.19
 
@@ -373,8 +373,8 @@
 - e63f3b61: Add logs displaying current sync from l2
 - Updated dependencies [0b4453f7]
 - Updated dependencies [78298782]
-  - @eth-optimism/core-utils@0.8.0
-  - @eth-optimism/contracts@0.5.15
+  - @mantleio/core-utils@0.8.0
+  - @mantleio/contracts@0.5.15
 
 ## 0.5.17
 
@@ -382,8 +382,8 @@
 
 - Updated dependencies [b4165299]
 - Updated dependencies [3c2acd91]
-  - @eth-optimism/core-utils@0.7.7
-  - @eth-optimism/contracts@0.5.14
+  - @mantleio/core-utils@0.7.7
+  - @mantleio/contracts@0.5.14
 
 ## 0.5.16
 
@@ -391,7 +391,7 @@
 
 - 8f72064d: Handle case where the remote block isn't found for `GET /eth/context/latest` and `GET /eth/context/blocknumber/:number`
 - Updated dependencies [438bc78a]
-  - @eth-optimism/contracts@0.5.13
+  - @mantleio/contracts@0.5.13
 
 ## 0.5.15
 
@@ -400,23 +400,23 @@
 - 1741d884: Updates DTL to correctly parse L1 to L2 tx timestamps after the first bss hardfork
 - ba14c59d: Updates various ethers dependencies to their latest versions
 - Updated dependencies [ba14c59d]
-  - @eth-optimism/contracts@0.5.12
-  - @eth-optimism/core-utils@0.7.6
+  - @mantleio/contracts@0.5.12
+  - @mantleio/core-utils@0.7.6
 
 ## 0.5.14
 
 ### Patch Changes
 
 - Updated dependencies [e631c39c]
-  - @eth-optimism/contracts@0.5.11
+  - @mantleio/contracts@0.5.11
 
 ## 0.5.13
 
 ### Patch Changes
 
 - Updated dependencies [ad94b9d1]
-  - @eth-optimism/core-utils@0.7.5
-  - @eth-optimism/contracts@0.5.10
+  - @mantleio/core-utils@0.7.5
+  - @mantleio/contracts@0.5.10
 
 ## 0.5.12
 
@@ -424,8 +424,8 @@
 
 - Updated dependencies [ba96a455]
 - Updated dependencies [c3e85fef]
-  - @eth-optimism/core-utils@0.7.4
-  - @eth-optimism/contracts@0.5.9
+  - @mantleio/core-utils@0.7.4
+  - @mantleio/contracts@0.5.9
 
 ## 0.5.11
 
@@ -436,14 +436,14 @@
 - Updated dependencies [b3efb8b7]
 - Updated dependencies [279603e5]
 - Updated dependencies [b6040bb3]
-  - @eth-optimism/contracts@0.5.8
+  - @mantleio/contracts@0.5.8
 
 ## 0.5.10
 
 ### Patch Changes
 
 - Updated dependencies [b6f89fad]
-  - @eth-optimism/contracts@0.5.7
+  - @mantleio/contracts@0.5.7
 
 ## 0.5.9
 
@@ -451,7 +451,7 @@
 
 - Updated dependencies [bbd42e03]
 - Updated dependencies [453f0774]
-  - @eth-optimism/contracts@0.5.6
+  - @mantleio/contracts@0.5.6
 
 ## 0.5.8
 
@@ -477,16 +477,16 @@
 
 - 128e0f84: Handle unprotected transactions
 - Updated dependencies [584cbc25]
-  - @eth-optimism/core-utils@0.7.3
-  - @eth-optimism/contracts@0.5.5
+  - @mantleio/core-utils@0.7.3
+  - @mantleio/contracts@0.5.5
 
 ## 0.5.4
 
 ### Patch Changes
 
 - Updated dependencies [8e634b49]
-  - @eth-optimism/core-utils@0.7.2
-  - @eth-optimism/contracts@0.5.4
+  - @mantleio/core-utils@0.7.2
+  - @mantleio/contracts@0.5.4
 
 ## 0.5.3
 
@@ -494,7 +494,7 @@
 
 - Updated dependencies [b9049406]
 - Updated dependencies [a8b14a7d]
-  - @eth-optimism/contracts@0.5.3
+  - @mantleio/contracts@0.5.3
 
 ## 0.5.2
 
@@ -502,16 +502,16 @@
 
 - 243f33e5: Standardize package json file format
 - Updated dependencies [243f33e5]
-  - @eth-optimism/common-ts@0.2.1
-  - @eth-optimism/contracts@0.5.2
-  - @eth-optimism/core-utils@0.7.1
+  - @mantleio/common-ts@0.2.1
+  - @mantleio/contracts@0.5.2
+  - @mantleio/core-utils@0.7.1
 
 ## 0.5.1
 
 ### Patch Changes
 
 - Updated dependencies [c0fc7fee]
-  - @eth-optimism/contracts@0.5.1
+  - @mantleio/contracts@0.5.1
 
 ## 0.5.0
 
@@ -589,9 +589,9 @@
 - Updated dependencies [beb6c977]
 - Updated dependencies [33abe73d]
 - Updated dependencies [71de86d6]
-  - @eth-optimism/contracts@0.5.0
-  - @eth-optimism/core-utils@0.7.0
-  - @eth-optimism/common-ts@0.2.0
+  - @mantleio/contracts@0.5.0
+  - @mantleio/core-utils@0.7.0
+  - @mantleio/common-ts@0.2.0
 
 ## 0.4.9
 
@@ -600,9 +600,9 @@
 - 6d3e1d7f: Update dependencies
 - Updated dependencies [6d3e1d7f]
 - Updated dependencies [2e929aa9]
-  - @eth-optimism/common-ts@0.1.6
-  - @eth-optimism/contracts@0.4.14
-  - @eth-optimism/core-utils@0.6.1
+  - @mantleio/common-ts@0.1.6
+  - @mantleio/contracts@0.4.14
+  - @mantleio/core-utils@0.6.1
 
 ## 0.4.8
 
@@ -612,8 +612,8 @@
 - Updated dependencies [e0be02e1]
 - Updated dependencies [7f7f35c3]
 - Updated dependencies [8da04505]
-  - @eth-optimism/core-utils@0.6.0
-  - @eth-optimism/contracts@0.4.13
+  - @mantleio/core-utils@0.6.0
+  - @mantleio/contracts@0.4.13
 
 ## 0.4.7
 
@@ -624,8 +624,8 @@
 - Updated dependencies [eb0854e7]
 - Updated dependencies [21b17edd]
 - Updated dependencies [dfe3598f]
-  - @eth-optimism/contracts@0.4.11
-  - @eth-optimism/core-utils@0.5.5
+  - @mantleio/contracts@0.4.11
+  - @mantleio/core-utils@0.5.5
 
 ## 0.4.6
 
@@ -633,8 +633,8 @@
 
 - 918c08ca: Bump ethers dependency to 5.4.x to support eip1559
 - Updated dependencies [918c08ca]
-  - @eth-optimism/contracts@0.4.10
-  - @eth-optimism/core-utils@0.5.2
+  - @mantleio/contracts@0.4.10
+  - @mantleio/core-utils@0.5.2
 
 ## 0.4.5
 
@@ -642,7 +642,7 @@
 
 - b5b9fd89: Migrate to using `ethers.StaticJsonRpcProvider`
 - Updated dependencies [ecc2f8c1]
-  - @eth-optimism/contracts@0.4.9
+  - @mantleio/contracts@0.4.9
 
 ## 0.4.4
 
@@ -650,9 +650,9 @@
 
 - c73c3939: Update the typescript version to `4.3.5`
 - Updated dependencies [c73c3939]
-  - @eth-optimism/common-ts@0.1.5
-  - @eth-optimism/contracts@0.4.5
-  - @eth-optimism/core-utils@0.5.1
+  - @mantleio/common-ts@0.1.5
+  - @mantleio/contracts@0.4.5
+  - @mantleio/core-utils@0.5.1
 
 ## 0.4.3
 
@@ -663,8 +663,8 @@
 - Updated dependencies [0313794b]
 - Updated dependencies [049200f4]
 - Updated dependencies [21e47e1f]
-  - @eth-optimism/contracts@0.4.2
-  - @eth-optimism/core-utils@0.5.0
+  - @mantleio/contracts@0.4.2
+  - @mantleio/core-utils@0.5.0
 
 ## 0.4.2
 
@@ -678,7 +678,7 @@
 
 - 67eedaf6: Correctly bind the event handlers to the correct `this` in the missing event error path
 - Updated dependencies [224b04c0]
-  - @eth-optimism/core-utils@0.4.7
+  - @mantleio/core-utils@0.4.7
 
 ## 0.4.0
 
@@ -725,9 +725,9 @@
 - Updated dependencies [e29fab10]
 - Updated dependencies [c2a04893]
 - Updated dependencies [baacda34]
-  - @eth-optimism/contracts@0.4.0
-  - @eth-optimism/core-utils@0.4.6
-  - @eth-optimism/common-ts@0.1.4
+  - @mantleio/contracts@0.4.0
+  - @mantleio/core-utils@0.4.6
+  - @mantleio/common-ts@0.1.4
 
 ## 0.3.6
 
@@ -735,7 +735,7 @@
 
 - baa3b761: Improve Sentry support, initializing as needed and ensuring ERROR logs route to Sentry
 - Updated dependencies [baa3b761]
-  - @eth-optimism/common-ts@0.1.3
+  - @mantleio/common-ts@0.1.3
 
 ## 0.3.5
 
@@ -759,8 +759,8 @@
 - Updated dependencies [750a5021]
 - Updated dependencies [c2b6e14b]
 - Updated dependencies [245136f1]
-  - @eth-optimism/core-utils@0.4.5
-  - @eth-optimism/contracts@0.3.5
+  - @mantleio/core-utils@0.4.5
+  - @mantleio/contracts@0.3.5
 
 ## 0.3.3
 
@@ -768,7 +768,7 @@
 
 - e4c3b4b: Add Sentry and Metrics switches and environment tag to DTL
 - Updated dependencies [5e5d4a1]
-  - @eth-optimism/contracts@0.3.3
+  - @mantleio/contracts@0.3.3
 
 ## 0.3.2
 
@@ -776,7 +776,7 @@
 
 - f5185bb: Fix bug with replica syncing where contract creations would fail in replicas but pass in the sequencer. This was due to the change from a custom batched tx serialization to the batch serialzation for txs being regular RLP encoding
 - Updated dependencies [7dd2f72]
-  - @eth-optimism/contracts@0.3.2
+  - @mantleio/contracts@0.3.2
 
 ## 0.3.1
 
@@ -788,9 +788,9 @@
 - Updated dependencies [96a586e]
 - Updated dependencies [0c16805]
 - Updated dependencies [775118a]
-  - @eth-optimism/core-utils@0.4.3
-  - @eth-optimism/common-ts@0.1.2
-  - @eth-optimism/contracts@0.3.1
+  - @mantleio/core-utils@0.4.3
+  - @mantleio/common-ts@0.1.2
+  - @mantleio/contracts@0.3.1
 
 ## 0.3.0
 
@@ -812,8 +812,8 @@
 - Updated dependencies [20747fd]
 - Updated dependencies [b799caa]
 - Updated dependencies [b799caa]
-  - @eth-optimism/contracts@0.3.0
-  - @eth-optimism/core-utils@0.4.2
+  - @mantleio/contracts@0.3.0
+  - @mantleio/core-utils@0.4.2
 
 ## 0.2.5
 
@@ -826,9 +826,9 @@
 - Updated dependencies [ce7fa52]
 - Updated dependencies [575bcf6]
 - Updated dependencies [6dc1877]
-  - @eth-optimism/common-ts@0.1.1
-  - @eth-optimism/contracts@0.2.10
-  - @eth-optimism/core-utils@0.4.1
+  - @mantleio/common-ts@0.1.1
+  - @mantleio/contracts@0.2.10
+  - @mantleio/core-utils@0.4.1
 
 ## 0.2.4
 
@@ -844,9 +844,9 @@
 - Updated dependencies [d2091d4]
 - Updated dependencies [a0a0052]
 - Updated dependencies [0ef3069]
-  - @eth-optimism/common-ts@0.1.0
-  - @eth-optimism/core-utils@0.4.0
-  - @eth-optimism/contracts@0.2.9
+  - @mantleio/common-ts@0.1.0
+  - @mantleio/core-utils@0.4.0
+  - @mantleio/contracts@0.2.9
 
 ## 0.2.3
 
@@ -866,8 +866,8 @@
 - Updated dependencies [e713cd0]
 - Updated dependencies [572dcbc]
 - Updated dependencies [6014ec0]
-  - @eth-optimism/contracts@0.2.8
-  - @eth-optimism/core-utils@0.3.2
+  - @mantleio/contracts@0.2.8
+  - @mantleio/core-utils@0.3.2
 
 ## 0.2.2
 
@@ -892,8 +892,8 @@
 - Updated dependencies [d4ee2d7]
 - Updated dependencies [edb4346]
 - Updated dependencies [5077441]
-  - @eth-optimism/contracts@0.2.6
-  - @eth-optimism/core-utils@0.3.1
+  - @mantleio/contracts@0.2.6
+  - @mantleio/core-utils@0.3.1
 
 ## 0.2.0
 
@@ -907,8 +907,8 @@
 - Updated dependencies [91460d9]
 - Updated dependencies [a0a7956]
 - Updated dependencies [0497d7d]
-  - @eth-optimism/core-utils@0.3.0
-  - @eth-optimism/contracts@0.2.5
+  - @mantleio/core-utils@0.3.0
+  - @mantleio/contracts@0.2.5
 
 ## 0.1.6
 
@@ -916,7 +916,7 @@
 
 - 35b99b0: add Sentry to TypeScript services for error tracking
 - Updated dependencies [35b99b0]
-  - @eth-optimism/core-utils@0.2.3
+  - @mantleio/core-utils@0.2.3
 
 ## 0.1.5
 
@@ -924,7 +924,7 @@
 
 - 01eaf2c: added extra logs to base-service / dtl to improve observability
 - Updated dependencies [01eaf2c]
-  - @eth-optimism/core-utils@0.2.2
+  - @mantleio/core-utils@0.2.2
 
 ## 0.1.4
 
@@ -937,8 +937,8 @@
 ### Patch Changes
 
 - Updated dependencies [6cbc54d]
-  - @eth-optimism/core-utils@0.2.0
-  - @eth-optimism/contracts@0.2.2
+  - @mantleio/core-utils@0.2.0
+  - @mantleio/contracts@0.2.2
 
 ## v0.1.2
 

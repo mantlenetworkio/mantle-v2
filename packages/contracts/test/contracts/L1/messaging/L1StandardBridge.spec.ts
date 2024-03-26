@@ -99,7 +99,7 @@ describe('L1StandardBridge', () => {
           'finalizeDeposit',
           [
             constants.AddressZero,
-            predeploys.OVM_ETH,
+            predeploys.BVM_ETH,
             alice.address,
             alice.address,
             depositAmount,
@@ -143,7 +143,7 @@ describe('L1StandardBridge', () => {
           'finalizeDeposit',
           [
             constants.AddressZero,
-            predeploys.OVM_ETH,
+            predeploys.BVM_ETH,
             alice.address,
             bob.address,
             depositAmount,

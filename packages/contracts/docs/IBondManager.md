@@ -16,7 +16,7 @@
 function isCollateralized(address _who) external view returns (bool)
 ```
 
-Checks whether a given address is properly collateralized and can perform actions within the system.
+
 
 
 
@@ -24,13 +24,13 @@ Checks whether a given address is properly collateralized and can perform action
 
 | Name | Type | Description |
 |---|---|---|
-| _who | address | Address to check.
+| _who | address | undefined
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | true if the address is properly collateralized, false otherwise.
+| _0 | bool | undefined
 
 
 

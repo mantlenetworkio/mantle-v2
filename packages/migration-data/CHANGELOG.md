@@ -1,4 +1,4 @@
-# @eth-optimism/migration-data
+# @mantleio/migration-data
 
 ## 0.0.2
 ### Patch Changes

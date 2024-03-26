@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {ethers, Overrides, BigNumber, Contract} from 'ethers'
 import { TransactionRequest, BlockTag } from '@ethersproject/abstract-provider'
-import {l1DevPredeploys, predeploys} from '@eth-optimism/contracts'
-import { hexStringEquals } from '@eth-optimism/core-utils'
-
+import { hexStringEquals } from '@mantleio/core-utils'
 import {
   NumberLike,
   AddressLike,
@@ -12,10 +10,10 @@ import {
 } from '../interfaces'
 import { toAddress, omit } from '../utils'
 import { StandardBridgeAdapter } from './standard-bridge'
-import { getContractInterface } from '@eth-optimism/contracts-bedrock'
+import { getContractInterface } from '@mantleio/contracts-bedrock'
 
 /**
- * Bridge adapter for the ETH bridge.
+ * Bridge adapter for the MNT bridge.
  */
 export class MNTBridgeAdapter extends StandardBridgeAdapter {
   public async approval(
@@ -48,14 +46,14 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
       opts?.fromBlock,
       opts?.toBlock
     )
-
+    const l1_mnt = this.l1Bridge.L1_MNT_ADDRESS()
     return events
       .map((event) => {
         return {
           direction: MessageDirection.L1_TO_L2,
           from: event.args.from,
           to: event.args.to,
-          l1Token: l1DevPredeploys.L1_MNT,
+          l1Token: l1_mnt,
           l2Token: ethers.constants.AddressZero,
           amount: event.args.amount,
           data: event.args.extraData,
@@ -85,9 +83,8 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
 
     return events
       .filter((event) => {
-        // Only find ETH withdrawals.
+        // Only find MNT withdrawals.
         return (
-          hexStringEquals(event.args.l1Token, l1DevPredeploys.L1_MNT) &&
           hexStringEquals(event.args.l2Token, ethers.constants.AddressZero)
         )
       })
@@ -117,7 +114,6 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
   ): Promise<boolean> {
     // Only support MNT deposits and withdrawals.
     return (
-      hexStringEquals(toAddress(l1Token), l1DevPredeploys.L1_MNT) &&
       hexStringEquals(toAddress(l2Token), ethers.constants.AddressZero)
     )
   }
@@ -164,22 +160,16 @@ export class MNTBridgeAdapter extends StandardBridgeAdapter {
 
       if (opts?.recipient === undefined) {
         return this.l1Bridge.populateTransaction.depositMNT(
-          toAddress(l1Token),
-          toAddress(l2Token),
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
           '0x', // No data.
-          opts?.overrides || {}
         )
       } else {
-        return this.l1Bridge.populateTransaction.depositERC20To(
-          toAddress(l1Token),
-          toAddress(l2Token),
+        return this.l1Bridge.populateTransaction.depositMNTTo(
           toAddress(opts.recipient),
           amount,
           opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
           '0x', // No data.
-          opts?.overrides || {}
         )
       }
     },

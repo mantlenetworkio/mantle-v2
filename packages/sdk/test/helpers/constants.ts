@@ -5,7 +5,8 @@ export const DUMMY_MESSAGE = {
   sender: '0x' + '22'.repeat(20),
   message: '0x' + '33'.repeat(64),
   messageNonce: ethers.BigNumber.from(1234),
-  value: ethers.BigNumber.from(0),
+  mntValue: ethers.BigNumber.from(0),
+  ethValue: ethers.BigNumber.from(0),
   minGasLimit: ethers.BigNumber.from(5678),
 }
 

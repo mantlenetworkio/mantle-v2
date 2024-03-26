@@ -1,4 +1,4 @@
-# @eth-optimism/common-ts
+# @mantleio/common-ts
 
 ## 0.8.1
 
@@ -42,14 +42,14 @@
 
 - Updated dependencies [c975c9620]
 - Updated dependencies [136ea1785]
-  - @eth-optimism/core-utils@0.12.0
+  - @mantleio/core-utils@0.12.0
 
 ## 0.6.7
 
 ### Patch Changes
 
 - Updated dependencies [1e76cdb86]
-  - @eth-optimism/core-utils@0.11.0
+  - @mantleio/core-utils@0.11.0
 
 ## 0.6.6
 
@@ -65,14 +65,14 @@
 - d7679ca4: Add source maps
 - Updated dependencies [7215f4ce]
 - Updated dependencies [206f6033]
-  - @eth-optimism/core-utils@0.10.1
+  - @mantleio/core-utils@0.10.1
 
 ## 0.6.4
 
 ### Patch Changes
 
 - Updated dependencies [dbfea116]
-  - @eth-optimism/core-utils@0.10.0
+  - @mantleio/core-utils@0.10.0
 
 ## 0.6.3
 
@@ -81,7 +81,7 @@
 - Updated dependencies [0df744f6]
 - Updated dependencies [8ae39154]
 - Updated dependencies [dac4a9f0]
-  - @eth-optimism/core-utils@0.9.3
+  - @mantleio/core-utils@0.9.3
 
 ## 0.6.2
 
@@ -90,14 +90,14 @@
 - Updated dependencies [0bf3b9b4]
 - Updated dependencies [8d26459b]
 - Updated dependencies [4477fe9f]
-  - @eth-optimism/core-utils@0.9.2
+  - @mantleio/core-utils@0.9.2
 
 ## 0.6.1
 
 ### Patch Changes
 
 - Updated dependencies [f9fee446]
-  - @eth-optimism/core-utils@0.9.1
+  - @mantleio/core-utils@0.9.1
 
 ## 0.6.0
 
@@ -108,7 +108,7 @@
 ### Patch Changes
 
 - Updated dependencies [700dcbb0]
-  - @eth-optimism/core-utils@0.9.0
+  - @mantleio/core-utils@0.9.0
 
 ## 0.5.0
 
@@ -131,7 +131,7 @@
 - c201f3f1: Collect default node metrics
 - 29ff7462: Revert es target back to 2017
 - Updated dependencies [29ff7462]
-  - @eth-optimism/core-utils@0.8.7
+  - @mantleio/core-utils@0.8.7
 
 ## 0.3.1
 
@@ -158,7 +158,7 @@
 ### Patch Changes
 
 - Updated dependencies [17962ca9]
-  - @eth-optimism/core-utils@0.8.6
+  - @mantleio/core-utils@0.8.6
 
 ## 0.2.8
 
@@ -167,7 +167,7 @@
 - f16383f2: Have legacy BaseService metrics bind to 0.0.0.0 by default
 - d18ae135: Updates all ethers versions in response to BN.js bug
 - Updated dependencies [d18ae135]
-  - @eth-optimism/core-utils@0.8.5
+  - @mantleio/core-utils@0.8.5
 
 ## 0.2.7
 
@@ -175,7 +175,7 @@
 
 - Updated dependencies [5cb3a5f7]
 - Updated dependencies [6b9fc055]
-  - @eth-optimism/core-utils@0.8.4
+  - @mantleio/core-utils@0.8.4
 
 ## 0.2.6
 
@@ -183,7 +183,7 @@
 
 - b57014d1: Update to typescript@4.6.2
 - Updated dependencies [b57014d1]
-  - @eth-optimism/core-utils@0.8.3
+  - @mantleio/core-utils@0.8.3
 
 ## 0.2.5
 
@@ -194,7 +194,7 @@
 - 51673b90: Have BaseServiceV2 throw when options are undefined
 - 7a179003: Adds the jsonRpcProvider validator as an input validator
 - Updated dependencies [c1957126]
-  - @eth-optimism/core-utils@0.8.2
+  - @mantleio/core-utils@0.8.2
 
 ## 0.2.4
 

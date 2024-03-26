@@ -16,8 +16,8 @@ The contract addresses are in `.../optimism/packages/contracts-bedrock/deploymen
 | Contract name when creating `CrossDomainMessenger` | File with address |
 | - | - |
 | `AddressManager`         | `Lib_AddressManager.json`
-| `L1CrossDomainMessenger` | `Proxy__OVM_L1CrossDomainMessenger.json`
-| `L1StandardBridge`       | `Proxy__OVM_L1StandardBridge.json`
+| `L1CrossDomainMessenger` | `Proxy__BVM_L1CrossDomainMessenger.json`
+| `L1StandardBridge`       | `Proxy__BVM_L1StandardBridge.json`
 | `OptimismPortal`         | `OptimismPortalProxy.json`
 | `L2OutputOracle`         | `L2OutputOracleProxy.json`
 
@@ -72,25 +72,25 @@ They further assume that your project already includes the Optimism SDK [`@eth-o
       BondManager: zeroAddr,
       // These contracts have the addresses you found out earlier.
       AddressManager: "0x....",   // Lib_AddressManager.json
-      L1CrossDomainMessenger: "0x....",   // Proxy__OVM_L1CrossDomainMessenger.json  
-      L1StandardBridge: "0x....",   // Proxy__OVM_L1StandardBridge.json
+      L1CrossDomainMessenger: "0x....",   // Proxy__BVM_L1CrossDomainMessenger.json
+      L1StandardBridge: "0x....",   // Proxy__BVM_L1StandardBridge.json
       OptimismPortal: "0x....",   // OptimismPortalProxy.json
       L2OutputOracle: "0x....",   // L2OutputOracleProxy.json
-   }                       
+   }
    ```
 
 1. Create the data structure for the standard bridge.
 
    ```js
-    bridges = { 
-      Standard: { 
-         l1Bridge: l1Contracts.L1StandardBridge, 
-         l2Bridge: "0x4200000000000000000000000000000000000010", 
+    bridges = {
+      Standard: {
+         l1Bridge: l1Contracts.L1StandardBridge,
+         l2Bridge: "0x4200000000000000000000000000000000000010",
          Adapter: optimismSDK.StandardBridgeAdapter
       },
       ETH: {
-         l1Bridge: l1Contracts.L1StandardBridge, 
-         l2Bridge: "0x4200000000000000000000000000000000000010", 
+         l1Bridge: l1Contracts.L1StandardBridge,
+         l2Bridge: "0x4200000000000000000000000000000000000010",
          Adapter: optimismSDK.ETHBridgeAdapter
       }
    }
@@ -109,7 +109,7 @@ They further assume that your project already includes the Optimism SDK [`@eth-o
       l1ChainId: await l1Signer.getChainId(),
       l2ChainId: await l2Signer.getChainId(),
       l1SignerOrProvider: l1Signer,
-      l2SignerOrProvider: l2Signer,    
+      l2SignerOrProvider: l2Signer,
    })
    ```
 
@@ -148,7 +148,7 @@ To verify the SDK's functionality, transfer some ETH from L1 to L2.
    (balances0[0]-balances1[0])/1e9
    ```
 
-1. See that the L2 balance changed (it might take a few minutes).  
+1. See that the L2 balance changed (it might take a few minutes).
 
    ```js
    ((await l2Provider.getBalance(l1Signer.address))-balances0[1])/1e9

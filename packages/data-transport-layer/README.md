@@ -1,4 +1,4 @@
-# @eth-optimism/data-transport-layer
+# @mantleio/data-transport-layer
 
 [![codecov](https://codecov.io/gh/ethereum-optimism/optimism/branch/develop/graph/badge.svg?token=0VTG7PG7YR&flag=dtl-tests)](https://codecov.io/gh/ethereum-optimism/optimism)
 

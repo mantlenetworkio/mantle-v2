@@ -1,4 +1,4 @@
-# @eth-optimism/atst
+# @mantleio/atst
 
 ## 0.2.0
 
@@ -6,7 +6,7 @@
 
 - dcd13eec1: Update readAttestations and prepareWriteAttestation to handle keys longer than 32 bytes
 - 9fd5be8e2: Remove broken allowFailures as option
-- 3f4a43542: Move react api to @eth-optimism/atst/react so react isn't required to run the core sdk
+- 3f4a43542: Move react api to @mantleio/atst/react so react isn't required to run the core sdk
 - 71727eae9: Fix main and module in atst package.json
 - 3d5f26c49: Deprecate parseAttestationBytes and createRawKey in favor for createKey, createValue
 

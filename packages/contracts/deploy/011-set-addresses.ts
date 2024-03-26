@@ -1,5 +1,5 @@
 /* Imports: External */
-import { hexStringEquals, awaitCondition } from '@eth-optimism/core-utils'
+import { hexStringEquals, awaitCondition } from '@mantleio/core-utils'
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 
 /* Imports: Internal */

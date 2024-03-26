@@ -1,7 +1,7 @@
 /* Imports: External */
 import { DeployFunction } from 'hardhat-deploy/dist/types'
 import { ethers } from 'ethers'
-import { hexStringEquals, awaitCondition } from '@eth-optimism/core-utils'
+import { hexStringEquals, awaitCondition } from '@mantleio/core-utils'
 
 /* Imports: Internal */
 import { getContractDefinition } from '../src/contract-defs'
@@ -23,9 +23,9 @@ const deployFn: DeployFunction = async (hre) => {
     }
   )
 
-  const Proxy__OVM_L1StandardBridge = await getContractFromArtifact(
+  const Proxy__BVM_L1StandardBridge = await getContractFromArtifact(
     hre,
-    names.managed.contracts.Proxy__OVM_L1StandardBridge,
+    names.managed.contracts.Proxy__BVM_L1StandardBridge,
     {
       iface: 'L1ChugSplashProxy',
       signerOrProvider: deployer,
@@ -40,8 +40,8 @@ const deployFn: DeployFunction = async (hre) => {
     throw new Error('code hash does not match actual bridge code')
   }
 
-  const currentOwner = await Proxy__OVM_L1StandardBridge.connect(
-    Proxy__OVM_L1StandardBridge.signer.provider
+  const currentOwner = await Proxy__BVM_L1StandardBridge.connect(
+    Proxy__BVM_L1StandardBridge.signer.provider
   ).callStatic.getOwner({
     from: ethers.constants.AddressZero,
   })
@@ -74,7 +74,7 @@ const deployFn: DeployFunction = async (hre) => {
         }]
 
     (3) Transfer ownership of the L1ChugSplashProxy located at (${
-      Proxy__OVM_L1StandardBridge.address
+      Proxy__BVM_L1StandardBridge.address
     })
         to the ChugSplashDictator contract located at the following address:
 
@@ -91,7 +91,7 @@ const deployFn: DeployFunction = async (hre) => {
     process.env.AUTOMATICALLY_TRANSFER_OWNERSHIP === 'true'
   ) {
     const owner = await hre.ethers.getSigner(currentOwner)
-    await Proxy__OVM_L1StandardBridge.connect(owner).setOwner(
+    await Proxy__BVM_L1StandardBridge.connect(owner).setOwner(
       ChugSplashDictator.address
     )
   }
@@ -100,8 +100,8 @@ const deployFn: DeployFunction = async (hre) => {
   await awaitCondition(
     async () => {
       return hexStringEquals(
-        await Proxy__OVM_L1StandardBridge.connect(
-          Proxy__OVM_L1StandardBridge.signer.provider
+        await Proxy__BVM_L1StandardBridge.connect(
+          Proxy__BVM_L1StandardBridge.signer.provider
         ).callStatic.getOwner({
           from: ethers.constants.AddressZero,
         }),
@@ -120,8 +120,8 @@ const deployFn: DeployFunction = async (hre) => {
   await awaitCondition(
     async () => {
       return hexStringEquals(
-        await Proxy__OVM_L1StandardBridge.connect(
-          Proxy__OVM_L1StandardBridge.signer.provider
+        await Proxy__BVM_L1StandardBridge.connect(
+          Proxy__BVM_L1StandardBridge.signer.provider
         ).callStatic.getOwner({
           from: ethers.constants.AddressZero,
         }),

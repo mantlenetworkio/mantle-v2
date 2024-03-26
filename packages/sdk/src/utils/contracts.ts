@@ -1,5 +1,5 @@
-import { getContractInterface, predeploys } from '@eth-optimism/contracts'
-import { getContractInterface as getContractInterfaceBedrock } from '@eth-optimism/contracts-bedrock'
+import { getContractInterface, predeploys } from '@mantleio/contracts'
+import { getContractInterface as getContractInterfaceBedrock } from '@mantleio/contracts-bedrock'
 import { ethers, Contract } from 'ethers'
 
 import { toAddress } from './coercion'
@@ -31,7 +31,7 @@ import {
  */
 const NAME_REMAPPING = {
   AddressManager: 'Lib_AddressManager' as const,
-  OVM_L1BlockNumber: 'iOVM_L1BlockNumber' as const,
+  BVM_L1BlockNumber: 'iBVM_L1BlockNumber' as const,
   WETH: 'WETH9' as const,
   BedrockMessagePasser: 'L2ToL1MessagePasser' as const,
 }

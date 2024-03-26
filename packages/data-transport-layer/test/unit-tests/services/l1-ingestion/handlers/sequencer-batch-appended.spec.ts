@@ -1,5 +1,5 @@
 import { BigNumber, ethers } from 'ethers'
-import { sequencerBatch, add0x, BatchType } from '@eth-optimism/core-utils'
+import { sequencerBatch, add0x, BatchType } from '@mantleio/core-utils'
 
 const compressBatchWithZlib = (calldata: string): string => {
   const batch = sequencerBatch.decode(calldata)

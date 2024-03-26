@@ -5,15 +5,15 @@ import {
   Gauge,
   validators,
   waitForProvider,
-} from '@eth-optimism/common-ts'
-import { getChainId, sleep, toRpcHexString } from '@eth-optimism/core-utils'
+} from '@mantleio/common-ts'
+import { getChainId, sleep, toRpcHexString } from '@mantleio/core-utils'
 import {
   CONTRACT_ADDRESSES,
   CrossChainMessenger,
   getOEContract,
   L2ChainID,
   OEL1ContractsLike,
-} from '@eth-optimism/sdk'
+} from '@mantleio/sdk'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ethers, Transaction } from 'ethers'
 import dateformat from 'dateformat'
@@ -137,6 +137,7 @@ export class FaultDetector extends BaseServiceV2<Options, Metrics, State> {
       BondManager: ethers.constants.AddressZero,
       OptimismPortal: ethers.constants.AddressZero,
       L2OutputOracle: ethers.constants.AddressZero,
+      Rollup: ethers.constants.AddressZero,
     }
 
     const chainType = this.options.bedrock ? 'bedrock' : 'legacy'

@@ -28,6 +28,7 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
      ********************************/
 
     address public l2TokenBridge;
+    address public l1MantleAddress;
 
     // Maps L1 token to L2 token to balance of the L1 token deposited
     mapping(address => mapping(address => uint256)) public deposits;
@@ -46,12 +47,14 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
     /**
      * @param _l1messenger L1 Messenger address being used for cross-chain communications.
      * @param _l2TokenBridge L2 standard bridge address.
+     * @param _l1MantleAddress initialize L1 mantle address
      */
     // slither-disable-next-line external-function
-    function initialize(address _l1messenger, address _l2TokenBridge) public {
+    function initialize(address _l1messenger, address _l2TokenBridge, address _l1MantleAddress) public {
         require(messenger == address(0), "Contract has already been initialized.");
         messenger = _l1messenger;
         l2TokenBridge = _l2TokenBridge;
+        l1MantleAddress = _l1MantleAddress;
     }
 
     /**************
@@ -64,6 +67,7 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
     modifier onlyEOA() {
         // Used to stop deposits from contracts (avoid accidentally lost tokens)
         require(!Address.isContract(msg.sender), "Account not EOA");
+        require(tx.origin==msg.sender, "msg.sender is not ts origin");
         _;
     }
 
@@ -115,7 +119,7 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
         bytes memory message = abi.encodeWithSelector(
             IL2ERC20Bridge.finalizeDeposit.selector,
             address(0),
-            Lib_PredeployAddresses.OVM_ETH,
+            Lib_PredeployAddresses.BVM_ETH,
             _from,
             _to,
             msg.value,
@@ -187,15 +191,33 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
 
         // Construct calldata for _l2Token.finalizeDeposit(_to, _amount)
-        bytes memory message = abi.encodeWithSelector(
-            IL2ERC20Bridge.finalizeDeposit.selector,
-            _l1Token,
-            _l2Token,
-            _from,
-            _to,
-            _amount,
-            _data
-        );
+        bytes memory message;
+        if (_l1Token == l1MantleAddress) {
+            // Construct calldata for finalizeDeposit call
+            require(_l2Token == Lib_PredeployAddresses.BVM_MANTLE, "Unmatched token pair");
+            message = abi.encodeWithSelector(
+                IL2ERC20Bridge.finalizeDeposit.selector,
+                address(0x3c3a81e81dc49A522A592e7622A7E711c06bf354),
+                Lib_PredeployAddresses.BVM_MANTLE,
+                _from,
+                _to,
+                _amount,
+                _data
+            );
+
+        } else {
+            // Construct calldata for finalizeDeposit call
+            message = abi.encodeWithSelector(
+                IL2ERC20Bridge.finalizeDeposit.selector,
+                _l1Token,
+                _l2Token,
+                _from,
+                _to,
+                _amount,
+                _data
+            );
+        }
+
 
         // Send calldata into L2
         // slither-disable-next-line reentrancy-events, reentrancy-benign
@@ -232,6 +254,18 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
     /**
      * @inheritdoc IL1ERC20Bridge
      */
+    function finalizeMantleWithdrawal(
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) external onlyFromCrossDomainAccount(l2TokenBridge) {
+        finalizeERC20Withdrawal(l1MantleAddress, Lib_PredeployAddresses.BVM_MANTLE, _from, _to, _amount, _data);
+    }
+
+    /**
+     * @inheritdoc IL1ERC20Bridge
+     */
     function finalizeERC20Withdrawal(
         address _l1Token,
         address _l2Token,
@@ -239,7 +273,7 @@ contract L1StandardBridge is IL1StandardBridge, CrossDomainEnabled {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external onlyFromCrossDomainAccount(l2TokenBridge) {
+    ) public onlyFromCrossDomainAccount(l2TokenBridge) {
         deposits[_l1Token][_l2Token] = deposits[_l1Token][_l2Token] - _amount;
 
         // When a withdrawal is finalized on L1, the L1 Bridge transfers the funds to the withdrawer

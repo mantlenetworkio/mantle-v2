@@ -1,5 +1,5 @@
 ---
-'@eth-optimism/contracts-bedrock': minor
+'@mantleio/contracts-bedrock': minor
 ---
 
 Increase precision in `SafeCall.hasMinGas`

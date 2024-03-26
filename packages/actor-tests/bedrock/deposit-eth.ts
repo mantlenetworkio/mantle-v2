@@ -3,9 +3,9 @@ import {
   CrossChainMessenger,
   ETHBridgeAdapter,
   StandardBridgeAdapter,
-} from '@eth-optimism/sdk'
-import { predeploys } from '@eth-optimism/contracts-bedrock'
-import { sleep } from '@eth-optimism/core-utils'
+} from '@mantleio/sdk'
+import { predeploys } from '@mantleio/contracts-bedrock'
+import { sleep } from '@mantleio/core-utils'
 
 import { actor, setupActor, run, setupRun } from '../lib/convenience'
 import { l1Provider, l2Provider } from './utils'

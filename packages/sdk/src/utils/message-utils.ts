@@ -1,4 +1,4 @@
-import { hashWithdrawal } from '@eth-optimism/core-utils'
+import { hashWithdrawal } from '@mantleio/core-utils'
 import { BigNumber, utils, ethers } from 'ethers'
 
 import { LowLevelMessage } from '../interfaces'
@@ -25,7 +25,8 @@ export const hashLowLevelMessage = (message: LowLevelMessage): string => {
     message.messageNonce,
     message.sender,
     message.target,
-    message.value,
+    message.mntValue,
+    message.ethValue,
     message.minGasLimit,
     message.message
   )

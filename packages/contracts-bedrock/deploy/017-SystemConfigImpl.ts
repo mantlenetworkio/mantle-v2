@@ -1,7 +1,7 @@
 import assert from 'assert'
 
 import { DeployFunction } from 'hardhat-deploy/dist/types'
-import '@eth-optimism/hardhat-deploy-config'
+import '@mantleio/hardhat-deploy-config'
 import { ethers } from 'ethers'
 
 import {assertContractVariable, deploy, deploySleepTime} from '../src/deploy-utils'

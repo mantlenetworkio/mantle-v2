@@ -1,5 +1,5 @@
 ---
-'@eth-optimism/contracts-periphery': patch
+'@mantleio/contracts-periphery': patch
 ---
 
 Add faucet contract

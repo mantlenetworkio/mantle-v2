@@ -4,10 +4,10 @@ import {
   Gauge,
   Counter,
   validators,
-} from '@eth-optimism/common-ts'
+} from '@mantleio/common-ts'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ethers } from 'ethers'
-import * as DrippieArtifact from '@eth-optimism/contracts-periphery/artifacts/contracts/universal/drippie/Drippie.sol/Drippie.json'
+import * as DrippieArtifact from '@mantleio/contracts-periphery/artifacts/contracts/universal/drippie/Drippie.sol/Drippie.json'
 
 import { version } from '../../package.json'
 

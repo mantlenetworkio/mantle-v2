@@ -1,5 +1,5 @@
 ---
-'@eth-optimism/sdk': patch
+'@mantleio/sdk': patch
 ---
 
 add eco bridge adapter

@@ -1,6 +1,6 @@
 import { createInterface } from 'readline'
 
-import { hexStringEquals } from '@eth-optimism/core-utils'
+import { hexStringEquals } from '@mantleio/core-utils'
 
 export const getInput = (query) => {
   const rl = createInterface({
@@ -41,11 +41,11 @@ const locateArtifact = (name: string) => {
     StateCommitmentChain:
       'L1/rollup/StateCommitmentChain.sol/StateCommitmentChain.json',
     BondManager: 'L1/verification/BondManager.sol/BondManager.json',
-    OVM_L1CrossDomainMessenger:
+    BVM_L1CrossDomainMessenger:
       'L1/messaging/L1CrossDomainMessenger.sol/L1CrossDomainMessenger.json',
-    Proxy__OVM_L1CrossDomainMessenger:
+    Proxy__BVM_L1CrossDomainMessenger:
       'libraries/resolver/Lib_ResolvedDelegateProxy.sol/Lib_ResolvedDelegateProxy.json',
-    Proxy__OVM_L1StandardBridge:
+    Proxy__BVM_L1StandardBridge:
       'chugsplash/L1ChugSplashProxy.sol/L1ChugSplashProxy.json',
   }[name]
 }

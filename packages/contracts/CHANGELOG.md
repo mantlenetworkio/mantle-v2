@@ -14,14 +14,14 @@
 - 1d3c749a2: Updates the version of TypeScript
 - Updated dependencies [c975c9620]
 - Updated dependencies [136ea1785]
-  - @eth-optimism/core-utils@0.12.0
+  - @mantleio/core-utils@0.12.0
 
 ## 0.5.38
 
 ### Patch Changes
 
 - Updated dependencies [1e76cdb86]
-  - @eth-optimism/core-utils@0.11.0
+  - @mantleio/core-utils@0.11.0
 
 ## 0.5.37
 
@@ -37,7 +37,7 @@
 - 7215f4ce: Bump ethers to 5.7.0 globally
 - Updated dependencies [7215f4ce]
 - Updated dependencies [206f6033]
-  - @eth-optimism/core-utils@0.10.1
+  - @mantleio/core-utils@0.10.1
 
 ## 0.5.35
 
@@ -51,7 +51,7 @@
 
 - 299157e7: Significantly reduces contracts package bundle size
 - Updated dependencies [dbfea116]
-  - @eth-optimism/core-utils@0.10.0
+  - @mantleio/core-utils@0.10.0
 
 ## 0.5.33
 
@@ -67,7 +67,7 @@
 - Updated dependencies [0df744f6]
 - Updated dependencies [8ae39154]
 - Updated dependencies [dac4a9f0]
-  - @eth-optimism/core-utils@0.9.3
+  - @mantleio/core-utils@0.9.3
 
 ## 0.5.31
 
@@ -77,7 +77,7 @@
 - Updated dependencies [0bf3b9b4]
 - Updated dependencies [8d26459b]
 - Updated dependencies [4477fe9f]
-  - @eth-optimism/core-utils@0.9.2
+  - @mantleio/core-utils@0.9.2
 
 ## 0.5.30
 
@@ -85,14 +85,14 @@
 
 - 6e3449ba: Properly export typechain
 - Updated dependencies [f9fee446]
-  - @eth-optimism/core-utils@0.9.1
+  - @mantleio/core-utils@0.9.1
 
 ## 0.5.29
 
 ### Patch Changes
 
 - Updated dependencies [700dcbb0]
-  - @eth-optimism/core-utils@0.9.0
+  - @mantleio/core-utils@0.9.0
 
 ## 0.5.28
 
@@ -101,7 +101,7 @@
 - 27234f68: Use hardhat-deploy-config for deployments
 - 29ff7462: Revert es target back to 2017
 - Updated dependencies [29ff7462]
-  - @eth-optimism/core-utils@0.8.7
+  - @mantleio/core-utils@0.8.7
 
 ## 0.5.27
 
@@ -115,7 +115,7 @@
 ### Patch Changes
 
 - Updated dependencies [17962ca9]
-  - @eth-optimism/core-utils@0.8.6
+  - @mantleio/core-utils@0.8.6
 
 ## 0.5.25
 
@@ -123,7 +123,7 @@
 
 - d18ae135: Updates all ethers versions in response to BN.js bug
 - Updated dependencies [d18ae135]
-  - @eth-optimism/core-utils@0.8.5
+  - @mantleio/core-utils@0.8.5
 
 ## 0.5.24
 
@@ -144,7 +144,7 @@
 - 51adb389: Add Teleportr mainnet deployment
 - Updated dependencies [5cb3a5f7]
 - Updated dependencies [6b9fc055]
-  - @eth-optimism/core-utils@0.8.4
+  - @mantleio/core-utils@0.8.4
 
 ## 0.5.21
 
@@ -159,7 +159,7 @@
 - d040a8d9: Deleted update and helper functions/tests from Lib_MerkleTrie.sol and Lib_SecureMerkleTrie.sol
 - b57014d1: Update to typescript@4.6.2
 - Updated dependencies [b57014d1]
-  - @eth-optimism/core-utils@0.8.3
+  - @mantleio/core-utils@0.8.3
 
 ## 0.5.19
 
@@ -168,7 +168,7 @@
 - c1957126: Update Dockerfile to use Alpine
 - d9a51154: Bump to hardhat@2.9.1
 - Updated dependencies [c1957126]
-  - @eth-optimism/core-utils@0.8.2
+  - @mantleio/core-utils@0.8.2
 
 ## 0.5.18
 
@@ -192,7 +192,7 @@
 - b7c0a5ca: Remove yargs as a contracts dependency (unused)
 - Updated dependencies [5a6f539c]
 - Updated dependencies [27d8942e]
-  - @eth-optimism/core-utils@0.8.1
+  - @mantleio/core-utils@0.8.1
 
 ## 0.5.15
 
@@ -200,7 +200,7 @@
 
 - 78298782: Contracts are additionally verified on sourcify during deploy. This should reduce manual labor during future regeneses.
 - Updated dependencies [0b4453f7]
-  - @eth-optimism/core-utils@0.8.0
+  - @mantleio/core-utils@0.8.0
 
 ## 0.5.14
 
@@ -208,7 +208,7 @@
 
 - Updated dependencies [b4165299]
 - Updated dependencies [3c2acd91]
-  - @eth-optimism/core-utils@0.7.7
+  - @mantleio/core-utils@0.7.7
 
 ## 0.5.13
 
@@ -222,7 +222,7 @@
 
 - ba14c59d: Updates various ethers dependencies to their latest versions
 - Updated dependencies [ba14c59d]
-  - @eth-optimism/core-utils@0.7.6
+  - @mantleio/core-utils@0.7.6
 
 ## 0.5.11
 
@@ -235,7 +235,7 @@
 ### Patch Changes
 
 - Updated dependencies [ad94b9d1]
-  - @eth-optimism/core-utils@0.7.5
+  - @mantleio/core-utils@0.7.5
 
 ## 0.5.9
 
@@ -243,7 +243,7 @@
 
 - Updated dependencies [ba96a455]
 - Updated dependencies [c3e85fef]
-  - @eth-optimism/core-utils@0.7.4
+  - @mantleio/core-utils@0.7.4
 
 ## 0.5.8
 
@@ -271,14 +271,14 @@
 ### Patch Changes
 
 - Updated dependencies [584cbc25]
-  - @eth-optimism/core-utils@0.7.3
+  - @mantleio/core-utils@0.7.3
 
 ## 0.5.4
 
 ### Patch Changes
 
 - Updated dependencies [8e634b49]
-  - @eth-optimism/core-utils@0.7.2
+  - @mantleio/core-utils@0.7.2
 
 ## 0.5.3
 
@@ -293,7 +293,7 @@
 
 - 243f33e5: Standardize package json file format
 - Updated dependencies [243f33e5]
-  - @eth-optimism/core-utils@0.7.1
+  - @mantleio/core-utils@0.7.1
 
 ## 0.5.1
 
@@ -371,7 +371,7 @@
 - Updated dependencies [83a449c4]
 - Updated dependencies [81ccd6e4]
 - Updated dependencies [6d32d701]
-  - @eth-optimism/core-utils@0.7.0
+  - @mantleio/core-utils@0.7.0
 
 ## 0.4.14
 
@@ -380,7 +380,7 @@
 - 6d3e1d7f: Update dependencies
 - Updated dependencies [6d3e1d7f]
 - Updated dependencies [2e929aa9]
-  - @eth-optimism/core-utils@0.6.1
+  - @mantleio/core-utils@0.6.1
 
 ## 0.4.13
 
@@ -389,7 +389,7 @@
 - 7f7f35c3: contracts: remove l1 contracts from l2 state dump process
 - Updated dependencies [e0be02e1]
 - Updated dependencies [8da04505]
-  - @eth-optimism/core-utils@0.6.0
+  - @mantleio/core-utils@0.6.0
 
 ## 0.4.12
 
@@ -405,7 +405,7 @@
 - Updated dependencies [eb0854e7]
 - Updated dependencies [21b17edd]
 - Updated dependencies [dfe3598f]
-  - @eth-optimism/core-utils@0.5.5
+  - @mantleio/core-utils@0.5.5
 
 ## 0.4.10
 
@@ -413,7 +413,7 @@
 
 - 918c08ca: Bump ethers dependency to 5.4.x to support eip1559
 - Updated dependencies [918c08ca]
-  - @eth-optimism/core-utils@0.5.2
+  - @mantleio/core-utils@0.5.2
 
 ## 0.4.9
 
@@ -447,7 +447,7 @@
 
 - c73c3939: Update the typescript version to `4.3.5`
 - Updated dependencies [c73c3939]
-  - @eth-optimism/core-utils@0.5.1
+  - @mantleio/core-utils@0.5.1
 
 ## 0.4.4
 
@@ -468,7 +468,7 @@
 - 0313794b: Add a factory contract we can whitelist for the community phase which will be used by the Gateway to create standard ERC20 tokens on L2
 - 21e47e1f: A small change to the L1 Messenger, which prevents an L2 to L1 call from send calling the CTC.
 - Updated dependencies [049200f4]
-  - @eth-optimism/core-utils@0.5.0
+  - @mantleio/core-utils@0.5.0
 
 ## 0.4.1
 
@@ -512,7 +512,7 @@
 - baacda34: Introduce the L1ChugSplashProxy contract
 - Updated dependencies [d9644c34]
 - Updated dependencies [df5ff890]
-  - @eth-optimism/core-utils@0.4.6
+  - @mantleio/core-utils@0.4.6
 
 ## 0.3.5
 
@@ -524,7 +524,7 @@
 - Updated dependencies [a64f8161]
 - Updated dependencies [750a5021]
 - Updated dependencies [c2b6e14b]
-  - @eth-optimism/core-utils@0.4.5
+  - @mantleio/core-utils@0.4.5
 
 ## 0.3.4
 
@@ -533,7 +533,7 @@
 - 7bf5941: Remove colon names from filenames
 - Updated dependencies [f091e86]
 - Updated dependencies [f880479]
-  - @eth-optimism/core-utils@0.4.4
+  - @mantleio/core-utils@0.4.4
 
 ## 0.3.3
 
@@ -553,7 +553,7 @@
 
 - 775118a: Updated package json with a missing dependency
 - Updated dependencies [96a586e]
-  - @eth-optimism/core-utils@0.4.3
+  - @mantleio/core-utils@0.4.3
 
 ## 0.3.0
 
@@ -570,7 +570,7 @@
 - 20747fd: Set L2MessageRelayer name to L1MultiMessageRelayer when deploying to mainnet
 - b799caa: Update ABI of simulateMessage to match run
 - Updated dependencies [b799caa]
-  - @eth-optimism/core-utils@0.4.2
+  - @mantleio/core-utils@0.4.2
 
 ## 0.2.11
 
@@ -586,7 +586,7 @@
 - 6dc1877: Heavily reduces npm package size by excluding unnecessary files.
 - Updated dependencies [1d40586]
 - Updated dependencies [ce7fa52]
-  - @eth-optimism/core-utils@0.4.1
+  - @mantleio/core-utils@0.4.1
 
 ## 0.2.9
 
@@ -596,7 +596,7 @@
 - 0ef3069: Add pause(), blockMessage() and allowMessage() to L1 messenger
 - Updated dependencies [28dc442]
 - Updated dependencies [a0a0052]
-  - @eth-optimism/core-utils@0.4.0
+  - @mantleio/core-utils@0.4.0
 
 ## 0.2.8
 
@@ -615,7 +615,7 @@
 - Updated dependencies [6daa408]
 - Updated dependencies [dee74ef]
 - Updated dependencies [d64b66d]
-  - @eth-optimism/core-utils@0.3.2
+  - @mantleio/core-utils@0.3.2
 
 ## 0.2.7
 
@@ -636,7 +636,7 @@
 - d4ee2d7: Port OVM_DeployerWhitelist to use optimistic-solc.
 - edb4346: Ports OVM_ProxyEOA to use optimistic-solc instead of the standard solc compiler.
 - Updated dependencies [5077441]
-  - @eth-optimism/core-utils@0.3.1
+  - @mantleio/core-utils@0.3.1
 
 ## 0.2.5
 
@@ -645,7 +645,7 @@
 - Updated dependencies [91460d9]
 - Updated dependencies [a0a7956]
 - Updated dependencies [0497d7d]
-  - @eth-optimism/core-utils@0.3.0
+  - @mantleio/core-utils@0.3.0
 
 ## 0.2.4
 
@@ -659,14 +659,14 @@
 
 - 5362d38: adds build files which were not published before to npm
 - Updated dependencies [5362d38]
-  - @eth-optimism/core-utils@0.2.1
+  - @mantleio/core-utils@0.2.1
 
 ## 0.2.2
 
 ### Patch Changes
 
 - Updated dependencies [6cbc54d]
-  - @eth-optimism/core-utils@0.2.0
+  - @mantleio/core-utils@0.2.0
 
 ## v0.1.11
 

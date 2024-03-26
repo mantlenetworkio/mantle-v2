@@ -1,4 +1,4 @@
-# @eth-optimism/hardhat-deploy-config
+# @mantleio/hardhat-deploy-config
 
 ## 0.2.6
 

@@ -1,7 +1,7 @@
 {
-  "name": "optimism",
+  "name": "mantle",
   "version": "1.0.0",
-  "author": "Optimism PBC",
+  "author": "Mantle PBC",
   "license": "MIT",
   "workspaces": {
     "packages": [
@@ -22,14 +22,14 @@
     "nohoist": [
       "**/typechain/*",
       "**/@typechain/*",
-      "@eth-optimism/contracts-bedrock/ds-test",
-      "@eth-optimism/contracts-bedrock/forge-std",
-      "@eth-optimism/contracts-bedrock/@rari-capital/solmate",
-      "@eth-optimism/contracts-bedrock/clones-with-immutable-args",
+      "@mantleio/contracts-bedrock/ds-test",
+      "@mantleio/contracts-bedrock/forge-std",
+      "@mantleio/contracts-bedrock/@rari-capital/solmate",
+      "@mantleio/contracts-bedrock/clones-with-immutable-args",
       "**/@openzeppelin/*",
-      "@eth-optimism/contracts-periphery/ds-test",
-      "@eth-optimism/contracts-periphery/forge-std",
-      "@eth-optimism/contracts-periphery/@rari-capital/solmate",
+      "@mantleio/contracts-periphery/ds-test",
+      "@mantleio/contracts-periphery/forge-std",
+      "@mantleio/contracts-periphery/@rari-capital/solmate",
       "forta-agent"
     ]
   },

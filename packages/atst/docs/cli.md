@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install @eth-optimism/atst --global
+npm install @mantleio/atst --global
 ```
 
 ## Usage
@@ -57,10 +57,10 @@ npx atst read --key "optimist.base-uri" --about 0x2335022c740d17c2837f9C884Bfe4f
 - `--key <address>` Key of the attestation either as string or hex number
 - `--value <string>` undefined
 - `[--rpc-url <url>]` Rpc url to use (default: `https://mainnet.optimism.io`)
-- `[--contract <address>]` Contract address to read from (default: 0xEE36eaaD94d1Cc1d0eccaDb55C38bFfB6Be06C77) 
+- `[--contract <address>]` Contract address to read from (default: 0xEE36eaaD94d1Cc1d0eccaDb55C38bFfB6Be06C77)
 - `-h`, `--help` Display this message
 
-Example: 
+Example:
 
 ```bash
 npx atst write --key "optimist.base-uri" \

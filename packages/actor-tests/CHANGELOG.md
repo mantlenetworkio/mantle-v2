@@ -1,4 +1,4 @@
-# @eth-optimism/actor-tests
+# @mantleio/actor-tests
 
 ## 0.0.24
 
@@ -8,8 +8,8 @@
 - Updated dependencies [be3315689]
 - Updated dependencies [9a02079eb]
 - Updated dependencies [98fbe9d22]
-  - @eth-optimism/contracts-bedrock@0.13.2
-  - @eth-optimism/sdk@2.0.2
+  - @mantleio/contracts-bedrock@0.13.2
+  - @mantleio/sdk@2.0.2
 
 ## 0.0.23
 
@@ -18,24 +18,24 @@
 - Updated dependencies [22c3885f5]
 - Updated dependencies [66cafc00a]
 - Updated dependencies [f52c07529]
-  - @eth-optimism/contracts-bedrock@0.13.1
-  - @eth-optimism/sdk@2.0.1
+  - @mantleio/contracts-bedrock@0.13.1
+  - @mantleio/sdk@2.0.1
 
 ## 0.0.22
 
 ### Patch Changes
 
 - Updated dependencies [cb19e2f9c]
-  - @eth-optimism/sdk@2.0.0
-  - @eth-optimism/contracts-bedrock@0.13.0
+  - @mantleio/sdk@2.0.0
+  - @mantleio/contracts-bedrock@0.13.0
 
 ## 0.0.21
 
 ### Patch Changes
 
 - Updated dependencies [80f2271f5]
-  - @eth-optimism/contracts-bedrock@0.12.1
-  - @eth-optimism/sdk@1.10.4
+  - @mantleio/contracts-bedrock@0.12.1
+  - @mantleio/sdk@1.10.4
 
 ## 0.0.20
 
@@ -45,8 +45,8 @@
 - Updated dependencies [2865dd9b4]
 - Updated dependencies [efc98d261]
 - Updated dependencies [388f2c25a]
-  - @eth-optimism/contracts-bedrock@0.12.0
-  - @eth-optimism/sdk@1.10.3
+  - @mantleio/contracts-bedrock@0.12.0
+  - @mantleio/sdk@1.10.3
 
 ## 0.0.19
 
@@ -54,24 +54,24 @@
 
 - Updated dependencies [3c22333b8]
 - Updated dependencies [5372c9f5b]
-  - @eth-optimism/contracts-bedrock@0.11.4
-  - @eth-optimism/sdk@1.10.2
+  - @mantleio/contracts-bedrock@0.11.4
+  - @mantleio/sdk@1.10.2
 
 ## 0.0.18
 
 ### Patch Changes
 
 - Updated dependencies [4964be480]
-  - @eth-optimism/contracts-bedrock@0.11.3
-  - @eth-optimism/sdk@1.10.1
+  - @mantleio/contracts-bedrock@0.11.3
+  - @mantleio/sdk@1.10.1
 
 ## 0.0.17
 
 ### Patch Changes
 
 - Updated dependencies [8784bc0bc]
-  - @eth-optimism/contracts-bedrock@0.11.2
-  - @eth-optimism/sdk@1.9.1
+  - @mantleio/contracts-bedrock@0.11.2
+  - @mantleio/sdk@1.9.1
 
 ## 0.0.16
 
@@ -87,8 +87,8 @@
 - Updated dependencies [0f8fc58ad]
 - Updated dependencies [89f70c591]
 - Updated dependencies [03940c3cb]
-  - @eth-optimism/contracts-bedrock@0.11.1
-  - @eth-optimism/sdk@1.9.0
+  - @mantleio/contracts-bedrock@0.11.1
+  - @mantleio/sdk@1.9.0
 
 ## 0.0.15
 
@@ -106,9 +106,9 @@
 - Updated dependencies [136ea1785]
 - Updated dependencies [4d13f0afe]
 - Updated dependencies [7300a7ca7]
-  - @eth-optimism/contracts-bedrock@0.11.0
-  - @eth-optimism/sdk@1.8.0
-  - @eth-optimism/core-utils@0.12.0
+  - @mantleio/contracts-bedrock@0.11.0
+  - @mantleio/sdk@1.8.0
+  - @mantleio/core-utils@0.12.0
 
 ## 0.0.14
 
@@ -121,8 +121,8 @@
 - Updated dependencies [f49b71d50]
 - Updated dependencies [1bfe79f20]
 - Updated dependencies [ccaf5bc83]
-  - @eth-optimism/contracts-bedrock@0.10.0
-  - @eth-optimism/sdk@1.7.0
+  - @mantleio/contracts-bedrock@0.10.0
+  - @mantleio/sdk@1.7.0
 
 ## 0.0.13
 
@@ -132,8 +132,8 @@
 - Updated dependencies [13bfafb21]
 - Updated dependencies [eeae96941]
 - Updated dependencies [427831d86]
-  - @eth-optimism/contracts-bedrock@0.9.1
-  - @eth-optimism/sdk@1.6.11
+  - @mantleio/contracts-bedrock@0.9.1
+  - @mantleio/sdk@1.6.11
 
 ## 0.0.12
 
@@ -146,9 +146,9 @@
 - Updated dependencies [cc5adbc61]
 - Updated dependencies [31c91ea74]
 - Updated dependencies [87702c741]
-  - @eth-optimism/core-utils@0.11.0
-  - @eth-optimism/contracts-bedrock@0.9.0
-  - @eth-optimism/sdk@1.6.10
+  - @mantleio/core-utils@0.11.0
+  - @mantleio/contracts-bedrock@0.9.0
+  - @mantleio/sdk@1.6.10
 
 ## 0.0.11
 
@@ -156,16 +156,16 @@
 
 - Updated dependencies [db84317b]
 - Updated dependencies [9b90c732]
-  - @eth-optimism/contracts-bedrock@0.8.3
-  - @eth-optimism/sdk@1.6.9
+  - @mantleio/contracts-bedrock@0.8.3
+  - @mantleio/sdk@1.6.9
 
 ## 0.0.10
 
 ### Patch Changes
 
 - Updated dependencies [7d7d9ba8]
-  - @eth-optimism/contracts-bedrock@0.8.2
-  - @eth-optimism/sdk@1.6.8
+  - @mantleio/contracts-bedrock@0.8.2
+  - @mantleio/sdk@1.6.8
 
 ## 0.0.9
 
@@ -175,8 +175,8 @@
 - Updated dependencies [b40913b1]
 - Updated dependencies [a5e715c3]
 - Updated dependencies [d18b8aa3]
-  - @eth-optimism/contracts-bedrock@0.8.1
-  - @eth-optimism/sdk@1.6.7
+  - @mantleio/contracts-bedrock@0.8.1
+  - @mantleio/sdk@1.6.7
 
 ## 0.0.8
 
@@ -187,8 +187,8 @@
 - Updated dependencies [caf5dd3e]
 - Updated dependencies [a6cbfee2]
 - Updated dependencies [394a26ec]
-  - @eth-optimism/contracts-bedrock@0.8.0
-  - @eth-optimism/sdk@1.6.6
+  - @mantleio/contracts-bedrock@0.8.0
+  - @mantleio/sdk@1.6.6
 
 ## 0.0.7
 
@@ -200,8 +200,8 @@
 - Updated dependencies [e2faaa8b]
 - Updated dependencies [d28ad592]
 - Updated dependencies [76c8ee2d]
-  - @eth-optimism/contracts-bedrock@0.7.0
-  - @eth-optimism/sdk@1.6.5
+  - @mantleio/contracts-bedrock@0.7.0
+  - @mantleio/sdk@1.6.5
 
 ## 0.0.6
 
@@ -220,17 +220,17 @@
 - Updated dependencies [d7679ca4]
 - Updated dependencies [8790156c]
 - Updated dependencies [515685f4]
-  - @eth-optimism/contracts-bedrock@0.6.3
-  - @eth-optimism/core-utils@0.10.1
-  - @eth-optimism/sdk@1.6.4
+  - @mantleio/contracts-bedrock@0.6.3
+  - @mantleio/core-utils@0.10.1
+  - @mantleio/sdk@1.6.4
 
 ## 0.0.5
 
 ### Patch Changes
 
 - Updated dependencies [651a2883]
-  - @eth-optimism/contracts-bedrock@0.6.2
-  - @eth-optimism/sdk@1.6.3
+  - @mantleio/contracts-bedrock@0.6.2
+  - @mantleio/sdk@1.6.3
 
 ## 0.0.4
 
@@ -240,8 +240,8 @@
 - Updated dependencies [593f1cfb]
 - Updated dependencies [cfa81f88]
 - Updated dependencies [f78eb056]
-  - @eth-optimism/contracts-bedrock@0.6.1
-  - @eth-optimism/sdk@1.6.2
+  - @mantleio/contracts-bedrock@0.6.1
+  - @mantleio/sdk@1.6.2
 
 ## 0.0.3
 
@@ -252,9 +252,9 @@
 - Updated dependencies [3d228a0e]
 - Updated dependencies [dbfea116]
 - Updated dependencies [63ef1949]
-  - @eth-optimism/contracts-bedrock@0.6.0
-  - @eth-optimism/sdk@1.6.1
-  - @eth-optimism/core-utils@0.10.0
+  - @mantleio/contracts-bedrock@0.6.0
+  - @mantleio/sdk@1.6.1
+  - @mantleio/core-utils@0.10.0
 
 ## 0.0.2
 
@@ -279,5 +279,5 @@
 - Updated dependencies [329d21b6]
 - Updated dependencies [35eafed0]
 - Updated dependencies [3cde9205]
-  - @eth-optimism/contracts-bedrock@0.5.4
-  - @eth-optimism/sdk@1.6.0
+  - @mantleio/contracts-bedrock@0.5.4
+  - @mantleio/sdk@1.6.0
