@@ -64,11 +64,9 @@ const config: HardhatUserConfig = {
       ],
     },
     'mantle-mainnet': {
-      live: false,
-      url: 'https://mainnet.infura.io/v3/c0628ccd5a1041a583b5d7816b2dffc7',
-      accounts: [
-        'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-      ],
+      chainId: 1,
+      url: process.env.L1_RPC || '',
+      accounts: [process.env.PRIVATE_KEY_DEPLOYER || ethers.constants.HashZero],
     },
     'mantle-goerli': {
       chainId: 5,
