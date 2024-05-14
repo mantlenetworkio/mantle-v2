@@ -6,9 +6,3 @@
 	url = https://github.com/mds1/multicall
 [submodule "lib/multicall"]
 	branch = v3.1.0
-[submodule "datalayr"]
-	path = datalayr
-	url = https://github.com/mantlenetworkio/datalayr.git
-[submodule "eignlayr-contracts"]
-	path = eignlayr-contracts
-	url = https://github.com/mantlenetworkio/eignlayr-contracts.git
