@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+commonLabels:
+  app: dl-retriever
+configMapGenerator:
+- envs:
+  - dl-retriever-0.env
+  name: dl-retriever-0
+generatorOptions:
+  disableNameSuffixHash: true

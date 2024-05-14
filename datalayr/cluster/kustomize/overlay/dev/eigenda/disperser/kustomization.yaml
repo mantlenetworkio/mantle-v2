@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../../base/disperser/
+replicas:
+- count: 1
+  name: dl-disperser
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/0
+      value:
+        name: dl-disperser-0
+        mountPath: /dl-disperser-0
+    - op: add
+      path: /spec/template/spec/volumes/0
+      value:
+        name: dl-disperser-0
+        configMap:
+          name: dl-disperser-0
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-disperser
+    version: v1

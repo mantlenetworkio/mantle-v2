@@ -1,0 +1,27 @@
+[submodule "contracts/eignlayr-contracts"]
+	path = contracts/eignlayr-contracts
+	url = https://github.com/mantlenetworkio/eignlayr-contracts.git
+[submodule "contracts/datalayr-contracts/lib/openzeppelin-contracts"]
+	path = contracts/datalayr-contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "lib/openzeppelin-contracts"]
+	branch = v4.8.0
+[submodule "contracts/datalayr-contracts/lib/openzeppelin-contracts-upgradeable"]
+	path = contracts/datalayr-contracts/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "lib/openzeppelin-contracts-upgradeable"]
+	branch = v4.8.0
+[submodule "contracts/datalayr-contracts/lib/forge-std"]
+	path = contracts/datalayr-contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/forge-std"]
+	branch = v1.1.1
+[submodule "contracts/rollup-example-contracts/lib/openzeppelin-contracts"]
+	path = contracts/rollup-example-contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "contracts/rollup-example-contracts/lib/forge-std"]
+	path = contracts/rollup-example-contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "contracts/rollup-example-contracts/lib/openzeppelin-contracts-upgradeable"]
+	path = contracts/rollup-example-contracts/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable

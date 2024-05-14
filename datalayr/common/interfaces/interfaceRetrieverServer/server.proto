@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "github.com/Layr-Labs/datalayr/common/interfaces/interfaceRetrieverServer";
+package interfaceRetrieverServer;
+
+service DataRetrieval {
+	rpc RetrieveFramesAndData(FramesAndDataRequest) returns (FramesAndDataReply) {}
+	// rpc RetrieveFrames() returns () {}
+	// rpc RetrieveData() returns () {}
+}
+
+message FramesAndDataRequest {
+	uint32 DataStoreId = 1;
+}
+
+message FramesAndDataReply {
+	bytes Data = 1;
+	repeated bytes Frames = 2;
+}
+

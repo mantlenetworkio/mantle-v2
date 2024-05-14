@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: graph-svc-0
+  labels:
+    app: graph
+spec:
+  type: NodePort
+  selector:
+    statefulset.kubernetes.io/pod-name: graph-0
+  ports:
+    - name: http
+      port: 8000
+      nodePort: 32500
+      targetPort: 8000
+    - name: postgres
+      port: 5432

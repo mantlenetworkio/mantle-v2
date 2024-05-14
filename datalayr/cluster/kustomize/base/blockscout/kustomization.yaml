@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+commonLabels:
+  app: blockscout
+configMapGenerator:
+- envs:
+  - config/common-blockscout.env
+  name: blockscout-config
+- envs:
+  - config/common-smart-contract-verifier.env
+  name: smart-contract-verifier-config
+resources:
+- statefulset.yaml
+- service.yaml

@@ -1,0 +1,13 @@
+.github
+
+node_modules
+.env
+**/.env
+
+contracts
+storage
+testbed
+geth-node
+graph-node
+
+integration

@@ -1,0 +1,348 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../../base/node/
+replicas:
+- count: 20
+  name: dl-node
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/0
+      value:
+        name: dl-node-0
+        mountPath: /dl-node-0
+    - op: add
+      path: /spec/template/spec/volumes/0
+      value:
+        name: dl-node-0
+        configMap:
+          name: dl-node-0
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/1
+      value:
+        name: dl-node-1
+        mountPath: /dl-node-1
+    - op: add
+      path: /spec/template/spec/volumes/1
+      value:
+        name: dl-node-1
+        configMap:
+          name: dl-node-1
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/2
+      value:
+        name: dl-node-2
+        mountPath: /dl-node-2
+    - op: add
+      path: /spec/template/spec/volumes/2
+      value:
+        name: dl-node-2
+        configMap:
+          name: dl-node-2
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/3
+      value:
+        name: dl-node-3
+        mountPath: /dl-node-3
+    - op: add
+      path: /spec/template/spec/volumes/3
+      value:
+        name: dl-node-3
+        configMap:
+          name: dl-node-3
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/4
+      value:
+        name: dl-node-4
+        mountPath: /dl-node-4
+    - op: add
+      path: /spec/template/spec/volumes/4
+      value:
+        name: dl-node-4
+        configMap:
+          name: dl-node-4
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/5
+      value:
+        name: dl-node-5
+        mountPath: /dl-node-5
+    - op: add
+      path: /spec/template/spec/volumes/5
+      value:
+        name: dl-node-5
+        configMap:
+          name: dl-node-5
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/6
+      value:
+        name: dl-node-6
+        mountPath: /dl-node-6
+    - op: add
+      path: /spec/template/spec/volumes/6
+      value:
+        name: dl-node-6
+        configMap:
+          name: dl-node-6
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/7
+      value:
+        name: dl-node-7
+        mountPath: /dl-node-7
+    - op: add
+      path: /spec/template/spec/volumes/7
+      value:
+        name: dl-node-7
+        configMap:
+          name: dl-node-7
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/8
+      value:
+        name: dl-node-8
+        mountPath: /dl-node-8
+    - op: add
+      path: /spec/template/spec/volumes/8
+      value:
+        name: dl-node-8
+        configMap:
+          name: dl-node-8
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/9
+      value:
+        name: dl-node-9
+        mountPath: /dl-node-9
+    - op: add
+      path: /spec/template/spec/volumes/9
+      value:
+        name: dl-node-9
+        configMap:
+          name: dl-node-9
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/10
+      value:
+        name: dl-node-10
+        mountPath: /dl-node-10
+    - op: add
+      path: /spec/template/spec/volumes/10
+      value:
+        name: dl-node-10
+        configMap:
+          name: dl-node-10
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/11
+      value:
+        name: dl-node-11
+        mountPath: /dl-node-11
+    - op: add
+      path: /spec/template/spec/volumes/11
+      value:
+        name: dl-node-11
+        configMap:
+          name: dl-node-11
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/12
+      value:
+        name: dl-node-12
+        mountPath: /dl-node-12
+    - op: add
+      path: /spec/template/spec/volumes/12
+      value:
+        name: dl-node-12
+        configMap:
+          name: dl-node-12
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/13
+      value:
+        name: dl-node-13
+        mountPath: /dl-node-13
+    - op: add
+      path: /spec/template/spec/volumes/13
+      value:
+        name: dl-node-13
+        configMap:
+          name: dl-node-13
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/14
+      value:
+        name: dl-node-14
+        mountPath: /dl-node-14
+    - op: add
+      path: /spec/template/spec/volumes/14
+      value:
+        name: dl-node-14
+        configMap:
+          name: dl-node-14
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/15
+      value:
+        name: dl-node-15
+        mountPath: /dl-node-15
+    - op: add
+      path: /spec/template/spec/volumes/15
+      value:
+        name: dl-node-15
+        configMap:
+          name: dl-node-15
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/16
+      value:
+        name: dl-node-16
+        mountPath: /dl-node-16
+    - op: add
+      path: /spec/template/spec/volumes/16
+      value:
+        name: dl-node-16
+        configMap:
+          name: dl-node-16
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/17
+      value:
+        name: dl-node-17
+        mountPath: /dl-node-17
+    - op: add
+      path: /spec/template/spec/volumes/17
+      value:
+        name: dl-node-17
+        configMap:
+          name: dl-node-17
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/18
+      value:
+        name: dl-node-18
+        mountPath: /dl-node-18
+    - op: add
+      path: /spec/template/spec/volumes/18
+      value:
+        name: dl-node-18
+        configMap:
+          name: dl-node-18
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/19
+      value:
+        name: dl-node-19
+        mountPath: /dl-node-19
+    - op: add
+      path: /spec/template/spec/volumes/19
+      value:
+        name: dl-node-19
+        configMap:
+          name: dl-node-19
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-node
+    version: v1

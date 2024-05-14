@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: geth
+  labels:
+    app: geth
+spec:
+  serviceName: geth
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: geth
+  volumeClaimTemplates:
+  - metadata:
+      name: geth-data
+      labels:
+        owner: geth
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 32Gi
+  template:
+    metadata:
+      labels:
+        app: geth
+        ver: "0.2"
+    spec:
+      volumes:
+        - name: chain-genesis
+          configMap:
+            name: chain-genesis
+        - name: bootnode-secret
+          secret:
+            secretName: bootnode-secret
+      containers:
+        - name: geth
+          image: ethereum/client-go:v1.10.17
+          imagePullPolicy: Always
+          startupProbe:
+            periodSeconds: 1
+            failureThreshold: 300
+            exec:
+              command:
+              - sh
+              - -c
+              - "[ -e /geth-data/geth.ipc ]"
+          readinessProbe:
+            periodSeconds: 5
+            failureThreshold: 12
+            tcpSocket:
+              port: 30303
+          livenessProbe:
+            initialDelaySeconds: 10
+            failureThreshold: 12
+            periodSeconds: 5
+            exec:
+              command:
+              - sh
+              - -c
+              - "geth attach /geth-data/geth.ipc --exec eth.blockNumber"
+          volumeMounts:
+            - name: geth-data
+              mountPath: /geth-data
+            - name: chain-genesis
+              mountPath: /chain-genesis
+            - name: bootnode-secret
+              mountPath: /bootnode-secret
+          command:
+            - /bin/sh
+            - -c
+            - |
+              key=$(cat /bootnode-secret/geth-account-pk) ; \
+              echo ${key:2} > geth-tmp
+              geth account import --password /bootnode-secret/geth-account-password --datadir /geth-data geth-tmp
+
+              geth --datadir=/geth-data init /chain-genesis/genesis.json ; \
+
+              geth \
+                --datadir=/geth-data \
+                --networkid=40525 \
+                --nodiscover \
+                --syncmode=full \
+                --unlock=$(cat /bootnode-secret/geth-account-address) \
+                --mine \
+                --password=/bootnode-secret/geth-account-password \
+                --rpc.gascap=0 \
+                --miner.gasprice=1 \
+                --miner.gaslimit=2922337203600000

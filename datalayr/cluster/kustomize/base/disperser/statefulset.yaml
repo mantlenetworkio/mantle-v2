@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dl-disperser
+spec:
+  podManagementPolicy: Parallel
+  replicas: 1
+  serviceName: dl-disperser
+  template:
+    metadata:
+      annotations:
+        eigenda.io/should_be_scraped: "true"
+        eigenda.io/scrape_port: "9091"
+    spec:
+      initContainers:
+        - name: init-container-data-loader
+          image: ghcr.io/layr-labs/datalayr/init-container-data-loader:point-300000
+          imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -c
+            - |
+              ordinal=${HOSTNAME##*-} ; \
+              cp /dl-disperser-${ordinal}/* /conf.d/ ; \
+              cp -r /template/* /data/ \
+              && echo "Successfully copied data directory to /data" \
+              || echo "Error copied data directory to /data"
+          volumeMounts:
+            - name: conf
+              mountPath: /conf.d
+            - name: data
+              mountPath: /data
+      containers:
+        - name: dl-disperser
+          image: ghcr.io/layr-labs/datalayr/dl-disperser:{{tag}}
+          imagePullPolicy: Always
+          env:
+            - name: NUM_CLUSTER_GRAPH
+              value: "1"
+            - name: NUM_CHAIN_RELAY
+              value: "1"
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 9091
+            initialDelaySeconds: 10
+            failureThreshold: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9091
+            failureThreshold: 3
+            periodSeconds: 10
+          # use ports config to decide which relay node to connect to
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add curl ; \
+              for entry in $(ls /conf.d/); do export "$entry=$(cat /conf.d/$entry)"; done; \
+              ordinal=${HOSTNAME##*-} ; \
+              for entry in $(ls /chain-relay-node-port/); do export "$entry=$(cat /chain-relay-node-port/$entry)"; done ; \
+              relay_index=$( expr $ordinal % $NUM_CHAIN_RELAY  ) ; \
+              echo $relay_index > relay_index ; \
+              graph_index=$( expr $ordinal % $NUM_CLUSTER_GRAPH ) ; \
+              socket=$(cat /chain-relay-node-port/HTTP_NODE_PORT_${relay_index}) ; \
+              DL_DISPERSER_CHAIN_RPC=http://$socket ; \
+              DL_DISPERSER_GRAPH_PROVIDER=http://graph-svc-${graph_index}:8000/subgraphs/name/datalayr ; \
+              dl-disperser
+          volumeMounts:
+            - name: conf
+              mountPath: /conf.d
+            - name: data
+              mountPath: /data
+            - name: chain-relay-node-port
+              mountPath: /chain-relay-node-port
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: chain-relay-node-port
+          configMap:
+            name: chain-relay-node-port
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          owner: dl-disperser
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

@@ -1,0 +1,209 @@
+path: ../cluster/kustomize/overlay/int
+environment:
+    name: int
+    type: cluster
+deployers:
+    - name: default
+      rpc: http://54.225.32.141:31501
+      verifierUrl: http://localhost:4000/api
+      verifyContracts: false
+      slow: true
+eigenlayer:
+    deployer: default
+    delegation: 0x960edecA5a3740Dc714F23d1F57B3Edd57F873f5
+    investmentmanager: 0x492e37dB8C88ac5b144cE7406C0B8CBC0A985a2E
+    eigen: 0x7B69a06974d1Ba71346FA5D32A5255BA1f0E23C7
+    eigenstrat: 0xa4b849984e782AdA054f067df37c06650673d8Bf
+    weth: 0x7c63882934Aa8937F1Ff089D68626Fa63f381bB0
+    wethstrat: 0x2D164B36b9BB44F1747387A92B5ce2944695743F
+eigenda:
+    deployer: default
+    dlregistry: 0xDfc6B2E0d3cfEbE88bd51186c9dD3cf302E1cdD7
+    dlservicemanager: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+    pubkeycompendium: 0xbc311a461b5a217042ae28BC698B7Ea7200E1Fc8
+rollup:
+    deployer: ""
+    datalayrRollup: ""
+privateKeys:
+    file: ../cluster/kustomize/base/chain/config/dev-chain/secret/private-keys.txt
+    list: []
+    map:
+        default: 0x1a5843a0c64beab41ae8b1059f30db49339019d9b31a42f61577aae58976ee68
+        dis0: 0x22d18cb021555a7c7857e49b558e0c8dc5812a7e63b3d79460668a57ffd244fe
+        dln0: 0x0985b8e385027822d2e1d7a94ed1a1949d198e187d62e4c3e0bfbc7e6bc9fecb
+        dln1: 0x5b2c2c40c30dab73f99a257a630e3075805165984701c93ccd8cc1a0bed41357
+        dln2: 0x57307ad3c4103598e12a93b9e09e9655905772664bfddbc611bceb219ae14273
+        dln3: 0x26d38ba3c1727c49b5f025093ef2af54145fa5671fe84a13c645617dff4df67c
+        ret0: 0x1e42f0c6b4d708e38fb8123e88e1b1fa9896d3ca9ff6917b664dea3cb1cfbf36
+        staker0: 0x053b71217b8f58fa872ddf99d825276753e450c843b1d3166fcbc3836489ca18
+        staker1: 0x5ff83d8826787dadbabcc8da63c5d135b91a7dcd866fa52bf2921a2440f57671
+        staker2: 0x4a89be45024933a3ae00d792aa16f2c07fed97fe85a9ee1a9bd7588623d2e655
+        staker3: 0x0a167be5def66ab281049c62807d7e41d642122b68cf9a796ab5fb6f83b4a7af
+services:
+    counts:
+        dispersers: 1
+        operators: 4
+        retrievers: 1
+        rollupSequencers: 0
+        rollupChallengers: 0
+    stakes:
+        total: 1e+20
+        distribution:
+            - 1.3
+            - 2
+            - 3
+            - 5
+    basePort: 32000
+    variables:
+        globals:
+            CACHE_PATH: /data/kzg/SRSTables
+            CHAIN_ID: "40525"
+            CHAIN_RPC: http://127.0.0.1:8545
+            CHALLENGE_ORDER: "3000"
+            G1_PATH: /data/kzg/g1.point
+            G2_PATH: /data/kzg/g2.point
+            GRAPH_PROVIDER: http://117.0.0.1:8000/subgraphs/name/datalayr
+            HOSTNAME: 172.18.0.1
+            SRS_ORDER: "3000"
+            TIMEOUT: 20s
+dispersers:
+    - dl_disperser_hostname: 172.18.0.1
+      dl_disperser_grpc_port: "32001"
+      dl_disperser_enable_metrics: "true"
+      dl_disperser_metrics_port: "9091"
+      dl_disperser_timeout: 20s
+      dl_disperser_polling_retry: "1"
+      dl_disperser_db_path: /data/db/dis0
+      dl_disperser_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_disperser_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_disperser_use_cache: "false"
+      dl_disperser_chain_rpc: http://127.0.0.1:8545
+      dl_disperser_private_key: 22d18cb021555a7c7857e49b558e0c8dc5812a7e63b3d79460668a57ffd244fe
+      dl_disperser_chain_id: "40525"
+      dl_disperser_std_log_level: debug
+      dl_disperser_file_log_level: trace
+      dl_disperser_log_path: /data/logs/dis0
+      dl_disperser_g1_path: /data/kzg/g1.point
+      dl_disperser_g2_path: /data/kzg/g2.point
+      dl_disperser_cache_path: /data/kzg/SRSTables
+      dl_disperser_srs_order: "3000"
+      dl_disperser_num_workers: "4"
+      dl_disperser_verbose: "true"
+operators:
+    - dl_node_hostname: 172.18.0.1
+      dl_node_grpc_port: "32003"
+      dl_node_enable_metrics: "true"
+      dl_node_metrics_port: "9091"
+      dl_node_timeout: 20s
+      dl_node_db_path: /data/db/dln0
+      dl_node_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_node_private_bls: "12099563622016326347122785474729860358043437547473438006886136941496472657668"
+      dl_node_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_node_challenge_order: "3000"
+      dl_node_chain_rpc: http://127.0.0.1:8545
+      dl_node_private_key: 0985b8e385027822d2e1d7a94ed1a1949d198e187d62e4c3e0bfbc7e6bc9fecb
+      dl_node_chain_id: "40525"
+      dl_node_std_log_level: debug
+      dl_node_file_log_level: trace
+      dl_node_log_path: /data/logs/dln0
+      dl_node_g1_path: /data/kzg/g1.point
+      dl_node_g2_path: /data/kzg/g2.point
+      dl_node_cache_path: /data/kzg/SRSTables
+      dl_node_srs_order: "3000"
+      dl_node_num_workers: "4"
+      dl_node_verbose: "true"
+    - dl_node_hostname: 172.18.0.1
+      dl_node_grpc_port: "32005"
+      dl_node_enable_metrics: "true"
+      dl_node_metrics_port: "9091"
+      dl_node_timeout: 20s
+      dl_node_db_path: /data/db/dln1
+      dl_node_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_node_private_bls: "3684620461631783440140192899491792971426668420387250371038403943952458944560"
+      dl_node_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_node_challenge_order: "3000"
+      dl_node_chain_rpc: http://127.0.0.1:8545
+      dl_node_private_key: 5b2c2c40c30dab73f99a257a630e3075805165984701c93ccd8cc1a0bed41357
+      dl_node_chain_id: "40525"
+      dl_node_std_log_level: debug
+      dl_node_file_log_level: trace
+      dl_node_log_path: /data/logs/dln1
+      dl_node_g1_path: /data/kzg/g1.point
+      dl_node_g2_path: /data/kzg/g2.point
+      dl_node_cache_path: /data/kzg/SRSTables
+      dl_node_srs_order: "3000"
+      dl_node_num_workers: "4"
+      dl_node_verbose: "true"
+    - dl_node_hostname: 172.18.0.1
+      dl_node_grpc_port: "32007"
+      dl_node_enable_metrics: "true"
+      dl_node_metrics_port: "9091"
+      dl_node_timeout: 20s
+      dl_node_db_path: /data/db/dln2
+      dl_node_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_node_private_bls: "18782659589100778172767456299101824982839689253488325718116347106769376542816"
+      dl_node_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_node_challenge_order: "3000"
+      dl_node_chain_rpc: http://127.0.0.1:8545
+      dl_node_private_key: 57307ad3c4103598e12a93b9e09e9655905772664bfddbc611bceb219ae14273
+      dl_node_chain_id: "40525"
+      dl_node_std_log_level: debug
+      dl_node_file_log_level: trace
+      dl_node_log_path: /data/logs/dln2
+      dl_node_g1_path: /data/kzg/g1.point
+      dl_node_g2_path: /data/kzg/g2.point
+      dl_node_cache_path: /data/kzg/SRSTables
+      dl_node_srs_order: "3000"
+      dl_node_num_workers: "4"
+      dl_node_verbose: "true"
+    - dl_node_hostname: 172.18.0.1
+      dl_node_grpc_port: "32009"
+      dl_node_enable_metrics: "true"
+      dl_node_metrics_port: "9091"
+      dl_node_timeout: 20s
+      dl_node_db_path: /data/db/dln3
+      dl_node_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_node_private_bls: "19152454398731194730738642950189966865683167225573585278312048571891939391417"
+      dl_node_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_node_challenge_order: "3000"
+      dl_node_chain_rpc: http://127.0.0.1:8545
+      dl_node_private_key: 26d38ba3c1727c49b5f025093ef2af54145fa5671fe84a13c645617dff4df67c
+      dl_node_chain_id: "40525"
+      dl_node_std_log_level: debug
+      dl_node_file_log_level: trace
+      dl_node_log_path: /data/logs/dln3
+      dl_node_g1_path: /data/kzg/g1.point
+      dl_node_g2_path: /data/kzg/g2.point
+      dl_node_cache_path: /data/kzg/SRSTables
+      dl_node_srs_order: "3000"
+      dl_node_num_workers: "4"
+      dl_node_verbose: "true"
+retrievers:
+    - dl_retriever_hostname: 172.18.0.1
+      dl_retriever_grpc_port: "32011"
+      dl_retriever_timeout: 20s
+      dl_retriever_graph_provider: http://117.0.0.1:8000/subgraphs/name/datalayr
+      dl_retriever_dlsm_address: 0x4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+      dl_retriever_chain_rpc: http://127.0.0.1:8545
+      dl_retriever_private_key: 1e42f0c6b4d708e38fb8123e88e1b1fa9896d3ca9ff6917b664dea3cb1cfbf36
+      dl_retriever_chain_id: "40525"
+      dl_retriever_std_log_level: debug
+      dl_retriever_file_log_level: trace
+      dl_retriever_log_path: /data/logs/ret0
+      dl_retriever_g1_path: /data/kzg/g1.point
+      dl_retriever_g2_path: /data/kzg/g2.point
+      dl_retriever_cache_path: /data/kzg/SRSTables
+      dl_retriever_srs_order: "3000"
+      dl_retriever_num_workers: "4"
+      dl_retriever_verbose: "true"
+stakers:
+    - address: 0xe17bAd29284B9A8E7b49439B3904819814F67944
+      private: 053b71217b8f58fa872ddf99d825276753e450c843b1d3166fcbc3836489ca18
+    - address: 0xE1D0D0ADf2e30710Ec9C009130a399031e76653D
+      private: 5ff83d8826787dadbabcc8da63c5d135b91a7dcd866fa52bf2921a2440f57671
+    - address: 0x4F492dae6157E0D2cBd9C93499E38964089DC811
+      private: 4a89be45024933a3ae00d792aa16f2c07fed97fe85a9ee1a9bd7588623d2e655
+    - address: 0x6627b6917fe0b16be1199A921485C332DF163847
+      private: 0a167be5def66ab281049c62807d7e41d642122b68cf9a796ab5fb6f83b4a7af
+sequencers: []
+challengers: []

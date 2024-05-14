@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: graph
+  labels:
+    app: graph
+spec:
+  serviceName: graph
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graph
+  volumeClaimTemplates:
+    - metadata:
+        name: graph-data
+        labels:
+          owner: graph
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 12Gi
+    - metadata:
+        name: ipfs-data
+        labels:
+          owner: graph
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: postgres-data
+        labels:
+          owner: graph
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 32Gi
+  template:
+    metadata:
+      labels:
+        app: graph
+        ver: "0.2"
+    spec:
+      volumes:
+        - name: subgraph-config
+          configMap:
+            name: subgraph-config
+        - name: graph-network-config
+          configMap:
+            name: graph-network-config
+        - name: chain-relay-node-port
+          configMap:
+            name: chain-relay-node-port
+      containers:
+        - name: subgraph-starter
+          image: ghcr.io/layr-labs/datalayr/subgraph-starter:v0.0.3
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: graph-data
+              mountPath: /graph-data
+            - name: subgraph-config
+              mountPath: /subgraph-config
+            - name: graph-network-config
+              mountPath: /graph-network-config
+          command:
+            - /bin/bash
+            - -c
+            - |
+              cp -r /graph-data-template/* /graph-data/ ; \
+              cp /graph-network-config/networks.json /graph-data ; \
+              cp /subgraph-config/subgraph.yaml /graph-data ; \
+              wait-for.sh http://127.0.0.1:8020/ ; \
+              i=0; \
+              while true; do result=$(curl 127.0.0.1:8030); if [ "$result" = "OK" ]; then break; fi; sleep 3; echo "retry $i" > "retry$i"; i=$(( i + 1 )); done; \
+              cd /graph-data ; yarn ; yarn codegen ; yarn create-local ; echo 'v0.0.1' | yarn deploy-local ; \
+              sleep 10000
+        - name: graph-node
+          image: graphprotocol/graph-node:v0.29.0
+          imagePullPolicy: Always
+          env:
+            - name: postgres_host
+              value: 127.0.0.1
+            - name: postgres_user
+              value: graph-node
+            - name: postgres_pass
+              value: let-me-in
+            - name: postgres_db
+              value: graph-node
+            - name: ipfs
+              value: http://127.0.0.1:5001
+            - name: GRAPH_LOG
+              value: info
+            - name: NUM_CHAIN_RELAY
+              value: "1"
+          volumeMounts:
+            - name: chain-relay-node-port
+              mountPath: /chain-relay-node-port
+          # start node only geth node is connected with some peer, retry 10 times
+          command:
+           - /bin/sh
+           - -c
+           - |
+             apt -y install jq curl; \
+             ordinal=${HOSTNAME##*-} ; \
+             for entry in $(ls /chain-relay-node-port/); do export "$entry=$(cat /chain-relay-node-port/$entry)"; done ; \
+             relay_index=$( expr $ordinal % $NUM_CHAIN_RELAY  ) ; \
+             echo $relay_index > relay_index ; \
+             CHAIN_PROVIDER=$(cat /chain-relay-node-port/HTTP_NODE_PORT_${relay_index}) ; \
+             i=0 ; \
+             sleep 1 ; while true; do resp=$(curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' $CHAIN_PROVIDER); echo $resp > /resp; peerCountHexStr=$(echo $resp | jq '.result'); peerCount=$(perl -le "print hex($peerCountHexStr)"); echo $peerCount > "/pureNumber$i"; if [ "${peerCount}" -gt 0 ]; then break; fi;  sleep 3; echo "retried $i" > "/retry$i"; i=$(( i + 1 )); done; \
+             ethereum=mainnet:http://${CHAIN_PROVIDER}
+             start
+        - name: ipfs
+          image: ipfs/go-ipfs:v0.10.0
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: ipfs-data
+              mountPath: /ipfs-data
+        - name: postgres
+          image: postgres
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5432
+          command:
+            - /bin/bash
+            - -c
+            - |
+              docker-entrypoint.sh -c 'shared_buffers=256MB' -c 'max_connections=200' -cshared_preload_libraries=pg_stat_statements
+          env:
+            - name: POSTGRES_USER
+              value: graph-node
+            - name: POSTGRES_PASSWORD
+              value: let-me-in
+            - name: POSTGRES_DB
+              value: graph-node
+            - name: PGDATA
+              value: /data/postgres
+          volumeMounts:
+           - name: postgres-data
+             mountPath: /var/lib/postgresql/data

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay-svc-0
+  labels:
+    app: relay
+  namespace: relay
+spec:
+  type: NodePort
+  selector:
+    statefulset.kubernetes.io/pod-name: relay-0
+  ports:
+    - name: p2p
+      port: 31500
+      nodePort: 31500
+      protocol: TCP
+    - name: http
+      port: 8545
+      nodePort: 31501
+      targetPort: 8545

@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: relay
+commonLabels:
+  app: relay
+configMapGenerator:
+- literals:
+  - SEALER_ENODE_ENV=enode://a6b06e09f4f181ab553df0dd7be580adc2e80c44d76017724085d16e92c0a28d46f962ac72aae484f0be222eec8841b198def508b3d2714a23890f072cff0898@geth-svc.default.svc.cluster.local:30303
+  name: sealer-config

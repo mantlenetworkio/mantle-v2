@@ -1,0 +1,161 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"dl-node"},"name":"dl-node-svc-0","namespace":"default"},"spec":{"externalTrafficPolicy":"Local","ports":[{"name":"grpc","nodePort":32003,"port":32003,"targetPort":32003},{"name":"metrics","nodePort":32002,"port":32002,"targetPort":32002}],"selector":{"statefulset.kubernetes.io/pod-name":"dl-node-0"},"type":"NodePort"}}
+    creationTimestamp: "2022-12-10T02:42:36Z"
+    labels:
+      app: dl-node
+    name: dl-node-svc-0
+    namespace: default
+    resourceVersion: "13328591"
+    uid: 9e667f7f-39f3-4725-8845-486ba1ee2e7a
+  spec:
+    clusterIP: 172.20.52.76
+    clusterIPs:
+    - 172.20.52.76
+    externalTrafficPolicy: Local
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: grpc
+      nodePort: 32003
+      port: 32003
+      protocol: TCP
+      targetPort: 32003
+    - name: metrics
+      nodePort: 32002
+      port: 32002
+      protocol: TCP
+      targetPort: 32002
+    selector:
+      statefulset.kubernetes.io/pod-name: dl-node-0
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"dl-node"},"name":"dl-node-svc-1","namespace":"default"},"spec":{"externalTrafficPolicy":"Local","ports":[{"name":"grpc","nodePort":32005,"port":32005,"targetPort":32005},{"name":"metrics","nodePort":32004,"port":32004,"targetPort":32004}],"selector":{"statefulset.kubernetes.io/pod-name":"dl-node-1"},"type":"NodePort"}}
+    creationTimestamp: "2022-12-10T02:42:39Z"
+    labels:
+      app: dl-node
+    name: dl-node-svc-1
+    namespace: default
+    resourceVersion: "13328607"
+    uid: 4a4afe38-a946-4935-b727-8a43dd9ae950
+  spec:
+    clusterIP: 172.20.123.235
+    clusterIPs:
+    - 172.20.123.235
+    externalTrafficPolicy: Local
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: grpc
+      nodePort: 32005
+      port: 32005
+      protocol: TCP
+      targetPort: 32005
+    - name: metrics
+      nodePort: 32004
+      port: 32004
+      protocol: TCP
+      targetPort: 32004
+    selector:
+      statefulset.kubernetes.io/pod-name: dl-node-1
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"dl-node"},"name":"dl-node-svc-2","namespace":"default"},"spec":{"externalTrafficPolicy":"Local","ports":[{"name":"grpc","nodePort":32007,"port":32007,"targetPort":32007},{"name":"metrics","nodePort":32006,"port":32006,"targetPort":32006}],"selector":{"statefulset.kubernetes.io/pod-name":"dl-node-2"},"type":"NodePort"}}
+    creationTimestamp: "2022-12-10T02:42:41Z"
+    labels:
+      app: dl-node
+    name: dl-node-svc-2
+    namespace: default
+    resourceVersion: "13328627"
+    uid: 58df08e8-e47c-4b13-ac6e-1ccb6eb17828
+  spec:
+    clusterIP: 172.20.0.200
+    clusterIPs:
+    - 172.20.0.200
+    externalTrafficPolicy: Local
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: grpc
+      nodePort: 32007
+      port: 32007
+      protocol: TCP
+      targetPort: 32007
+    - name: metrics
+      nodePort: 32006
+      port: 32006
+      protocol: TCP
+      targetPort: 32006
+    selector:
+      statefulset.kubernetes.io/pod-name: dl-node-2
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"dl-node"},"name":"dl-node-svc-3","namespace":"default"},"spec":{"externalTrafficPolicy":"Local","ports":[{"name":"grpc","nodePort":32009,"port":32009,"targetPort":32009},{"name":"metrics","nodePort":32008,"port":32008,"targetPort":32008}],"selector":{"statefulset.kubernetes.io/pod-name":"dl-node-3"},"type":"NodePort"}}
+    creationTimestamp: "2022-12-10T02:42:44Z"
+    labels:
+      app: dl-node
+    name: dl-node-svc-3
+    namespace: default
+    resourceVersion: "13328641"
+    uid: a3888795-aede-47fb-928f-45cc6a4816ac
+  spec:
+    clusterIP: 172.20.113.74
+    clusterIPs:
+    - 172.20.113.74
+    externalTrafficPolicy: Local
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: grpc
+      nodePort: 32009
+      port: 32009
+      protocol: TCP
+      targetPort: 32009
+    - name: metrics
+      nodePort: 32008
+      port: 32008
+      protocol: TCP
+      targetPort: 32008
+    selector:
+      statefulset.kubernetes.io/pod-name: dl-node-3
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

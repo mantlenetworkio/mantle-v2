@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dl-retriever
+  labels:
+    app: dl-retriever
+spec:
+  serviceName: dl-retriever
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dl-retriever
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          owner: dl-retriever
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+  template:
+    metadata:
+      labels:
+        app: dl-retriever
+    spec:
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: chain-relay-node-port
+          configMap:
+            name: chain-relay-node-port
+      initContainers:
+        - name: init-container-data-loader
+          image: ghcr.io/layr-labs/datalayr/init-container-data-loader:point-300000
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: conf
+              mountPath: /conf.d
+            - name: data
+              mountPath: /data
+          command:
+            - /bin/sh
+            - -c
+            - |
+              ordinal=${HOSTNAME##*-} ; \
+              cp /dl-retriever-${ordinal}/* /conf.d/ ; \
+              cp -r /template/* /data/ \
+              && echo "Successfully copied data directory to /data" \
+              || echo "Error copied data directory to /data"
+      containers:
+        - name: dl-retriever
+          image: ghcr.io/layr-labs/datalayr/dl-retriever:{{tag}}
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: conf
+              mountPath: /conf.d
+            - name: data
+              mountPath: /data
+            - name: chain-relay-node-port
+              mountPath: /chain-relay-node-port
+          env:
+            - name: NUM_CLUSTER_GRAPH
+              value: "1"
+            - name: NUM_CHAIN_RELAY
+              value: "1"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add curl ; \
+              for entry in $(ls /conf.d/); do export "$entry=$(cat /conf.d/$entry)"; done; \
+              ordinal=${HOSTNAME##*-} ; \
+              for entry in $(ls /chain-relay-node-port/); do export "$entry=$(cat /chain-relay-node-port/$entry)"; done ; \
+              relay_index=$( expr $ordinal % $NUM_CHAIN_RELAY  ) ; \
+              echo $relay_index > relay_index ; \
+              graph_index=$( expr $ordinal % $NUM_CLUSTER_GRAPH ) ; \
+              socket=$(cat /chain-relay-node-port/HTTP_NODE_PORT_${relay_index}) ; \
+              DL_RETRIEVER_CHAIN_RPC=http://$socket ; \
+              DL_RETRIEVER_GRAPH_PROVIDER=http://graph-svc-${graph_index}:8000/subgraphs/name/datalayr ; \
+              dl-retriever svc

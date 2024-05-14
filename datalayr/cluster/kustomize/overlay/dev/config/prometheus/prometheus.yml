@@ -1,0 +1,30 @@
+global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+scrape_configs:
+    - job_name: dl-disperser-metrics-svc-0
+      static_configs:
+        - targets:
+            - dl-disperser-metrics-svc-0:32000
+            - dl-disperser-metrics-svc-0:9100
+    - job_name: dl-node-metrics-svc-0
+      static_configs:
+        - targets:
+            - dl-node-metrics-svc-0:32002
+            - dl-node-metrics-svc-0:9100
+    - job_name: dl-node-metrics-svc-1
+      static_configs:
+        - targets:
+            - dl-node-metrics-svc-1:32004
+            - dl-node-metrics-svc-1:9100
+    - job_name: dl-node-metrics-svc-2
+      static_configs:
+        - targets:
+            - dl-node-metrics-svc-2:32006
+            - dl-node-metrics-svc-2:9100
+    - job_name: dl-node-metrics-svc-3
+      static_configs:
+        - targets:
+            - dl-node-metrics-svc-3:32008
+            - dl-node-metrics-svc-3:9100
+

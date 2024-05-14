@@ -1,0 +1,18 @@
+# Configuration file version
+apiVersion: 1
+
+deleteDatasources:
+  - name: EigenDA
+    orgId: 1
+
+datasources:
+  - name: EigenDA
+    type: prometheus
+    url: http://prometheus:9090
+    access: proxy
+    # <int> Sets the organization id. Defaults to orgId 1.
+    orgId: 1
+    basicAuth: false
+    editable: true
+    isDefault: true
+

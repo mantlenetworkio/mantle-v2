@@ -1,0 +1,3 @@
+environment:
+  name: "dev"
+  type: "cluster"

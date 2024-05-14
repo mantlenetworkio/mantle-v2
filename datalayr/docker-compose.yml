@@ -1,0 +1,27 @@
+# This file is used for building and pushing images
+services:
+  disperser:
+    build:
+      context: .
+      dockerfile: dl-disperser/Dockerfile
+    image: ghcr.io/layr-labs/datalayr/dl-disperser:latest
+  node:
+    build:
+      context: .
+      dockerfile: dl-node/Dockerfile
+    image: ghcr.io/layr-labs/datalayr/dl-node:latest
+  retriever:
+    build:
+      context: .
+      dockerfile: dl-retriever/Dockerfile
+    image: ghcr.io/layr-labs/datalayr/dl-retriever:latest
+  sequencer:
+    build:
+      context: .
+      dockerfile: middleware/rollup-example/sequencer/Dockerfile
+    image: ghcr.io/layr-labs/datalayr/rollup-sequencer:latest
+  challenger:
+    build:
+      context: .
+      dockerfile: middleware/rollup-example/challenger/Dockerfile
+    image: ghcr.io/layr-labs/datalayr/rollup-challenger:latest

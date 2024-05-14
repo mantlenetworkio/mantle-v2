@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: geth-svc
+spec:
+  type: ClusterIP
+  selector:
+    statefulset.kubernetes.io/pod-name: geth-0
+  ports:
+    - name: p2p
+      port: 30303
+      protocol: TCP

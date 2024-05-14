@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpc-ingress-svc
+spec:
+  selector:
+    app: relay
+    service: rpc
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8545
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rpc-ingress
+  annotations:
+    cert-manager.io/issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rpc.eigenda.xyz
+    secretName: rpc-tls
+  rules:
+  - host: rpc.eigenda.xyz
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: rpc-ingress-svc
+            port:
+              number: 80

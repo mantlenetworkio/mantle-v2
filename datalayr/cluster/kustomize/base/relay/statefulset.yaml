@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: relay
+  labels:
+    app: relay
+spec:
+  serviceName: relay
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: relay
+  volumeClaimTemplates:
+    - metadata:
+        name: relay-data
+        labels:
+          owner: relay
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 128Gi
+  template:
+    metadata:
+      labels:
+        app: relay
+        ver: "0.2"
+    spec:
+      volumes:
+        - name: place-holder
+          emptyDir: {}
+        - name: chain-genesis
+          configMap:
+            name: chain-genesis
+        - name: relay-start-script
+          configMap:
+            name: relay-start-script
+      containers:
+        - name: relay
+          image: ethereum/client-go:v1.10.17
+          imagePullPolicy: Always
+          startupProbe:
+            periodSeconds: 1
+            failureThreshold: 300
+            exec:
+              command:
+              - sh
+              - -c
+              - "[ -e /relay-data/geth.ipc ]"
+          readinessProbe:
+            periodSeconds: 5
+            failureThreshold: 12
+            tcpSocket:
+              port: 8545
+          livenessProbe:
+            initialDelaySeconds: 10
+            failureThreshold: 12
+            periodSeconds: 5
+            exec:
+              command:
+              - sh
+              - -c
+              - "geth attach /relay-data/geth.ipc --exec eth.blockNumber"
+          volumeMounts:
+            - name: relay-data
+              mountPath: /relay-data
+            - name: chain-genesis
+              mountPath: /chain-genesis
+            - name: relay-start-script
+              mountPath: /relay-start-script
+          env:
+            - name: SEALER_ENODE
+              valueFrom:
+                configMapKeyRef:
+                  name: sealer-config
+                  key: SEALER_ENODE_ENV
+          # ToDo opening admin ports to public is considered unsafe. Geth does not seem to offer different IP for different API. We can use AWS security group to restrict sources only from dl-nodes
+          command:
+            - /bin/sh
+            - -c
+            - |
+              ordinal=${HOSTNAME##*-} ; \
+              P2P_PORT=$((31500 + $ordinal * 2))
+              echo $P2P_PORT > /p2p_port ; \
+              echo ${SEALER_ENODE} > /sealer_enode ; \
+              /bin/sh /relay-start-script/start.sh

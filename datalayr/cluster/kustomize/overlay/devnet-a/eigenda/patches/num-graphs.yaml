@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dl-disperser
+spec:
+  template:
+    spec:
+      containers:
+        - name: dl-disperser
+          env:
+            - name: NUM_CLUSTER_GRAPH
+              value: "4"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dl-retriever
+spec:
+  template:
+    spec:
+      containers:
+        - name: dl-retriever
+          env:
+            - name: NUM_CLUSTER_GRAPH
+              value: "4"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dl-node
+spec:
+  template:
+    spec:
+      containers:
+        - name: dl-node
+          env:
+            - name: NUM_CLUSTER_GRAPH
+              value: "4"

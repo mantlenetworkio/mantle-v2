@@ -1,0 +1,52 @@
+
+**/node_modules
+
+*binding.go
+
+**/bin/
+.env
+***/*.env
+*.log
+*.swp
+
+data
+
+integration/explorer/redis-data
+integration/explorer/postgres-data
+integration/geth-node/secret
+integration/prom-grafana/prometheus-yaml-gen/cmd
+
+cluster/github_users.json
+cluster/github_users
+cluster/kustomize/base/chain/config/prod-chain/secret
+
+contracts/**/lib/**
+contracts/**/out
+contracts/**/cache
+contracts/**/broadcast
+
+contracts/**/lib/**
+contracts/**/out
+contracts/**/cache
+contracts/**/broadcast
+
+# Go specific .gitignore
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.pyc
+*.old
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+# go.work
+.idea

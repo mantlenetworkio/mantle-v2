@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docs
+  labels:
+    app: docs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docs
+  template:
+    metadata:
+      labels:
+        app: docs
+        oauth2: ""
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: docs
+        image: ghcr.io/layr-labs/datalayr-docs:latest
+        imagePullPolicy: Always
+      - name: oauth2-proxy
+        image: bitnami/oauth2-proxy:7.4.0
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: docs-oauth2
+        args:
+        - --http-address=:4181
+        - --reverse-proxy=true
+        - --upstream=http://127.0.0.1:80
+        - --logging-local-time=true
+        - --logging-compress=false
+        - --standard-logging=true
+        - --standard-logging-format=[{{.Timestamp}}] [{{.File}}] {{.Message}}
+        - --request-logging=true
+        - --request-logging-format={{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+        - --auth-logging=true
+        - --auth-logging-format={{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+        - --email-domain=*
+        - --provider=github
+        - --scope=user:email
+        - --cookie-secure=true

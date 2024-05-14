@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v1.5.0
+          imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -c
+            - |
+              prometheus '--config.file=/etc/prometheus/prometheus-eigenda/prometheus.yml'
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/prometheus-eigenda

@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: blockscout
+  labels:
+    app: blockscout
+    oauth2: ""
+spec:
+  serviceName: blockscout
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: blockscout
+  volumeClaimTemplates:
+    - metadata:
+        name: blockscout-data
+        labels:
+          owner: blockscout
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 12Gi
+    - metadata:
+        name: postgres-data
+        labels:
+          owner: blockscout
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 64Gi
+  template:
+    metadata:
+      labels:
+        app: blockscout
+        oauth2: ""
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: bitnami/oauth2-proxy:7.4.0
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: blockscout-oauth2
+          args:
+          - --http-address=:4180
+          - --reverse-proxy=true
+          - --upstream=http://127.0.0.1:4000
+          - --logging-local-time=true
+          - --logging-compress=false
+          - --standard-logging=true
+          - --standard-logging-format=[{{.Timestamp}}] [{{.File}}] {{.Message}}
+          - --request-logging=true
+          - --request-logging-format={{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+          - --auth-logging=true
+          - --auth-logging-format={{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+          - --email-domain=*
+          - --provider=github
+          - --scope=user:email
+          - --cookie-secure=true
+        - name: blockscout-node
+          image: blockscout/blockscout:5.1.0
+          imagePullPolicy: Always
+          env:
+            - name: ETHEREUM_JSONRPC_VARIANT
+              value: "geth"
+            - name: BLOCK_TRANSFORMER
+              value: "clique"
+            - name: ETHEREUM_JSONRPC_HTTP_URL
+              value: "http://relay-svc-0.relay.svc.cluster.local:8545/"
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@localhost:5432/blockscout?ssl=false"
+            - name: ECTO_USE_SSL
+              value: "false"
+            - name: SECRET_KEY_BASE
+              value: "56NtB48ear7+wMSf0IQuWDAAazhpb31qyc7GiyspBP2vh7t5zlCsF5QDv76chXeN"
+            - name: RUST_VERIFICATION_SERVICE_URL
+              value: http://localhost:8043/
+          envFrom:
+            - configMapRef:
+                name: blockscout-config
+          command:
+            - /bin/bash
+            - -c
+            - |
+              sleep 6 ; \
+              bin/blockscout eval "Elixir.Explorer.ReleaseTasks.create_and_migrate()" ; \
+              bin/blockscout start
+        - name: postgres
+          image: postgres:14
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5432
+          command:
+            - /bin/bash
+            - -c
+            - |
+              docker-entrypoint.sh -c 'shared_buffers=256MB' -c 'max_connections=200' -cshared_preload_libraries=pg_stat_statements
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: blockscout
+          resources:
+            limits:
+              memory: "8Gi"
+
+        - name: smart-contract-verifier
+          image: ghcr.io/blockscout/smart-contract-verifier:v0.6.0
+          envFrom:
+            - configMapRef:
+                name: smart-contract-verifier-config
+
+

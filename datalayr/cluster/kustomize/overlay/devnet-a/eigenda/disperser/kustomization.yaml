@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../../base/disperser/
+replicas:
+- count: 4
+  name: dl-disperser
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/0
+      value:
+        name: dl-disperser-0
+        mountPath: /dl-disperser-0
+    - op: add
+      path: /spec/template/spec/volumes/0
+      value:
+        name: dl-disperser-0
+        configMap:
+          name: dl-disperser-0
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-disperser
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/1
+      value:
+        name: dl-disperser-1
+        mountPath: /dl-disperser-1
+    - op: add
+      path: /spec/template/spec/volumes/1
+      value:
+        name: dl-disperser-1
+        configMap:
+          name: dl-disperser-1
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-disperser
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/2
+      value:
+        name: dl-disperser-2
+        mountPath: /dl-disperser-2
+    - op: add
+      path: /spec/template/spec/volumes/2
+      value:
+        name: dl-disperser-2
+        configMap:
+          name: dl-disperser-2
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-disperser
+    version: v1
+- patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/volumeMounts/3
+      value:
+        name: dl-disperser-3
+        mountPath: /dl-disperser-3
+    - op: add
+      path: /spec/template/spec/volumes/3
+      value:
+        name: dl-disperser-3
+        configMap:
+          name: dl-disperser-3
+  target:
+    group: apps
+    kind: StatefulSet
+    name: dl-disperser
+    version: v1

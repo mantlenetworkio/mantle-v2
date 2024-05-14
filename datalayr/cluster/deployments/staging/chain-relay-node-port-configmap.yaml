@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  HTTP_NODE_PORT_0: 34.219.140.73:31501
+  NUM_CHAIN_RELAY: "1"
+  P2P_NODE_PORT_0: 34.219.140.73:31500
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: chain-relay-node-port

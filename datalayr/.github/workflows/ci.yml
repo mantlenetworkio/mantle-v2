@@ -1,0 +1,235 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - 'master'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'master'
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: dl-disperser/Dockerfile
+            image: ghcr.io/layr-labs/datalayr/dl-disperser
+            name: dl-disperser
+          - dockerfile: dl-node/Dockerfile
+            image: ghcr.io/layr-labs/datalayr/dl-node
+            name: dl-node
+          - dockerfile: dl-retriever/Dockerfile
+            image: ghcr.io/layr-labs/datalayr/dl-retriever
+            name: dl-retriever
+          - dockerfile: middleware/rollup-example/challenger/Dockerfile
+            image: ghcr.io/layr-labs/datalayr/rollup-challenger
+            name: rollup-challenger
+          - dockerfile: middleware/rollup-example/sequencer/Dockerfile
+            image: ghcr.io/layr-labs/datalayr/rollup-sequencer
+            name: rollup-sequencer
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set Environment Variables
+        run: |
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "REPOSITORY_OWNER=${OWNER}" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Clone EL contracts
+        uses: actions/checkout@v3
+        with:
+          repository: Layr-Labs/eignlayr-contracts
+          path: contracts/eignlayr-contracts
+          ssh-key: ${{ secrets.EIGENLAYR_DEPLOY_KEY }}
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Update Submodule Commits
+        run: |
+          git submodule update --init --recursive contracts/eignlayr-contracts
+
+      - name: Install geth
+        run: |
+          sudo add-apt-repository -y ppa:ethereum/ethereum
+          sudo apt-get update
+          sudo apt-get -y install ethereum
+
+      - name: Get geth version
+        run: geth version
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Get Forge version
+        run: forge --version
+
+      - name: Compile contracts
+        run: |
+          make compile-el
+          make compile-and-test-dl
+          make compile-rollup
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4.1.1
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2.2.1
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3.2.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,ref=${{ env.REPOSITORY_OWNER }}/${{ github.event.repository.name }}/${{ matrix.name }}:buildcache
+          cache-to: type=gha,ref=${{ env.REPOSITORY_OWNER }}/${{ github.event.repository.name }}/${{ matrix.name }}:buildcache,mode=max
+
+  deploy-integration:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read
+    if: contains(github.ref, 'refs/tags/') || contains(github.ref, 'heads')
+    needs:
+      - build-and-push-image
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.18' # The Go version to download (if necessary) and use.
+      - run: |
+          go version
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.2.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Clone EL contracts
+        uses: actions/checkout@v3
+        with:
+          repository: Layr-Labs/eignlayr-contracts
+          path: contracts/eignlayr-contracts
+          ssh-key: ${{ secrets.EIGENLAYR_DEPLOY_KEY }}
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Update Submodule Commits
+        run: |
+          git submodule update --init --recursive contracts/eignlayr-contracts
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install geth
+        run: |
+          sudo add-apt-repository -y ppa:ethereum/ethereum
+          sudo apt-get update
+          sudo apt-get -y install ethereum
+
+      - name: Get geth version
+        run: geth version
+
+      - name: Get Forge version
+        run: forge --version
+
+      - name: yq - portable yaml processor
+        uses: mikefarah/yq@v4.29.2
+
+      - name: Compile contracts
+        run: |
+          make compile-el
+          make compile-dl
+          make compile-rollup
+
+      - name: Configure Kubectl
+        uses: azure/setup-kubectl@v2.0
+        with:
+          version: 'v1.25.3'
+        id: install
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::844660611549:role/int-datalayr-admin-access
+
+      # The following command will update the kube config file with our cluster information.
+      - name: Update Kubeconfig
+        run: |
+          aws eks update-kubeconfig --name int --region=us-east-1
+
+      - name: Get pods
+        run: kubectl get pods
+
+      - name: Deploy contracts to cluster
+        working-directory: cluster
+        run: |
+          RPC_URL="http://$(./geth_relay_rpc_url.sh)"
+          url=$RPC_URL yq -i '.deployers[0].rpc = env(url)' kustomize/overlay/int/config.yaml
+
+          # Deploy contracts and intialize the participants
+          ./infra-kd.sh int us-east-1 run-dev-relay 1 1
+          ./go-eigenda-kd.sh int us-east-1 deploy-eigenlayer
+          ./go-eigenda-kd.sh int us-east-1 gen-config-maps
+          ./go-eigenda-kd.sh int us-east-1 run-graph 1 v0.0.3 false
+          ./go-eigenda-kd.sh int us-east-1 run-eigenda 1 1 sha-$(git rev-parse --short=7 HEAD) point-3000 false
+
+          # Restart the graph
+          kubectl rollout restart statefulset graph
+
+          # Restart statefulsets
+          kubectl rollout restart statefulset dl-disperser
+          kubectl rollout restart statefulset dl-retriever
+          kubectl rollout restart statefulset dl-node
+
+          kubectl rollout status statefulset graph
+          kubectl rollout status statefulset dl-disperser
+          kubectl rollout status statefulset dl-retriever
+          kubectl rollout status statefulset dl-node
+
+      - name: Run integration tests
+        working-directory: cluster
+        run: ./run-integration.sh int
+
+

@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+commonLabels:
+  app: dl-node
+configMapGenerator:
+- envs:
+  - dl-node-0.env
+  name: dl-node-0
+- envs:
+  - dl-node-1.env
+  name: dl-node-1
+- envs:
+  - dl-node-2.env
+  name: dl-node-2
+- envs:
+  - dl-node-3.env
+  name: dl-node-3
+generatorOptions:
+  disableNameSuffixHash: true

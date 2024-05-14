@@ -1,0 +1,53 @@
+environment:
+  name: "staging"
+  type: "local"
+
+deployers:
+- name: "default"
+  rpc: http://${HOST_IP}:8545
+  verifyContracts: false
+  verifierUrl: http://localhost:4000/api
+  slow: false
+- name: "seq0"
+  rpc: http://${HOST_IP}:8545
+  verifyContracts: false
+  verifierUrl: http://localhost:4000/api
+  slow: false
+
+eigenlayer:
+  deployer: "default"
+
+eigenda:
+  deployer: "default"
+
+rollup:
+  deployer: "seq0"
+
+privateKeys:
+  file: ./geth-node/secret/private-keys.txt
+
+services:
+  counts:
+    dispersers: 1
+    operators: 8
+    retrievers: 1
+    rollupSequencers: 0
+    rollupChallengers: 0
+  stakes:
+    total: 100e18
+    distribution: [1, 1, 1, 1, 1, 1, 1, 1]
+  basePort: 32000
+  variables:
+    globals:
+      HOSTNAME: ${HOST_IP}
+      TIMEOUT: 20s
+      CHAIN_RPC: http://${HOST_IP}:8545
+      CHAIN_ID: 40525
+      GRAPH_PROVIDER: http://${HOST_IP}:8000/subgraphs/name/datalayr
+      G1_PATH: data/kzg/g1.point
+      G2_PATH: data/kzg/g2.point
+      CACHE_PATH: data/kzg/SRSTables
+      SRS_ORDER: 3000
+      CHALLENGE_ORDER: 3000
+      STD_LOG_LEVEL: "trace"
+      VERBOSE: true

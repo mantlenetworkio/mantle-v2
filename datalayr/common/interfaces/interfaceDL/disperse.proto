@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+option go_package = "github.com/Layr-Labs/datalayr/common/interfaces/interfaceDL";
+package interfaceDL;
+
+service DataDispersal {
+	rpc EncodeStore(EncodeStoreRequest) returns (EncodeStoreReply) {}
+	rpc DisperseStore(DisperseStoreRequest) returns (DisperseStoreReply) {}
+	rpc EncodeAndDisperseStore(EncodeStoreRequest) returns (EncodeAndDisperseStoreReply) {}
+	rpc StoreFrame(StoreFrameRequest) returns (StoreFrameReply) {}
+	rpc StoreFrames(StoreFramesRequest) returns (StoreFrameReply) {}
+	rpc RetrieveFrame(RetrieveFrameRequest) returns (stream RetrieveFrameReply) {}
+	rpc ChallengeCoding(CodingChallengeRequest) returns (ChallengeReply) {}
+	rpc ChallengePayment(PaymentChallengeRequest) returns (ChallengeReply) {}
+	// rpc PushLeaverFrames(PushLeaverFramesRequest) returns (PushLeaverFramesReply) {}
+	// rpc PullLeaverFrames(PullLeaverFramesRequest) returns (PullLeaverFramesReply) {}
+	// rpc PushNewComerFrames(PushNewComerFramesRequest) returns (PushNewComerFramesReply) {}
+}
+
+
+
+message EncodeStoreRequest {
+	uint64 Duration = 1;
+	bytes Data = 2;
+	uint32 BlockNumber = 3;
+}
+
+message StoreParams {
+
+	// Store Params
+	uint32 ReferenceBlockNumber = 15;
+	uint32 TotalOperatorsIndex = 16;
+	uint32 OrigDataSize = 1;
+	uint32 NumTotal = 2;
+	uint32 Quorum = 3;
+	uint32 NumSys = 4;
+	uint32 NumPar = 5;
+	uint32 Duration = 6;
+
+	// Data and Encoding
+	bytes KzgCommit = 7;
+	bytes LowDegreeProof = 8;
+	uint32 Degree = 9;
+	uint64 TotalSize = 10;
+	repeated uint32 Order = 11;
+
+	// Chain
+	bytes Fee = 12;
+	bytes HeaderHash = 13;
+	bytes Disperser = 14;
+}
+
+message EncodeStoreReply {
+  //enum EncodeStoreStatus {
+		//OK = 0;
+    //Err = 1;
+  //}
+	StoreParams store = 1;
+	// EncodeStoreStatus status = 2;
+}
+
+message DisperseStoreRequest {
+	bytes HeaderHash = 1;
+	bytes MessageHash = 2;
+}
+
+message AggregateSignature{
+	bytes AggSig = 1;
+	bytes StoredAggPubkeyG1 = 2;
+	bytes UsedAggPubkeyG2 = 3;
+	repeated bytes NonSignerPubkeys = 4;
+}
+
+message DisperseStoreReply {
+  //enum Status {
+    //OK = 0;
+    //Err = 1;
+  //}
+  //Status status = 1;
+	AggregateSignature sigs = 1;
+	uint32 ApkIndex = 2;
+	uint64 TotalStakeIndex = 3;
+}
+
+message EncodeAndDisperseStoreReply {
+	StoreParams store = 1;
+	AggregateSignature sigs = 2;
+	bytes msgHash = 3;
+	uint32 storeId = 4;
+}
+
+message StoreFrameRequest {
+	bytes msgHash = 1;
+	bytes frame = 3;
+}
+
+message StoreFramesRequest {
+	bytes msgHash = 1;
+	repeated bytes frame = 3;
+}
+
+message StoreFrameReply {
+	bytes signature = 1;
+}
+
+message RetrieveFrameRequest {
+	bytes commit = 1;
+}
+
+message RetrieveFrameReply {
+	bytes frame = 1;
+}
+
+message CodingChallengeRequest {
+	bytes commit = 1;
+	repeated bytes frames = 2;
+}
+
+message PaymentChallengeRequest {
+	string address = 1;
+}
+
+message ChallengeReply {
+	enum ChallengeStatus {
+		AGREE = 0;
+		DISAGREE = 1;
+    	INTERNALERR = 2;
+	}
+	ChallengeStatus status = 1;
+	bytes signature = 2;
+}
+
+// message PushLeaverFramesRequest {
+// 	int64 registryId = 1;
+// 	repeated bytes frames = 2;
+// }
+
+// message PushLeaverFramesReply {
+// 	enum PushLeaverFramesStatus {
+// 		ACCEPTED = 0;
+// 		REJECTED = 1;
+// 		INTERNALERR = 2;
+// 	}
+
+// 	PushLeaverFramesStatus status = 1;
+// }
+
+// // TODO sign is better
+// message PullLeaverFramesRequest {
+// 	uint32 registryId = 1;
+// }
+
+// message PullLeaverFramesReply {
+// 	enum PullLeaverFramesStatus {
+// 		ACCEPTED = 0;
+// 		REJECTED = 1;
+// 		INTERNALERR = 2;
+// 	}
+// 	repeated bytes frames = 1;
+// 	PullLeaverFramesStatus status = 2;
+	
+// }
+
+// message PushNewComerFramesRequest {
+// 	int64 registryId = 1;
+// 	int64 leaverId = 2;
+// }
+
+// message PushNewComerFramesReply {
+// 	enum PushNewComerFramesReplyStatus {
+// 		Ok = 0;
+// 		WrongSocket = 1;
+//     Empty = 2;
+// 		Expired = 3;
+// 	}
+
+// 	PushNewComerFramesReplyStatus status = 1;
+// 	repeated bytes frames = 2;
+// }
+
+// message PullNewComerFramesRequest {
+// 	int64 registryId = 1;
+// 	int64 leaverId = 2;
+// }
+
+// message PullNewComerFramesReply {
+// 	enum PullNewComerFramesReplyStatus {
+// 		Ok = 0;
+// 		WrongSocket = 1;
+//     Empty = 2;
+// 		Expired = 3;
+// 	}
+
+// 	PullNewComerFramesReplyStatus status = 1;
+// 	repeated bytes frames = 2;
+// }

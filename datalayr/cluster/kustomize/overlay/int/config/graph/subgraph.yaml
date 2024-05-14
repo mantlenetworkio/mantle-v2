@@ -1,0 +1,73 @@
+dataSources:
+    - kind: ethereum
+      mapping:
+        abis:
+            - file: ./abis/BLSRegistry.json
+              name: BLSRegistry
+        apiVersion: 0.0.7
+        entities:
+            - Registration
+        eventHandlers:
+            - event: Registration(indexed address,bytes32,(uint256,uint256),uint32,bytes32,string)
+              handler: handleRegistration
+            - event: SocketUpdate(address,string)
+              handler: handleSocketUpdate
+        blockHandlers: []
+        file: ./src/bls-registry.ts
+        kind: ethereum/events
+        language: wasm/assemblyscript
+      name: BLSRegistry
+      network: mainnet
+      source:
+        abi: BLSRegistry
+        address: Dfc6B2E0d3cfEbE88bd51186c9dD3cf302E1cdD7
+        startBlock: 94
+    - kind: ethereum
+      mapping:
+        abis:
+            - file: ./abis/DataLayrServiceManager.json
+              name: DataLayrServiceManager
+        apiVersion: 0.0.7
+        entities:
+            - ConfirmDataStore
+            - InitDataStore
+            - SignatoryRecord
+        eventHandlers:
+            - event: InitDataStore(address,((bytes32,uint32,uint32,uint32,uint32,uint96,address,bytes32),uint8,uint256,uint32),bytes)
+              handler: handleInitDataStore
+            - event: SignatoryRecord(bytes32,uint32,uint256,uint256,bytes32[])
+              handler: handleSignatoryRecord
+        blockHandlers: []
+        file: ./src/dl-service-manager.ts
+        kind: ethereum/events
+        language: wasm/assemblyscript
+      name: DataLayrServiceManager
+      network: mainnet
+      source:
+        abi: DataLayrServiceManager
+        address: 4C2c0Dc54379Fd5777c6086a3c5FfF9c5C5a4422
+        startBlock: 94
+    - kind: ethereum
+      mapping:
+        abis:
+            - file: ./abis/BLSPublicKeyCompendium.json
+              name: BLSPublicKeyCompendium
+        apiVersion: 0.0.7
+        entities:
+            - NewPubkeyRegistration
+        eventHandlers:
+            - event: NewPubkeyRegistration(address,(uint256,uint256),(uint256[2],uint256[2]))
+              handler: handleNewPubkeyRegistration
+        blockHandlers: []
+        file: ./src/bls-pubkey-compendium.ts
+        kind: ethereum/events
+        language: wasm/assemblyscript
+      name: BLSPublicKeyCompendium
+      network: mainnet
+      source:
+        abi: BLSPublicKeyCompendium
+        address: bc311a461b5a217042ae28BC698B7Ea7200E1Fc8
+        startBlock: 94
+schema:
+    file: ./schema.graphql
+specVersion: 0.0.5

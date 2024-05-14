@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../../base/blobs/
+configMapGenerator:
+- envs:
+  - config/blobs-oauth2.env
+  name: blobs-oauth2
+generatorOptions:
+  disableNameSuffixHash: true
+images:
+- name: blobs
+  name: ghcr.io/layr-labs/datalayr-explorer
+  newTag: 0.0.1

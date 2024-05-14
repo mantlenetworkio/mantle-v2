@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: blockscout-svc
+spec:
+  type: ClusterIP
+  selector:
+    statefulset.kubernetes.io/pod-name: blockscout-0
+  ports:
+  - name: http
+    port: 4000
+    targetPort: 4000
+  - name: postgres
+    port: 5432

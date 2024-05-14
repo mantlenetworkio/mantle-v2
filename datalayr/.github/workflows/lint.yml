@@ -1,0 +1,105 @@
+name: lint
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  golangci:
+    name: Linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.18' # The Go version to download (if necessary) and use.
+      - run: go version
+
+      - name: Checkout DataLayr
+        uses: actions/checkout@v3
+
+      - name: Clone EL contracts
+        uses: actions/checkout@v2
+        with:
+          repository: Layr-Labs/eignlayr-contracts
+          path: contracts/eignlayr-contracts
+          ssh-key: ${{ secrets.EIGENLAYR_DEPLOY_KEY }}
+          submodules: recursive
+          persist-credentials: true
+
+      - name: Update Submodule Commits
+        run: |
+          git submodule update --init --recursive contracts/eignlayr-contracts
+
+      - name: Install geth
+        run: |
+          sudo add-apt-repository -y ppa:ethereum/ethereum
+          sudo apt-get update
+          sudo apt-get -y install ethereum
+
+      - name: Get geth version
+        run: geth version
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Get Forge version
+        run: forge --version
+
+      - name: Compile contracts
+        run: |
+          make compile-el
+          make compile-dl
+
+      - name: golangci-lint common
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: common
+          args: --issues-exit-code=0
+
+      - name: golangci-lint dl-disperser
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: dl-disperser
+          args: --issues-exit-code=0
+
+      - name: golangci-lint dl-node
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: dl-node
+          args: --issues-exit-code=0
+
+      - name: golangci-lint dl-retriever
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: dl-retriever
+          args: --issues-exit-code=0
+
+      - name: golangci-lint integration
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: integration
+          args: --issues-exit-code=0
+
+      - name: golangci-lint lib/encoding
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: lib/encoding
+          args: --issues-exit-code=0
+
+      - name: golangci-lint lib/merkzg
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: lib/merkzg
+          args: --issues-exit-code=0

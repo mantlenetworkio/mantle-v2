@@ -1,0 +1,37 @@
+environment:
+  name: "devnet-a"
+  type: "cluster"
+
+deployers:
+- name: "default"
+  rpc: http://rpc.eigenda.xyz
+  verifyContracts: false
+  verifierUrl: http://localhost:4000/api
+
+eigenlayer:
+  deployer: "default"
+
+eigenda:
+  deployer: "default"
+
+privateKeys:
+  file: ../cluster/kustomize/base/chain/config/dev-chain/secret/private-keys.txt
+
+services:
+  counts:
+    dispersers: 1
+    operators: 4
+    retrievers: 1
+  basePort: 32000
+  variables:
+    globals:
+      HOSTNAME: 172.18.0.1
+      TIMEOUT: 20s
+      CHAIN_RPC: http://127.0.0.1:8545
+      CHAIN_ID: 40525
+      GRAPH_PROVIDER: http://117.0.0.1:8000/subgraphs/name/datalayr
+      G1_PATH: /data/kzg/g1.point
+      G2_PATH: /data/kzg/g2.point
+      CACHE_PATH: /data/kzg/SRSTables
+      SRS_ORDER: 3000
+      CHALLENGE_ORDER: 3000

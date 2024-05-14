@@ -1,0 +1,99 @@
+type DataStore @entity {
+	id: ID!
+	durationDataStoreId: BigInt!
+	storeNumber: BigInt!
+	index: BigInt!
+	dataCommitment: Bytes!
+	lastUpdated: 	BigInt!
+
+  	# init data store
+	msgHash: Bytes!
+	referenceBlockNumber: BigInt!
+  	initTime: BigInt!
+	expireTime: BigInt!
+	duration: Int!
+	storePeriodLength: BigInt!
+	fee: BigInt!
+	initTxHash: Bytes!
+	initGasUsed: BigInt!
+  	initBlockNumber: BigInt!
+	confirmer: String!
+
+	# header
+	header: Bytes!
+	headerHash: Bytes!
+	disperser: Bytes!
+	kzgCommit: Bytes!
+	lowDegreeProof: Bytes!
+	origDataSize: BigInt!
+	degree: BigInt!
+	numPar: BigInt!
+	numSys: BigInt!
+
+  	# confirmation
+	confirmed: Boolean!
+	ethSigned:      BigInt
+	eigenSigned:    BigInt
+	confirmTxHash:  Bytes
+	confirmGasUsed: BigInt
+	nonSignerPubKeyHashes:   [Bytes!]
+	signatoryRecord: Bytes
+}
+
+type OperatorPublicKeys @entity {
+	id: ID!
+	pubkeyHash: Bytes!
+	pubkeyG1: [BigInt!]!
+	pubkeyG2: [BigInt!]!
+}
+
+type Operator @entity {
+	id: ID!
+	socket: String!
+	pubkeys: OperatorPublicKeys!
+  fromBlockNumber: BigInt!
+	toBlockNumber: BigInt!
+	stakeHistory: [OperatorStake!]! @derivedFrom(field: "operator")
+	indexHistory: [OperatorIndex!]! @derivedFrom(field: "operator")
+  status: Int!
+  stakeHistoryIds: [String!]!
+  indexHistoryIds: [String!]!
+}
+
+type OperatorStake @entity {
+	id: ID!
+	operator: Operator!
+	toBlockNumber: BigInt!
+	mantleFirstStake: BigInt!
+	mantleSencodStake: BigInt!
+}
+
+type OperatorIndex @entity {
+	id: ID!
+	operator: Operator!
+	toBlockNumber: BigInt!
+	index: BigInt!
+}
+
+type Total @entity {
+	id: ID!
+	stakeHistory: [TotalStake!]!
+	indexHistory: [TotalOperator!]!
+}
+
+type TotalStake @entity {
+	id: ID!
+	toBlockNumber: BigInt!
+	mantleFirstStake: BigInt!
+	mantleSencodStake: BigInt!
+	index: Int!
+}
+
+type TotalOperator @entity {
+	id: ID!
+	toBlockNumber: BigInt!
+	count: BigInt!
+	aggPubKeyHash: Bytes!
+	aggPubKey: [BigInt!]!
+	index: Int!
+}

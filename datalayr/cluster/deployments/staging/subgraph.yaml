@@ -1,0 +1,54 @@
+dataSources:
+  - kind: ethereum
+    mapping:
+      abis:
+        - file: ./abis/BLSRegistryWithBomb.json
+          name: BLSRegistryWithBomb
+      apiVersion: 0.0.7
+      entities:
+        - Registration
+      eventHandlers:
+        - event: Registration(indexed address,bytes32,uint256[4],uint32,bytes32,string)
+          handler: handleRegistration
+        - event: SocketUpdate(address,string)
+          handler: handleSocketUpdate
+      file: ./src/bls-registry-with-bomb.ts
+      kind: ethereum/events
+      language: wasm/assemblyscript
+    name: BLSRegistryWithBomb
+    network: mainnet
+    source:
+      abi: BLSRegistryWithBomb
+      address: '0x13995ee8B4C7A50BDc37454f918219Bd19Ab3d86'
+      startBlock: 0
+  - kind: ethereum
+    mapping:
+      abis:
+        - file: ./abis/DataLayrServiceManager.json
+          name: DataLayrServiceManager
+      apiVersion: 0.0.7
+      blockHandlers:
+        - handler: handleBlock
+      entities:
+        - ConfirmDataStore
+        - InitDataStore
+        - SignatoryRecord
+      eventHandlers:
+        - event: InitDataStore(address,((bytes32,uint32,uint32,uint32,uint96,address,bytes32),uint8,uint256,uint32),bytes)
+          handler: handleInitDataStore
+          receipt: true
+        - event: SignatoryRecord(bytes32,uint32,uint256,uint256,bytes32[])
+          handler: handleSignatoryRecord
+          receipt: true
+      file: ./src/dl-service-manager.ts
+      kind: ethereum/events
+      language: wasm/assemblyscript
+    name: DataLayrServiceManager
+    network: mainnet
+    source:
+      abi: DataLayrServiceManager
+      address: '0xbc7b5f904772e16265EA7125B91FD7CBDBb59E90'
+      startBlock: 0
+schema:
+  file: ./schema.graphql
+specVersion: 0.0.5

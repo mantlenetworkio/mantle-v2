@@ -1,0 +1,18 @@
+{
+  "name": "QmXDs3UikxJBLwPztj3tLhyFuaV51tEftjSY1AHjBUz3CH",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ datalayr",
+    "create-local": "graph create --node http://localhost:8020/ datalayr",
+    "remove-local": "graph remove --node http://localhost:8020/ datalayr",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 datalayr",
+    "meda": "yarn remove-local && yarn create-local && yarn deploy-local",
+    "test": "graph test"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.33.0",
+    "@graphprotocol/graph-ts": "0.27.0"
+  }
+}

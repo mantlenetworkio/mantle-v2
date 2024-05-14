@@ -1,0 +1,12 @@
+go 1.18
+
+use (
+	./common
+	./dl-disperser
+	./dl-node
+	./dl-retriever
+	./integration
+	./lib/encoding
+	./lib/merkzg
+  ./traffic-gen
+)
