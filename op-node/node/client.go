@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
+	sclient "github.com/ethereum-optimism/optimism/op-service/client"
+
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	ssources "github.com/ethereum-optimism/optimism/op-service/sources"
@@ -212,4 +216,57 @@ func (cfg *PreparedL1Endpoint) Check() error {
 	}
 
 	return nil
+}
+
+type L1BeaconEndpointConfig struct {
+	BeaconAddr             string // Address of L1 User Beacon-API endpoint to use (beacon namespace required)
+	BeaconHeader           string // Optional HTTP header for all requests to L1 Beacon
+	BeaconArchiverAddr     string // Address of L1 User Beacon-API Archive endpoint to use for expired blobs (beacon namespace required)
+	BeaconCheckIgnore      bool   // When false, halt startup if the beacon version endpoint fails
+	BeaconFetchAllSidecars bool   // Whether to fetch all blob sidecars and filter locally
+}
+
+var _ L1BeaconEndpointSetup = (*L1BeaconEndpointConfig)(nil)
+
+func (cfg *L1BeaconEndpointConfig) Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsFetcher, err error) {
+	var opts []sclient.BasicHTTPClientOption
+	if cfg.BeaconHeader != "" {
+		hdr, err := parseHTTPHeader(cfg.BeaconHeader)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing beacon header: %w", err)
+		}
+		opts = append(opts, sclient.WithHeader(hdr))
+	}
+
+	a := sclient.NewBasicHTTPClient(cfg.BeaconAddr, log, opts...)
+	if cfg.BeaconArchiverAddr != "" {
+		b := sclient.NewBasicHTTPClient(cfg.BeaconArchiverAddr, log)
+		fb = append(fb, ssources.NewBeaconHTTPClient(b))
+	}
+	return ssources.NewBeaconHTTPClient(a), fb, nil
+}
+
+func (cfg *L1BeaconEndpointConfig) Check() error {
+	if cfg.BeaconAddr == "" && !cfg.BeaconCheckIgnore {
+		return errors.New("expected L1 Beacon API endpoint, but got none")
+	}
+	return nil
+}
+
+func (cfg *L1BeaconEndpointConfig) ShouldIgnoreBeaconCheck() bool {
+	return cfg.BeaconCheckIgnore
+}
+
+func (cfg *L1BeaconEndpointConfig) ShouldFetchAllSidecars() bool {
+	return cfg.BeaconFetchAllSidecars
+}
+
+func parseHTTPHeader(headerStr string) (http.Header, error) {
+	h := make(http.Header, 1)
+	s := strings.SplitN(headerStr, ": ", 2)
+	if len(s) != 2 {
+		return nil, errors.New("invalid header format")
+	}
+	h.Add(s[0], s[1])
+	return h, nil
 }

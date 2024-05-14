@@ -108,5 +108,10 @@ func (cfg *Config) Check() error {
 			return fmt.Errorf("p2p config error: %w", err)
 		}
 	}
+	if cfg.Beacon != nil {
+		if err := cfg.Beacon.Check(); err != nil {
+			return fmt.Errorf("beacon config error: %w", err)
+		}
+	}
 	return nil
 }

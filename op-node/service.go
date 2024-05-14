@@ -102,6 +102,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Sync: *syncConfig,
 		DA:   daCfg,
 	}
+	beacon := NewBeaconEndpointConfig(ctx)
+	if beacon.Check() == nil {
+		cfg.Beacon = beacon
+	}
+
 	if err := cfg.Check(); err != nil {
 		return nil, err
 	}
@@ -116,6 +121,16 @@ func NewL1EndpointConfig(ctx *cli.Context) *node.L1EndpointConfig {
 		RateLimit:        ctx.GlobalFloat64(flags.L1RPCRateLimit.Name),
 		BatchSize:        ctx.GlobalInt(flags.L1RPCMaxBatchSize.Name),
 		HttpPollInterval: ctx.Duration(flags.L1HTTPPollInterval.Name),
+	}
+}
+
+func NewBeaconEndpointConfig(ctx *cli.Context) node.L1BeaconEndpointSetup {
+	return &node.L1BeaconEndpointConfig{
+		BeaconAddr:             ctx.String(flags.BeaconAddr.Name),
+		BeaconHeader:           ctx.String(flags.BeaconHeader.Name),
+		BeaconArchiverAddr:     ctx.String(flags.BeaconArchiverAddr.Name),
+		BeaconCheckIgnore:      ctx.Bool(flags.BeaconCheckIgnore.Name),
+		BeaconFetchAllSidecars: ctx.Bool(flags.BeaconFetchAllSidecars.Name),
 	}
 }
 

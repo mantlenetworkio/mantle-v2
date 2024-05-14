@@ -150,6 +150,22 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 						blobsFetcher: blobsFetcher,
 					}
 				} else {
+					if blobsFetcher == nil && len(blobHashes) > 0 {
+						log.Error("find blob transaction, but blobsFetcher is nil")
+						return &DataSource{
+							open:         false,
+							id:           block,
+							cfg:          cfg,
+							fetcher:      fetcher,
+							syncer:       syncer,
+							metrics:      metrics,
+							log:          log,
+							batcherAddr:  batcherAddr,
+							daClient:     daClient,
+							safeL2Ref:    safeL2Ref,
+							blobsFetcher: blobsFetcher,
+						}
+					}
 					if len(blobHashes) > 0 {
 						// download the actual blob bodies corresponding to the indexed blob hashes
 						blobs, err := blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(block), blobHashes)
@@ -262,6 +278,10 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 					data, blobHashes, err := dataFromEigenDa(ds.cfg, txs, ds.daClient, ds.metrics, log.New("origin", ds.id), ds.batcherAddr)
 					if err != nil {
 						return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+					}
+					if ds.blobsFetcher == nil && len(blobHashes) > 0 {
+						log.Error("find blob transaction, but blobsFetcher is nil")
+						return nil, NewResetError(fmt.Errorf("failed to fetch blobs"))
 					}
 					if len(blobHashes) > 0 {
 						// download the actual blob bodies corresponding to the indexed blob hashes
@@ -444,9 +464,6 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, daClient eig
 					hashes = append(hashes, idh)
 					blobIndex += 1
 				}
-			} else {
-				out = append(out, data)
-				// skip next tx
 			}
 			continue
 		case data[0] == eigenda.DerivationVersionEigenda:

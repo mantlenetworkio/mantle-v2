@@ -260,6 +260,32 @@ var (
 		Value:  "http://da:26658",
 		EnvVar: prefixEnvVar("DA_RPC"),
 	}
+	/* Optional Flags */
+	BeaconAddr = cli.StringFlag{
+		Name:   "l1.beacon",
+		Usage:  "Address of L1 Beacon-node HTTP endpoint to use.",
+		EnvVar: prefixEnvVar("L1_BEACON"),
+	}
+	BeaconHeader = cli.StringFlag{
+		Name:   "l1.beacon-header",
+		Usage:  "Optional HTTP header to add to all requests to the L1 Beacon endpoint. Format: 'X-Key: Value'",
+		EnvVar: prefixEnvVar("L1_BEACON_HEADER"),
+	}
+	BeaconArchiverAddr = cli.StringFlag{
+		Name:   "l1.beacon-archiver",
+		Usage:  "Address of L1 Beacon-node compatible HTTP endpoint to use. This is used to fetch blobs that the --l1.beacon does not have (i.e expired blobs).",
+		EnvVar: prefixEnvVar("L1_BEACON_ARCHIVER"),
+	}
+	BeaconCheckIgnore = cli.BoolFlag{
+		Name:   "l1.beacon.ignore",
+		Usage:  "When false, halts op-node startup if the healthcheck to the Beacon-node endpoint fails.",
+		EnvVar: prefixEnvVar("L1_BEACON_IGNORE"),
+	}
+	BeaconFetchAllSidecars = cli.BoolFlag{
+		Name:   "l1.beacon.fetch-all-sidecars",
+		Usage:  "If true, all sidecars are fetched and filtered locally. Workaround for buggy Beacon nodes.",
+		EnvVar: prefixEnvVar("L1_BEACON_FETCH_ALL_SIDECARS"),
+	}
 )
 
 var requiredFlags = []cli.Flag{
@@ -270,6 +296,11 @@ var requiredFlags = []cli.Flag{
 }
 
 var optionalFlags = []cli.Flag{
+	BeaconAddr,
+	BeaconHeader,
+	BeaconArchiverAddr,
+	BeaconCheckIgnore,
+	BeaconFetchAllSidecars,
 	RollupConfig,
 	Network,
 	L1TrustRPC,
