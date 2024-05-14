@@ -6,9 +6,3 @@
 	url = https://github.com/mds1/multicall
 [submodule "lib/multicall"]
 	branch = v3.1.0
-[submodule "mantleda-datalayr"]
-	path = mantleda-datalayr
-	url = https://github.com/mantle-xyz/mantleDA-datalayr.git
-[submodule "mantleda-contracts"]
-	path = mantleda-contracts
-	url = https://github.com/mantle-xyz/mantleDA-contracts.git
