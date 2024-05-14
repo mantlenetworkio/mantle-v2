@@ -1,7 +1,0 @@
-**/node_modules
-
-generated/
-build/
-
-/subgraph.yaml
-/networks.json

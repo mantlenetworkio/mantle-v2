@@ -1,3 +1,0 @@
-environment:
-  name: "staging"
-  type: "cluster"

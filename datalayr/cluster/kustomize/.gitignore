@@ -1,3 +1,0 @@
-!base/***/*.env
-!***/chain-relay-node-port.env
-!***/dl-nodes-ip-map.env
