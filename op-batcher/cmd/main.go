@@ -35,7 +35,6 @@ func main() {
 			Subcommands: doc.Subcommands,
 		},
 	}
-
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Crit("Application failed", "message", err)

@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
@@ -46,7 +47,8 @@ type BatchSubmitter struct {
 	lastStoredBlock eth.BlockID
 	lastL1Tip       eth.L1BlockRef
 
-	state *channelManager
+	state   *channelManager
+	eigenDA eigenda.IEigenDA
 }
 
 // NewBatchSubmitterFromCLIConfig initializes the BatchSubmitter, gathering any resources
@@ -104,6 +106,11 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
+		EigenDA: eigenda.Config{
+			RPC:                      cfg.EigenDAConfig.RPC,
+			StatusQueryTimeout:       cfg.EigenDAConfig.StatusQueryTimeout,
+			StatusQueryRetryInterval: cfg.EigenDAConfig.StatusQueryRetryInterval,
+		},
 	}
 
 	// Validate the batcher config
@@ -158,7 +165,11 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 	return &BatchSubmitter{
 		Config: cfg,
 		txMgr:  cfg.TxManager,
-		state:  NewChannelManager(l, m, cfg.Channel),
+		state:  NewChannelManager(l, m, cfg.Channel, cfg.Rollup),
+		eigenDA: &eigenda.EigenDA{
+			Config: cfg.EigenDA,
+			Log:    l,
+		},
 	}, nil
 
 }

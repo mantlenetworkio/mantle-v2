@@ -1,7 +1,10 @@
 package derive
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -19,6 +22,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 )
 
 type testTx struct {
@@ -144,3 +148,27 @@ func TestRLPEncodeDecodeEthData(t *testing.T) {
 	err = rlp.DecodeBytes(bz, &dataL)
 	require.NoError(t, err)
 }
+
+func TestRetrieveBlob(t *testing.T) {
+	da := eigenda.EigenDA{
+		Config: eigenda.Config{
+			RPC: "disperser-holesky.eigenda.xyz:443",
+		},
+
+		Log: log.New(context.Background()),
+	}
+	//req, _ := base64.StdEncoding.DecodeString("OTlmNjlkMmVkM2MyNjhhNGIwYjYwMWZhZGFlMWUyZDE5NDFhNmZmNDc2ZGVkZTAxNDNhYzA1MTE3ZTczNTUxMy0zMTM3MzEzNTM0MzEzNjM5MzMzNDMyMzUzNzMzMzUzNzMwMzAzMjJmMzAyZjMzMzMyZjMxMmYzMzMzMmZlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1")
+	//da.GetBlobStatus(context.Background(), req)
+
+	batchHeaderHashHex, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
+	fmt.Printf("%x\n", batchHeaderHashHex)
+	data, err := da.RetrieveBlob(context.Background(), batchHeaderHashHex, 207)
+	if err != nil {
+		t.Errorf("RetrieveBlob err:%v", err)
+		return
+	}
+	fmt.Printf("RetrieveBlob %d\n", len(data))
+}
+
+//914019ca6da22a54263a49bdc740a0e3640b060ac5127b2cbd0d69deeb336298
+//669AF59E4827077102146302CA7F6D839CC6B9CC92710A1A6145771A76249446

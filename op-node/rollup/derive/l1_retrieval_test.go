@@ -35,7 +35,7 @@ type MockDataSource struct {
 	mock.Mock
 }
 
-func (m *MockDataSource) OpenData(ctx context.Context, id eth.BlockID, batcherAddr common.Address) DataIter {
+func (m *MockDataSource) OpenData(ctx context.Context, id eth.L1BlockRef, batcherAddr common.Address) DataIter {
 	out := m.Mock.MethodCalled("OpenData", id, batcherAddr)
 	return out[0].(DataIter)
 }

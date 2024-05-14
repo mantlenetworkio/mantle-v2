@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
@@ -64,6 +65,7 @@ type Config struct {
 
 	// Channel builder parameters
 	Channel ChannelConfig
+	EigenDA eigenda.Config
 }
 
 // Check ensures that the [Config] is valid.
@@ -159,6 +161,7 @@ type CLIConfig struct {
 	CompressorConfig compressor.CLIConfig
 
 	EigenLogConfig logging.Config
+	EigenDAConfig  eigenda.CLIConfig
 }
 
 func (c CLIConfig) Check() error {
@@ -175,6 +178,9 @@ func (c CLIConfig) Check() error {
 		return err
 	}
 	if err := c.TxMgrConfig.Check(); err != nil {
+		return err
+	}
+	if err := c.EigenDAConfig.Check(); err != nil {
 		return err
 	}
 	return nil
@@ -209,5 +215,6 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		PprofConfig:            oppprof.ReadCLIConfig(ctx),
 		CompressorConfig:       compressor.ReadCLIConfig(ctx),
 		EigenLogConfig:         logging.ReadCLIConfig(ctx),
+		EigenDAConfig:          eigenda.ReadCLIConfig(ctx),
 	}
 }

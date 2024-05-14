@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 )
 
@@ -18,6 +19,8 @@ type Config struct {
 	L1     L1EndpointSetup
 	L2     L2EndpointSetup
 	L2Sync L2SyncEndpointSetup
+
+	Beacon L1BeaconEndpointSetup
 
 	Driver driver.Config
 
@@ -45,6 +48,8 @@ type Config struct {
 	Heartbeat HeartbeatConfig
 
 	Sync sync.Config
+
+	DA eigenda.Config
 }
 
 type RPCConfig struct {

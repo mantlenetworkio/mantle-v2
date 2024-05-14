@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
 	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 
 	"github.com/urfave/cli"
@@ -63,6 +64,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	syncConfig := NewSyncConfig(ctx)
 
+	daCfg, err := NewEigenDAConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load da config: %w", err)
+	}
+
 	cfg := &node.Config{
 		L1:     l1Endpoint,
 		L2:     l2Endpoint,
@@ -94,6 +100,7 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		},
 		Sync: *syncConfig,
+		DA:   daCfg,
 	}
 	if err := cfg.Check(); err != nil {
 		return nil, err
@@ -227,4 +234,12 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 		EngineSync:         ctx.Bool(flags.L2EngineSyncEnabled.Name),
 		SkipSyncStartCheck: ctx.Bool(flags.SkipSyncStartCheck.Name),
 	}
+}
+
+func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
+	rpc := ctx.String(flags.DARPC.Name)
+	return eigenda.Config{
+		RPC: rpc,
+		// Can leave everything else unfilled for the node
+	}, nil
 }

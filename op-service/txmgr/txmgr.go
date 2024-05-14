@@ -10,23 +10,42 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum-optimism/optimism/l2geth/params"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/holiman/uint256"
 
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 )
 
-// Geth defaults the priceBump to 10
-// Set it to 15% to be more aggressive about including transactions
-const priceBump int64 = 15
+const (
+	// geth requires a minimum fee bump of 10% for regular tx resubmission
+	priceBump int64 = 10
+	// geth requires a minimum fee bump of 100% for blob tx resubmission
+	blobPriceBump int64 = 100
+)
 
-// new = old * (100 + priceBump) / 100
-var priceBumpPercent = big.NewInt(100 + priceBump)
-var oneHundred = big.NewInt(100)
+// geth enforces a 1 gwei minimum for blob tx fee
+var (
+	priceBumpPercent     = big.NewInt(100 + priceBump)
+	blobPriceBumpPercent = big.NewInt(100 + blobPriceBump)
+
+	// geth enforces a 1 gwei minimum for blob tx fee
+	minBlobTxFee = big.NewInt(params.GWei)
+
+	oneHundred = big.NewInt(100)
+	ninetyNine = big.NewInt(99)
+	two        = big.NewInt(2)
+
+	ErrBlobFeeLimit = errors.New("blob fee limit reached")
+)
 
 // TxManager is an interface that allows callers to reliably publish txs,
 // bumping the gas price if needed, and obtain the receipt of the resulting tx.
@@ -121,6 +140,9 @@ type TxCandidate struct {
 	To *common.Address
 	// GasLimit is the gas limit to be used in the constructed tx.
 	GasLimit uint64
+	// Blobs to send along in the tx (optional). If len(Blobs) > 0 then a blob tx
+	// will be sent instead of a DynamicFeeTx.
+	Blobs []*eth.Blob
 }
 
 // Send is used to publish a transaction with incrementally higher gas prices
@@ -164,7 +186,7 @@ func (m *SimpleTxManager) send(ctx context.Context, candidate TxCandidate) (*typ
 // NOTE: If the [TxCandidate.GasLimit] is non-zero, it will be used as the transaction's gas.
 // NOTE: Otherwise, the [SimpleTxManager] will query the specified backend for an estimate.
 func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*types.Transaction, error) {
-	gasTipCap, basefee, err := m.suggestGasPriceCaps(ctx)
+	gasTipCap, basefee, blobBaseFee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
 		m.metr.RPCError()
 		return nil, fmt.Errorf("failed to get gas price info: %w", err)
@@ -205,9 +227,42 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		rawTx.Gas = gas
 	}
 
+	var sidecar *types.BlobTxSidecar
+	var blobHashes []common.Hash
+	if len(candidate.Blobs) > 0 {
+		if candidate.To == nil {
+			return nil, errors.New("blob txs cannot deploy contracts")
+		}
+		if sidecar, blobHashes, err = MakeSidecar(candidate.Blobs); err != nil {
+			return nil, fmt.Errorf("failed to make sidecar: %w", err)
+		}
+	}
+
+	var txMessage types.TxData
+	if sidecar != nil {
+		if blobBaseFee == nil {
+			return nil, fmt.Errorf("expected non-nil blobBaseFee")
+		}
+		blobFeeCap := calcBlobFeeCap(blobBaseFee)
+		message := &types.BlobTx{
+			To:         *candidate.To,
+			Data:       candidate.TxData,
+			Gas:        rawTx.Gas,
+			BlobHashes: blobHashes,
+			Sidecar:    sidecar,
+			Nonce:      nonce,
+		}
+		if err := finishBlobTx(message, m.chainID, gasTipCap, gasFeeCap, blobFeeCap, nil); err != nil {
+			return nil, fmt.Errorf("failed to create blob transaction: %w", err)
+		}
+		txMessage = message
+	} else {
+		txMessage = rawTx
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
-	return m.cfg.Signer(ctx, m.cfg.From, types.NewTx(rawTx))
+	return m.cfg.Signer(ctx, m.cfg.From, types.NewTx(txMessage))
 }
 
 // nextNonce returns a nonce to use for the next transaction. It uses
@@ -418,6 +473,21 @@ func (m *SimpleTxManager) queryReceipt(ctx context.Context, txHash common.Hash, 
 	return nil
 }
 
+func (m *SimpleTxManager) checkBlobFeeLimits(blobBaseFee, bumpedBlobFee *big.Int) error {
+	// If below threshold, don't apply multiplier limit. Note we use same threshold parameter here
+	// used for non-blob fee limiting.
+	if thr := m.cfg.FeeLimitThreshold; thr != nil && thr.Cmp(bumpedBlobFee) == 1 {
+		return nil
+	}
+	maxBlobFee := new(big.Int).Mul(calcBlobFeeCap(blobBaseFee), big.NewInt(int64(m.cfg.FeeLimitMultiplier)))
+	if bumpedBlobFee.Cmp(maxBlobFee) > 0 {
+		return fmt.Errorf(
+			"bumped blob fee %v is over %dx multiple of the suggested value: %w",
+			bumpedBlobFee, m.cfg.FeeLimitMultiplier, ErrBlobFeeLimit)
+	}
+	return nil
+}
+
 // increaseGasPrice takes the previous transaction & potentially clones then signs it with a higher tip.
 // If the tip + basefee suggested by the network are not greater than the previous values, the same transaction
 // will be returned. If they are greater, this function will ensure that they are at least greater by 15% than
@@ -428,7 +498,7 @@ func (m *SimpleTxManager) queryReceipt(ctx context.Context, txHash common.Hash, 
 //
 // If it encounters an error with creating the new transaction, it will return the old transaction.
 func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transaction) *types.Transaction {
-	tip, basefee, err := m.suggestGasPriceCaps(ctx)
+	tip, basefee, blobBaseFee, err := m.suggestGasPriceCaps(ctx)
 	if err != nil {
 		m.l.Warn("failed to get suggested gas tip and basefee", "err", err)
 		return tx
@@ -439,55 +509,114 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 		return tx
 	}
 
-	rawTx := &types.DynamicFeeTx{
-		ChainID:    tx.ChainId(),
-		Nonce:      tx.Nonce(),
-		GasTipCap:  gasTipCap,
-		GasFeeCap:  gasFeeCap,
-		Gas:        tx.Gas(),
-		To:         tx.To(),
-		Value:      tx.Value(),
-		Data:       tx.Data(),
-		AccessList: tx.AccessList(),
+	// Re-estimate gaslimit in case things have changed or a previous gaslimit estimate was wrong
+	gas, err := m.backend.EstimateGas(ctx, ethereum.CallMsg{
+		From:      m.cfg.From,
+		To:        tx.To(),
+		GasTipCap: gasTipCap,
+		GasFeeCap: gasFeeCap,
+		Data:      tx.Data(),
+		Value:     tx.Value(),
+	})
+	if err != nil {
+		// If this is a transaction resubmission, we sometimes see this outcome because the
+		// original tx can get included in a block just before the above call. In this case the
+		// error is due to the tx reverting with message "block number must be equal to next
+		// expected block number"
+		m.l.Warn("failed to re-estimate gas", "err", err, "tx", tx.Hash(), "gaslimit", tx.Gas(),
+			"gasFeeCap", gasFeeCap, "gasTipCap", gasTipCap)
+		return tx
 	}
+
+	var newTx *types.Transaction
+	if tx.Type() == types.BlobTxType {
+		// Blob transactions have an additional blob gas price we must specify, so we must make sure it is
+		// getting bumped appropriately.
+		bumpedBlobFee := calcThresholdValue(tx.BlobGasFeeCap(), true)
+		if bumpedBlobFee.Cmp(blobBaseFee) < 0 {
+			bumpedBlobFee = blobBaseFee
+		}
+		if err := m.checkBlobFeeLimits(blobBaseFee, bumpedBlobFee); err != nil {
+			m.l.Warn("failed to check blob fee limits", "err", err)
+			return tx
+		}
+		message := &types.BlobTx{
+			Nonce:      tx.Nonce(),
+			To:         *tx.To(),
+			Data:       tx.Data(),
+			Gas:        gas,
+			BlobHashes: tx.BlobHashes(),
+			Sidecar:    tx.BlobTxSidecar(),
+		}
+		if err := finishBlobTx(message, tx.ChainId(), gasTipCap, gasFeeCap, bumpedBlobFee, tx.Value()); err != nil {
+			m.l.Warn("failed to finish blob tx", "err", err)
+			return tx
+		}
+		newTx = types.NewTx(message)
+	} else {
+		newTx = types.NewTx(&types.DynamicFeeTx{
+			ChainID:    tx.ChainId(),
+			Nonce:      tx.Nonce(),
+			GasTipCap:  gasTipCap,
+			GasFeeCap:  gasFeeCap,
+			Gas:        gas,
+			To:         tx.To(),
+			Value:      tx.Value(),
+			Data:       tx.Data(),
+			AccessList: tx.AccessList(),
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
-	newTx, err := m.cfg.Signer(ctx, m.cfg.From, types.NewTx(rawTx))
+	signedTx, err := m.cfg.Signer(ctx, m.cfg.From, newTx)
 	if err != nil {
 		m.l.Warn("failed to sign new transaction", "err", err)
 		return tx
 	}
-	return newTx
+	return signedTx
 }
 
 // suggestGasPriceCaps suggests what the new tip & new basefee should be based on the current L1 conditions
-func (m *SimpleTxManager) suggestGasPriceCaps(ctx context.Context) (*big.Int, *big.Int, error) {
+func (m *SimpleTxManager) suggestGasPriceCaps(ctx context.Context) (*big.Int, *big.Int, *big.Int, error) {
 	cCtx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
 	tip, err := m.backend.SuggestGasTipCap(cCtx)
 	if err != nil {
 		m.metr.RPCError()
-		return nil, nil, fmt.Errorf("failed to fetch the suggested gas tip cap: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to fetch the suggested gas tip cap: %w", err)
 	} else if tip == nil {
-		return nil, nil, errors.New("the suggested tip was nil")
+		return nil, nil, nil, errors.New("the suggested tip was nil")
 	}
 	cCtx, cancel = context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
 	head, err := m.backend.HeaderByNumber(cCtx, nil)
 	if err != nil {
 		m.metr.RPCError()
-		return nil, nil, fmt.Errorf("failed to fetch the suggested basefee: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to fetch the suggested basefee: %w", err)
 	} else if head.BaseFee == nil {
-		return nil, nil, errors.New("txmgr does not support pre-london blocks that do not have a basefee")
+		return nil, nil, nil, errors.New("txmgr does not support pre-london blocks that do not have a basefee")
 	}
-	return tip, head.BaseFee, nil
+
+	var blobFee *big.Int
+	if head.ExcessBlobGas != nil {
+		blobFee = eip4844.CalcBlobFee(*head.ExcessBlobGas)
+	}
+
+	return tip, head.BaseFee, blobFee, nil
 }
 
-// calcThresholdValue returns x * priceBumpPercent / 100
-func calcThresholdValue(x *big.Int) *big.Int {
-	threshold := new(big.Int).Mul(priceBumpPercent, x)
-	threshold = threshold.Div(threshold, oneHundred)
-	return threshold
+// calcThresholdValue returns ceil(x * priceBumpPercent / 100) for non-blob txs, or
+// ceil(x * blobPriceBumpPercent / 100) for blob txs.
+// It guarantees that x is increased by at least 1
+func calcThresholdValue(x *big.Int, isBlobTx bool) *big.Int {
+	threshold := new(big.Int)
+	if isBlobTx {
+		threshold.Set(blobPriceBumpPercent)
+	} else {
+		threshold.Set(priceBumpPercent)
+	}
+	return threshold.Mul(threshold, x).Add(threshold, ninetyNine).Div(threshold, oneHundred)
 }
 
 // updateFees takes the old tip/basefee & the new tip/basefee and then suggests
@@ -502,8 +631,8 @@ func updateFees(oldTip, oldFeeCap, newTip, newBaseFee *big.Int, lgr log.Logger) 
 		return oldTip, oldFeeCap
 	}
 	// Determine if we need to increase the suggested values
-	thresholdTip := calcThresholdValue(oldTip)
-	thresholdFeeCap := calcThresholdValue(oldFeeCap)
+	thresholdTip := calcThresholdValue(oldTip, false)
+	thresholdFeeCap := calcThresholdValue(oldFeeCap, false)
 	if newTip.Cmp(thresholdTip) >= 0 && newFeeCap.Cmp(thresholdFeeCap) >= 0 {
 		lgr.Debug("Using new tip and feecap")
 		return newTip, newFeeCap
@@ -545,4 +674,57 @@ func errStringMatch(err, target error) bool {
 		return false
 	}
 	return strings.Contains(err.Error(), target.Error())
+}
+
+// MakeSidecar builds & returns the BlobTxSidecar and corresponding blob hashes from the raw blob
+// data.
+func MakeSidecar(blobs []*eth.Blob) (*types.BlobTxSidecar, []common.Hash, error) {
+	sidecar := &types.BlobTxSidecar{}
+	blobHashes := []common.Hash{}
+	for i, blob := range blobs {
+		rawBlob := *blob.KZGBlob()
+		sidecar.Blobs = append(sidecar.Blobs, rawBlob)
+		commitment, err := kzg4844.BlobToCommitment(rawBlob)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot compute KZG commitment of blob %d in tx candidate: %w", i, err)
+		}
+		sidecar.Commitments = append(sidecar.Commitments, commitment)
+		proof, err := kzg4844.ComputeBlobProof(rawBlob, commitment)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot compute KZG proof for fast commitment verification of blob %d in tx candidate: %w", i, err)
+		}
+		sidecar.Proofs = append(sidecar.Proofs, proof)
+		blobHashes = append(blobHashes, eth.KZGToVersionedHash(commitment))
+	}
+	return sidecar, blobHashes, nil
+}
+
+// calcBlobFeeCap computes a suggested blob fee cap that is twice the current header's blob base fee
+// value, with a minimum value of minBlobTxFee.
+func calcBlobFeeCap(blobBaseFee *big.Int) *big.Int {
+	cap := new(big.Int).Mul(blobBaseFee, two)
+	if cap.Cmp(minBlobTxFee) < 0 {
+		cap.Set(minBlobTxFee)
+	}
+	return cap
+}
+
+func finishBlobTx(message *types.BlobTx, chainID, tip, fee, blobFee, value *big.Int) error {
+	var o bool
+	if message.ChainID, o = uint256.FromBig(chainID); o {
+		return fmt.Errorf("ChainID overflow")
+	}
+	if message.GasTipCap, o = uint256.FromBig(tip); o {
+		return fmt.Errorf("GasTipCap overflow")
+	}
+	if message.GasFeeCap, o = uint256.FromBig(fee); o {
+		return fmt.Errorf("GasFeeCap overflow")
+	}
+	if message.BlobFeeCap, o = uint256.FromBig(blobFee); o {
+		return fmt.Errorf("BlobFeeCap overflow")
+	}
+	if message.Value, o = uint256.FromBig(value); o {
+		return fmt.Errorf("Value overflow")
+	}
+	return nil
 }

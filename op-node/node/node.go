@@ -20,6 +20,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	sclient "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/retry"
+	ssources "github.com/ethereum-optimism/optimism/op-service/sources"
 )
 
 type OpNode struct {
@@ -46,6 +49,8 @@ type OpNode struct {
 	// and depend on this ctx to be closed.
 	resourcesCtx   context.Context
 	resourcesClose context.CancelFunc
+
+	beacon *ssources.L1BeaconClient
 }
 
 // The OpNode handles incoming gossip
@@ -84,6 +89,9 @@ func (n *OpNode) init(ctx context.Context, cfg *Config, snapshotLog log.Logger) 
 		return err
 	}
 	if err := n.initRuntimeConfig(ctx, cfg); err != nil {
+		return err
+	}
+	if err := n.initL1BeaconAPI(ctx, cfg); err != nil {
 		return err
 	}
 	if err := n.initL2(ctx, cfg, snapshotLog); err != nil {
@@ -203,9 +211,68 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 
 	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync)
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, &cfg.DA)
 
 	return nil
+}
+
+func (n *OpNode) initL1BeaconAPI(ctx context.Context, cfg *Config) error {
+	// Once the Ecotone upgrade is scheduled, we must have initialized the Beacon API settings.
+	if cfg.Beacon == nil {
+		n.log.Error("missing L1 Beacon API configuration")
+		return nil
+	}
+
+	// We always initialize a client. We will get an error on requests if the client does not work.
+	// This way the op-node can continue non-L1 functionality when the user chooses to ignore the Beacon API requirement.
+	beaconClient, fallbacks, err := cfg.Beacon.Setup(ctx, n.log)
+	if err != nil {
+		return fmt.Errorf("failed to setup L1 Beacon API client: %w", err)
+	}
+	beaconCfg := ssources.L1BeaconClientConfig{
+		FetchAllSidecars: cfg.Beacon.ShouldFetchAllSidecars(),
+	}
+	n.beacon = ssources.NewL1BeaconClient(beaconClient, beaconCfg, fallbacks...)
+
+	// Retry retrieval of the Beacon API version, to be more robust on startup against Beacon API connection issues.
+	beaconVersion, missingEndpoint, err := retry.Do2[string, bool](ctx, 5, retry.Exponential(), func() (string, bool, error) {
+		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+		beaconVersion, err := n.beacon.GetVersion(ctx)
+		if err != nil {
+			if errors.Is(err, sclient.ErrNoEndpoint) {
+				return "", true, nil // don't return an error, we do not have to retry when there is a config issue.
+			}
+			return "", false, err
+		}
+		return beaconVersion, false, nil
+	})
+	if missingEndpoint {
+		// Allow the user to continue if they explicitly ignore the requirement of the endpoint.
+		if cfg.Beacon.ShouldIgnoreBeaconCheck() {
+			n.log.Warn("This endpoint is required for the Ecotone upgrade, but is missing, and configured to be ignored. " +
+				"The node may be unable to retrieve EIP-4844 blobs data.")
+			return nil
+		} else {
+			// If the client tells us the endpoint was not configured,
+			// then explain why we need it, and what the user can do to ignore this.
+			n.log.Error("The Ecotone upgrade requires a L1 Beacon API endpoint, to retrieve EIP-4844 blobs data. " +
+				"This can be ignored with the --l1.beacon.ignore option, " +
+				"but the node may be unable to sync from L1 without this endpoint.")
+			return errors.New("missing L1 Beacon API endpoint")
+		}
+	} else if err != nil {
+		if cfg.Beacon.ShouldIgnoreBeaconCheck() {
+			n.log.Warn("Failed to check L1 Beacon API version, but configuration ignores results. "+
+				"The node may be unable to retrieve EIP-4844 blobs data.", "err", err)
+			return nil
+		} else {
+			return fmt.Errorf("failed to check L1 Beacon API version: %w", err)
+		}
+	} else {
+		n.log.Info("Connected to L1 Beacon API, ready for EIP-4844 blobs retrieval.", "version", beaconVersion)
+		return nil
+	}
 }
 
 func (n *OpNode) initRPCSync(ctx context.Context, cfg *Config) error {

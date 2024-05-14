@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	ssources "github.com/ethereum-optimism/optimism/op-service/sources"
 
 	"github.com/ethereum/go-ethereum/log"
 	gn "github.com/ethereum/go-ethereum/node"
@@ -33,6 +34,14 @@ type L1EndpointSetup interface {
 	// The results of the RPC client may be trusted for faster processing, or strictly validated.
 	// The kind of the RPC may be non-basic, to optimize RPC usage.
 	Setup(ctx context.Context, log log.Logger, rollupCfg *rollup.Config) (cl client.RPC, rpcCfg *sources.L1ClientConfig, err error)
+	Check() error
+}
+
+type L1BeaconEndpointSetup interface {
+	Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsFetcher, err error)
+	// ShouldIgnoreBeaconCheck returns true if the Beacon-node version check should not halt startup.
+	ShouldIgnoreBeaconCheck() bool
+	ShouldFetchAllSidecars() bool
 	Check() error
 }
 

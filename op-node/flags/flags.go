@@ -254,6 +254,12 @@ var (
 		EnvVar:   prefixEnvVar("L2_SKIP_SYNC_START_CHECK"),
 		Required: false,
 	}
+	DARPC = cli.StringFlag{
+		Name:   "da-rpc",
+		Usage:  "Data Availability RPC",
+		Value:  "http://da:26658",
+		EnvVar: prefixEnvVar("DA_RPC"),
+	}
 )
 
 var requiredFlags = []cli.Flag{
@@ -299,6 +305,7 @@ var optionalFlags = []cli.Flag{
 	MantleDaIndexerSocketFlag,
 	MantleDAIndexerEnableFlag,
 	RPCEnableAdmin,
+	DARPC,
 }
 
 // Flags contains the list of configuration options available to the binary.

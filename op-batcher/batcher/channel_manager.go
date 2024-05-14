@@ -9,6 +9,7 @@ import (
 	bcommon "github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -26,14 +27,17 @@ var ErrReorg = errors.New("block does not extend existing chain")
 // channel.
 // Functions on channelManager are not safe for concurrent access.ErrReorg
 type channelManager struct {
-	log  log.Logger
-	metr metrics.Metricer
-	cfg  ChannelConfig
+	log       log.Logger
+	metr      metrics.Metricer
+	cfg       ChannelConfig
+	rollupCfg *rollup.Config
 
 	// All blocks since the last request for new tx data.
 	blocks []*types.Block
 	// last block hash - for reorg detection
 	tip common.Hash
+	// last processed block
+	lastProcessedBlock *types.Block
 
 	// Pending data returned by TxData waiting on Tx Confirmed/Failed
 
@@ -55,11 +59,12 @@ type channelManager struct {
 	closed bool
 }
 
-func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig) *channelManager {
+func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig, rollupCfg *rollup.Config) *channelManager {
 	return &channelManager{
-		log:  log,
-		metr: metr,
-		cfg:  cfg,
+		log:       log,
+		metr:      metr,
+		cfg:       cfg,
+		rollupCfg: rollupCfg,
 
 		pendingTransactions:   make(map[txID]txData),
 		confirmedTransactions: make(map[txID]eth.BlockID),
@@ -280,6 +285,10 @@ func (s *channelManager) processBlocks() error {
 		latestL2ref eth.L2BlockRef
 	)
 	for i, block := range s.blocks {
+		if s.rollupCfg.EigenDaUpgradeHeight != nil && s.rollupCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
+			s.pendingChannel.setFullErr(ErrDaUpgrade)
+			break
+		}
 		l1info, err := s.pendingChannel.AddBlock(block)
 		if errors.As(err, &_chFullErr) {
 			// current block didn't get added because channel is already full
@@ -287,6 +296,7 @@ func (s *channelManager) processBlocks() error {
 		} else if err != nil {
 			return fmt.Errorf("adding block[%d] to channel builder: %w", i, err)
 		}
+		s.lastProcessedBlock = block
 		blocksAdded += 1
 		latestL2ref = l2BlockRefFromBlockAndL1Info(block, l1info)
 		s.metr.RecordL2BlockInChannel(block)
