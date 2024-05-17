@@ -11,18 +11,33 @@ type DaUpgradeChainConfig struct {
 	EigenDaUpgradeHeight *big.Int `json:"Eigen_da_upgrade_height"` // Upgrade Da from MantleDA to EigenDA
 }
 
+// OP Stack chain config
+var (
+	OptimismGoerliChainId = big.NewInt(420)
+	// March 17, 2023 @ 7:00:00 pm UTC
+	OptimismGoerliRegolithTime = uint64(1679079600)
+	BaseGoerliChainId          = big.NewInt(84531)
+	// April 27, 2023 @ 5:00:00 pm UTC
+	BaseGoerliRegolithTime = uint64(1682614800)
+
+	// Mantle chain_id
+	MantleMainnetChainId = big.NewInt(5000)
+	MantleSepoliaChainId = big.NewInt(5003)
+	MantleLocalChainId   = big.NewInt(17)
+)
+
 var (
 	MantleMainnetUpgradeConfig = DaUpgradeChainConfig{
-		ChainID:              params.MantleMainnetChainId,
+		ChainID:              MantleMainnetChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
 
 	MantleSepoliaUpgradeConfig = DaUpgradeChainConfig{
-		ChainID:              params.MantleSepoliaChainId,
+		ChainID:              MantleSepoliaChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
 	MantleLocalUpgradeConfig = DaUpgradeChainConfig{
-		ChainID:              params.MantleLocalChainId,
+		ChainID:              MantleLocalChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
 	MantleDefaultUpgradeConfig = DaUpgradeChainConfig{
