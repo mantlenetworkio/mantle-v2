@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/urfave/cli"
 )
 
@@ -13,6 +12,10 @@ const (
 	StatusQueryRetryIntervalFlagName = "da-status-query-retry-interval"
 	StatusQueryTimeoutFlagName       = "da-status-query-timeout"
 )
+
+func PrefixEnvVar(prefix, suffix string) string {
+	return prefix + "_" + suffix
+}
 
 type CLIConfig struct {
 	RPC                      string
@@ -45,7 +48,7 @@ func (m CLIConfig) Check() error {
 
 func CLIFlags(envPrefix string) []cli.Flag {
 	prefixEnvVars := func(name string) string {
-		return opservice.PrefixEnvVar(envPrefix, name)
+		return PrefixEnvVar(envPrefix, name)
 	}
 	return []cli.Flag{
 		cli.StringFlag{
