@@ -2,8 +2,6 @@ package eigenda
 
 import (
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/params"
 )
 
 type DaUpgradeChainConfig struct {
@@ -50,11 +48,11 @@ func GetDaUpgradeConfigForMantle(chainID *big.Int) *DaUpgradeChainConfig {
 		return nil
 	}
 	switch chainID.Int64() {
-	case params.MantleMainnetChainId.Int64():
+	case MantleMainnetChainId.Int64():
 		return &MantleMainnetUpgradeConfig
-	case params.MantleSepoliaChainId.Int64():
+	case MantleSepoliaChainId.Int64():
 		return &MantleSepoliaUpgradeConfig
-	case params.MantleLocalChainId.Int64():
+	case MantleLocalChainId.Int64():
 		return &MantleLocalUpgradeConfig
 	default:
 		return &MantleDefaultUpgradeConfig
