@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/l2geth/params"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,6 +29,10 @@ const (
 	priceBump int64 = 10
 	// geth requires a minimum fee bump of 100% for blob tx resubmission
 	blobPriceBump int64 = 100
+
+	Wei   = 1
+	GWei  = 1e9
+	Ether = 1e18
 )
 
 // geth enforces a 1 gwei minimum for blob tx fee
@@ -38,7 +41,7 @@ var (
 	blobPriceBumpPercent = big.NewInt(100 + blobPriceBump)
 
 	// geth enforces a 1 gwei minimum for blob tx fee
-	minBlobTxFee = big.NewInt(params.GWei)
+	minBlobTxFee = big.NewInt(GWei)
 
 	oneHundred = big.NewInt(100)
 	ninetyNine = big.NewInt(99)
