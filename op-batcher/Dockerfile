@@ -20,6 +20,8 @@ COPY ./op-batcher/docker.go.work /go/go.work
 
 WORKDIR /app/op-batcher
 
+RUN go mod tidy
+
 RUN go mod download
 
 ARG TARGETOS TARGETARCH
