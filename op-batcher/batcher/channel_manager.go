@@ -285,7 +285,7 @@ func (s *channelManager) processBlocks() error {
 		latestL2ref eth.L2BlockRef
 	)
 	for i, block := range s.blocks {
-		if s.rollupCfg.EigenDaUpgradeHeight != nil && s.rollupCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
+		if s.rollupCfg.EigenDaUpgradeHeight != nil && s.lastProcessedBlock != nil && s.rollupCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
 			s.pendingChannel.setFullErr(ErrDaUpgrade)
 			break
 		}
