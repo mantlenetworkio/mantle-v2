@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -157,8 +158,20 @@ func TestRetrieveBlob(t *testing.T) {
 
 		Log: log.New(context.Background()),
 	}
-	//req, _ := base64.StdEncoding.DecodeString("OTlmNjlkMmVkM2MyNjhhNGIwYjYwMWZhZGFlMWUyZDE5NDFhNmZmNDc2ZGVkZTAxNDNhYzA1MTE3ZTczNTUxMy0zMTM3MzEzNTM0MzEzNjM5MzMzNDMyMzUzNzMzMzUzNzMwMzAzMjJmMzAyZjMzMzMyZjMxMmYzMzMzMmZlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1")
-	//da.GetBlobStatus(context.Background(), req)
+	req, _ := base64.StdEncoding.DecodeString("OTlmNjlkMmVkM2MyNjhhNGIwYjYwMWZhZGFlMWUyZDE5NDFhNmZmNDc2ZGVkZTAxNDNhYzA1MTE3ZTczNTUxMy0zMTM3MzEzNTM0MzEzNjM5MzMzNDMyMzUzNzMzMzUzNzMwMzAzMjJmMzAyZjMzMzMyZjMxMmYzMzMzMmZlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1")
+	b, _ := da.GetBlobStatus(context.Background(), req)
+	blob := b.Info
+	fmt.Printf("len(%d):%x len(%d):%x\n", len(blob.BlobHeader.Commitment.GetX()), blob.BlobHeader.Commitment.GetX(), len(blob.BlobHeader.Commitment.GetY()), blob.BlobHeader.Commitment.GetY())
+	sig, _ := base64.StdEncoding.DecodeString("t8RA24i/uPKVpxC3/p5+yK0NQZdabM9gSYXh2ZRrSaI=")
+	fmt.Println("sig:", hex.EncodeToString(sig))
+	unknow, _ := hex.DecodeString("313731363434363231343138313435383431362f302f33332f312f33332fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+	fmt.Println("unknow:", base64.StdEncoding.EncodeToString(unknow))
+	commit := append([]byte{}, blob.BlobHeader.Commitment.GetX()...)
+	commit = append(commit, blob.BlobHeader.Commitment.GetY()...)
+	hd, _ := base64.StdEncoding.DecodeString("qU0QLZ/WdqUdQ72tSfu8j5+LxZk7LGMpmT298HD+HtA=")
+	fmt.Println("hd:", hex.EncodeToString(hd))
+	fmt.Println("############")
+	fmt.Println(base64.StdEncoding.DecodeString("AA=="))
 
 	batchHeaderHashHex, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
 	fmt.Printf("%x\n", batchHeaderHashHex)

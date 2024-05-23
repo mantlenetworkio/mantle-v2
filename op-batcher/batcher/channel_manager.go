@@ -9,8 +9,8 @@ import (
 	bcommon "github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -27,10 +27,10 @@ var ErrReorg = errors.New("block does not extend existing chain")
 // channel.
 // Functions on channelManager are not safe for concurrent access.ErrReorg
 type channelManager struct {
-	log       log.Logger
-	metr      metrics.Metricer
-	cfg       ChannelConfig
-	rollupCfg *rollup.Config
+	log        log.Logger
+	metr       metrics.Metricer
+	cfg        ChannelConfig
+	upgradeCfg *eigenda.DaUpgradeChainConfig
 
 	// All blocks since the last request for new tx data.
 	blocks []*types.Block
@@ -59,13 +59,12 @@ type channelManager struct {
 	closed bool
 }
 
-func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig, rollupCfg *rollup.Config) *channelManager {
+func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig, upgradeCfg *eigenda.DaUpgradeChainConfig) *channelManager {
 	return &channelManager{
-		log:       log,
-		metr:      metr,
-		cfg:       cfg,
-		rollupCfg: rollupCfg,
-
+		log:                   log,
+		metr:                  metr,
+		cfg:                   cfg,
+		upgradeCfg:            upgradeCfg,
 		pendingTransactions:   make(map[txID]txData),
 		confirmedTransactions: make(map[txID]eth.BlockID),
 		daPendingTxData:       make(map[txID]txData),
@@ -285,7 +284,7 @@ func (s *channelManager) processBlocks() error {
 		latestL2ref eth.L2BlockRef
 	)
 	for i, block := range s.blocks {
-		if s.rollupCfg.EigenDaUpgradeHeight != nil && s.lastProcessedBlock != nil && s.rollupCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
+		if s.upgradeCfg != nil && s.lastProcessedBlock != nil && s.upgradeCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
 			s.pendingChannel.setFullErr(ErrDaUpgrade)
 			break
 		}

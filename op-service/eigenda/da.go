@@ -16,8 +16,8 @@ import (
 
 type IEigenDA interface {
 	RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error)
-	DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, error)
-	GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobInfo, error)
+	DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, []byte, error)
+	GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error)
 }
 
 type EigenDA struct {
@@ -26,7 +26,7 @@ type EigenDA struct {
 	Log log.Logger
 }
 
-func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobInfo, error) {
+func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
 	m.Log.Info("Attempting to disperse blob to EigenDA")
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
@@ -44,7 +44,7 @@ func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*dispers
 		return nil, err
 	}
 
-	return statusRes.Info, nil
+	return statusRes, nil
 }
 
 func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
@@ -71,14 +71,14 @@ func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, Blob
 	return decodedData, nil
 }
 
-func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, error) {
+func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, []byte, error) {
 	m.Log.Info("Attempting to disperse blob to EigenDA")
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential)}
 	conn, err := grpc.Dial(m.RPC, dialOptions...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	daClient := disperser.NewDisperserClient(conn)
 
@@ -92,13 +92,13 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 
 	if err != nil || disperseRes == nil {
 		m.Log.Error("Unable to disperse blob to EigenDA, aborting", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if disperseRes.Result == disperser.BlobStatus_UNKNOWN ||
 		disperseRes.Result == disperser.BlobStatus_FAILED {
 		m.Log.Error("Unable to disperse blob to EigenDA, aborting", "err", err)
-		return nil, fmt.Errorf("reply status is %d", disperseRes.Result)
+		return nil, nil, fmt.Errorf("reply status is %d", disperseRes.Result)
 	}
 
 	base64RequestID := base64.StdEncoding.EncodeToString(disperseRes.RequestId)
@@ -122,11 +122,11 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 			// contracts on Ethereum have confirmed the full availability of the blob on EigenDA.
 			batchHeaderHashHex := fmt.Sprintf("0x%s", hex.EncodeToString(statusRes.Info.BlobVerificationProof.BatchMetadata.BatchHeaderHash))
 			m.Log.Info("Successfully dispersed blob to EigenDA", "requestID", base64RequestID, "batchHeaderHash", batchHeaderHashHex)
-			return statusRes.Info, nil
+			return statusRes.Info, disperseRes.RequestId, nil
 		} else if statusRes.Status == disperser.BlobStatus_UNKNOWN ||
 			statusRes.Status == disperser.BlobStatus_FAILED {
 			m.Log.Error("EigenDA blob dispersal failed in processing", "requestID", base64RequestID, "err", err)
-			return nil, fmt.Errorf("eigenDA blob dispersal failed in processing with reply status %d", statusRes.Status)
+			return nil, nil, fmt.Errorf("eigenDA blob dispersal failed in processing with reply status %d", statusRes.Status)
 		} else {
 			m.Log.Warn("Still waiting for confirmation from EigenDA", "requestID", base64RequestID)
 		}
@@ -135,5 +135,5 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 		time.Sleep(m.StatusQueryRetryInterval)
 	}
 
-	return nil, fmt.Errorf("timed out getting EigenDA status for dispersed blob key: %s", base64RequestID)
+	return nil, nil, fmt.Errorf("timed out getting EigenDA status for dispersed blob key: %s", base64RequestID)
 }

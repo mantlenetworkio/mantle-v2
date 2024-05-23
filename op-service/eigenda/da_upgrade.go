@@ -9,19 +9,13 @@ type DaUpgradeChainConfig struct {
 	EigenDaUpgradeHeight *big.Int `json:"Eigen_da_upgrade_height"` // Upgrade Da from MantleDA to EigenDA
 }
 
-// OP Stack chain config
+// chain config
 var (
-	OptimismGoerliChainId = big.NewInt(420)
-	// March 17, 2023 @ 7:00:00 pm UTC
-	OptimismGoerliRegolithTime = uint64(1679079600)
-	BaseGoerliChainId          = big.NewInt(84531)
-	// April 27, 2023 @ 5:00:00 pm UTC
-	BaseGoerliRegolithTime = uint64(1682614800)
-
 	// Mantle chain_id
-	MantleMainnetChainId = big.NewInt(5000)
-	MantleSepoliaChainId = big.NewInt(5003)
-	MantleLocalChainId   = big.NewInt(17)
+	MantleMainnetChainId   = big.NewInt(5000)
+	MantleSepoliaChainId   = big.NewInt(5003)
+	MantleSepoliaQAChainId = big.NewInt(5003003)
+	MantleLocalChainId     = big.NewInt(17)
 )
 
 var (
@@ -29,10 +23,13 @@ var (
 		ChainID:              MantleMainnetChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
-
 	MantleSepoliaUpgradeConfig = DaUpgradeChainConfig{
 		ChainID:              MantleSepoliaChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
+	}
+	MantleSepoliaQAUpgradeConfig = DaUpgradeChainConfig{
+		ChainID:              MantleSepoliaQAChainId,
+		EigenDaUpgradeHeight: big.NewInt(3002381),
 	}
 	MantleLocalUpgradeConfig = DaUpgradeChainConfig{
 		ChainID:              MantleLocalChainId,
@@ -52,6 +49,8 @@ func GetDaUpgradeConfigForMantle(chainID *big.Int) *DaUpgradeChainConfig {
 		return &MantleMainnetUpgradeConfig
 	case MantleSepoliaChainId.Int64():
 		return &MantleSepoliaUpgradeConfig
+	case MantleSepoliaQAChainId.Int64():
+		return &MantleSepoliaQAUpgradeConfig
 	case MantleLocalChainId.Int64():
 		return &MantleLocalUpgradeConfig
 	default:

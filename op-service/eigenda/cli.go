@@ -65,7 +65,7 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		cli.DurationFlag{
 			Name:   StatusQueryRetryIntervalFlagName,
 			Usage:  "Wait time between retries of EigenDA blob status queries (made while waiting for a blob to be confirmed by)",
-			Value:  1 * time.Second,
+			Value:  5 * time.Second,
 			EnvVar: prefixEnvVars("DA_STATUS_QUERY_INTERVAL"),
 		},
 	}

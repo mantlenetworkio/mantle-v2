@@ -19,4 +19,5 @@ message FrameRef {
 	uint32 reference_block_number = 3;
 	repeated uint32 quorum_ids = 4;
   uint32 blob_length = 5;
+  bytes request_id = 6;
 }

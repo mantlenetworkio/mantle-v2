@@ -89,7 +89,7 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 				done bool
 				err  error
 			)
-			if l.state.rollupCfg.EigenDaUpgradeHeight != nil && l.state.lastProcessedBlock.Number().Cmp(l.state.rollupCfg.EigenDaUpgradeHeight) >= 0 {
+			if l.Config.DaUpgradeChainConfig != nil && l.state.lastProcessedBlock.Number().Cmp(l.Config.DaUpgradeChainConfig.EigenDaUpgradeHeight) >= 0 {
 				done, err = l.loopEigenDa()
 			} else {
 				done, err = l.loopRollupDa()
@@ -224,8 +224,6 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	l.log.Info("txAggregatorForEigenDa", "data", fmt.Sprintf("%x %x %x %x %x %x", data[0], data[1], data[2], data[3], data[4], data[5]))
-
 	//try 3 times
 	for retry := 0; retry < 3; retry++ {
 		wrappedData, err := l.disperseEigenDaData(data)
@@ -294,7 +292,7 @@ func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error
 }
 
 func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
-	blobInfo, err := l.eigenDA.DisperseBlob(context.Background(), data)
+	blobInfo, requestId, err := l.eigenDA.DisperseBlob(context.Background(), data)
 	if err != nil {
 		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
 		return nil, err
@@ -313,6 +311,7 @@ func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
 				ReferenceBlockNumber: blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber,
 				QuorumIds:            quorumIDs,
 				BlobLength:           uint32(len(data)),
+				RequestId:            requestId,
 			},
 		},
 	}

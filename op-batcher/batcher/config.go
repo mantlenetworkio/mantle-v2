@@ -66,6 +66,8 @@ type Config struct {
 	// Channel builder parameters
 	Channel ChannelConfig
 	EigenDA eigenda.Config
+	// Upgrade Da from MantleDA to EigenDA
+	DaUpgradeChainConfig *eigenda.DaUpgradeChainConfig
 }
 
 // Check ensures that the [Config] is valid.

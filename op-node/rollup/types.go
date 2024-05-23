@@ -92,8 +92,6 @@ type Config struct {
 	// MANTLE DA MODIFY //
 	// Use Da from MantleDA(EigenDA)
 	MantleDaSwitch bool `json:"mantle_da_switch"`
-	// Upgrade Da from MantleDA to EigenDA
-	EigenDaUpgradeHeight *big.Int `json:"Eigen_da_upgrade_height"`
 	// MantleDA(EigenDA) DataLayrServiceManage contract address
 	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr"`
 }

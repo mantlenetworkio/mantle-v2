@@ -28,7 +28,7 @@ func TestIsChannelFull(t *testing.T) {
 	log := testlog.Logger(t, log.LvlCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		ChannelTimeout: 100,
-	})
+	}, nil)
 	require.NoError(t, m.ensurePendingChannel(eth.BlockID{}))
 	channelID := m.pendingChannel.ID()
 	frame := frameData{
@@ -63,7 +63,7 @@ func TestTxAggregator(t *testing.T) {
 	}
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		ChannelTimeout: 100,
-	})
+	}, nil)
 	graphClient := graphView.NewGraphClient("", graphLog)
 	b := &BatchSubmitter{
 		Config: Config{

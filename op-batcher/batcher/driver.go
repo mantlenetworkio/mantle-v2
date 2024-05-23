@@ -113,6 +113,13 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		},
 	}
 
+	l2ChainID, err := l2Client.ChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	eigendaUpgradeConfig := eigenda.GetDaUpgradeConfigForMantle(l2ChainID)
+	batcherCfg.DaUpgradeChainConfig = eigendaUpgradeConfig
+
 	// Validate the batcher config
 	if err := batcherCfg.Check(); err != nil {
 		return nil, err
@@ -165,7 +172,7 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 	return &BatchSubmitter{
 		Config: cfg,
 		txMgr:  cfg.TxManager,
-		state:  NewChannelManager(l, m, cfg.Channel, cfg.Rollup),
+		state:  NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
 		eigenDA: &eigenda.EigenDA{
 			Config: cfg.EigenDA,
 			Log:    l,
