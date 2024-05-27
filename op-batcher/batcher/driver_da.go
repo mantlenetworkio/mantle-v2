@@ -248,10 +248,12 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	receipt, err := l.txMgr.Send(l.killCtx, *candidate)
 	if err != nil {
 		l.log.Error("failed to send tx candidate", "err", err)
+		return false, err
 	}
 	err = l.handleConfirmDataStoreReceipt(receipt)
 	if err != nil {
 		l.log.Error("failed to handleConfirmDataStoreReceipt", "err", err)
+		return false, err
 	}
 
 	return true, nil

@@ -815,6 +815,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mantlenetworkio/op-geth v0.0.0-20240515065754-1acb19be4efb h1:L2aanSMNQub+BvulsBU8Hski72Bc0YxKvyJ0crddXXo=
 github.com/mantlenetworkio/op-geth v0.0.0-20240515065754-1acb19be4efb/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
+github.com/mantlenetworkio/op-geth v0.0.0-20240527025727-5676c679a2b1 h1:SdsilyTizE5mOWXUMaQOnfRbYy/JxLpUArD9Oo+cj3Y=
+github.com/mantlenetworkio/op-geth v0.0.0-20240527025727-5676c679a2b1/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
 github.com/mantlenetworkio/op-geth v0.5.1-0.20240117094448-f191c6ffe8bd h1:Gen4HXuI6sXG0ure1+YiLt5OC/C++3z7ugXd0ehx/00=
 github.com/mantlenetworkio/op-geth v0.5.1-0.20240117094448-f191c6ffe8bd/go.mod h1:SGLXBOtu2JlKrNoUG76EatI2uJX/WZRY4nmEyvE9Q38=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd h1:HvFwW+cm9bCbZ/+vuGNq7CRWXql8c0y8nGeYpqmpvmk=
