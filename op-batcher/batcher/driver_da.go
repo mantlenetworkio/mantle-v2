@@ -278,8 +278,9 @@ func minInt(a, b int) int {
 func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error) {
 	l.log.Info("building Blob transaction candidate", "size", len(data))
 	blobs := []*se.Blob{}
-	for idx := 0; idx < len(data); idx += se.MaxBlobDataSize {
-		blobData := data[idx:minInt(len(data)-idx, se.MaxBlobDataSize)]
+	realBlobDataSize := se.MaxBlobDataSize - 1
+	for idx := 0; idx < len(data); idx += realBlobDataSize {
+		blobData := data[idx : idx+minInt(len(data)-idx, realBlobDataSize)]
 		var blob se.Blob
 		if err := blob.FromData(append([]byte{derive.DerivationVersion0}, blobData...)); err != nil {
 			return nil, err
