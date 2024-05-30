@@ -80,7 +80,8 @@ type Driver struct {
 	snapshotLog log.Logger
 	done        chan struct{}
 
-	wg gosync.WaitGroup
+	wg              gosync.WaitGroup
+	syncStatusCache *eth.SyncStatus
 }
 
 // Start starts up the state loop.
@@ -452,9 +453,13 @@ func (s *Driver) SyncStatus(ctx context.Context) (*eth.SyncStatus, error) {
 	select {
 	case s.stateReq <- wait:
 		resp := s.syncStatus()
+		s.syncStatusCache = resp
 		<-wait
 		return resp, nil
 	case <-ctx.Done():
+		if s.syncStatusCache != nil {
+			return s.syncStatusCache, nil
+		}
 		return nil, ctx.Err()
 	}
 }
