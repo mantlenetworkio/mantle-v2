@@ -3,7 +3,7 @@
 <p><img src="./docs/assets/horizontal_logo.svg" width="800"></p>
 
 <p>
-<h3><a href="https://mantle.xyz">Website</a> &nbsp&nbsp | &nbsp&nbsp&nbsp<a href="https://docs.mantle.xyz">Tech Docs</a>
+<h3><a href="https://mantle.xyz">Website</a> &nbsp&nbsp | &nbsp&nbsp&nbsp<a href="https://docs-v2.mantle.xyz">Tech Docs</a>
 </p>
 
 <p>
@@ -26,24 +26,23 @@
 
 <hr>
 
-
 ## Introduction
 
 Mantle is a suite of Ethereum scaling solutions including an optimistic rollup and ZK rollup built using an iterative modular chain approach, and supported by Mantle’s native token $MNT.
 
-Mantle V2 is an upgrade of [Mantle V1](https://github.com/mantlenetworkio/mantle), tailored with specific adaptations to work seamlessly within the [BedRock](https://community.optimism.io/docs/developers/bedrock/explainer/) infrastructure.
+Mantle V2 is an upgrade of [Mantle V1](https://github.com/mantlenetworkio/mantle), tailored with specific adaptations to work seamlessly within the BedRock infrastructure.
 
 <br/>
 
 ## What's the difference?
 
-Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has realized significant enhancements, including support for reduced gas fees, shorter deposit times, optimized node performance, and improved Ethereum compatibility, among other benefits. For more detailed information, please refer to this [documentation](https://community.optimism.io/docs/developers/bedrock/differences/).
+Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has realized significant enhancements, including support for reduced gas fees, shorter deposit times, optimized node performance, and improved Ethereum compatibility, among other benefits. For more detailed information, please refer to this [documentation](https://docs-v2.mantle.xyz/intro/whats-new-in-mantle-v2).
 
 Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, for example, Mantle Network will introduce a new DA scheme implemented using EigenDA technology called **MantleDA**.
 
 Another significant enhancement involves the adoption of `$MNT` as the native token for Mantle Network, departing from the more common choice of `$ETH` in OP Stack implementations. This adjustment aligns the design more closely with Ethereum's native architecture, leading to reduced development and maintenance costs.
 
-> We encourage you to check out the [**Mantle tech docs**](https://docs.mantle.xyz) to learn more about the inner workings of Mantle.
+> We encourage you to check out the [**Mantle tech docs**](https://docs-v2.mantle.xyz) to learn more about the inner workings of Mantle.
 
 </br>
 
@@ -104,6 +103,5 @@ Then check out our list of [good first issues](https://github.com/mantlenetworki
 ## License
 
 Code forked from [`optimism`](https://github.com/ethereum-optimism/optimism) under the name [`optimism`](https://github.com/mantlenetworkio/bitnetwork/tree/master/l2geth) is licensed under the [GNU GPLv3](https://gist.github.com/kn9ts/cbe95340d29fc1aaeaa5dd5c059d2e60) in accordance with the [original license](https://github.com/ethereum-optimism/optimism/blob/master/COPYING).
-
 
 All other files within this repository are licensed under the [MIT License](https://github.com/mantlenetworkio/bitnetwork/blob/master/LICENSE) unless stated otherwise.
