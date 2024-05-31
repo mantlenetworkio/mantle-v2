@@ -187,14 +187,21 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 								blobsFetcher: blobsFetcher,
 							}
 						}
+						wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
 						for _, blob := range blobs {
 							blobData, err := blob.ToData()
 							if err != nil {
 								log.Error("ignoring blob due to parse failure", "err", err)
 								continue
 							}
-							data = append(data, blobData)
+							wholeBlobData = append(wholeBlobData, blobData[1:]...)
 						}
+						frameData := []eth.Data{}
+						err = rlp.DecodeBytes(wholeBlobData, &frameData)
+						if err != nil {
+							log.Error("DecodeBytes blob failure", "err", err)
+						}
+						data = append(data, frameData...)
 						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
 					return &DataSource{
@@ -301,14 +308,21 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 						} else if err != nil {
 							return nil, NewTemporaryError(fmt.Errorf("failed to fetch blobs: %w", err))
 						}
+						wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
 						for _, blob := range blobs {
 							blobData, err := blob.ToData()
 							if err != nil {
 								ds.log.Error("ignoring blob due to parse failure", "err", err)
 								continue
 							}
-							data = append(data, blobData)
+							wholeBlobData = append(wholeBlobData, blobData[1:]...)
 						}
+						frameData := []eth.Data{}
+						err = rlp.DecodeBytes(wholeBlobData, &frameData)
+						if err != nil {
+							log.Error("DecodeBytes blob failure", "err", err)
+						}
+						data = append(data, frameData...)
 						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
 					ds.open = true
