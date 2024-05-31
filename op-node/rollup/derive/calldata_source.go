@@ -170,6 +170,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 					}
 					if len(blobHashes) > 0 {
 						// download the actual blob bodies corresponding to the indexed blob hashes
+						log.Info("get data from blob", "client", blobsFetcher, "blobHashes", blobHashes)
 						blobs, err := blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(block), blobHashes)
 						if err != nil {
 							return &DataSource{
@@ -290,6 +291,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 					}
 					if len(blobHashes) > 0 {
 						// download the actual blob bodies corresponding to the indexed blob hashes
+						log.Info("get data from blob", "client", ds.blobsFetcher, "blobHashes", blobHashes)
 						blobs, err := ds.blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(ds.id), blobHashes)
 						if errors.Is(err, ethereum.NotFound) {
 							// If the L1 block was available, then the blobs should be available too. The only
