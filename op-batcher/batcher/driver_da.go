@@ -295,7 +295,7 @@ func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error
 }
 
 func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
-	blobInfo, requestId, err := l.eigenDA.DisperseBlob(context.Background(), data)
+	blobInfo, requestId, err := l.eigenDA.DisperseBlob(l.shutdownCtx, data)
 	if err != nil {
 		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
 		return nil, err

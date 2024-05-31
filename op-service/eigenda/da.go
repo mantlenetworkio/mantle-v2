@@ -110,6 +110,10 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 	// Wait before first status check
 	time.Sleep(m.StatusQueryRetryInterval)
 	for time.Now().Before(timeoutTime) {
+		if ctx.Err() != nil {
+			m.Log.Warn("context error", "err", ctx.Err())
+			return nil, nil, ctx.Err()
+		}
 		statusRes, err = daClient.GetBlobStatus(ctx, &disperser.BlobStatusRequest{
 			RequestId: disperseRes.RequestId,
 		})

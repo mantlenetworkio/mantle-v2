@@ -151,6 +151,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 						blobsFetcher: blobsFetcher,
 					}
 				} else {
+					log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
 					if blobsFetcher == nil && len(blobHashes) > 0 {
 						log.Error("find blob transaction, but blobsFetcher is nil")
 						return &DataSource{
@@ -193,6 +194,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 							}
 							data = append(data, blobData)
 						}
+						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
 					return &DataSource{
 						open: true,
@@ -281,6 +283,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 					if err != nil {
 						return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
 					}
+					log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
 					if ds.blobsFetcher == nil && len(blobHashes) > 0 {
 						log.Error("find blob transaction, but blobsFetcher is nil")
 						return nil, NewResetError(fmt.Errorf("failed to fetch blobs"))
@@ -304,6 +307,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 							}
 							data = append(data, blobData)
 						}
+						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
 					ds.open = true
 					ds.data = data
