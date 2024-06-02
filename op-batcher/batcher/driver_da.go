@@ -262,7 +262,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	l.state.registerL1Block(currentL1.ID())
+	//l.state.registerL1Block(currentL1.ID())
 
 	return true, nil
 
