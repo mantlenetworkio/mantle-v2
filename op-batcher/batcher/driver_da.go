@@ -224,11 +224,11 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	currentL1, err := l.l1Tip(l.killCtx)
-	if err != nil {
-		l.log.Error("loopEigenDa l1Tip", "err", err)
-		return false, err
-	}
+	// currentL1, err := l.l1Tip(l.killCtx)
+	// if err != nil {
+	// 	l.log.Error("loopEigenDa l1Tip", "err", err)
+	// 	return false, err
+	// }
 
 	//try 3 times
 	for retry := 0; retry < 3; retry++ {
