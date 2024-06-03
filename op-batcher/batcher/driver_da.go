@@ -223,11 +223,11 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	currentL1, err := l.l1Tip(l.killCtx)
-	if err != nil {
-		l.log.Error("loopEigenDa l1Tip", "err", err)
-		return false, err
-	}
+	// currentL1, err := l.l1Tip(l.killCtx)
+	// if err != nil {
+	// 	l.log.Error("loopEigenDa l1Tip", "err", err)
+	// 	return false, err
+	// }
 
 	//try 3 times
 	for retry := 0; retry < 3; retry++ {
@@ -262,10 +262,10 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	}
 
 	//create a new channel now for reducing the disperseEigenDaData latency time
-	if err := l.state.ensurePendingChannel(currentL1.ID()); err != nil {
-		l.log.Error("failed to ensurePendingChannel", "err", err)
-	}
-	l.state.registerL1Block(currentL1.ID())
+	// if err := l.state.ensurePendingChannel(currentL1.ID()); err != nil {
+	// 	l.log.Error("failed to ensurePendingChannel", "err", err)
+	// }
+	// l.state.registerL1Block(currentL1.ID())
 
 	return true, nil
 
