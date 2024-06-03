@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	se "github.com/ethereum-optimism/optimism/op-service/eth"
 
-	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
@@ -224,11 +223,11 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	// currentL1, err := l.l1Tip(l.killCtx)
-	// if err != nil {
-	// 	l.log.Error("loopEigenDa l1Tip", "err", err)
-	// 	return false, err
-	// }
+	currentL1, err := l.l1Tip(l.killCtx)
+	if err != nil {
+		l.log.Error("loopEigenDa l1Tip", "err", err)
+		return false, err
+	}
 
 	//try 3 times
 	for retry := 0; retry < 3; retry++ {
@@ -262,7 +261,11 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	//l.state.registerL1Block(currentL1.ID())
+	//create a new channel now for reducing the disperseEigenDaData latency time
+	if err := l.state.ensurePendingChannel(currentL1.ID()); err != nil {
+		l.log.Error("failed to ensurePendingChannel", "err", err)
+	}
+	l.state.registerL1Block(currentL1.ID())
 
 	return true, nil
 
@@ -286,11 +289,10 @@ func minInt(a, b int) int {
 func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error) {
 	l.log.Info("building Blob transaction candidate", "size", len(data))
 	blobs := []*se.Blob{}
-	realBlobDataSize := se.MaxBlobDataSize - 1
-	for idx := 0; idx < len(data); idx += realBlobDataSize {
-		blobData := data[idx : idx+minInt(len(data)-idx, realBlobDataSize)]
+	for idx := 0; idx < len(data); idx += se.MaxBlobDataSize {
+		blobData := data[idx : idx+minInt(len(data)-idx, se.MaxBlobDataSize)]
 		var blob se.Blob
-		if err := blob.FromData(append([]byte{derive.DerivationVersion0}, blobData...)); err != nil {
+		if err := blob.FromData(blobData); err != nil {
 			return nil, err
 		}
 		blobs = append(blobs, &blob)

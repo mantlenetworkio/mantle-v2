@@ -194,7 +194,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 								log.Error("ignoring blob due to parse failure", "err", err)
 								continue
 							}
-							wholeBlobData = append(wholeBlobData, blobData[1:]...)
+							wholeBlobData = append(wholeBlobData, blobData...)
 						}
 						frameData := []eth.Data{}
 						err = rlp.DecodeBytes(wholeBlobData, &frameData)
@@ -315,7 +315,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 								ds.log.Error("ignoring blob due to parse failure", "err", err)
 								continue
 							}
-							wholeBlobData = append(wholeBlobData, blobData[1:]...)
+							wholeBlobData = append(wholeBlobData, blobData...)
 						}
 						frameData := []eth.Data{}
 						err = rlp.DecodeBytes(wholeBlobData, &frameData)
