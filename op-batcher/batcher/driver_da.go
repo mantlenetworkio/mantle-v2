@@ -213,7 +213,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	var err error
 	var candidate *txmgr.TxCandidate
 	var receipt *types.Receipt
-	var data []byte
+	var data, wrappedData []byte
 	eigendaSuccess := false
 
 	data, err = l.txAggregatorForEigenDa()
@@ -231,27 +231,28 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	for loopRetry := 0; loopRetry < DaLoopRetryNum; loopRetry++ {
 		err = func() error {
 			l.metr.RecordRollupRetry(int32(loopRetry))
-			if candidate == nil {
+			if !eigendaSuccess {
 				//try 3 times
 				for retry := 0; retry < EigenRPCRetryNum; retry++ {
 					l.metr.RecordDaRetry(int32(retry))
-					wrappedData, err := l.disperseEigenDaData(data)
+					wrappedData, err = l.disperseEigenDaData(data)
 					if err != nil {
 						l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
 						time.Sleep(5 * time.Second)
 						continue
 					}
 
-					candidate = l.calldataTxCandidate(wrappedData)
 					eigendaSuccess = true
 					break
 				}
+			}
 
-				if !eigendaSuccess {
-					if candidate, err = l.blobTxCandidate(data); err != nil {
-						l.log.Warn("failed to create blob tx candidate", "err", err)
-						return err
-					}
+			if eigendaSuccess {
+				candidate = l.calldataTxCandidate(wrappedData)
+			} else {
+				if candidate, err = l.blobTxCandidate(data); err != nil {
+					l.log.Warn("failed to create blob tx candidate", "err", err)
+					return err
 				}
 			}
 
