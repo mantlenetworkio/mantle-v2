@@ -27,7 +27,7 @@ type EigenDA struct {
 }
 
 func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
-	m.Log.Info("Attempting to disperse blob to EigenDA")
+	m.Log.Info("Attempting to get blob status from EigenDA")
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential)}

@@ -3,7 +3,6 @@ package batcher
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"math/big"
 	"sort"
@@ -34,6 +33,7 @@ import (
 const (
 	EigenRollupMaxSize  = 1024 * 1024 * 300
 	DaLoopRetryNum      = 10
+	EigenRPCRetryNum    = 3
 	BytesPerCoefficient = 31
 )
 
@@ -204,8 +204,6 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 }
 
 func (l *BatchSubmitter) loopEigenDa() (bool, error) {
-	l.metr.RecordRollupRetry(0)
-	l.metr.RecordDaRetry(0)
 	//it means that all the txData has been rollup
 	if len(l.state.daPendingTxData) == 0 {
 		l.log.Info("all txData of current channel have been rollup")
@@ -214,6 +212,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 
 	var err error
 	var candidate *txmgr.TxCandidate
+	var receipt *types.Receipt
 	var data []byte
 	eigendaSuccess := false
 
@@ -223,38 +222,59 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
-	// currentL1, err := l.l1Tip(l.killCtx)
-	// if err != nil {
-	// 	l.log.Error("loopEigenDa l1Tip", "err", err)
-	// 	return false, err
-	// }
-
-	//try 3 times
-	for retry := 0; retry < 3; retry++ {
-		wrappedData, err := l.disperseEigenDaData(data)
-		if err != nil {
-			l.log.Error("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		candidate = l.calldataTxCandidate(wrappedData)
-		eigendaSuccess = true
-		break
-	}
-
-	if !eigendaSuccess {
-		if candidate, err = l.blobTxCandidate(data); err != nil {
-			l.log.Error("failed to create blob tx candidate", "err", err)
-			return false, fmt.Errorf("could not create blob tx candidate: %w", err)
-		}
-	}
-
-	receipt, err := l.txMgr.Send(l.killCtx, *candidate)
+	currentL1, err := l.l1Tip(l.killCtx)
 	if err != nil {
-		l.log.Error("failed to send tx candidate", "err", err)
+		l.log.Warn("loopEigenDa l1Tip", "err", err)
 		return false, err
 	}
+
+	for loopRetry := 0; loopRetry < DaLoopRetryNum; loopRetry++ {
+		err = func() error {
+			l.metr.RecordRollupRetry(int32(loopRetry))
+			if candidate == nil {
+				//try 3 times
+				for retry := 0; retry < EigenRPCRetryNum; retry++ {
+					l.metr.RecordDaRetry(int32(retry))
+					wrappedData, err := l.disperseEigenDaData(data)
+					if err != nil {
+						l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
+						time.Sleep(5 * time.Second)
+						continue
+					}
+
+					candidate = l.calldataTxCandidate(wrappedData)
+					eigendaSuccess = true
+					break
+				}
+
+				if !eigendaSuccess {
+					if candidate, err = l.blobTxCandidate(data); err != nil {
+						l.log.Warn("failed to create blob tx candidate", "err", err)
+						return err
+					}
+				}
+			}
+
+			receipt, err = l.txMgr.Send(l.killCtx, *candidate)
+			if err != nil {
+				l.log.Warn("failed to send tx candidate", "err", err)
+				return err
+			}
+
+			return nil
+		}()
+		if err != nil {
+			l.log.Warn("failed to rollup", "err", err, "retry time", loopRetry)
+		} else {
+			break
+		}
+	}
+
+	if err != nil {
+		l.log.Error("failed to rollup", "err", err)
+		return false, err
+	}
+
 	err = l.handleConfirmDataStoreReceipt(receipt)
 	if err != nil {
 		l.log.Error("failed to handleConfirmDataStoreReceipt", "err", err)
@@ -262,10 +282,11 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	}
 
 	//create a new channel now for reducing the disperseEigenDaData latency time
-	// if err := l.state.ensurePendingChannel(currentL1.ID()); err != nil {
-	// 	l.log.Error("failed to ensurePendingChannel", "err", err)
-	// }
-	// l.state.registerL1Block(currentL1.ID())
+	if err = l.state.ensurePendingChannel(currentL1.ID()); err != nil {
+		l.log.Error("failed to ensurePendingChannel", "err", err)
+		return false, err
+	}
+	l.state.registerL1Block(currentL1.ID())
 
 	return true, nil
 
@@ -333,6 +354,8 @@ func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	l.metr.RecordConfirmedDataStoreId(blobInfo.BlobVerificationProof.BatchId)
+	l.metr.RecordInitReferenceBlockNumber(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 	// prepend the derivation version to the data
 	l.log.Info("Prepending derivation version to calldata")
 	wrappedData = append([]byte{eigenda.DerivationVersionEigenda}, wrappedData...)
