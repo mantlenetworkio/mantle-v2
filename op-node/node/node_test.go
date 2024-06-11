@@ -6,12 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	ssources "github.com/ethereum-optimism/optimism/op-service/sources"
@@ -65,7 +67,8 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 					Beacon: &L1BeaconEndpointConfig{
 						//BeaconAddr:             "https://ethereum-holesky-beacon-api.publicnode.com",
 						//BeaconAddr:             "https://eth-sepolia.g.alchemy.com/v2/XMS1J6f654XZolfd7oaMe-kaNPEpWifX",
-						BeaconAddr:             "https://ethereum-mainnet.core.chainstack.com/beacon/87483ac9f236e03d3acdd862a0e97dc7/",
+						//BeaconAddr: "http://ethereum-mainnet.core.chainstack.com/beacon/87483ac9f236e03d3acdd862a0e97dc7/",
+						BeaconAddr:             "http://localhost:5052",
 						BeaconHeader:           "",
 						BeaconArchiverAddr:     "",
 						BeaconCheckIgnore:      false,
@@ -117,14 +120,14 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 				// Number:     1541070,
 				// ParentHash: common.HexToHash("0x6c5711e7adf4a3d25dbe4ec089b8391171d1fdfcb8940c7ebbdbe18672e21a0d"),
 				// Time:       0x66430a1c,
-				Hash:       common.HexToHash("0x332ad6e39766b71cecf8d56ea6d56f75eced0c5431cc6fc039e23800c33a6f56"),
-				Number:     5898826,
-				ParentHash: common.HexToHash("0x90228ef8461bea2221e904020cbe9b96ae3ab887c32874f687e07dcf821c650e"),
-				Time:       0x6642e5ec,
+				Hash:       common.HexToHash("0x12be7af179e0937288f2bd6fe498b96dd72723e2e96fc1379df40e078af55e7f"),
+				Number:     6009409,
+				ParentHash: common.HexToHash("0x22209247f0237ac590d72eb73cf4167795a7d7c17eeff1f8e9ca495b627fad2a"),
+				Time:       0x665912ac,
 			}, []eth.IndexedBlobHash{
 				{
-					Index: 1,
-					Hash:  common.HexToHash("0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014"),
+					Index: 2,
+					Hash:  common.HexToHash("0x01fa31ad32ee8f1ee109a4fe4786e3f0342abeeeae3b19ad4506e7131b38606b"),
 				},
 			})
 
@@ -133,7 +136,19 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 				return
 			}
 
-			fmt.Println(blobs)
+			out := []eth.Data{}
+			data := []byte{}
+			for _, blob := range blobs {
+				blobData, err := blob.ToData()
+				if err != nil {
+					t.Errorf("ignoring blob due to parse failure %v", err)
+					continue
+				}
+				data = append(data, blobData[1:]...)
+			}
+			err = rlp.DecodeBytes(data, &out)
+			fmt.Println(err)
+			fmt.Println(derive.ParseFrames(out[0]))
 		})
 	}
 }

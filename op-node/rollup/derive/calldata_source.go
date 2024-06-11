@@ -116,7 +116,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 	if cfg.MantleDaSwitch {
 		daUpgradeCfg := eigenda.GetDaUpgradeConfigForMantle(cfg.L2ChainID)
 		if daUpgradeCfg != nil && (safeL2Ref.Number+1 >= daUpgradeCfg.EigenDaUpgradeHeight.Uint64()) {
-			log.Info("Derived by Eigenda da", "EigenDaUpgradeHeight", daUpgradeCfg.EigenDaUpgradeHeight)
+			log.Info("Derived by Eigenda da", "EigenDaUpgradeHeight", daUpgradeCfg.EigenDaUpgradeHeight, "safeL2Ref", safeL2Ref, "l1InBoxBlock", block)
 			_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 			if err != nil {
 				log.Error("Fetch txs by hash fail", "err", err)
@@ -525,11 +525,13 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, daClient eig
 			}
 			log.Info("Successfully retrieved data from EigenDA", "quorum id", frameRef.QuorumIds[0], "confirmation block number", frameRef.ReferenceBlockNumber, "blob length", frameRef.BlobLength)
 			data = data[:frameRef.BlobLength]
-			err = rlp.DecodeBytes(data, &out)
+			outData := []eth.Data{}
+			err = rlp.DecodeBytes(data, &outData)
 			if err != nil {
 				log.Error("Decode retrieval frames in error,skip wrong data", "err", err, "blobInfo", fmt.Sprintf("%x:%d", frameRef.BatchHeaderHash, frameRef.BlobIndex))
 				continue
 			}
+			out = append(out, outData...)
 		case *op_service.CalldataFrame_Frame:
 			log.Info("Successfully read data from calldata (not EigenDA)")
 			frame := calldataFrame.GetFrame()
