@@ -25,6 +25,7 @@ import (
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
@@ -117,7 +118,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 	if err != nil {
 		return nil, err
 	}
-	eigendaUpgradeConfig := eigenda.GetDaUpgradeConfigForMantle(l2ChainID)
+	eigendaUpgradeConfig := upgrade.GetUpgradeConfigForMantle(l2ChainID)
 	batcherCfg.DaUpgradeChainConfig = eigendaUpgradeConfig
 
 	// Validate the batcher config

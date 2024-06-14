@@ -31,6 +31,7 @@ type Metrics interface {
 
 	RecordUnsafePayloadsBuffer(length uint64, memSize uint64, next eth.BlockID)
 	RecordParseDataStoreId(dataStoreId uint32)
+	RecordFrames(frameSize int)
 	SetDerivationIdle(idle bool)
 
 	RecordL1ReorgDepth(d uint64)

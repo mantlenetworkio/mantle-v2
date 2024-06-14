@@ -88,7 +88,7 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 				done bool
 				err  error
 			)
-			if l.Config.DaUpgradeChainConfig != nil && l.state.lastProcessedBlock.Number().Cmp(l.Config.DaUpgradeChainConfig.EigenDaUpgradeHeight) >= 0 {
+			if l.Config.DaUpgradeChainConfig.IsUseEigenDa(l.state.lastProcessedBlock.Number()) {
 				done, err = l.loopEigenDa()
 			} else {
 				done, err = l.loopRollupDa()

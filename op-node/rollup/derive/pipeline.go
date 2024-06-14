@@ -20,6 +20,7 @@ type Metrics interface {
 	RecordUnsafePayloadsBuffer(length uint64, memSize uint64, next eth.BlockID)
 	RecordChannelInputBytes(inputCompresedBytes int)
 	RecordParseDataStoreId(dataStoreId uint32)
+	RecordFrames(frameSize int)
 }
 
 type L1Fetcher interface {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -23,6 +24,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	seth "github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
+	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
 const ConfirmDataStoreEventABI = "ConfirmDataStore(uint32,bytes32)"
@@ -114,8 +116,8 @@ type DataSource struct {
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
 func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, metrics Metrics, block eth.L1BlockRef, batcherAddr common.Address, daClient eigenda.IEigenDA, safeL2Ref eth.L2BlockRef, blobsFetcher L1BlobsFetcher) DataIter {
 	if cfg.MantleDaSwitch {
-		daUpgradeCfg := eigenda.GetDaUpgradeConfigForMantle(cfg.L2ChainID)
-		if daUpgradeCfg != nil && (safeL2Ref.Number+1 >= daUpgradeCfg.EigenDaUpgradeHeight.Uint64()) {
+		daUpgradeCfg := upgrade.GetUpgradeConfigForMantle(cfg.L2ChainID)
+		if daUpgradeCfg != nil && daUpgradeCfg.IsUseEigenDa(big.NewInt(int64(safeL2Ref.Number)+1)) {
 			log.Info("Derived by Eigenda da", "EigenDaUpgradeHeight", daUpgradeCfg.EigenDaUpgradeHeight, "safeL2Ref", safeL2Ref, "l1InBoxBlock", block)
 			_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
 			if err != nil {
@@ -204,6 +206,7 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 						data = append(data, frameData...)
 						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
+					metrics.RecordFrames(len(data))
 					return &DataSource{
 						open: true,
 						data: data,
@@ -284,8 +287,8 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
 		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
-			daUpgradeCfg := eigenda.GetDaUpgradeConfigForMantle(ds.cfg.L2ChainID)
-			if daUpgradeCfg.EigenDaUpgradeHeight != nil && (ds.safeL2Ref.Number+1 >= daUpgradeCfg.EigenDaUpgradeHeight.Uint64()) {
+			daUpgradeCfg := upgrade.GetUpgradeConfigForMantle(ds.cfg.L2ChainID)
+			if daUpgradeCfg != nil && daUpgradeCfg.IsUseEigenDa(big.NewInt(int64(ds.safeL2Ref.Number)+1)) {
 				if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
 					data, blobHashes, err := dataFromEigenDa(ds.cfg, txs, ds.daClient, ds.metrics, log.New("origin", ds.id), ds.batcherAddr)
 					if err != nil {
@@ -325,6 +328,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 						data = append(data, frameData...)
 						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 					}
+					ds.metrics.RecordFrames(len(data))
 					ds.open = true
 					ds.data = data
 				} else if errors.Is(err, ethereum.NotFound) {
@@ -532,6 +536,7 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, daClient eig
 				continue
 			}
 			out = append(out, outData...)
+			metrics.RecordParseDataStoreId(frameRef.ReferenceBlockNumber)
 		case *op_service.CalldataFrame_Frame:
 			log.Info("Successfully read data from calldata (not EigenDA)")
 			frame := calldataFrame.GetFrame()

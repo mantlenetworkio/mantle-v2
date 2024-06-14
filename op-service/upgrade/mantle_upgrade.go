@@ -1,10 +1,10 @@
-package eigenda
+package upgrade
 
 import (
 	"math/big"
 )
 
-type DaUpgradeChainConfig struct {
+type UpgradeChainConfig struct {
 	ChainID              *big.Int `json:"chainId"`                 // chainId identifies the current chain and is used for replay protection
 	EigenDaUpgradeHeight *big.Int `json:"Eigen_da_upgrade_height"` // Upgrade Da from MantleDA to EigenDA
 }
@@ -19,28 +19,28 @@ var (
 )
 
 var (
-	MantleMainnetUpgradeConfig = DaUpgradeChainConfig{
+	MantleMainnetUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleMainnetChainId,
-		EigenDaUpgradeHeight: big.NewInt(0),
+		EigenDaUpgradeHeight: nil,
 	}
-	MantleSepoliaUpgradeConfig = DaUpgradeChainConfig{
+	MantleSepoliaUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleSepoliaChainId,
-		EigenDaUpgradeHeight: big.NewInt(0),
+		EigenDaUpgradeHeight: nil,
 	}
-	MantleSepoliaQAUpgradeConfig = DaUpgradeChainConfig{
+	MantleSepoliaQAUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleSepoliaQAChainId,
 		EigenDaUpgradeHeight: big.NewInt(3274000),
 	}
-	MantleLocalUpgradeConfig = DaUpgradeChainConfig{
+	MantleLocalUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleLocalChainId,
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
-	MantleDefaultUpgradeConfig = DaUpgradeChainConfig{
+	MantleDefaultUpgradeConfig = UpgradeChainConfig{
 		EigenDaUpgradeHeight: big.NewInt(0),
 	}
 )
 
-func GetDaUpgradeConfigForMantle(chainID *big.Int) *DaUpgradeChainConfig {
+func GetUpgradeConfigForMantle(chainID *big.Int) *UpgradeChainConfig {
 	if chainID == nil {
 		return nil
 	}
@@ -56,4 +56,18 @@ func GetDaUpgradeConfigForMantle(chainID *big.Int) *DaUpgradeChainConfig {
 	default:
 		return &MantleDefaultUpgradeConfig
 	}
+}
+
+func (cfg *UpgradeChainConfig) IsEqualEigenDaUpgradeBlock(l2Block *big.Int) bool {
+	if cfg != nil && cfg.EigenDaUpgradeHeight != nil && cfg.EigenDaUpgradeHeight.Cmp(l2Block) == 0 {
+		return true
+	}
+	return false
+}
+
+func (cfg *UpgradeChainConfig) IsUseEigenDa(l2Block *big.Int) bool {
+	if cfg != nil && cfg.EigenDaUpgradeHeight != nil && cfg.EigenDaUpgradeHeight.Cmp(l2Block) <= 0 {
+		return true
+	}
+	return false
 }

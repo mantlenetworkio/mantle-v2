@@ -26,6 +26,7 @@ import (
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
 var (
@@ -67,7 +68,7 @@ type Config struct {
 	Channel ChannelConfig
 	EigenDA eigenda.Config
 	// Upgrade Da from MantleDA to EigenDA
-	DaUpgradeChainConfig *eigenda.DaUpgradeChainConfig
+	DaUpgradeChainConfig *upgrade.UpgradeChainConfig
 }
 
 // Check ensures that the [Config] is valid.

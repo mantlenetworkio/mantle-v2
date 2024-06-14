@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +30,7 @@ type channelManager struct {
 	log        log.Logger
 	metr       metrics.Metricer
 	cfg        ChannelConfig
-	upgradeCfg *eigenda.DaUpgradeChainConfig
+	upgradeCfg *upgrade.UpgradeChainConfig
 
 	// All blocks since the last request for new tx data.
 	blocks []*types.Block
@@ -59,7 +59,7 @@ type channelManager struct {
 	closed bool
 }
 
-func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig, upgradeCfg *eigenda.DaUpgradeChainConfig) *channelManager {
+func NewChannelManager(log log.Logger, metr metrics.Metricer, cfg ChannelConfig, upgradeCfg *upgrade.UpgradeChainConfig) *channelManager {
 	return &channelManager{
 		log:                   log,
 		metr:                  metr,
@@ -284,8 +284,8 @@ func (s *channelManager) processBlocks() error {
 		latestL2ref eth.L2BlockRef
 	)
 	for i, block := range s.blocks {
-		if s.upgradeCfg != nil && s.lastProcessedBlock != nil &&
-			len(s.pendingChannel.Blocks()) != 0 && s.upgradeCfg.EigenDaUpgradeHeight.Cmp(block.Number()) == 0 {
+		if s.lastProcessedBlock != nil &&
+			len(s.pendingChannel.Blocks()) != 0 && s.upgradeCfg.IsEqualEigenDaUpgradeBlock(block.Number()) {
 			s.pendingChannel.setFullErr(ErrDaUpgrade)
 			break
 		}
