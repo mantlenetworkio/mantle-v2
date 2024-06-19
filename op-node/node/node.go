@@ -34,16 +34,17 @@ type OpNode struct {
 	l1SafeSub      ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
 	l1FinalizedSub ethereum.Subscription // Subscription to get L1 safe blocks, a.k.a. justified data (polling)
 
-	l1Source  *sources.L1Client     // L1 Client to fetch data from
-	l2Driver  *driver.Driver        // L2 Engine to Sync
-	l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
-	daSyncer  *da.MantleDataStore
-	rpcSync   *sources.SyncClient // Alt-sync RPC client, optional (may be nil)
-	server    *rpcServer          // RPC server hosting the rollup-node API
-	p2pNode   *p2p.NodeP2P        // P2P node functionality
-	p2pSigner p2p.Signer          // p2p gogssip application messages will be signed with this signer
-	tracer    Tracer              // tracer to get events for testing/debugging
-	runCfg    *RuntimeConfig      // runtime configurables
+	l1Source      *sources.L1Client     // L1 Client to fetch data from
+	l2Driver      *driver.Driver        // L2 Engine to Sync
+	l2Source      *sources.EngineClient // L2 Execution Engine RPC bindings
+	daSyncer      *da.MantleDataStore
+	eigenDaSyncer *da.EigenDADataStore
+	rpcSync       *sources.SyncClient // Alt-sync RPC client, optional (may be nil)
+	server        *rpcServer          // RPC server hosting the rollup-node API
+	p2pNode       *p2p.NodeP2P        // P2P node functionality
+	p2pSigner     p2p.Signer          // p2p gogssip application messages will be signed with this signer
+	tracer        Tracer              // tracer to get events for testing/debugging
+	runCfg        *RuntimeConfig      // runtime configurables
 
 	// some resources cannot be stopped directly, like the p2p gossipsub router (not our design),
 	// and depend on this ctx to be closed.
@@ -210,8 +211,9 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	}
 
 	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
+	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, &cfg.DatastoreConfig)
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, &cfg.DA)
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer)
 
 	return nil
 }

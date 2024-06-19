@@ -440,7 +440,7 @@ func TestUnmashal(t *testing.T) {
 
 func TestCallEigenDA(t *testing.T) {
 	cfgData := `{
-		"L1EthRpc": "http://localhost:8545",
+		"L1EthRpc": "http://127.0.0.1:8545",
 		"L2EthRpc": "http://127.0.0.1:9545",
 		"RollupRpc": "http://127.0.0.1:7545",
 		"DisperserSocket": "127.0.0.1:31011",
@@ -457,7 +457,7 @@ func TestCallEigenDA(t *testing.T) {
 		"MaxL1TxSize": 10000,
 		"Stopped": false,
 		"TxMgrConfig": {
-			"L1RPCURL": "http://localhost:8545",
+			"L1RPCURL": "https://eth-sepolia.g.alchemy.com/v2/XMS1J6f654XZolfd7oaMe-kaNPEpWifX",
 			"Mnemonic": "",
 			"HDPath": "",
 			"SequencerHDPath": "m/44'/60'/0'/0/3",
@@ -530,7 +530,7 @@ func TestCallEigenDA(t *testing.T) {
 	batchSubmitter, err := NewBatchSubmitterFromCLIConfig(cfg, log.New(), metrics.NewMetrics("test"))
 
 	ctx := context.Background()
-	tx, pd, err := batchSubmitter.L1Client.TransactionByHash(ctx, common.HexToHash("0x0068906447d84373a302d19b65ff0379807eba9288cd98291f4f28b8fb3f5c20"))
+	tx, pd, err := batchSubmitter.L1Client.TransactionByHash(ctx, common.HexToHash("0xfae251d4d80abdf7e6ee1bb2f230169e335b7dd02112f66398cd92be1f1a85bc"))
 	if pd || err != nil {
 		t.Error(err)
 		return

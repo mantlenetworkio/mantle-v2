@@ -13,6 +13,7 @@ type TestDerivationMetrics struct {
 	FnRecordL2Ref             func(name string, ref eth.L2BlockRef)
 	FnRecordUnsafePayloads    func(length uint64, memSize uint64, next eth.BlockID)
 	FnRecordChannelInputBytes func(inputCompresedBytes int)
+	FnRecordFrames            func(frames int)
 }
 
 func (t *TestDerivationMetrics) RecordParseDataStoreId(dataStoreId uint32) {
@@ -48,6 +49,12 @@ func (t *TestDerivationMetrics) RecordUnsafePayloadsBuffer(length uint64, memSiz
 func (t *TestDerivationMetrics) RecordChannelInputBytes(inputCompresedBytes int) {
 	if t.FnRecordChannelInputBytes != nil {
 		t.FnRecordChannelInputBytes(inputCompresedBytes)
+	}
+}
+
+func (t *TestDerivationMetrics) RecordFrames(frames int) {
+	if t.FnRecordFrames != nil {
+		t.FnRecordFrames(frames)
 	}
 }
 

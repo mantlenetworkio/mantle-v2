@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	mdar "github.com/ethereum-optimism/optimism/op-node/rollup/da/interfaceRetrieverServer"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -107,7 +108,9 @@ func (mda *MantleDataStore) getFramesByDataStoreId(dataStoreId uint32) ([]byte, 
 	client := mdar.NewDataRetrievalClient(conn)
 	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
 	request := &mdar.FramesAndDataRequest{
-		DataStoreId: dataStoreId,
+		Value: &mdar.FramesAndDataRequest_DataStoreId{
+			DataStoreId: dataStoreId,
+		},
 	}
 	reply, err := client.RetrieveFramesAndData(mda.Ctx, request, opt)
 	if err != nil {
@@ -169,7 +172,9 @@ func (mda *MantleDataStore) RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]
 	client := mdar.NewDataRetrievalClient(conn)
 	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
 	request := &mdar.FramesAndDataRequest{
-		DataStoreId: dataStoreId,
+		Value: &mdar.FramesAndDataRequest_DataStoreId{
+			DataStoreId: dataStoreId,
+		},
 	}
 	reply, err := client.RetrieveFramesAndData(mda.Ctx, request, opt)
 	if err != nil {
@@ -196,4 +201,65 @@ func (mda *MantleDataStore) RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]
 
 func (mda *MantleDataStore) IsDaIndexer() bool {
 	return mda.Cfg.MantleDAIndexerEnable
+}
+
+type EigenDADataStore struct {
+	daClient eigenda.IEigenDA
+	Cfg      *MantleDataStoreConfig
+	Ctx      context.Context
+}
+
+func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *eigenda.Config, cfg *MantleDataStoreConfig) *EigenDADataStore {
+	var daClient eigenda.IEigenDA
+	if daCfg != nil {
+		daClient = &eigenda.EigenDA{
+			Log:    log,
+			Config: *daCfg,
+		}
+	}
+	return &EigenDADataStore{
+		daClient: daClient,
+		Cfg:      cfg,
+		Ctx:      ctx,
+	}
+}
+
+func (da *EigenDADataStore) IsDaIndexer() bool {
+	return da.Cfg.MantleDAIndexerEnable
+}
+
+func (da *EigenDADataStore) RetrieveBlob(BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
+	return da.daClient.RetrieveBlob(da.Ctx, BatchHeaderHash, BlobIndex)
+}
+
+func (da *EigenDADataStore) RetrievalFramesFromDaIndexer(txHash string) ([]byte, error) {
+	log.Info("sync block data from mantle da retriever")
+	conn, err := grpc.Dial(da.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Connect to da retriever fail", "err", err)
+		return nil, err
+	}
+	defer conn.Close()
+
+	client := mdar.NewDataRetrievalClient(conn)
+	opt := grpc.MaxCallRecvMsgSize(MAX_RPC_MESSAGE_SIZE)
+	request := &mdar.FramesAndDataRequest{
+		Value: &mdar.FramesAndDataRequest_DataConfirmHash{
+			DataConfirmHash: txHash,
+		},
+	}
+	reply, err := client.RetrieveFramesAndData(da.Ctx, request, opt)
+	if err != nil {
+		log.Error("Retrieve frames and data fail", "err", err)
+		return nil, err
+	}
+
+	if reply.Data == nil {
+		log.Error("frames is nil ,waiting da indexer syncing")
+		return nil, fmt.Errorf("frames is nil,maybe da indexer is syncing,need to try again,txHash %s", txHash)
+	}
+
+	replyData := reply.Data
+	log.Debug("Get reply data success", "replyLength", len(replyData))
+	return replyData, nil
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
@@ -171,5 +172,34 @@ func TestRetrieveBlob(t *testing.T) {
 func TestRetrieveBlobTx(t *testing.T) {
 }
 
-//914019ca6da22a54263a49bdc740a0e3640b060ac5127b2cbd0d69deeb336298
-//669AF59E4827077102146302CA7F6D839CC6B9CC92710A1A6145771A76249446
+func TestRetrieveFromDaIndexer(t *testing.T) {
+	eigenDA := eigenda.Config{
+		RPC: "disperser-holesky.eigenda.xyz:443",
+	}
+
+	eigenDaSyncer := da.NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &da.MantleDataStoreConfig{
+		MantleDaIndexerSocket: "127.0.0.1:32111",
+		MantleDAIndexerEnable: true,
+	})
+
+	out := []eth.Data{}
+
+	if eigenDaSyncer.IsDaIndexer() {
+		data, err := eigenDaSyncer.RetrievalFramesFromDaIndexer("0x8494e3e2c70933fc69b82bc0a851f77716d385b52fa8f386df29b819c717be9b")
+		if err != nil {
+			fmt.Println("Retrieval frames from eigenDa indexer error", "err", err)
+			return
+		}
+		outData := []eth.Data{}
+		err = rlp.DecodeBytes(data, &outData)
+		if err != nil {
+			fmt.Println("Decode retrieval frames in error,skip wrong data", "err", err)
+			return
+		}
+		out = append(out, outData...)
+
+		fmt.Println(len(out))
+		return
+	}
+
+}
