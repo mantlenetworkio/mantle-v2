@@ -55,3 +55,5 @@ func (*noopMetrics) RecordTxOverMaxLimit() {}
 func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
 
 }
+
+func (*noopMetrics) RecordEigenDAFailback() {}

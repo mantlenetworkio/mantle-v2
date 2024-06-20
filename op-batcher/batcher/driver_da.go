@@ -254,6 +254,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 					l.log.Warn("failed to create blob tx candidate", "err", err)
 					return err
 				}
+				l.metr.RecordEigenDAFailback()
 			}
 
 			receipt, err = l.txMgr.Send(l.killCtx, *candidate)
