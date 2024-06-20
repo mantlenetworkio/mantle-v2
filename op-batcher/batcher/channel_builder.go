@@ -19,6 +19,7 @@ var (
 	ErrChannelTimeoutClose   = errors.New("close to channel timeout")
 	ErrSeqWindowClose        = errors.New("close to sequencer window timeout")
 	ErrTerminated            = errors.New("channel terminated")
+	ErrDaUpgrade             = errors.New("da upgrade")
 )
 
 type ChannelFullError struct {

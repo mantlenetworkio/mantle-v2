@@ -19,6 +19,8 @@ COPY ./op-node/docker.go.work /go/go.work
 
 WORKDIR /app/op-node
 
+RUN go mod tidy
+
 RUN go mod download
 
 ARG TARGETOS TARGETARCH

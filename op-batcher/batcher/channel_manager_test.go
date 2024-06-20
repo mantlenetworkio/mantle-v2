@@ -28,7 +28,7 @@ func TestPendingChannelTimeout(t *testing.T) {
 	log := testlog.Logger(t, log.LvlCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		ChannelTimeout: 100,
-	})
+	}, nil)
 
 	// Pending channel is nil so is cannot be timed out
 	timeout := m.pendingChannelIsTimedOut()
@@ -69,7 +69,7 @@ func TestPendingChannelTimeout(t *testing.T) {
 // detects a reorg when it has cached L1 blocks.
 func TestChannelManagerReturnsErrReorg(t *testing.T) {
 	log := testlog.Logger(t, log.LvlCrit)
-	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{})
+	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	a := types.NewBlock(&types.Header{
 		Number: big.NewInt(0),
@@ -106,7 +106,7 @@ func TestChannelManagerReturnsErrReorgWhenDrained(t *testing.T) {
 				TargetFrameSize:  0,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 
 	a := newMiniL2Block(0)
 	x := newMiniL2BlockWithNumberParent(0, big.NewInt(1), common.Hash{0xff})
@@ -124,7 +124,7 @@ func TestChannelManagerReturnsErrReorgWhenDrained(t *testing.T) {
 // TestChannelManagerNextTxData checks the nextTxData function.
 func TestChannelManagerNextTxData(t *testing.T) {
 	log := testlog.Logger(t, log.LvlCrit)
-	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{})
+	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	// Nil pending channel should return EOF
 	returnedTxData, err := m.nextTxData()
@@ -181,7 +181,7 @@ func TestChannelManager_Clear(t *testing.T) {
 			TargetNumFrames:  1,
 			ApproxComprRatio: 1.0,
 		},
-	})
+	}, nil)
 
 	// Channel Manager state should be empty by default
 	require.Empty(m.blocks)
@@ -247,7 +247,7 @@ func TestChannelManagerTxConfirmed(t *testing.T) {
 		// channels on confirmation. This would result in [TxConfirmed]
 		// clearing confirmed transactions, and reseting the pendingChannels map
 		ChannelTimeout: 10,
-	})
+	}, nil)
 
 	// Let's add a valid pending transaction to the channel manager
 	// So we can demonstrate that TxConfirmed's correctness
@@ -295,7 +295,7 @@ func TestChannelManagerTxConfirmed(t *testing.T) {
 func TestChannelManagerTxFailed(t *testing.T) {
 	// Create a channel manager
 	log := testlog.Logger(t, log.LvlCrit)
-	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{})
+	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	// Let's add a valid pending transaction to the channel
 	// manager so we can demonstrate correctness
@@ -344,7 +344,7 @@ func TestChannelManager_TxResend(t *testing.T) {
 				TargetFrameSize:  0,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 
 	a, _ := derivetest.RandomL2Block(rng, 4)
 
@@ -388,7 +388,7 @@ func TestChannelManagerCloseBeforeFirstUse(t *testing.T) {
 				TargetFrameSize:  0,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 
 	a, _ := derivetest.RandomL2Block(rng, 4)
 
@@ -416,7 +416,7 @@ func TestChannelManagerCloseNoPendingChannel(t *testing.T) {
 				TargetNumFrames:  1,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 	a := newMiniL2Block(0)
 	b := newMiniL2BlockWithNumberParent(0, big.NewInt(1), a.Hash())
 
@@ -455,7 +455,7 @@ func TestChannelManagerClosePendingChannel(t *testing.T) {
 				TargetFrameSize:  1000,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 
 	a := newMiniL2Block(50_000)
 	b := newMiniL2BlockWithNumberParent(10, big.NewInt(1), a.Hash())
@@ -500,7 +500,7 @@ func TestChannelManagerCloseAllTxsFailed(t *testing.T) {
 				TargetFrameSize:  1000,
 				ApproxComprRatio: 1.0,
 			},
-		})
+		}, nil)
 
 	a := newMiniL2Block(50_000)
 

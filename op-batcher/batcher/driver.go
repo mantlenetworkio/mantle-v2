@@ -23,7 +23,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
 // BatchSubmitter encapsulates a service responsible for submitting L2 tx
@@ -46,7 +48,8 @@ type BatchSubmitter struct {
 	lastStoredBlock eth.BlockID
 	lastL1Tip       eth.L1BlockRef
 
-	state *channelManager
+	state   *channelManager
+	eigenDA eigenda.IEigenDA
 }
 
 // NewBatchSubmitterFromCLIConfig initializes the BatchSubmitter, gathering any resources
@@ -104,7 +107,19 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			MaxFrameSize:       cfg.MaxL1TxSize - 1, // subtract 1 byte for version
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
+		EigenDA: eigenda.Config{
+			RPC:                      cfg.EigenDAConfig.RPC,
+			StatusQueryTimeout:       cfg.EigenDAConfig.StatusQueryTimeout,
+			StatusQueryRetryInterval: cfg.EigenDAConfig.StatusQueryRetryInterval,
+		},
 	}
+
+	l2ChainID, err := l2Client.ChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	eigendaUpgradeConfig := upgrade.GetUpgradeConfigForMantle(l2ChainID)
+	batcherCfg.DaUpgradeChainConfig = eigendaUpgradeConfig
 
 	// Validate the batcher config
 	if err := batcherCfg.Check(); err != nil {
@@ -158,7 +173,11 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 	return &BatchSubmitter{
 		Config: cfg,
 		txMgr:  cfg.TxManager,
-		state:  NewChannelManager(l, m, cfg.Channel),
+		state:  NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
+		eigenDA: &eigenda.EigenDA{
+			Config: cfg.EigenDA,
+			Log:    l,
+		},
 	}, nil
 
 }

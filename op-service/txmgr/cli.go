@@ -11,6 +11,7 @@ import (
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-signer/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -27,6 +28,8 @@ const (
 	// TxMgr Flags (new + legacy + some shared flags)
 	NumConfirmationsFlagName          = "num-confirmations"
 	SafeAbortNonceTooLowCountFlagName = "safe-abort-nonce-too-low-count"
+	FeeLimitMultiplierFlagName        = "fee-limit-multiplier"
+	FeeLimitThresholdFlagName         = "txmgr.fee-limit-threshold"
 	ResubmissionTimeoutFlagName       = "resubmission-timeout"
 	NetworkTimeoutFlagName            = "network-timeout"
 	TxSendTimeoutFlagName             = "txmgr.send-timeout"
@@ -81,6 +84,18 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:  "Number of ErrNonceTooLow observations required to give up on a tx at a particular nonce without receiving confirmation",
 			Value:  3,
 			EnvVar: opservice.PrefixEnvVar(envPrefix, "SAFE_ABORT_NONCE_TOO_LOW_COUNT"),
+		},
+		cli.Uint64Flag{
+			Name:   FeeLimitMultiplierFlagName,
+			Usage:  "The multiplier applied to fee suggestions to put a hard limit on fee increases",
+			Value:  5,
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_MULTIPLIER"),
+		},
+		cli.Float64Flag{
+			Name:   FeeLimitThresholdFlagName,
+			Usage:  "The minimum threshold (in GWei) at which fee bumping starts to be capped. Allows arbitrary fee bumps below this threshold.",
+			Value:  100.0,
+			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_THRESHOLD"),
 		},
 		cli.DurationFlag{
 			Name:   ResubmissionTimeoutFlagName,
@@ -148,6 +163,8 @@ type CLIConfig struct {
 	SignerCLIConfig           client.CLIConfig
 	NumConfirmations          uint64
 	SafeAbortNonceTooLowCount uint64
+	FeeLimitMultiplier        uint64
+	FeeLimitThresholdGwei     float64
 	ResubmissionTimeout       time.Duration
 	ReceiptQueryInterval      time.Duration
 	NetworkTimeout            time.Duration
@@ -198,6 +215,8 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		SignerCLIConfig:           client.ReadCLIConfig(ctx),
 		NumConfirmations:          ctx.GlobalUint64(NumConfirmationsFlagName),
 		SafeAbortNonceTooLowCount: ctx.GlobalUint64(SafeAbortNonceTooLowCountFlagName),
+		FeeLimitMultiplier:        ctx.GlobalUint64(FeeLimitMultiplierFlagName),
+		FeeLimitThresholdGwei:     ctx.GlobalFloat64(FeeLimitThresholdFlagName),
 		ResubmissionTimeout:       ctx.GlobalDuration(ResubmissionTimeoutFlagName),
 		ReceiptQueryInterval:      ctx.GlobalDuration(ReceiptQueryIntervalFlagName),
 		NetworkTimeout:            ctx.GlobalDuration(NetworkTimeoutFlagName),
@@ -243,9 +262,16 @@ func NewConfig(cfg CLIConfig, l log.Logger) (Config, error) {
 		return Config{}, fmt.Errorf("could not init signer: %w", err)
 	}
 
+	feeLimitThreshold, err := eth.GweiToWei(cfg.FeeLimitThresholdGwei)
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid fee limit threshold: %w", err)
+	}
+
 	return Config{
 		Backend:                   l1,
 		ResubmissionTimeout:       cfg.ResubmissionTimeout,
+		FeeLimitMultiplier:        cfg.FeeLimitMultiplier,
+		FeeLimitThreshold:         feeLimitThreshold,
 		ChainID:                   chainID,
 		TxSendTimeout:             cfg.TxSendTimeout,
 		TxNotInMempoolTimeout:     cfg.TxNotInMempoolTimeout,
@@ -270,6 +296,14 @@ type Config struct {
 	// price will be published. Only one publication at MaxGasPrice will be
 	// attempted.
 	ResubmissionTimeout time.Duration
+
+	// The multiplier applied to fee suggestions to put a hard limit on fee increases.
+	FeeLimitMultiplier uint64
+
+	// Minimum threshold (in Wei) at which the FeeLimitMultiplier takes effect.
+	// On low-fee networks, like test networks, this allows for arbitrary fee bumps
+	// below this threshold.
+	FeeLimitThreshold *big.Int
 
 	// ChainID is the chain ID of the L1 chain.
 	ChainID *big.Int

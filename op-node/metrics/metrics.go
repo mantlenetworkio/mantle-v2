@@ -68,6 +68,7 @@ type Metricer interface {
 
 	// MantleDA
 	RecordParseDataStoreId(dataStoreId uint32)
+	RecordFrames(frameSize int)
 
 	// P2P Metrics
 	SetPeerScores(scores map[string]float64)
@@ -141,6 +142,7 @@ type Metrics struct {
 	ChannelInputBytes prometheus.Counter
 
 	ParseDataStoreId prometheus.Gauge
+	ParseFrameSize   prometheus.Counter
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
@@ -353,6 +355,11 @@ func NewMetrics(procName string) *Metrics {
 			Subsystem: "da",
 			Name:      "parse_data_store_id",
 			Help:      "Latest derive dataStoreId",
+		}),
+		ParseFrameSize: factory.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "parse_frame_size",
+			Help:      "Number of frame to parse",
 		}),
 
 		P2PReqDurationSeconds: factory.NewHistogramVec(prometheus.HistogramOpts{
@@ -680,6 +687,10 @@ func (m *Metrics) RecordParseDataStoreId(dataStoreId uint32) {
 	m.ParseDataStoreId.Set(float64(dataStoreId))
 }
 
+func (m *Metrics) RecordFrames(frameSize int) {
+	m.ParseFrameSize.Add(float64(frameSize))
+}
+
 type noopMetricer struct{}
 
 var NoopMetrics Metricer = new(noopMetricer)
@@ -787,4 +798,7 @@ func (n *noopMetricer) RecordChannelInputBytes(int) {
 }
 
 func (n *noopMetricer) RecordParseDataStoreId(dataStoreId uint32) {
+}
+
+func (n *noopMetricer) RecordFrames(frameSize int) {
 }

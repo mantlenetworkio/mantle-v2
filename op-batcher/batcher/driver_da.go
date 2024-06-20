@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/Layr-Labs/datalayr/common/interfaces/interfaceDL"
 
@@ -22,12 +23,17 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/common"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
+	se "github.com/ethereum-optimism/optimism/op-service/eth"
+
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 const (
 	EigenRollupMaxSize  = 1024 * 1024 * 300
 	DaLoopRetryNum      = 10
+	EigenRPCRetryNum    = 3
 	BytesPerCoefficient = 31
 )
 
@@ -73,15 +79,22 @@ func (l *BatchSubmitter) publishStateToMantleDA() {
 
 	for {
 		isFull, err := l.appendNextRollupData(l.killCtx)
-
 		if err != nil && err != io.EOF {
 			l.log.Error("failed to  get next tx data", "err", err)
 			return
 		}
 		if isFull {
-			done, err := l.loopRollupDa()
+			var (
+				done bool
+				err  error
+			)
+			if l.Config.DaUpgradeChainConfig.IsUseEigenDa(l.state.lastProcessedBlock.Number()) {
+				done, err = l.loopEigenDa()
+			} else {
+				done, err = l.loopRollupDa()
+			}
 			if err != nil {
-				l.log.Error("failed to rollup da to mantle da", "err", err)
+				l.log.Error("failed to rollup da to da", "err", err)
 				l.log.Warn("reset state in channel manager")
 				l.reset()
 				return
@@ -190,6 +203,169 @@ func (l *BatchSubmitter) loopRollupDa() (bool, error) {
 	}
 }
 
+func (l *BatchSubmitter) loopEigenDa() (bool, error) {
+	//it means that all the txData has been rollup
+	if len(l.state.daPendingTxData) == 0 {
+		l.log.Info("all txData of current channel have been rollup")
+		return true, nil
+	}
+
+	var err error
+	var candidate *txmgr.TxCandidate
+	var receipt *types.Receipt
+	var data, wrappedData []byte
+	eigendaSuccess := false
+
+	data, err = l.txAggregatorForEigenDa()
+	if err != nil {
+		l.log.Error("loopEigenDa txAggregatorForEigenDa err", "err", err)
+		return false, err
+	}
+
+	currentL1, err := l.l1Tip(l.killCtx)
+	if err != nil {
+		l.log.Warn("loopEigenDa l1Tip", "err", err)
+		return false, err
+	}
+
+	for loopRetry := 0; loopRetry < DaLoopRetryNum; loopRetry++ {
+		err = func() error {
+			l.metr.RecordRollupRetry(int32(loopRetry))
+			if !eigendaSuccess {
+				//try 3 times
+				for retry := 0; retry < EigenRPCRetryNum; retry++ {
+					l.metr.RecordDaRetry(int32(retry))
+					wrappedData, err = l.disperseEigenDaData(data)
+					if err != nil {
+						l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
+						time.Sleep(5 * time.Second)
+						continue
+					}
+
+					eigendaSuccess = true
+					break
+				}
+			}
+
+			if eigendaSuccess {
+				candidate = l.calldataTxCandidate(wrappedData)
+			} else {
+				if candidate, err = l.blobTxCandidate(data); err != nil {
+					l.log.Warn("failed to create blob tx candidate", "err", err)
+					return err
+				}
+				l.metr.RecordEigenDAFailback()
+			}
+
+			receipt, err = l.txMgr.Send(l.killCtx, *candidate)
+			if err != nil {
+				l.log.Warn("failed to send tx candidate", "err", err)
+				return err
+			}
+
+			return nil
+		}()
+		if err != nil {
+			l.log.Warn("failed to rollup", "err", err, "retry time", loopRetry)
+		} else {
+			break
+		}
+	}
+
+	if err != nil {
+		l.log.Error("failed to rollup", "err", err)
+		return false, err
+	}
+
+	err = l.handleConfirmDataStoreReceipt(receipt)
+	if err != nil {
+		l.log.Error("failed to handleConfirmDataStoreReceipt", "err", err)
+		return false, err
+	}
+
+	//create a new channel now for reducing the disperseEigenDaData latency time
+	if err = l.state.ensurePendingChannel(currentL1.ID()); err != nil {
+		l.log.Error("failed to ensurePendingChannel", "err", err)
+		return false, err
+	}
+	l.state.registerL1Block(currentL1.ID())
+
+	return true, nil
+
+}
+
+func (l *BatchSubmitter) calldataTxCandidate(data []byte) *txmgr.TxCandidate {
+	l.log.Info("building Calldata transaction candidate", "size", len(data))
+	return &txmgr.TxCandidate{
+		To:     &l.Rollup.BatchInboxAddress,
+		TxData: data,
+	}
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error) {
+	l.log.Info("building Blob transaction candidate", "size", len(data))
+	blobs := []*se.Blob{}
+	for idx := 0; idx < len(data); idx += se.MaxBlobDataSize {
+		blobData := data[idx : idx+minInt(len(data)-idx, se.MaxBlobDataSize)]
+		var blob se.Blob
+		if err := blob.FromData(blobData); err != nil {
+			return nil, err
+		}
+		blobs = append(blobs, &blob)
+	}
+
+	return &txmgr.TxCandidate{
+		To:    &l.Rollup.BatchInboxAddress,
+		Blobs: blobs,
+	}, nil
+}
+
+func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
+	blobInfo, requestId, err := l.eigenDA.DisperseBlob(l.shutdownCtx, data)
+	if err != nil {
+		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
+		return nil, err
+
+	}
+
+	quorumIDs := make([]uint32, len(blobInfo.BlobHeader.BlobQuorumParams))
+	for i := range quorumIDs {
+		quorumIDs[i] = blobInfo.BlobHeader.BlobQuorumParams[i].QuorumNumber
+	}
+	calldataFrame := &op_service.CalldataFrame{
+		Value: &op_service.CalldataFrame_FrameRef{
+			FrameRef: &op_service.FrameRef{
+				BatchHeaderHash:      blobInfo.BlobVerificationProof.BatchMetadata.BatchHeaderHash,
+				BlobIndex:            blobInfo.BlobVerificationProof.BlobIndex,
+				ReferenceBlockNumber: blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber,
+				QuorumIds:            quorumIDs,
+				BlobLength:           uint32(len(data)),
+				RequestId:            requestId,
+			},
+		},
+	}
+	wrappedData, err := proto.Marshal(calldataFrame)
+	if err != nil {
+		return nil, err
+	}
+
+	l.metr.RecordConfirmedDataStoreId(blobInfo.BlobVerificationProof.BatchId)
+	l.metr.RecordInitReferenceBlockNumber(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
+	// prepend the derivation version to the data
+	l.log.Info("Prepending derivation version to calldata")
+	wrappedData = append([]byte{eigenda.DerivationVersionEigenda}, wrappedData...)
+
+	return wrappedData, nil
+
+}
+
 func (l *BatchSubmitter) isRetry(retry *int32) bool {
 	*retry = *retry + 1
 	l.metr.RecordRollupRetry(*retry)
@@ -242,6 +418,37 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	if len(transactionByte) <= BytesPerCoefficient*nodesNumber {
 		paddingBytes := make([]byte, (BytesPerCoefficient*nodesNumber)-len(transactionByte))
 		transactionByte = append(transactionByte, paddingBytes...)
+	}
+	return transactionByte, nil
+}
+
+func (l *BatchSubmitter) txAggregatorForEigenDa() ([]byte, error) {
+	var txsData [][]byte
+	var transactionByte []byte
+	sortTxIds := make([]txID, 0, len(l.state.daPendingTxData))
+	l.state.daUnConfirmedTxID = l.state.daUnConfirmedTxID[:0]
+	for k := range l.state.daPendingTxData {
+		sortTxIds = append(sortTxIds, k)
+	}
+	sort.Slice(sortTxIds, func(i, j int) bool {
+		return sortTxIds[i].frameNumber < sortTxIds[j].frameNumber
+	})
+	for _, v := range sortTxIds {
+		txData := l.state.daPendingTxData[v]
+		txsData = append(txsData, txData.Bytes())
+		txnBufBytes, err := rlp.EncodeToBytes(txsData)
+		if err != nil {
+			l.log.Error("op-batcher unable to encode txn", "err", err)
+			return nil, err
+		}
+		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
+			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "rollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
+			l.metr.RecordTxOverMaxLimit()
+			break
+		}
+		transactionByte = txnBufBytes
+		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, v)
+		l.log.Info("added frame to daUnConfirmedTxID", "id", v.String())
 	}
 	return transactionByte, nil
 }

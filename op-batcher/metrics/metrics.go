@@ -61,6 +61,8 @@ type Metricer interface {
 	RecordConfirmedDataStoreId(dataStoreId uint32)
 
 	Document() []opmetrics.DocumentedMetric
+
+	RecordEigenDAFailback()
 }
 
 type Metrics struct {
@@ -100,6 +102,7 @@ type Metrics struct {
 
 	batcherTxEvs               opmetrics.EventVec
 	batcherTxOverMaxLimitEvent opmetrics.Event
+	eigenDAFailbackCount       prometheus.Counter
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -406,6 +409,10 @@ func (m *Metrics) RecordConfirmedDataStoreId(dataStoreId uint32) {
 
 func (m *Metrics) RecordTxOverMaxLimit() {
 	m.batcherTxOverMaxLimitEvent.Record()
+}
+
+func (m *Metrics) RecordEigenDAFailback() {
+	m.eigenDAFailbackCount.Add(1)
 }
 
 // estimateBatchSize estimates the size of the batch
