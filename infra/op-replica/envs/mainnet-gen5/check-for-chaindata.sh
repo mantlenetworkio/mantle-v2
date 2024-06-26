@@ -47,7 +47,7 @@ else
 fi
 
 # Check for an existing keystore folder.
-# If it exists, assume it's correct and skip geth acount import step
+# If it exists, assume it's correct and skip geth account import step
 GETH_KEYSTORE_DIR=$DATADIR/keystore
 mkdir -p "$GETH_KEYSTORE_DIR"
 GETH_KEYSTORE_KEYS=$(find "$GETH_KEYSTORE_DIR" -type f)

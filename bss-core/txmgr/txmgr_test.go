@@ -160,7 +160,7 @@ func (b *mockBackend) BlockNumber(ctx context.Context) (uint64, error) {
 }
 
 // TransactionReceipt queries the mockBackend for a mined txHash. If none is
-// found, nil is returned for both return values. Otherwise, it retruns a
+// found, nil is returned for both return values. Otherwise, it returns a
 // receipt containing the txHash and the gasFeeCap used in the GasUsed to make
 // the value accessible from our test framework.
 func (b *mockBackend) TransactionReceipt(
