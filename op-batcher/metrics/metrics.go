@@ -234,6 +234,11 @@ func NewMetrics(procName string) *Metrics {
 
 		batcherTxEvs:               opmetrics.NewEventVec(factory, ns, "", "batcher_tx", "BatcherTx", []string{"stage"}),
 		batcherTxOverMaxLimitEvent: opmetrics.NewEvent(factory, ns, "da_rollup", "over_max", "OverMax"),
+		eigenDAFailbackCount: factory.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigen_da_failback_count",
+			Help:      "Number of times eigen da failback.",
+		}),
 	}
 }
 
