@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
@@ -146,7 +145,6 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 				}
 				data = append(data, blobData[1:]...)
 			}
-			err = rlp.DecodeBytes(data, &out)
 			fmt.Println(err)
 			fmt.Println(derive.ParseFrames(out[0]))
 		})

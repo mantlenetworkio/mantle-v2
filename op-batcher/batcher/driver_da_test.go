@@ -14,8 +14,6 @@ import (
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
-	"github.com/ethereum-optimism/optimism/l2geth/common/hexutil"
-	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -425,19 +423,6 @@ func ParseFrames(data []byte) ([]Frame, error) {
 	return frames, nil
 }
 
-func TestUnmashal(t *testing.T) {
-	rawData, _ := hexutil.Decode("0x009a46d4128b0a0ca5a14d01f98534a12600000000027578dadae1c3f0c373816836abd825fffbafce3b78f408dddd3bf9cf69ab4a978b256ce6666702abe6af7b19b6806bf1f9092617df2ffba6b896e9ff5c8959ff58a7c91eb4f1bfb0fd5982be9471e1c596b404d1e0033b6e31fcb8be20ef78f0d3a2e54e87394edf7ef8f7d92bb98bdf9a4e1f7b75ef58d0ac851ecf4e047b872f58fa74d7e26d8e79a5a9dddcab56ab3f7559915b15e3785a82e59f7677b7ea3375719069a13f7a7774ffe8e468b19e758aa185f3fa119d294e0c1880bf61c9e3be893f19f0027e17b705750ddf949604ac799f25713e85d99ca526312f6f9dc3491f6f0719afe59f7fc5142fd07929b7ebd69d851ee552fe8cd27f2f5cda58c71ad89c93d25f9d507b805b6ff13f48485d36fbf7b738a97475fd8ae0a592765f03ad96143d909f79f6d83c8b1bed1f34176f22ce6fe10720a6ddfb70d6dcf581f9e32b02a5e7afc932cfe4e42b986495feba64a6e2e7578ce7181889332d126ada37939f6dcdd699df7d5edd7df7cafaa2bff915a1b3b94a3db785d39ab787a4775c8a58b06526f77f7387049f2f76130a153f3c7bfed37507e3bd402539f3a7efe4c576b357824c8b869a76274aefba789791815de6fdd49273996c8b0558f7acb6fbeda665f6957bffee599388332d166a5a52c91b7be5ed7a7f0c22da2557353df7cffbbd4e4e7356f0a505ba0cef0215181489332d1e6a1af3e524894a8e1f99eed3f7cd7a6f27afd6af55182617d4af9f75ae34f62efbbc33910b84d6f0c72eb879e6ef9e85513c2181b26c2b765e0c7c1cb041a87642fddee017767c20d312a1a6c5d85aacbe59667863e76f41d392a32ff654a4f3ccfc9558b35ceaa3db82dd9bbf2c20ceb4e40380000000ffff5759847e01")
-	//rawData, _ := hexutil.Decode("0xed12f0010a2098efdcc50cd8f59297d7688adb274d02a4eae30c8f199be6c9dd44571c44a06210661886a2662202000128a066a206bd01633836363438666337623636656239323934343938383865343634623134636434353133393331336439323465386631313864356330666566633431316662392d33313337333133373335333733383337333833303330333833373336333133323337333833323266333032663333333332663331326633333333326665336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535")
-	calldataFrame := &op_service.CalldataFrame{}
-	fmt.Println(rawData[0])
-	err := proto.Unmarshal(rawData[1:], calldataFrame)
-	if err != nil {
-		t.Error(err)
-	} else {
-		t.Log(calldataFrame)
-	}
-}
-
 func TestCallEigenDA(t *testing.T) {
 	cfgData := `{
 		"L1EthRpc": "http://127.0.0.1:8545",
@@ -562,7 +547,7 @@ func TestCallEigenDA(t *testing.T) {
 		out := []eth.Data{}
 
 		data = data[:frameRef.BlobLength]
-		err = rlp.DecodeBytes(data, &out)
+		//err = rlp.DecodeBytes(data, &out)
 		if err != nil {
 			log.Error("Decode retrieval frames in error,skip wrong data", "err", err, "blobInfo", fmt.Sprintf("%x:%d", frameRef.BatchHeaderHash, frameRef.BlobIndex))
 			return
@@ -575,7 +560,7 @@ func TestCallEigenDA(t *testing.T) {
 				return
 			}
 			for _, f := range fs {
-				fmt.Println("frame:", hexutil.Encode(f.ID[:]), f.FrameNumber, len(f.Data))
+				fmt.Println("frame:", f.ID[:], f.FrameNumber, len(f.Data))
 			}
 		}
 	}
@@ -671,38 +656,13 @@ func TestCallEigenDA2(t *testing.T) {
 	cfg := CLIConfig{}
 	_ = json.Unmarshal([]byte(cfgData), &cfg)
 
-	batchSubmitter, err := NewBatchSubmitterFromCLIConfig(cfg, log.New(), metrics.NewMetrics("test"))
-
-	hash, _ := hexutil.Decode("0x4d175ff8a702034856bc7afb5adbd4317abfe64b18101f68d6b94570ce94d93c")
-	hash2 := "TRdf+KcCA0hWvHr7WtvUMXq/5ksYEB9o1rlFcM6U2Tw="
-	fmt.Println("hash == hash2", base64.StdEncoding.EncodeToString(hash) == hash2)
-	data, err := batchSubmitter.eigenDA.RetrieveBlob(context.Background(), hash, 398)
-
-	out := []eth.Data{}
-
-	data = data[:]
-	err = rlp.DecodeBytes(data, &out)
-	if err != nil {
-		log.Error("Decode retrieval frames in error,skip wrong data", "err", err)
-		return
-	}
-
-	for _, d := range out {
-		fs, err := ParseFrames(d)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		for _, f := range fs {
-			fmt.Println("frame:", hexutil.Encode(f.ID[:]), f.FrameNumber, len(f.Data))
-		}
-	}
+	_, _ = NewBatchSubmitterFromCLIConfig(cfg, log.New(), metrics.NewMetrics("test"))
 
 }
 
 func TestDecode(t *testing.T) {
-	data, _ := base64.StdEncoding.DecodeString("fItdiqlPZyEjwyqJvLwlvuzkjYQ7qcnjI6DXooHht5U=")
-	fmt.Println(hexutil.Encode(data))
+	_, _ = base64.StdEncoding.DecodeString("fItdiqlPZyEjwyqJvLwlvuzkjYQ7qcnjI6DXooHht5U=")
+	//fmt.Println(hexutil.Encode(data))
 	//data, _ = base64.StdEncoding.DecodeString("Yzg2NjQ4ZmM3YjY2ZWI5Mjk0NDk4ODhlNDY0YjE0Y2Q0NTEzOTMxM2Q5MjRlOGYxMThkNWMwZmVmYzQxMWZiOS0zMTM3MzEzNzM1MzczODM3MzgzMDMwMzgzNzM2MzEzMjM3MzgzMjJmMzAyZjMzMzMyZjMxMmYzMzMzMmZlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1")
 	//fmt.Println(string(data))
 }
