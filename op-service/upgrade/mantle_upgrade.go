@@ -25,7 +25,7 @@ var (
 	}
 	MantleSepoliaUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleSepoliaChainId,
-		EigenDaUpgradeHeight: nil,
+		EigenDaUpgradeHeight: big.NewInt(9525400),
 	}
 	MantleSepoliaQAUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleSepoliaQAChainId,
