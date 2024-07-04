@@ -617,8 +617,8 @@ github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czP
 github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-github.com/mantlenetworkio/op-geth v0.0.0-20240617052629-084a975238b6 h1:xoyupyxbJORFGARzs2QPxnvtRqj4IRkuiPmYNj0D2RA=
-github.com/mantlenetworkio/op-geth v0.0.0-20240617052629-084a975238b6/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
+github.com/mantlenetworkio/op-geth v1.0.1 h1:P/kKL4DaVt231NR2j9A71vNeSB38ujOt+x3BwQ5uFj4=
+github.com/mantlenetworkio/op-geth v1.0.1/go.mod h1:M9VOhAEYcgMpO9JJzleXmqjKgx28Kq3dd1fjl6d9aU8=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd h1:br0buuQ854V8u83wA0rVZ8ttrq5CpaPZdvrK0LP2lOk=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd/go.mod h1:QuCEs1Nt24+FYQEqAAncTDPJIuGs+LxK1MCiFL25pMU=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd/go.mod h1:9ELz6aaclSIGnZBoaSLZ3NAl1VTufbOrXBPvtcy6WiQ=
