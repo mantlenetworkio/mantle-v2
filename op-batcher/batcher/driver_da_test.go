@@ -5,19 +5,23 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
+	"github.com/ethereum-optimism/optimism/l2geth/common/hexutil"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -661,8 +665,50 @@ func TestCallEigenDA2(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	_, _ = base64.StdEncoding.DecodeString("fItdiqlPZyEjwyqJvLwlvuzkjYQ7qcnjI6DXooHht5U=")
-	//fmt.Println(hexutil.Encode(data))
+	data, _ := base64.StdEncoding.DecodeString("MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw===")
+	fmt.Println(len(data[24:]))
+	fmt.Println(hex.EncodeToString(data[23:]))
+	fmt.Println(hex.EncodeToString(crypto.Keccak256(data[24:])[12:]))
 	//data, _ = base64.StdEncoding.DecodeString("Yzg2NjQ4ZmM3YjY2ZWI5Mjk0NDk4ODhlNDY0YjE0Y2Q0NTEzOTMxM2Q5MjRlOGYxMThkNWMwZmVmYzQxMWZiOS0zMTM3MzEzNzM1MzczODM3MzgzMDMwMzgzNzM2MzEzMjM3MzgzMjJmMzAyZjMzMzMyZjMxMmYzMzMzMmZlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1")
-	//fmt.Println(string(data))
+	fmt.Println(string(data))
+}
+
+func TestCrypto(t *testing.T) {
+	privateKeyHex := "0xff4476671982ec7fea451f53cb8dbcc64bdd7851087077a6de73b0cb8f757124" //0xFfC192B454c330e68D20f63C58a50c56290b07d7
+	privateKeyBytes := common.FromHex(privateKeyHex)
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	fmt.Println(privateKey, err)
+	pubkey := crypto.FromECDSAPub(&privateKey.PublicKey)
+	account := crypto.Keccak256(pubkey[1:])[12:]
+	fmt.Println("ecdsa pub", len(pubkey), hexutil.Encode(account))
+	rawpubkey, err := base64.StdEncoding.DecodeString("MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw==")
+	pk, _ := crypto.UnmarshalPubkey(rawpubkey[23:])
+	pubkey = crypto.FromECDSAPub(pk)
+	account = crypto.Keccak256(pubkey[1:])[12:]
+	fmt.Println("ecdsa pub", err, len(pubkey), hexutil.Encode(account), crypto.PubkeyToAddress(*pk))
+}
+
+func TestDisperseBlobAuthenticated(t *testing.T) {
+
+	hsmCreden := `{}`
+
+	hsmCreden = hex.EncodeToString([]byte(hsmCreden))
+	//signer, _ := eigenda.NewLocalBlobSigner("0xff4476671982ec7fea451f53cb8dbcc64bdd7851087077a6de73b0cb8f757124")
+	signer, _ := eigenda.NewHsmBlobSigner(hsmCreden, "projects/mantle-381302/locations/global/keyRings/qa/cryptoKeys/proposer-qa/cryptoKeyVersions/1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw==")
+	fmt.Println("pubkey", signer.GetAccountID())
+	da := eigenda.NewEigenDAClient(
+		eigenda.Config{
+			RPC:                      "disperser-holesky.eigenda.xyz:443",
+			StatusQueryTimeout:       time.Minute * 10,
+			StatusQueryRetryInterval: time.Second * 5,
+			RPCTimeout:               time.Minute,
+		}, log.New(context.Background()), signer,
+	)
+
+	data, _, err := da.DisperseBlobAuthenticated(context.Background(), common.Hex2Bytes("D4A7E1Bd8015057293f0D0A557088c286942e84b"))
+	if err != nil {
+		t.Errorf("RetrieveBlob err:%v", err)
+		return
+	}
+	fmt.Printf("RetrieveBlob %d:%d\n", data.BlobVerificationProof.BatchId, data.BlobVerificationProof.BlobIndex)
 }

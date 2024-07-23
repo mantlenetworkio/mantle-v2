@@ -20,6 +20,24 @@ type Config struct {
 
 	// The amount of time to wait between status queries of a newly dispersed blob
 	StatusQueryRetryInterval time.Duration
+
+	// rpc timeout
+	RPCTimeout time.Duration
+
+	// EigenDA whether or not to use cloud hsm
+	EnableHsm bool
+
+	// The public-key of EigenDA account in hsm
+	HsmCreden string
+
+	// The public-key of EigenDA account in hsm
+	HsmPubkey string
+
+	// The API name of EigenDA account in hsm
+	HsmAPIName string
+
+	// The private key of EigenDA account if not using cloud hsm
+	PrivateKey string
 }
 
 // We add this because the urfave/cli library doesn't support uint32 specifically

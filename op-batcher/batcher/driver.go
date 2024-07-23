@@ -98,6 +98,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		GraphPollingDuration:   cfg.GraphPollingDuration,
 		RollupMaxSize:          cfg.RollupMaxSize,
 		MantleDaNodes:          cfg.MantleDaNodes,
+		SkipEigenDaRpc:         cfg.SkipEigenDaRpc,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -111,6 +112,12 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			RPC:                      cfg.EigenDAConfig.RPC,
 			StatusQueryTimeout:       cfg.EigenDAConfig.StatusQueryTimeout,
 			StatusQueryRetryInterval: cfg.EigenDAConfig.StatusQueryRetryInterval,
+			RPCTimeout:               cfg.EigenDAConfig.DARPCTimeout,
+			EnableHsm:                cfg.EigenDAConfig.EnableHsm,
+			HsmCreden:                cfg.EigenDAConfig.HsmCreden,
+			HsmPubkey:                cfg.EigenDAConfig.HsmPubkey,
+			HsmAPIName:               cfg.EigenDAConfig.HsmAPIName,
+			PrivateKey:               cfg.EigenDAConfig.PrivateKey,
 		},
 	}
 
@@ -170,14 +177,26 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
+	var daSigner eigenda.BlobRequestSigner
+	if cfg.EigenDA.EnableHsm {
+		daSigner, err = eigenda.NewHsmBlobSigner(cfg.EigenDA.HsmCreden, cfg.EigenDA.HsmAPIName, cfg.EigenDA.HsmPubkey)
+		if err != nil {
+			return nil, err
+		}
+	} else if cfg.EigenDA.PrivateKey != "" {
+		daSigner, err = eigenda.NewLocalBlobSigner(cfg.EigenDA.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	eigenDA := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, daSigner)
+
 	return &BatchSubmitter{
-		Config: cfg,
-		txMgr:  cfg.TxManager,
-		state:  NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
-		eigenDA: &eigenda.EigenDA{
-			Config: cfg.EigenDA,
-			Log:    l,
-		},
+		Config:  cfg,
+		txMgr:   cfg.TxManager,
+		state:   NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
+		eigenDA: eigenDA,
 	}, nil
 
 }

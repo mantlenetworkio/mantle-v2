@@ -56,4 +56,4 @@ func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
 
 }
 
-func (*noopMetrics) RecordEigenDAFailback() {}
+func (*noopMetrics) RecordEigenDAFailback(txs int) {}

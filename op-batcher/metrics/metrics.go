@@ -62,7 +62,7 @@ type Metricer interface {
 
 	Document() []opmetrics.DocumentedMetric
 
-	RecordEigenDAFailback()
+	RecordEigenDAFailback(txs int)
 }
 
 type Metrics struct {
@@ -416,8 +416,8 @@ func (m *Metrics) RecordTxOverMaxLimit() {
 	m.batcherTxOverMaxLimitEvent.Record()
 }
 
-func (m *Metrics) RecordEigenDAFailback() {
-	m.eigenDAFailbackCount.Add(1)
+func (m *Metrics) RecordEigenDAFailback(txs int) {
+	m.eigenDAFailbackCount.Add(float64(txs))
 }
 
 // estimateBatchSize estimates the size of the batch
