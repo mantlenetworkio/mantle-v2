@@ -118,6 +118,13 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			HsmPubkey:                cfg.EigenDAConfig.HsmPubkey,
 			HsmAPIName:               cfg.EigenDAConfig.HsmAPIName,
 			PrivateKey:               cfg.EigenDAConfig.PrivateKey,
+			EthRPC:                   cfg.EigenDAConfig.EthRPC,
+			SvcManagerAddr:           cfg.EigenDAConfig.SvcManagerAddr,
+			EthConfirmationDepth:     cfg.EigenDAConfig.EthConfirmationDepth,
+			CacheDir:                 cfg.EigenDAConfig.CacheDir,
+			G1Path:                   cfg.EigenDAConfig.G1Path,
+			MaxBlobLength:            cfg.EigenDAConfig.MaxBlobLength,
+			G2PowerOfTauPath:         cfg.EigenDAConfig.G2PowerOfTauPath,
 		},
 	}
 
@@ -177,20 +184,10 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
-	var daSigner eigenda.BlobRequestSigner
-	if cfg.EigenDA.EnableHsm {
-		daSigner, err = eigenda.NewHsmBlobSigner(cfg.EigenDA.HsmCreden, cfg.EigenDA.HsmAPIName, cfg.EigenDA.HsmPubkey)
-		if err != nil {
-			return nil, err
-		}
-	} else if cfg.EigenDA.PrivateKey != "" {
-		daSigner, err = eigenda.NewLocalBlobSigner(cfg.EigenDA.PrivateKey)
-		if err != nil {
-			return nil, err
-		}
+	eigenDA, err := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log)
+	if err != nil {
+		return nil, fmt.Errorf("error creating EigenDA client: %w", err)
 	}
-
-	eigenDA := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, daSigner)
 
 	return &BatchSubmitter{
 		Config:  cfg,

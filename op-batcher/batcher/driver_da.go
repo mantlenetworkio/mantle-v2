@@ -231,17 +231,22 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 
 	eigendaSuccess := false
 	if !l.Config.SkipEigenDaRpc {
+		timeoutTime := time.Now().Add(l.EigenDA.StatusQueryTimeout)
 		for retry := 0; retry < EigenRPCRetryNum; retry++ {
 			l.metr.RecordDaRetry(int32(retry))
 			wrappedData, err = l.disperseEigenDaData(daData)
-			if err != nil {
-				l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
-				time.Sleep(5 * time.Second)
-				continue
+			if err == nil && len(wrappedData) > 0 {
+				eigendaSuccess = true
+				break
 			}
 
-			eigendaSuccess = true
-			break
+			if time.Now().After(timeoutTime) {
+				l.log.Warn("loopEigenDa disperseEigenDaData timeout", "retry time", retry, "err", err)
+				break
+			}
+
+			l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
+			time.Sleep(5 * time.Second)
 		}
 	}
 

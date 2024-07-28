@@ -16,7 +16,6 @@ import (
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
-	"github.com/ethereum-optimism/optimism/l2geth/common/hexutil"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -27,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -308,7 +308,7 @@ func TestBatchSubmitter_Send(t *testing.T) {
 			var candidate *txmgr.TxCandidate
 			var err error
 			da := [358834]byte{}
-			if candidate, err = l.blobTxCandidate(da[:]); err != nil {
+			if l.blobTxCandidates([][]byte{da[:]}); err != nil {
 				l.log.Error("failed to create blob tx candidate", "err", err)
 				return
 			}
@@ -694,15 +694,15 @@ func TestDisperseBlobAuthenticated(t *testing.T) {
 
 	hsmCreden = hex.EncodeToString([]byte(hsmCreden))
 	//signer, _ := eigenda.NewLocalBlobSigner("0xff4476671982ec7fea451f53cb8dbcc64bdd7851087077a6de73b0cb8f757124")
-	signer, _ := eigenda.NewHsmBlobSigner(hsmCreden, "projects/mantle-381302/locations/global/keyRings/qa/cryptoKeys/proposer-qa/cryptoKeyVersions/1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw==")
-	fmt.Println("pubkey", signer.GetAccountID())
-	da := eigenda.NewEigenDAClient(
+	//signer, _ := eigenda.NewHsmBlobSigner(hsmCreden, "projects/mantle-381302/locations/global/keyRings/qa/cryptoKeys/proposer-qa/cryptoKeyVersions/1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw==")
+	//fmt.Println("pubkey", signer.GetAccountID())
+	da, _ := eigenda.NewEigenDAClient(
 		eigenda.Config{
 			RPC:                      "disperser-holesky.eigenda.xyz:443",
 			StatusQueryTimeout:       time.Minute * 10,
 			StatusQueryRetryInterval: time.Second * 5,
 			RPCTimeout:               time.Minute,
-		}, log.New(context.Background()), signer,
+		}, log.New(context.Background()),
 	)
 
 	data, _, err := da.DisperseBlobAuthenticated(context.Background(), common.Hex2Bytes("D4A7E1Bd8015057293f0D0A557088c286942e84b"))

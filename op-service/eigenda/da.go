@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda/verify"
 	"github.com/ethereum/go-ethereum/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -24,16 +25,38 @@ type IEigenDA interface {
 type EigenDA struct {
 	Config
 
-	Log    log.Logger
-	signer BlobRequestSigner
+	Log      log.Logger
+	signer   BlobRequestSigner
+	verifier *verify.Verifier
 }
 
-func NewEigenDAClient(config Config, log log.Logger, signer BlobRequestSigner) *EigenDA {
-	return &EigenDA{
-		Config: config,
-		Log:    log,
-		signer: signer,
+func NewEigenDAClient(config Config, log log.Logger) (*EigenDA, error) {
+	var signer BlobRequestSigner
+	var err error
+	if config.EnableHsm {
+		signer, err = NewHsmBlobSigner(config.HsmCreden, config.HsmAPIName, config.HsmPubkey)
+		if err != nil {
+			return nil, fmt.Errorf("error creating HSM signer: %w", err)
+		}
+	} else if config.PrivateKey != "" {
+		signer, err = NewLocalBlobSigner(config.PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("error creating local signer: %w", err)
+		}
 	}
+
+	vCfg := config.VerificationCfg()
+	verifier, err := verify.NewVerifier(vCfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("error creating verifier: %w", err)
+	}
+
+	return &EigenDA{
+		Config:   config,
+		Log:      log,
+		signer:   signer,
+		verifier: verifier,
+	}, nil
 }
 
 func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
@@ -69,7 +92,9 @@ func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, Blob
 	defer func() { _ = conn.Close() }()
 	daClient := disperser.NewDisperserClient(conn)
 
-	reply, err := daClient.RetrieveBlob(ctx, &disperser.RetrieveBlobRequest{
+	ctxTimeout, cancel := context.WithTimeout(ctx, m.RPCTimeout)
+	defer cancel()
+	reply, err := daClient.RetrieveBlob(ctxTimeout, &disperser.RetrieveBlobRequest{
 		BatchHeaderHash: BatchHeaderHash,
 		BlobIndex:       BlobIndex,
 	})
@@ -84,10 +109,56 @@ func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, Blob
 }
 
 func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, []byte, error) {
+	dispersalStart := time.Now()
+	var blobInfo *disperser.BlobInfo
+	var blobData []byte
+	var err error
 	if m.signer == nil {
-		return m.DisperseBlobWithoutAuth(ctx, txData)
+		blobInfo, blobData, err = m.DisperseBlobWithoutAuth(ctx, txData)
+	} else {
+		blobInfo, blobData, err = m.DisperseBlobAuthenticated(ctx, txData)
 	}
-	return m.DisperseBlobAuthenticated(ctx, txData)
+	if err != nil {
+		m.Log.Error("error disperse blob", "err", err)
+		return nil, nil, err
+	}
+
+	encodedTxData := ConvertByPaddingEmptyByte(txData)
+	err = m.verifier.VerifyCommitment(blobInfo.BlobHeader.Commitment, encodedTxData)
+	if err != nil {
+		m.Log.Error("error verify commitment", "err", err)
+		return nil, nil, err
+	}
+
+	m.Log.Info("Dispersal took", "time", time.Since(dispersalStart))
+
+	dispersalDuration := time.Since(dispersalStart)
+	remainingTimeout := m.StatusQueryTimeout - dispersalDuration
+
+	ticker := time.NewTicker(12 * time.Second)
+	defer ticker.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), remainingTimeout)
+	defer cancel()
+
+	cert := (*verify.Certificate)(blobInfo)
+	done := false
+	for !done {
+		select {
+		case <-ctx.Done():
+			return nil, nil, ctx.Err()
+		case <-ticker.C:
+			err = m.verifier.VerifyCert(cert)
+			if err == nil {
+				done = true
+			} else if !errors.Is(err, verify.ErrBatchMetadataHashNotFound) {
+				return nil, nil, err
+			} else {
+				m.Log.Info("Blob confirmed, waiting for sufficient confirmation depth...", "targetDepth", m.EthConfirmationDepth)
+			}
+		}
+	}
+
+	return blobInfo, blobData, nil
 }
 
 func (m *EigenDA) DisperseBlobWithoutAuth(ctx context.Context, txData []byte) (*disperser.BlobInfo, []byte, error) {
@@ -102,14 +173,15 @@ func (m *EigenDA) DisperseBlobWithoutAuth(ctx context.Context, txData []byte) (*
 	defer func() { _ = conn.Close() }()
 	daClient := disperser.NewDisperserClient(conn)
 
+	ctxTimeout, cancel := context.WithTimeout(ctx, m.RPCTimeout)
+	defer cancel()
+
 	// encode modulo bn254
 	encodedTxData := ConvertByPaddingEmptyByte(txData)
-
 	disperseReq := &disperser.DisperseBlobRequest{
 		Data: encodedTxData,
 	}
-	disperseRes, err := daClient.DisperseBlob(ctx, disperseReq)
-
+	disperseRes, err := daClient.DisperseBlob(ctxTimeout, disperseReq)
 	if err != nil || disperseRes == nil {
 		m.Log.Error("Unable to disperse blob to EigenDA, aborting", "err", err)
 		return nil, nil, err
@@ -229,7 +301,6 @@ func (m *EigenDA) disperseBlobAuthenticated(ctx context.Context, data []byte) (*
 	daClient := disperser.NewDisperserClient(conn)
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, m.RPCTimeout)
-
 	defer cancel()
 
 	stream, err := daClient.DisperseBlobAuthenticated(ctxTimeout)

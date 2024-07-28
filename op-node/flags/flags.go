@@ -260,6 +260,12 @@ var (
 		Value:  "http://da:26658",
 		EnvVar: prefixEnvVar("DA_RPC"),
 	}
+	DARPCTimeout = cli.DurationFlag{
+		Name:   "da-rpc",
+		Usage:  "Data Availability RPC Timeout",
+		Value:  5 * time.Second,
+		EnvVar: prefixEnvVar("DA_RPC_TIMEOUT"),
+	}
 	/* Optional Flags */
 	BeaconAddr = cli.StringFlag{
 		Name:   "l1.beacon",
@@ -337,6 +343,7 @@ var optionalFlags = []cli.Flag{
 	MantleDAIndexerEnableFlag,
 	RPCEnableAdmin,
 	DARPC,
+	DARPCTimeout,
 }
 
 // Flags contains the list of configuration options available to the binary.

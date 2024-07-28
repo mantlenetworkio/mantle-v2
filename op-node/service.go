@@ -253,8 +253,10 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 
 func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
 	rpc := ctx.String(flags.DARPC.Name)
+	rpcTimeout := ctx.Duration(flags.DARPCTimeout.Name)
 	return eigenda.Config{
-		RPC: rpc,
+		RPC:        rpc,
+		RPCTimeout: rpcTimeout,
 		// Can leave everything else unfilled for the node
 	}, nil
 }
