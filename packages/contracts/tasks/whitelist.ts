@@ -10,7 +10,7 @@ import { LedgerSigner } from '@ethersproject/hardware-wallets'
 import { getContractFactory } from '../src/contract-defs'
 import { predeploys } from '../src/predeploys'
 
-// Add accounts the the OVM_DeployerWhitelist
+// Add accounts the OVM_DeployerWhitelist
 // npx hardhat whitelist --address 0x..
 task('whitelist')
   .addOptionalParam('address', 'Address to whitelist', undefined, types.string)

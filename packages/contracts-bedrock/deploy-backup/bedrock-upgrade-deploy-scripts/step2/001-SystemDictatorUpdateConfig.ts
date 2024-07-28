@@ -132,7 +132,7 @@ const deployFn: DeployFunction = async (hre) => {
           hre.deployConfig.l2OutputOracleStartingBlockNumber,
           l2OutputOracleStartingTimestamp: deployL2StartingTimestamp,
         },
-        false // do not pause the the OptimismPortal when initializing
+        false // do not pause the OptimismPortal when initializing
       )
     } else {
       // pause the OptimismPortal when initializing
