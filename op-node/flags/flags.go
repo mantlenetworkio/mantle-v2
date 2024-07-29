@@ -261,7 +261,7 @@ var (
 		EnvVar: prefixEnvVar("DA_RPC"),
 	}
 	DARPCTimeout = cli.DurationFlag{
-		Name:   "da-rpc",
+		Name:   "da-rpc-timeout",
 		Usage:  "Data Availability RPC Timeout",
 		Value:  5 * time.Second,
 		EnvVar: prefixEnvVar("DA_RPC_TIMEOUT"),
