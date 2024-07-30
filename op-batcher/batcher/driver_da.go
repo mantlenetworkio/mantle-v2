@@ -338,7 +338,7 @@ func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, 
 			return nil, err
 		}
 
-		if len(encodeData) > se.MaxBlobDataSize*MaxblobNum {
+		if len(nextEncodeData) > se.MaxBlobDataSize*MaxblobNum {
 			blobs := []*se.Blob{}
 			for idx := 0; idx < len(encodeData); idx += se.MaxBlobDataSize {
 				blobData := encodeData[idx : idx+minInt(len(encodeData)-idx, se.MaxBlobDataSize)]
