@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -140,6 +141,9 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 	ctx, cancel := context.WithTimeout(context.Background(), remainingTimeout)
 	defer cancel()
 
+	blobJson, _ := json.Marshal(blobInfo)
+	m.Log.Info("Verifying blob", "info", string(blobJson))
+
 	cert := (*verify.Certificate)(blobInfo)
 	done := false
 	for !done {
@@ -149,8 +153,10 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 		case <-ticker.C:
 			err = m.verifier.VerifyCert(cert)
 			if err == nil {
+				m.Log.Info("Blob verified successfully", "info", string(blobJson))
 				done = true
 			} else if !errors.Is(err, verify.ErrBatchMetadataHashNotFound) {
+				m.Log.Error("Blob verified with error", "info", string(blobJson))
 				return nil, nil, err
 			} else {
 				m.Log.Info("Blob confirmed, waiting for sufficient confirmation depth...", "targetDepth", m.EthConfirmationDepth)
