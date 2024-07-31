@@ -27,8 +27,8 @@ import (
 const (
 	// geth requires a minimum fee bump of 10% for regular tx resubmission
 	priceBump int64 = 10
-	// geth requires a minimum fee bump of 100% for blob tx resubmission
-	blobPriceBump int64 = 100
+	// geth requires a minimum fee bump of 110% for blob tx resubmission
+	blobPriceBump int64 = 110
 
 	Wei   = 1
 	GWei  = 1e9
