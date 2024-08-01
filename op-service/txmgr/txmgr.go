@@ -27,8 +27,8 @@ import (
 const (
 	// geth requires a minimum fee bump of 10% for regular tx resubmission
 	priceBump int64 = 10
-	// geth requires a minimum fee bump of 110% for blob tx resubmission
-	blobPriceBump int64 = 110
+	// geth requires a minimum fee bump of 100% for blob tx resubmission
+	blobPriceBump int64 = 100
 
 	Wei   = 1
 	GWei  = 1e9
@@ -506,7 +506,7 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 		m.l.Warn("failed to get suggested gas tip and basefee", "err", err)
 		return tx
 	}
-	gasTipCap, gasFeeCap := updateFees(tx.GasTipCap(), tx.GasFeeCap(), tip, basefee, m.l)
+	gasTipCap, gasFeeCap := updateFees(tx.GasTipCap(), tx.GasFeeCap(), tip, basefee, tx.Type() == types.BlobTxType, m.l)
 
 	if tx.GasTipCapIntCmp(gasTipCap) == 0 && tx.GasFeeCapIntCmp(gasFeeCap) == 0 {
 		return tx
@@ -625,7 +625,7 @@ func calcThresholdValue(x *big.Int, isBlobTx bool) *big.Int {
 // updateFees takes the old tip/basefee & the new tip/basefee and then suggests
 // a gasTipCap and gasFeeCap that satisfies geth's required fee bumps
 // Geth: FC and Tip must be bumped if any increase
-func updateFees(oldTip, oldFeeCap, newTip, newBaseFee *big.Int, lgr log.Logger) (*big.Int, *big.Int) {
+func updateFees(oldTip, oldFeeCap, newTip, newBaseFee *big.Int, isBlobTx bool, lgr log.Logger) (*big.Int, *big.Int) {
 	newFeeCap := calcGasFeeCap(newBaseFee, newTip)
 	lgr = lgr.New("old_tip", oldTip, "old_feecap", oldFeeCap, "new_tip", newTip, "new_feecap", newFeeCap)
 	// If the new prices are less than the old price, reuse the old prices
@@ -634,8 +634,8 @@ func updateFees(oldTip, oldFeeCap, newTip, newBaseFee *big.Int, lgr log.Logger) 
 		return oldTip, oldFeeCap
 	}
 	// Determine if we need to increase the suggested values
-	thresholdTip := calcThresholdValue(oldTip, false)
-	thresholdFeeCap := calcThresholdValue(oldFeeCap, false)
+	thresholdTip := calcThresholdValue(oldTip, isBlobTx)
+	thresholdFeeCap := calcThresholdValue(oldFeeCap, isBlobTx)
 	if newTip.Cmp(thresholdTip) >= 0 && newFeeCap.Cmp(thresholdFeeCap) >= 0 {
 		lgr.Debug("Using new tip and feecap")
 		return newTip, newFeeCap
