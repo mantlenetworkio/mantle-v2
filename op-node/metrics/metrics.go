@@ -146,6 +146,11 @@ type Metrics struct {
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
+
+	eigendaRpcSubmit   *prometheus.CounterVec
+	eigendaRpcSuccess  *prometheus.CounterVec
+	eigendaRpcFailed   *prometheus.CounterVec
+	eigendaRpcDuration *prometheus.SummaryVec
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -432,6 +437,26 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "sequencer_sealing_total",
 			Help:      "Number of sequencer block sealing jobs",
 		}),
+		eigendaRpcSubmit: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_submit",
+			Help:      "Number of eigenda rpc submit",
+		}, []string{"method"}),
+		eigendaRpcSuccess: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_success",
+			Help:      "Number of eigenda rpc success",
+		}, []string{"method"}),
+		eigendaRpcFailed: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_failed",
+			Help:      "Number of eigenda rpc failed",
+		}, []string{"method"}),
+		eigendaRpcDuration: factory.NewSummaryVec(prometheus.SummaryOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_duration",
+			Help:      "Eigenda rpc duration",
+		}, []string{"method"}),
 
 		registry: registry,
 		factory:  factory,
@@ -689,6 +714,19 @@ func (m *Metrics) RecordParseDataStoreId(dataStoreId uint32) {
 
 func (m *Metrics) RecordFrames(frameSize int) {
 	m.ParseFrameSize.Add(float64(frameSize))
+}
+
+func (m *Metrics) RecordInterval(method string) func(error) {
+	m.eigendaRpcSubmit.WithLabelValues(method).Inc()
+	timer := prometheus.NewTimer(m.eigendaRpcDuration.WithLabelValues(method))
+	return func(err error) {
+		timer.ObserveDuration()
+		if err != nil {
+			m.eigendaRpcFailed.WithLabelValues(method).Inc()
+		} else {
+			m.eigendaRpcSuccess.WithLabelValues(method).Inc()
+		}
+	}
 }
 
 type noopMetricer struct{}

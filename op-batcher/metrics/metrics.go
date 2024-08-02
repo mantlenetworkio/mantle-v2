@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	txmetrics "github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 )
@@ -26,6 +27,7 @@ type Metricer interface {
 
 	// Record Tx metrics
 	txmetrics.TxMetricer
+	eigenda.Metrics
 
 	RecordLatestL1Block(l1ref eth.L1BlockRef)
 	RecordL2BlocksLoaded(l2ref eth.L2BlockRef)
@@ -63,6 +65,8 @@ type Metricer interface {
 	Document() []opmetrics.DocumentedMetric
 
 	RecordEigenDAFailback(txs int)
+
+	RecordInterval(method string) func(error)
 }
 
 type Metrics struct {
@@ -103,6 +107,11 @@ type Metrics struct {
 	batcherTxEvs               opmetrics.EventVec
 	batcherTxOverMaxLimitEvent opmetrics.Event
 	eigenDAFailbackCount       prometheus.Counter
+
+	eigendaRpcSubmit   *prometheus.CounterVec
+	eigendaRpcSuccess  *prometheus.CounterVec
+	eigendaRpcFailed   *prometheus.CounterVec
+	eigendaRpcDuration *prometheus.SummaryVec
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -239,6 +248,26 @@ func NewMetrics(procName string) *Metrics {
 			Name:      "eigen_da_failback_count",
 			Help:      "Number of times eigen da failback.",
 		}),
+		eigendaRpcSubmit: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_submit",
+			Help:      "Number of eigenda rpc submit",
+		}, []string{"method"}),
+		eigendaRpcSuccess: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_success",
+			Help:      "Number of eigenda rpc success",
+		}, []string{"method"}),
+		eigendaRpcFailed: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_failed",
+			Help:      "Number of eigenda rpc failed",
+		}, []string{"method"}),
+		eigendaRpcDuration: factory.NewSummaryVec(prometheus.SummaryOpts{
+			Namespace: ns,
+			Name:      "eigenda_rpc_duration",
+			Help:      "Eigenda rpc duration",
+		}, []string{"method"}),
 	}
 }
 
@@ -418,6 +447,19 @@ func (m *Metrics) RecordTxOverMaxLimit() {
 
 func (m *Metrics) RecordEigenDAFailback(txs int) {
 	m.eigenDAFailbackCount.Add(float64(txs))
+}
+
+func (m *Metrics) RecordInterval(method string) func(error) {
+	m.eigendaRpcSubmit.WithLabelValues(method).Inc()
+	timer := prometheus.NewTimer(m.eigendaRpcDuration.WithLabelValues(method))
+	return func(err error) {
+		timer.ObserveDuration()
+		if err != nil {
+			m.eigendaRpcFailed.WithLabelValues(method).Inc()
+		} else {
+			m.eigendaRpcSuccess.WithLabelValues(method).Inc()
+		}
+	}
 }
 
 // estimateBatchSize estimates the size of the batch

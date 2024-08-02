@@ -57,3 +57,7 @@ func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
 }
 
 func (*noopMetrics) RecordEigenDAFailback(txs int) {}
+
+func (*noopMetrics) RecordInterval(method string) func(error) {
+	return func(error) {}
+}

@@ -184,7 +184,7 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
-	eigenDA, err := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log)
+	eigenDA, err := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, m)
 	if err != nil {
 		return nil, fmt.Errorf("error creating EigenDA client: %w", err)
 	}

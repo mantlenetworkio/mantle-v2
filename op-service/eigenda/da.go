@@ -27,11 +27,12 @@ type EigenDA struct {
 	Config
 
 	Log      log.Logger
+	Metricer Metrics
 	signer   BlobRequestSigner
 	verifier *verify.Verifier
 }
 
-func NewEigenDAClient(config Config, log log.Logger) (*EigenDA, error) {
+func NewEigenDAClient(config Config, log log.Logger, metricer Metrics) (*EigenDA, error) {
 	var signer BlobRequestSigner
 	var err error
 	if config.EnableHsm {
@@ -46,10 +47,13 @@ func NewEigenDAClient(config Config, log log.Logger) (*EigenDA, error) {
 		}
 	}
 
-	vCfg := config.VerificationCfg()
-	verifier, err := verify.NewVerifier(vCfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("error creating verifier: %w", err)
+	var verifier *verify.Verifier
+	if config.EthRPC != "" && config.SvcManagerAddr != "" {
+		vCfg := config.VerificationCfg()
+		verifier, err = verify.NewVerifier(vCfg, log)
+		if err != nil {
+			return nil, fmt.Errorf("error creating verifier: %w", err)
+		}
 	}
 
 	return &EigenDA{
@@ -57,6 +61,7 @@ func NewEigenDAClient(config Config, log log.Logger) (*EigenDA, error) {
 		Log:      log,
 		signer:   signer,
 		verifier: verifier,
+		Metricer: metricer,
 	}, nil
 }
 
@@ -114,14 +119,21 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 	var blobInfo *disperser.BlobInfo
 	var blobData []byte
 	var err error
+	done := m.recordInterval("WholeDisperseLifecycle")
 	if m.signer == nil {
 		blobInfo, blobData, err = m.DisperseBlobWithoutAuth(ctx, txData)
 	} else {
 		blobInfo, blobData, err = m.DisperseBlobAuthenticated(ctx, txData)
 	}
+	done(err)
 	if err != nil {
 		m.Log.Error("error disperse blob", "err", err)
 		return nil, nil, err
+	}
+
+	if m.verifier == nil {
+		m.Log.Info("DisperseBlob without verification", "time", time.Since(dispersalStart))
+		return blobInfo, blobData, nil
 	}
 
 	encodedTxData := ConvertByPaddingEmptyByte(txData)
@@ -145,8 +157,8 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 	m.Log.Info("Verifying blob", "info", string(blobJson))
 
 	cert := (*verify.Certificate)(blobInfo)
-	done := false
-	for !done {
+	finished := false
+	for !finished {
 		select {
 		case <-ctx.Done():
 			return nil, nil, ctx.Err()
@@ -154,7 +166,7 @@ func (m *EigenDA) DisperseBlob(ctx context.Context, txData []byte) (*disperser.B
 			err = m.verifier.VerifyCert(cert)
 			if err == nil {
 				m.Log.Info("Blob verified successfully", "info", string(blobJson))
-				done = true
+				finished = true
 			} else if !errors.Is(err, verify.ErrBatchMetadataHashNotFound) {
 				m.Log.Error("Blob verified with error", "info", string(blobJson))
 				return nil, nil, err
@@ -187,7 +199,10 @@ func (m *EigenDA) DisperseBlobWithoutAuth(ctx context.Context, txData []byte) (*
 	disperseReq := &disperser.DisperseBlobRequest{
 		Data: encodedTxData,
 	}
+
+	done := m.recordInterval("DisperseBlob")
 	disperseRes, err := daClient.DisperseBlob(ctxTimeout, disperseReq)
+	done(err)
 	if err != nil || disperseRes == nil {
 		m.Log.Error("Unable to disperse blob to EigenDA, aborting", "err", err)
 		return nil, nil, err
@@ -212,9 +227,11 @@ func (m *EigenDA) DisperseBlobWithoutAuth(ctx context.Context, txData []byte) (*
 			m.Log.Warn("context error", "err", ctx.Err())
 			return nil, nil, ctx.Err()
 		}
+		done := m.recordInterval("GetBlobStatus")
 		statusRes, err = daClient.GetBlobStatus(ctx, &disperser.BlobStatusRequest{
 			RequestId: disperseRes.RequestId,
 		})
+		done(err)
 		if err != nil {
 			m.Log.Warn("Unable to retrieve blob dispersal status, will retry", "requestID", base64RequestID, "err", err)
 		} else if statusRes.Status == disperser.BlobStatus_CONFIRMED || statusRes.Status == disperser.BlobStatus_FINALIZED {
@@ -244,7 +261,9 @@ func (m *EigenDA) DisperseBlobAuthenticated(ctx context.Context, rawData []byte)
 	m.Log.Info("Attempting to disperse blob to EigenDA with auth")
 
 	// disperse blob
+	done := m.recordInterval("DisperseBlobAuthenticated")
 	blobStatus, requestID, err := m.disperseBlobAuthenticated(ctx, rawData)
+	done(err)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error calling DisperseBlobAuthenticated() client: %w", err)
 	}
@@ -269,7 +288,9 @@ func (m *EigenDA) DisperseBlobAuthenticated(ctx context.Context, rawData []byte)
 		case <-ctx.Done():
 			return nil, nil, fmt.Errorf("timed out waiting for EigenDA blob to confirm blob with request id=%s: %w", base64RequestID, ctx.Err())
 		case <-ticker.C:
+			done := m.recordInterval("GetBlobStatus")
 			statusRes, err := m.GetBlobStatus(ctx, requestID)
+			done(err)
 			if err != nil {
 				m.Log.Error("Unable to retrieve blob dispersal status, will retry", "requestID", base64RequestID, "err", err)
 				continue
@@ -367,4 +388,12 @@ func (m *EigenDA) disperseBlobAuthenticated(ctx context.Context, data []byte) (*
 	status := disperseReply.DisperseReply.GetResult()
 
 	return &status, disperseReply.DisperseReply.GetRequestId(), nil
+}
+
+func (m *EigenDA) recordInterval(method string) func(error) {
+	if m.Metricer == nil {
+		return func(err error) {}
+	}
+
+	return m.Metricer.RecordInterval(method)
 }
