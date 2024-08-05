@@ -209,12 +209,13 @@ type EigenDADataStore struct {
 	Ctx      context.Context
 }
 
-func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *eigenda.Config, cfg *MantleDataStoreConfig) *EigenDADataStore {
+func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *eigenda.Config, cfg *MantleDataStoreConfig, m eigenda.Metrics) *EigenDADataStore {
 	var daClient eigenda.IEigenDA
 	if daCfg != nil {
 		daClient = &eigenda.EigenDA{
-			Log:    log,
-			Config: *daCfg,
+			Log:      log,
+			Config:   *daCfg,
+			Metricer: m,
 		}
 	}
 	return &EigenDADataStore{

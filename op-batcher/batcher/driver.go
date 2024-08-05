@@ -98,6 +98,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		GraphPollingDuration:   cfg.GraphPollingDuration,
 		RollupMaxSize:          cfg.RollupMaxSize,
 		MantleDaNodes:          cfg.MantleDaNodes,
+		SkipEigenDaRpc:         cfg.SkipEigenDaRpc,
 		Rollup:                 rcfg,
 		Channel: ChannelConfig{
 			SeqWindowSize:      rcfg.SeqWindowSize,
@@ -111,6 +112,19 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			RPC:                      cfg.EigenDAConfig.RPC,
 			StatusQueryTimeout:       cfg.EigenDAConfig.StatusQueryTimeout,
 			StatusQueryRetryInterval: cfg.EigenDAConfig.StatusQueryRetryInterval,
+			RPCTimeout:               cfg.EigenDAConfig.DARPCTimeout,
+			EnableHsm:                cfg.EigenDAConfig.EnableHsm,
+			HsmCreden:                cfg.EigenDAConfig.HsmCreden,
+			HsmPubkey:                cfg.EigenDAConfig.HsmPubkey,
+			HsmAPIName:               cfg.EigenDAConfig.HsmAPIName,
+			PrivateKey:               cfg.EigenDAConfig.PrivateKey,
+			EthRPC:                   cfg.EigenDAConfig.EthRPC,
+			SvcManagerAddr:           cfg.EigenDAConfig.SvcManagerAddr,
+			EthConfirmationDepth:     cfg.EigenDAConfig.EthConfirmationDepth,
+			CacheDir:                 cfg.EigenDAConfig.CacheDir,
+			G1Path:                   cfg.EigenDAConfig.G1Path,
+			MaxBlobLength:            cfg.EigenDAConfig.MaxBlobLength,
+			G2PowerOfTauPath:         cfg.EigenDAConfig.G2PowerOfTauPath,
 		},
 	}
 
@@ -170,14 +184,16 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
+	eigenDA, err := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, m)
+	if err != nil {
+		return nil, fmt.Errorf("error creating EigenDA client: %w", err)
+	}
+
 	return &BatchSubmitter{
-		Config: cfg,
-		txMgr:  cfg.TxManager,
-		state:  NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
-		eigenDA: &eigenda.EigenDA{
-			Config: cfg.EigenDA,
-			Log:    l,
-		},
+		Config:  cfg,
+		txMgr:   cfg.TxManager,
+		state:   NewChannelManager(l, m, cfg.Channel, cfg.DaUpgradeChainConfig),
+		eigenDA: eigenDA,
 	}, nil
 
 }

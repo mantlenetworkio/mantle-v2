@@ -3,6 +3,7 @@ package batcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"sort"
@@ -35,6 +36,7 @@ const (
 	DaLoopRetryNum      = 10
 	EigenRPCRetryNum    = 3
 	BytesPerCoefficient = 31
+	MaxblobNum          = 3 // max number of blobs, the bigger the more possible of timeout
 )
 
 var ErrInitDataStore = errors.New("init data store transaction failed")
@@ -211,12 +213,9 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	}
 
 	var err error
-	var candidate *txmgr.TxCandidate
-	var receipt *types.Receipt
-	var data, wrappedData []byte
-	eigendaSuccess := false
+	var wrappedData []byte
 
-	data, err = l.txAggregatorForEigenDa()
+	daData, err := l.txAggregatorForEigenDa()
 	if err != nil {
 		l.log.Error("loopEigenDa txAggregatorForEigenDa err", "err", err)
 		return false, err
@@ -228,60 +227,76 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		return false, err
 	}
 
+	l.log.Info("disperseEigenDaData", "skip da rpc", l.Config.SkipEigenDaRpc)
+
+	eigendaSuccess := false
+	if !l.Config.SkipEigenDaRpc {
+		timeoutTime := time.Now().Add(l.EigenDA.StatusQueryTimeout)
+		for retry := 0; retry < EigenRPCRetryNum; retry++ {
+			l.metr.RecordDaRetry(int32(retry))
+			wrappedData, err = l.disperseEigenDaData(daData)
+			if err == nil && len(wrappedData) > 0 {
+				eigendaSuccess = true
+				break
+			}
+
+			if time.Now().After(timeoutTime) {
+				l.log.Warn("loopEigenDa disperseEigenDaData timeout", "retry time", retry, "err", err)
+				break
+			}
+
+			l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
+			time.Sleep(5 * time.Second)
+		}
+	}
+
+	var candidates []*txmgr.TxCandidate
+	if eigendaSuccess {
+		candidate := l.calldataTxCandidate(wrappedData)
+		candidates = append(candidates, candidate)
+	} else {
+		if blobCandidates, err := l.blobTxCandidates(daData); err != nil {
+			l.log.Warn("failed to create blob tx candidate", "err", err)
+			return false, err
+		} else {
+			candidates = append(candidates, blobCandidates...)
+			l.metr.RecordEigenDAFailback(len(blobCandidates))
+		}
+	}
+
+	var lastReceipt *types.Receipt
+	var successTxs []ecommon.Hash
 	for loopRetry := 0; loopRetry < DaLoopRetryNum; loopRetry++ {
-		err = func() error {
-			l.metr.RecordRollupRetry(int32(loopRetry))
-			if !eigendaSuccess {
-				//try 3 times
-				for retry := 0; retry < EigenRPCRetryNum; retry++ {
-					l.metr.RecordDaRetry(int32(retry))
-					wrappedData, err = l.disperseEigenDaData(data)
-					if err != nil {
-						l.log.Warn("loopEigenDa disperseEigenDaData err,need to try again", "retry time", retry, "err", err)
-						time.Sleep(5 * time.Second)
-						continue
-					}
-
-					eigendaSuccess = true
-					break
-				}
-			}
-
-			if eigendaSuccess {
-				candidate = l.calldataTxCandidate(wrappedData)
-			} else {
-				if candidate, err = l.blobTxCandidate(data); err != nil {
-					l.log.Warn("failed to create blob tx candidate", "err", err)
-					return err
-				}
-				l.metr.RecordEigenDAFailback()
-			}
-
-			receipt, err = l.txMgr.Send(l.killCtx, *candidate)
-			if err != nil {
+		l.metr.RecordRollupRetry(int32(loopRetry))
+		failedIdx := 0
+		for idx, tx := range candidates {
+			lastReceipt, err = l.txMgr.Send(l.killCtx, *tx)
+			if err != nil || lastReceipt.Status == types.ReceiptStatusFailed {
 				l.log.Warn("failed to send tx candidate", "err", err)
-				return err
+				break
 			}
+			successTxs = append(successTxs, lastReceipt.TxHash)
+			failedIdx = idx + 1
+		}
+		candidates = candidates[failedIdx:]
 
-			return nil
-		}()
-		if err != nil {
+		if len(candidates) > 0 {
 			l.log.Warn("failed to rollup", "err", err, "retry time", loopRetry)
 		} else {
+			l.log.Info("rollup success", "success txs", successTxs)
 			break
 		}
 	}
 
-	if err != nil {
+	if len(candidates) > 0 {
+		err = fmt.Errorf("failed to rollup %d tx candidates", len(candidates))
 		l.log.Error("failed to rollup", "err", err)
+		l.metr.RecordBatchTxConfirmDataFailed()
 		return false, err
 	}
 
-	err = l.handleConfirmDataStoreReceipt(receipt)
-	if err != nil {
-		l.log.Error("failed to handleConfirmDataStoreReceipt", "err", err)
-		return false, err
-	}
+	l.metr.RecordBatchTxConfirmDataSuccess()
+	l.recordConfirmedEigenDATx(lastReceipt)
 
 	//create a new channel now for reducing the disperseEigenDaData latency time
 	if err = l.state.ensurePendingChannel(currentL1.ID()); err != nil {
@@ -309,26 +324,74 @@ func minInt(a, b int) int {
 	return b
 }
 
-func (l *BatchSubmitter) blobTxCandidate(data []byte) (*txmgr.TxCandidate, error) {
+func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, error) {
 	l.log.Info("building Blob transaction candidate", "size", len(data))
-	blobs := []*se.Blob{}
-	for idx := 0; idx < len(data); idx += se.MaxBlobDataSize {
-		blobData := data[idx : idx+minInt(len(data)-idx, se.MaxBlobDataSize)]
-		var blob se.Blob
-		if err := blob.FromData(blobData); err != nil {
+	candidates := []*txmgr.TxCandidate{}
+	dataInTx := [][]byte{}
+	encodeData := []byte{}
+
+	for _, frameData := range data {
+		dataInTx = append(dataInTx, frameData)
+		nextEncodeData, err := rlp.EncodeToBytes(dataInTx)
+		if err != nil {
+			l.log.Error("op-batcher unable to encode txn", "err", err)
 			return nil, err
 		}
-		blobs = append(blobs, &blob)
+
+		if len(nextEncodeData) > se.MaxBlobDataSize*MaxblobNum {
+			blobs := []*se.Blob{}
+			for idx := 0; idx < len(encodeData); idx += se.MaxBlobDataSize {
+				blobData := encodeData[idx : idx+minInt(len(encodeData)-idx, se.MaxBlobDataSize)]
+				var blob se.Blob
+				if err := blob.FromData(blobData); err != nil {
+					return nil, err
+				}
+				blobs = append(blobs, &blob)
+			}
+			candidates = append(candidates, &txmgr.TxCandidate{
+				To:    &l.Rollup.BatchInboxAddress,
+				Blobs: blobs,
+			})
+			dataInTx = [][]byte{frameData}
+			encodeData, err = rlp.EncodeToBytes(dataInTx)
+			if err != nil {
+				l.log.Error("op-batcher unable to encode txn", "err", err)
+				return nil, err
+			}
+		} else {
+			dataInTx = append(dataInTx, frameData)
+			encodeData = nextEncodeData
+		}
+
 	}
 
-	return &txmgr.TxCandidate{
-		To:    &l.Rollup.BatchInboxAddress,
-		Blobs: blobs,
-	}, nil
+	if len(dataInTx) > 0 {
+		blobs := []*se.Blob{}
+		for idx := 0; idx < len(encodeData); idx += se.MaxBlobDataSize {
+			blobData := encodeData[idx : idx+minInt(len(encodeData)-idx, se.MaxBlobDataSize)]
+			var blob se.Blob
+			if err := blob.FromData(blobData); err != nil {
+				return nil, err
+			}
+			blobs = append(blobs, &blob)
+		}
+		candidates = append(candidates, &txmgr.TxCandidate{
+			To:    &l.Rollup.BatchInboxAddress,
+			Blobs: blobs,
+		})
+	}
+
+	return candidates, nil
 }
 
-func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
-	blobInfo, requestId, err := l.eigenDA.DisperseBlob(l.shutdownCtx, data)
+func (l *BatchSubmitter) disperseEigenDaData(data [][]byte) ([]byte, error) {
+	encodeData, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		l.log.Error("op-batcher unable to encode txn", "err", err)
+		return nil, err
+	}
+
+	blobInfo, requestId, err := l.eigenDA.DisperseBlob(l.shutdownCtx, encodeData)
 	if err != nil {
 		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
 		return nil, err
@@ -346,7 +409,7 @@ func (l *BatchSubmitter) disperseEigenDaData(data []byte) ([]byte, error) {
 				BlobIndex:            blobInfo.BlobVerificationProof.BlobIndex,
 				ReferenceBlockNumber: blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber,
 				QuorumIds:            quorumIDs,
-				BlobLength:           uint32(len(data)),
+				BlobLength:           uint32(len(encodeData)),
 				RequestId:            requestId,
 			},
 		},
@@ -422,7 +485,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	return transactionByte, nil
 }
 
-func (l *BatchSubmitter) txAggregatorForEigenDa() ([]byte, error) {
+func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
 	var txsData [][]byte
 	var transactionByte []byte
 	sortTxIds := make([]txID, 0, len(l.state.daPendingTxData))
@@ -450,7 +513,13 @@ func (l *BatchSubmitter) txAggregatorForEigenDa() ([]byte, error) {
 		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, v)
 		l.log.Info("added frame to daUnConfirmedTxID", "id", v.String())
 	}
-	return transactionByte, nil
+
+	if len(txsData) == 0 {
+		l.log.Error("txsData is empty")
+		return nil, fmt.Errorf("txsData is empty")
+	}
+
+	return txsData, nil
 }
 
 func (l *BatchSubmitter) disperseStoreData(txsData []byte) error {

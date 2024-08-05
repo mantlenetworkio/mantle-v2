@@ -69,6 +69,7 @@ var (
 		Value:  31600, // ktz for order is 3000
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
 	}
+
 	MantleDaNodeFlag = cli.IntFlag{
 		Name:   "mantle-da-node",
 		Usage:  "The number of nodes in MantleDA",
@@ -112,6 +113,11 @@ var (
 		Usage:  "Initialize the batcher in a stopped state. The batcher can be started using the admin_startBatcher RPC",
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "STOPPED"),
 	}
+	SkipEigenDaRpcFlag = cli.BoolFlag{
+		Name:   "skip-eigenda-da-rpc",
+		Usage:  "skip eigenDA rpc and submit da data to ethereum blob transaction when mantle_da_switch is open",
+		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "SKIP_EIGENDA_DA_RPC"),
+	}
 	// Legacy Flags
 	SequencerHDPathFlag = txmgr.SequencerHDPathFlag
 )
@@ -129,6 +135,7 @@ var optionalFlags = []cli.Flag{
 	MaxChannelDurationFlag,
 	MaxL1TxSizeBytesFlag,
 	StoppedFlag,
+	SkipEigenDaRpcFlag,
 	SequencerHDPathFlag,
 	DisperserTimeoutFlag,
 	DisperserSocketFlag,

@@ -69,6 +69,8 @@ type Config struct {
 	EigenDA eigenda.Config
 	// Upgrade Da from MantleDA to EigenDA
 	DaUpgradeChainConfig *upgrade.UpgradeChainConfig
+	//skip eigenda and submit to ethereum blob transaction
+	SkipEigenDaRpc bool
 }
 
 // Check ensures that the [Config] is valid.
@@ -93,7 +95,6 @@ func (c *Config) Check() error {
 			return ErrGraphPollingDurationZero
 		}
 	}
-
 	return nil
 }
 
@@ -165,6 +166,7 @@ type CLIConfig struct {
 
 	EigenLogConfig logging.Config
 	EigenDAConfig  eigenda.CLIConfig
+	SkipEigenDaRpc bool
 }
 
 func (c CLIConfig) Check() error {
@@ -211,6 +213,7 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		RollupMaxSize:          ctx.GlobalUint64(flags.RollUpMaxSizeFlag.Name),
 		MantleDaNodes:          ctx.GlobalInt(flags.MantleDaNodeFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
+		SkipEigenDaRpc:         ctx.GlobalBool(flags.SkipEigenDaRpcFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),
 		LogConfig:              oplog.ReadCLIConfig(ctx),

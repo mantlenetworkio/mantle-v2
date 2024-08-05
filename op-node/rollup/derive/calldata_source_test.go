@@ -180,7 +180,7 @@ func TestRetrieveFromDaIndexer(t *testing.T) {
 	eigenDaSyncer := da.NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &da.MantleDataStoreConfig{
 		MantleDaIndexerSocket: "127.0.0.1:32111",
 		MantleDAIndexerEnable: true,
-	})
+	}, nil)
 
 	out := []eth.Data{}
 
