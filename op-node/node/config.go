@@ -113,8 +113,11 @@ func (cfg *Config) Check() error {
 			return fmt.Errorf("beacon config error: %w", err)
 		}
 	}
-	if cfg.DA.RPC != "" && cfg.Beacon == nil {
-		return errors.New("beacon config must be set when using eigenda")
+
+	if cfg.Rollup.MantleDaSwitch && !cfg.DatastoreConfig.MantleDAIndexerEnable {
+		if cfg.DA.RPC != "" && cfg.Beacon == nil {
+			return errors.New("beacon config must be set when using eigenda")
+		}
 	}
 
 	return nil
