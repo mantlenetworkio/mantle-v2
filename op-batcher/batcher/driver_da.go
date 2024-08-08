@@ -36,7 +36,7 @@ const (
 	DaLoopRetryNum      = 10
 	EigenRPCRetryNum    = 3
 	BytesPerCoefficient = 31
-	MaxblobNum          = 3 // max number of blobs, the bigger the more possible of timeout
+	MaxblobNum          = 4 // max number of blobs, the bigger the more possible of timeout
 )
 
 var ErrInitDataStore = errors.New("init data store transaction failed")
