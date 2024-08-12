@@ -359,7 +359,6 @@ func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, 
 				return nil, err
 			}
 		} else {
-			dataInTx = append(dataInTx, frameData)
 			encodeData = nextEncodeData
 		}
 
