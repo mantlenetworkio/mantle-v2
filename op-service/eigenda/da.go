@@ -100,10 +100,12 @@ func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, Blob
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, m.RPCTimeout)
 	defer cancel()
+	done := m.recordInterval("RetrieveBlob")
 	reply, err := daClient.RetrieveBlob(ctxTimeout, &disperser.RetrieveBlobRequest{
 		BatchHeaderHash: BatchHeaderHash,
 		BlobIndex:       BlobIndex,
 	})
+	done(err)
 	if err != nil {
 		return nil, err
 	}
