@@ -36,7 +36,7 @@ const (
 	DaLoopRetryNum      = 10
 	EigenRPCRetryNum    = 3
 	BytesPerCoefficient = 31
-	MaxblobNum          = 3 // max number of blobs, the bigger the more possible of timeout
+	MaxblobNum          = 4 // max number of blobs, the bigger the more possible of timeout
 )
 
 var ErrInitDataStore = errors.New("init data store transaction failed")
@@ -359,7 +359,6 @@ func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, 
 				return nil, err
 			}
 		} else {
-			dataInTx = append(dataInTx, frameData)
 			encodeData = nextEncodeData
 		}
 
@@ -486,7 +485,7 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 }
 
 func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
-	var txsData [][]byte
+	var tempTxsData, txsData [][]byte
 	var transactionByte []byte
 	sortTxIds := make([]txID, 0, len(l.state.daPendingTxData))
 	l.state.daUnConfirmedTxID = l.state.daUnConfirmedTxID[:0]
@@ -498,8 +497,8 @@ func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
 	})
 	for _, v := range sortTxIds {
 		txData := l.state.daPendingTxData[v]
-		txsData = append(txsData, txData.Bytes())
-		txnBufBytes, err := rlp.EncodeToBytes(txsData)
+		tempTxsData = append(tempTxsData, txData.Bytes())
+		txnBufBytes, err := rlp.EncodeToBytes(tempTxsData)
 		if err != nil {
 			l.log.Error("op-batcher unable to encode txn", "err", err)
 			return nil, err
@@ -509,6 +508,7 @@ func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
 			l.metr.RecordTxOverMaxLimit()
 			break
 		}
+		txsData = tempTxsData
 		transactionByte = txnBufBytes
 		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, v)
 		l.log.Info("added frame to daUnConfirmedTxID", "id", v.String())
