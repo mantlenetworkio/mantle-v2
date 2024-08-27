@@ -90,7 +90,7 @@ func (m *EigenDA) GetBlobStatus(ctx context.Context, requestID []byte) (*dispers
 func (m *EigenDA) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
-	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential)}
+	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100 * 1024 * 1024))} // 100MiB receive buffer
 	conn, err := grpc.Dial(m.RPC, dialOptions...)
 	if err != nil {
 		return nil, err
