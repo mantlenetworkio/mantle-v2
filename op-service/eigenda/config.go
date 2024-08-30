@@ -73,13 +73,16 @@ func (c *Config) GetMaxBlobLength() (uint64, error) {
 }
 
 func (c *Config) VerificationCfg() *verify.Config {
-
+	numBytes, err := c.GetMaxBlobLength()
+	if err != nil {
+		panic(fmt.Errorf("Check() was not called on config object, err is not nil: %w", err))
+	}
 	kzgCfg := &kzg.KzgConfig{
 		G1Path:          c.G1Path,
 		G2PowerOf2Path:  c.G2PowerOfTauPath,
 		CacheDir:        c.CacheDir,
-		SRSOrder:        268435456, // 2 ^ 32
-		SRSNumberToLoad: 65536,     // # of fp.Elements
+		SRSOrder:        268435456,     // 2 ^ 32
+		SRSNumberToLoad: numBytes / 32, // # of fp.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
 	}
 
