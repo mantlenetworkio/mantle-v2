@@ -231,7 +231,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 
 	eigendaSuccess := false
 	if !l.Config.SkipEigenDaRpc {
-		timeoutTime := time.Now().Add(l.EigenDA.StatusQueryTimeout)
+		timeoutTime := time.Now().Add(l.EigenDA.DisperseBlobTimeout)
 		for retry := 0; retry < EigenRPCRetryNum; retry++ {
 			l.metr.RecordDaRetry(int32(retry))
 			wrappedData, err = l.disperseEigenDaData(daData)
@@ -390,11 +390,15 @@ func (l *BatchSubmitter) disperseEigenDaData(data [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
-	blobInfo, requestId, err := l.eigenDA.DisperseBlob(l.shutdownCtx, encodeData)
+	blobInfo, err := l.eigenDA.DisperseBlob(l.shutdownCtx, encodeData)
 	if err != nil {
 		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
 		return nil, err
 
+	}
+	commitment, err := eigenda.EncodeCommitment(blobInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	quorumIDs := make([]uint32, len(blobInfo.BlobHeader.BlobQuorumParams))
@@ -409,7 +413,7 @@ func (l *BatchSubmitter) disperseEigenDaData(data [][]byte) ([]byte, error) {
 				ReferenceBlockNumber: blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber,
 				QuorumIds:            quorumIDs,
 				BlobLength:           uint32(len(encodeData)),
-				RequestId:            requestId,
+				Commitment:           commitment,
 			},
 		},
 	}
