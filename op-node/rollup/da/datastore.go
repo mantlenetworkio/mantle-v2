@@ -225,8 +225,11 @@ func (da *EigenDADataStore) IsDaIndexer() bool {
 	return da.Cfg.MantleDAIndexerEnable
 }
 
-func (da *EigenDADataStore) RetrieveBlob(requestID []byte) ([]byte, error) {
-	return da.daClient.RetrieveBlob(da.Ctx, requestID)
+func (da *EigenDADataStore) RetrieveBlob(batchHeaderHash []byte, blobIndex uint32, commitment []byte) ([]byte, error) {
+	if len(commitment) == 0 {
+		return da.daClient.RetrieveBlob(da.Ctx, batchHeaderHash, blobIndex)
+	}
+	return da.daClient.RetrieveBlobWithCommitment(da.Ctx, commitment)
 }
 
 func (da *EigenDADataStore) RetrieveBlobWithCommitment(commitment []byte) ([]byte, error) {

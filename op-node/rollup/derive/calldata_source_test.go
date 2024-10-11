@@ -3,13 +3,15 @@ package derive
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,6 +26,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 )
 
 type testTx struct {
@@ -151,17 +154,27 @@ func TestRLPEncodeDecodeEthData(t *testing.T) {
 }
 
 func TestRetrieveBlob(t *testing.T) {
-	da := eigenda.NewEigenDAClient(
-		eigenda.Config{
-			ProxyUrl: "disperser-holesky.eigenda.xyz:443",
-		},
-		log.New(context.Background()),
-		nil,
-	)
+	// da := eigenda.NewEigenDAClient(
+	cfg := eigenda.Config{
+		DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
+		ProxyUrl:            "http://127.0.0.1:3100",
+		DisperseBlobTimeout: 20 * time.Minute,
+		RetrieveBlobTimeout: 20 * time.Minute,
+	}
+	// 	log.New(context.Background()),
+	// 	nil,
+	// )
 
-	requestID, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
-	fmt.Printf("%x\n", requestID)
-	data, err := da.RetrieveBlob(context.Background(), requestID)
+	calldata, _ := hex.DecodeString("ed12f3010a20420bc17c0b13e62ad8204a13d88e0412dfe90d65b208d0df6ecbbf204363cc0d10cc0218c49e99012202000128fcb101a206bd01346430636338376539663261393432316539643165346138333531376130623430356434633336643730656333366535623330636461343666303864663736392d33313337333233383336333333373331333333383331333533323330333133313331333233373266333032663333333332663331326633333333326665336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535")
+	calldataFrame := &op_service.CalldataFrame{}
+	err := proto.Unmarshal(calldata[1:], calldataFrame)
+	if err != nil {
+		return
+	}
+	frame := calldataFrame.Value.(*op_service.CalldataFrame_FrameRef)
+	da := da.NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil, nil)
+	fmt.Printf("%x\n%x\n", frame.FrameRef.BatchHeaderHash, frame.FrameRef.Commitment)
+	data, err := da.RetrieveBlob(frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex, frame.FrameRef.Commitment)
 	if err != nil {
 		t.Errorf("RetrieveBlob err:%v", err)
 		return

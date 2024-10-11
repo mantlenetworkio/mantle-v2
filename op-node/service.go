@@ -254,7 +254,7 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
 	return eigenda.Config{
 		ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
-		DisperserUrl:        ctx.String(eigenda.EigenDADisperserRpcFlagName),
+		DisperserUrl:        ctx.String(eigenda.EigenDADisperserUrlFlagName),
 		DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
 		RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
 	}, nil

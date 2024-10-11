@@ -58,7 +58,7 @@ type MantleDaSyncer interface {
 }
 
 type EigenDaSyncer interface {
-	RetrieveBlob(requestID []byte) ([]byte, error)
+	RetrieveBlob(batchHeaderHash []byte, blobIndex uint32, commitment []byte) ([]byte, error)
 	RetrievalFramesFromDaIndexer(txHash string) ([]byte, error)
 	IsDaIndexer() bool
 }
@@ -531,7 +531,7 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSynce
 
 			log.Info("requesting data from EigenDA", "quorum id", frameRef.QuorumIds[0], "confirmation block number", frameRef.ReferenceBlockNumber,
 				"batchHeaderHash", base64.StdEncoding.EncodeToString(frameRef.BatchHeaderHash), "blobIndex", frameRef.BlobIndex, "blobLength", frameRef.BlobLength)
-			data, err := eigenDaSyncer.RetrieveBlob(frameRef.RequestId)
+			data, err := eigenDaSyncer.RetrieveBlob(frameRef.BatchHeaderHash, frameRef.BlobIndex, frameRef.Commitment)
 			if err != nil {
 				retrieveReqJSON, _ := json.Marshal(struct {
 					BatchHeaderHash string

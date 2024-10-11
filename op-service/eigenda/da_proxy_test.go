@@ -52,7 +52,7 @@ func TestNewEigenDAProxy_RetrieveBlob(t *testing.T) {
 				disperserUrl: tt.fields.disperserUrl,
 				log:          tt.fields.log,
 			}
-			got, err := c.RetrieveBlob(tt.args.ctx, tt.args.requestId)
+			got, err := c.RetrieveBlob(tt.args.ctx, nil, 0)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EigenDAClient.RetrieveBlob() error = %v, wantErr %v", err, tt.wantErr)
 				return

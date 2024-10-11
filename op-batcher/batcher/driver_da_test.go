@@ -545,7 +545,7 @@ func TestCallEigenDA(t *testing.T) {
 
 		log.Info("requesting data from EigenDA", "quorum id", frameRef.QuorumIds[0], "confirmation block number", frameRef.ReferenceBlockNumber,
 			"batchHeaderHash", base64.StdEncoding.EncodeToString(frameRef.BatchHeaderHash), "blobIndex", frameRef.BlobIndex, "blobLength", frameRef.BlobLength)
-		data, err := batchSubmitter.eigenDA.RetrieveBlob(context.Background(), frameRef.RequestId)
+		data, err := batchSubmitter.eigenDA.RetrieveBlob(context.Background(), frameRef.BatchHeaderHash, frameRef.BlobIndex)
 
 		out := []eth.Data{}
 
