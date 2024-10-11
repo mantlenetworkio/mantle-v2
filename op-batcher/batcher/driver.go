@@ -109,22 +109,8 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
 		EigenDA: eigenda.Config{
-			RPC:                      cfg.EigenDAConfig.RPC,
-			StatusQueryTimeout:       cfg.EigenDAConfig.StatusQueryTimeout,
-			StatusQueryRetryInterval: cfg.EigenDAConfig.StatusQueryRetryInterval,
-			RPCTimeout:               cfg.EigenDAConfig.DARPCTimeout,
-			EnableHsm:                cfg.EigenDAConfig.EnableHsm,
-			HsmCreden:                cfg.EigenDAConfig.HsmCreden,
-			HsmPubkey:                cfg.EigenDAConfig.HsmPubkey,
-			HsmAPIName:               cfg.EigenDAConfig.HsmAPIName,
-			PrivateKey:               cfg.EigenDAConfig.PrivateKey,
-			EthRPC:                   cfg.EigenDAConfig.EthRPC,
-			SvcManagerAddr:           cfg.EigenDAConfig.SvcManagerAddr,
-			EthConfirmationDepth:     cfg.EigenDAConfig.EthConfirmationDepth,
-			CacheDir:                 cfg.EigenDAConfig.CacheDir,
-			G1Path:                   cfg.EigenDAConfig.G1Path,
-			MaxBlobLength:            cfg.EigenDAConfig.MaxBlobLength,
-			G2PowerOfTauPath:         cfg.EigenDAConfig.G2PowerOfTauPath,
+			ProxyUrl:     cfg.EigenDAConfig.EigenDAProxyUrl,
+			DisperserUrl: cfg.EigenDAConfig.EigenDADisperserRpc,
 		},
 	}
 
@@ -184,10 +170,7 @@ func NewBatchSubmitter(ctx context.Context, cfg Config, l log.Logger, m metrics.
 
 	cfg.metr = m
 
-	eigenDA, err := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, m)
-	if err != nil {
-		return nil, fmt.Errorf("error creating EigenDA client: %w", err)
-	}
+	eigenDA := eigenda.NewEigenDAClient(cfg.EigenDA, cfg.log, m)
 
 	return &BatchSubmitter{
 		Config:  cfg,

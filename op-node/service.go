@@ -252,11 +252,10 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 }
 
 func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
-	rpc := ctx.String(flags.DARPC.Name)
-	rpcTimeout := ctx.Duration(flags.DARPCTimeout.Name)
 	return eigenda.Config{
-		RPC:        rpc,
-		RPCTimeout: rpcTimeout,
-		// Can leave everything else unfilled for the node
+		ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
+		DisperserUrl:        ctx.String(eigenda.EigenDADisperserRpcFlagName),
+		DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
+		RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
 	}, nil
 }

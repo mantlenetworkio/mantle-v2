@@ -151,17 +151,17 @@ func TestRLPEncodeDecodeEthData(t *testing.T) {
 }
 
 func TestRetrieveBlob(t *testing.T) {
-	da := eigenda.EigenDA{
-		Config: eigenda.Config{
-			RPC: "disperser-holesky.eigenda.xyz:443",
+	da := eigenda.NewEigenDAClient(
+		eigenda.Config{
+			ProxyUrl: "disperser-holesky.eigenda.xyz:443",
 		},
+		log.New(context.Background()),
+		nil,
+	)
 
-		Log: log.New(context.Background()),
-	}
-
-	batchHeaderHashHex, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
-	fmt.Printf("%x\n", batchHeaderHashHex)
-	data, err := da.RetrieveBlob(context.Background(), batchHeaderHashHex, 207)
+	requestID, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
+	fmt.Printf("%x\n", requestID)
+	data, err := da.RetrieveBlob(context.Background(), requestID)
 	if err != nil {
 		t.Errorf("RetrieveBlob err:%v", err)
 		return
@@ -174,7 +174,7 @@ func TestRetrieveBlobTx(t *testing.T) {
 
 func TestRetrieveFromDaIndexer(t *testing.T) {
 	eigenDA := eigenda.Config{
-		RPC: "disperser-holesky.eigenda.xyz:443",
+		ProxyUrl: "disperser-holesky.eigenda.xyz:443",
 	}
 
 	eigenDaSyncer := da.NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &da.MantleDataStoreConfig{
