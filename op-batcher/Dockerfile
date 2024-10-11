@@ -30,7 +30,5 @@ RUN make op-batcher VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH
 FROM alpine:3.16
 
 COPY --from=builder /app/op-batcher/bin/op-batcher /usr/local/bin
-COPY --from=builder /app/op-batcher/resources /resources
-
 
 ENTRYPOINT ["op-batcher"]

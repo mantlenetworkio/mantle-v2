@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	EigenDADisperserRpcFlagName = "eigenda-disperser-rpc"
+	EigenDADisperserUrlFlagName = "eigenda-disperser-url"
 	EigenDAProxyUrlFlagName     = "eigenda-proxy-url"
 	DisperseBlobTimeoutFlagName = "eigenda-disperser-timeout"
 	RetrieveBlobTimeoutFlagName = "eigenda-retrieve-timeout"
@@ -19,7 +19,7 @@ func PrefixEnvVar(prefix, suffix string) string {
 }
 
 type CLIConfig struct {
-	EigenDADisperserRpc string
+	EigenDADisperserUrl string
 	EigenDAProxyUrl     string
 	DisperseBlobTimeout time.Duration
 	RetrieveBlobTimeout time.Duration
@@ -29,7 +29,7 @@ type CLIConfig struct {
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	return CLIConfig{
 		/* Required Flags */
-		EigenDADisperserRpc: ctx.String(EigenDADisperserRpcFlagName),
+		EigenDADisperserUrl: ctx.String(EigenDADisperserUrlFlagName),
 		EigenDAProxyUrl:     ctx.String(EigenDAProxyUrlFlagName),
 
 		/* Optional Flags */
@@ -39,7 +39,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 }
 
 func (m CLIConfig) Check() error {
-	if m.EigenDADisperserRpc == "" {
+	if m.EigenDADisperserUrl == "" {
 		return errors.New("must provide a DA disperser rpc url")
 	}
 	if m.EigenDAProxyUrl == "" {
@@ -55,27 +55,27 @@ func CLIFlags(envPrefix string) []cli.Flag {
 	}
 	return []cli.Flag{
 		cli.StringFlag{
-			Name:     EigenDADisperserRpcFlagName,
+			Name:     EigenDADisperserUrlFlagName,
 			Usage:    "RPC endpoint of the EigenDA disperser",
-			EnvVar:   prefixEnvVars("EIGEN_DA_DISPERSER_URL"),
+			EnvVar:   prefixEnvVars("EIGENDA_DISPERSER_URL"),
 			Required: true,
 		},
 		cli.StringFlag{
 			Name:     EigenDAProxyUrlFlagName,
 			Usage:    "HTTP endpoint of the EigenDA proxy",
-			EnvVar:   prefixEnvVars("EIGEN_DA_PROXY_URL"),
+			EnvVar:   prefixEnvVars("EIGENDA_PROXY_URL"),
 			Required: true,
 		},
 		cli.DurationFlag{
 			Name:   DisperseBlobTimeoutFlagName,
 			Usage:  "Timeout for EigenDA disperse blob",
-			EnvVar: prefixEnvVars("EIGEN_DA_DISPERSER_TIMEOUT"),
+			EnvVar: prefixEnvVars("EIGENDA_DISPERSER_TIMEOUT"),
 			Value:  20 * time.Minute,
 		},
 		cli.DurationFlag{
 			Name:   RetrieveBlobTimeoutFlagName,
 			Usage:  "Timeout for EigenDA retrieve blob",
-			EnvVar: prefixEnvVars("EIGEN_DA_RETRIEVE_TIMEOUT"),
+			EnvVar: prefixEnvVars("EIGENDA_RETRIEVE_TIMEOUT"),
 			Value:  30 * time.Second,
 		},
 	}

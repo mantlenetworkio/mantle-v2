@@ -110,7 +110,7 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		},
 		EigenDA: eigenda.Config{
 			ProxyUrl:     cfg.EigenDAConfig.EigenDAProxyUrl,
-			DisperserUrl: cfg.EigenDAConfig.EigenDADisperserRpc,
+			DisperserUrl: cfg.EigenDAConfig.EigenDADisperserUrl,
 		},
 	}
 
