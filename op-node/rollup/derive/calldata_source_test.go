@@ -165,7 +165,7 @@ func TestRetrieveBlob(t *testing.T) {
 	// 	nil,
 	// )
 
-	calldata, _ := hex.DecodeString("ed12f3010a20420bc17c0b13e62ad8204a13d88e0412dfe90d65b208d0df6ecbbf204363cc0d10cc0218c49e99012202000128fcb101a206bd01346430636338376539663261393432316539643165346138333531376130623430356434633336643730656333366535623330636461343666303864663736392d33313337333233383336333333373331333333383331333533323330333133313331333233373266333032663333333332663331326633333333326665336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535")
+	calldata, _ := hex.DecodeString("ed12b1040a2081527385eba808ba6154daaafa62e746c2ec0b7856f8454091733eda4fa9d050105118a1879a012202000128b5bd01aa06fc03010000f901f6f852f842a01a967fd2735712173f3437ae56a48df44fab54c7cd2191cd95873c78f187370ba00803bd0ba7f6b70f8c659b68374ff566f9bc203c399657599b179cb79206f8d5820310cac480213701c401213720f9019f82b27551f873eba01962d84c8eb1d8f670697a3a44c7bae877c8a9b52f7f0857d485cdeee19f7c30820001824164832683a1a0ece199bfbd970b9e96a93535acdf57f0a1658414ffe9226661e00a423f807e8100832683fca081527385eba808ba6154daaafa62e746c2ec0b7856f8454091733eda4fa9d050b90120b152eb926fc18a88f275dea5e31cba2878a01db7847fea4c5e8c66d4a77d86cc944360c7cb6763f82899f7ae99aaa88ab27518544f0871ad948d18f173ce4b93b5bc2e33b3bf174a5f46e36ef5257bcbab3fc3e27e80911aaa4e4992cdde5e0fc04f2ffff84bc145d195eb06181e458e9411a333a8921756cafa87970380bca6ee16d27cd5b689f68816de5de3ee6b52dde63344277512cf843758e8134ce4cbe825440109b7714d92644ccb9494798d1336b914d49984a0e2e0ff8508d6bf9d92ebc351b1446b3c87b7eb97cb0d6b07c41dba813d48cc8bd723ac731963bab5e4f85c738d4026c47a13937e51aa432cb4afe75cff35e978f07149f11883c542213d41966f66eb8799ed6dda418ad4c72573d57f088fa70446572ca1b230ff01820001")
 	calldataFrame := &op_service.CalldataFrame{}
 	err := proto.Unmarshal(calldata[1:], calldataFrame)
 	if err != nil {
@@ -174,12 +174,22 @@ func TestRetrieveBlob(t *testing.T) {
 	frame := calldataFrame.Value.(*op_service.CalldataFrame_FrameRef)
 	da := da.NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil, nil)
 	fmt.Printf("%x\n%x\n", frame.FrameRef.BatchHeaderHash, frame.FrameRef.Commitment)
-	data, err := da.RetrieveBlob(frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex, frame.FrameRef.Commitment)
+	data, err := da.RetrieveBlob(frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex, nil)
 	if err != nil {
 		t.Errorf("RetrieveBlob err:%v", err)
 		return
 	}
-	fmt.Printf("RetrieveBlob %d\n", len(data))
+	fmt.Printf("RetrieveBlob size:%d blob length:%d\n", len(data), frame.FrameRef.BlobLength)
+
+	data = data[:frame.FrameRef.BlobLength]
+	outData := []eth.Data{}
+	err = rlp.DecodeBytes(data, &outData)
+	if err != nil {
+		log.Error("Decode retrieval frames in error,skip wrong data", "err", err, "blobInfo", fmt.Sprintf("%x:%d", frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex))
+		return
+	}
+
+	fmt.Printf("RetrieveBlob %d\n", len(outData))
 }
 
 func TestRetrieveBlobTx(t *testing.T) {

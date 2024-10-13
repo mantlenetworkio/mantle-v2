@@ -486,7 +486,7 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSynce
 			outData := []eth.Data{}
 			err = rlp.DecodeBytes(data, &outData)
 			if err != nil {
-				log.Warn("Decode retrieval frames in error,skip wrong data", "err", err, "blobInfo", "tx", tx.Hash().String())
+				log.Warn("Decode retrieval frames in error,skip wrong data", "err", err, "tx", tx.Hash().String())
 				continue
 			}
 			out = append(out, outData...)
