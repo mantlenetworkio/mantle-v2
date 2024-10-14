@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
-	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -190,10 +190,6 @@ func (m *EigenDAClient) recordInterval(method string) func(error) {
 }
 
 func DecodeCommitment(commitment []byte) (*disperser.BlobInfo, error) {
-	// if len(commitment) < 3 {
-	// 	return nil, fmt.Errorf("commitment is too short")
-	// }
-
 	if len(commitment) < 3 {
 		return nil, fmt.Errorf("commitment is too short")
 	}
