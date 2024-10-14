@@ -113,3 +113,35 @@ func TestRetrieveBlob(t *testing.T) {
 
 	fmt.Printf("RetrieveBlob %d\n", len(outData))
 }
+
+func TestRetrieveFromDaIndexer(t *testing.T) {
+	eigenDA := eigenda.Config{
+		ProxyUrl: "disperser-holesky.eigenda.xyz:443",
+	}
+
+	eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &MantleDataStoreConfig{
+		MantleDaIndexerSocket: "127.0.0.1:32111",
+		MantleDAIndexerEnable: true,
+	}, nil)
+
+	out := []eth.Data{}
+
+	if eigenDaSyncer.IsDaIndexer() {
+		data, err := eigenDaSyncer.RetrievalFramesFromDaIndexer("0x8494e3e2c70933fc69b82bc0a851f77716d385b52fa8f386df29b819c717be9b")
+		if err != nil {
+			fmt.Println("Retrieval frames from eigenDa indexer error", "err", err)
+			return
+		}
+		outData := []eth.Data{}
+		err = rlp.DecodeBytes(data, &outData)
+		if err != nil {
+			fmt.Println("Decode retrieval frames in error,skip wrong data", "err", err)
+			return
+		}
+		out = append(out, outData...)
+
+		fmt.Println(len(out))
+		return
+	}
+
+}
