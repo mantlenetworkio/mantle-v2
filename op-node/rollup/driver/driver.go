@@ -59,7 +59,7 @@ type DaSource interface {
 }
 
 type EigenDaSource interface {
-	RetrieveBlob(BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error)
+	RetrieveBlob(batchHeaderHash []byte, blobIndex uint32, commitment []byte) ([]byte, error)
 	RetrievalFramesFromDaIndexer(txHash string) ([]byte, error)
 	IsDaIndexer() bool
 }

@@ -43,7 +43,7 @@ type Driver struct {
 }
 
 func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, daSyncer DaSource, targetBlockNum uint64) *Driver {
-	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, l2Source, daSyncer, metrics.NoopMetrics, &sync.Config{})
+	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, nil, l2Source, daSyncer, metrics.NoopMetrics, &sync.Config{}, nil)
 
 	pipeline.Reset()
 	return &Driver{

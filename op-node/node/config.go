@@ -115,7 +115,7 @@ func (cfg *Config) Check() error {
 	}
 
 	if cfg.Rollup.MantleDaSwitch && !cfg.DatastoreConfig.MantleDAIndexerEnable {
-		if cfg.DA.RPC != "" && cfg.Beacon == nil {
+		if cfg.DA.ProxyUrl != "" && cfg.Beacon == nil {
 			return errors.New("beacon config must be set when using eigenda")
 		}
 	}
