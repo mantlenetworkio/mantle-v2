@@ -90,7 +90,7 @@ func (c *EigenDAClient) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte
 
 // RetrieveBlob returns the input data for the given encoded commitment bytes.
 func (c *EigenDAClient) RetrieveBlobWithCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
-	c.log.Info("Attempting to retrieve blob from EigenDA with commitment", "commitment", string(commitment))
+	c.log.Info("Attempting to retrieve blob from EigenDA with commitment", "commitment", hex.EncodeToString(commitment))
 	blobInfo, err := DecodeCommitment(commitment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode commitment: %w", err)
@@ -164,13 +164,13 @@ func (c *EigenDAClient) DisperseBlob(ctx context.Context, img []byte) (*disperse
 	}
 
 	blobProof := comm.BlobVerificationProof
-	c.log.Info("Dispersed blob to EigenDA successfully", "BatchHeaderHash", blobProof.BatchMetadata.BatchHeaderHash, "BlobIndex", blobProof.BlobIndex)
+	c.log.Info("Dispersed blob to EigenDA successfully", "BatchHeaderHash", hex.EncodeToString(blobProof.BatchMetadata.BatchHeaderHash), "BlobIndex", blobProof.BlobIndex)
 
 	return comm, nil
 }
 
 func (c *EigenDAClient) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
-	c.log.Info("Attempting to get blob status from EigenDA", "RequestID", requestID)
+	c.log.Info("Attempting to get blob status from EigenDA", "RequestID", hex.EncodeToString(requestID))
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential)}

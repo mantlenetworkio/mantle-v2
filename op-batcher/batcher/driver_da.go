@@ -408,8 +408,6 @@ func (l *BatchSubmitter) disperseEigenDaData(data [][]byte) ([]byte, error) {
 	calldataFrame := &op_service.CalldataFrame{
 		Value: &op_service.CalldataFrame_FrameRef{
 			FrameRef: &op_service.FrameRef{
-				BatchHeaderHash:      blobInfo.BlobVerificationProof.BatchMetadata.BatchHeaderHash,
-				BlobIndex:            blobInfo.BlobVerificationProof.BlobIndex,
 				ReferenceBlockNumber: blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber,
 				QuorumIds:            quorumIDs,
 				BlobLength:           uint32(len(encodeData)),
