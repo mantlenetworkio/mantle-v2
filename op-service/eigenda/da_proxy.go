@@ -57,20 +57,21 @@ func NewEigenDAClient(cfg Config, log log.Logger, m Metrics) *EigenDAClient {
 // RetrieveBlob returns the input data for the given batch header and blob index.
 // This method is used for the op-node compatibility.
 // Only RetrieveBlobWithCommitment supports EigenDA S3 fallback
-func (m *EigenDAClient) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
+func (c *EigenDAClient) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
+	c.log.Info("Attempting to retrieve blob from EigenDA", "BatchHeaderHash", BatchHeaderHash, "blobIndex", BlobIndex)
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100 * 1024 * 1024))} // 100MiB receive buffer
-	conn, err := grpc.Dial(m.disperserUrl, dialOptions...)
+	conn, err := grpc.Dial(c.disperserUrl, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = conn.Close() }()
 	daClient := disperser.NewDisperserClient(conn)
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, m.retrieveBlobTimeout)
+	ctxTimeout, cancel := context.WithTimeout(ctx, c.retrieveBlobTimeout)
 	defer cancel()
-	done := m.recordInterval("RetrieveBlob")
+	done := c.recordInterval("RetrieveBlob")
 	reply, err := daClient.RetrieveBlob(ctxTimeout, &disperser.RetrieveBlobRequest{
 		BatchHeaderHash: BatchHeaderHash,
 		BlobIndex:       BlobIndex,
@@ -89,6 +90,11 @@ func (m *EigenDAClient) RetrieveBlob(ctx context.Context, BatchHeaderHash []byte
 // RetrieveBlob returns the input data for the given encoded commitment bytes.
 func (c *EigenDAClient) RetrieveBlobWithCommitment(ctx context.Context, commitment []byte) ([]byte, error) {
 	c.log.Info("Attempting to retrieve blob from EigenDA with commitment", "commitment", commitment)
+	blobInfo, err := DecodeCommitment(commitment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode commitment: %w", err)
+	}
+	c.log.Info("Blob info", "BatchHeaderHash", blobInfo.BlobVerificationProof.BatchMetadata.BatchHeaderHash, "blobIndex", blobInfo.BlobVerificationProof.BlobIndex)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/get/0x%x", c.proxyUrl, commitment), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -156,24 +162,31 @@ func (c *EigenDAClient) DisperseBlob(ctx context.Context, img []byte) (*disperse
 		return nil, err
 	}
 
+	blobProof := comm.BlobVerificationProof
+	c.log.Info("Dispersed blob to EigenDA successfully", "BatchHeaderHash", blobProof.BatchMetadata.BatchHeaderHash, "BlobIndex", blobProof.BlobIndex)
+
 	return comm, nil
 }
 
-func (m *EigenDAClient) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
-	m.log.Info("Attempting to get blob status from EigenDA")
+func (c *EigenDAClient) GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error) {
+	c.log.Info("Attempting to get blob status from EigenDA", "RequestID", requestID)
 	config := &tls.Config{}
 	credential := credentials.NewTLS(config)
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(credential)}
-	conn, err := grpc.Dial(m.disperserUrl, dialOptions...)
+	conn, err := grpc.Dial(c.disperserUrl, dialOptions...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = conn.Close() }()
 	daClient := disperser.NewDisperserClient(conn)
 
-	statusRes, err := daClient.GetBlobStatus(ctx, &disperser.BlobStatusRequest{
+	ctxTimeout, cancel := context.WithTimeout(ctx, c.retrieveBlobTimeout)
+	defer cancel()
+	done := c.recordInterval("GetBlobStatus")
+	statusRes, err := daClient.GetBlobStatus(ctxTimeout, &disperser.BlobStatusRequest{
 		RequestId: requestID,
 	})
+	done(err)
 	if err != nil {
 		return nil, err
 	}
