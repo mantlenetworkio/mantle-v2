@@ -55,16 +55,14 @@ func CLIFlags(envPrefix string) []cli.Flag {
 	}
 	return []cli.Flag{
 		cli.StringFlag{
-			Name:     EigenDADisperserUrlFlagName,
-			Usage:    "RPC endpoint of the EigenDA disperser",
-			EnvVar:   prefixEnvVars("EIGENDA_DISPERSER_URL"),
-			Required: true,
+			Name:   EigenDADisperserUrlFlagName,
+			Usage:  "RPC endpoint of the EigenDA disperser",
+			EnvVar: prefixEnvVars("EIGENDA_DISPERSER_URL"),
 		},
 		cli.StringFlag{
-			Name:     EigenDAProxyUrlFlagName,
-			Usage:    "HTTP endpoint of the EigenDA proxy",
-			EnvVar:   prefixEnvVars("EIGENDA_PROXY_URL"),
-			Required: true,
+			Name:   EigenDAProxyUrlFlagName,
+			Usage:  "HTTP endpoint of the EigenDA proxy",
+			EnvVar: prefixEnvVars("EIGENDA_PROXY_URL"),
 		},
 		cli.DurationFlag{
 			Name:   DisperseBlobTimeoutFlagName,
