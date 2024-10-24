@@ -109,8 +109,10 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 			CompressorConfig:   cfg.CompressorConfig.Config(),
 		},
 		EigenDA: eigenda.Config{
-			ProxyUrl:     cfg.EigenDAConfig.EigenDAProxyUrl,
-			DisperserUrl: cfg.EigenDAConfig.EigenDADisperserUrl,
+			ProxyUrl:            cfg.EigenDAConfig.EigenDAProxyUrl,
+			DisperserUrl:        cfg.EigenDAConfig.EigenDADisperserUrl,
+			DisperseBlobTimeout: cfg.EigenDAConfig.DisperseBlobTimeout,
+			RetrieveBlobTimeout: cfg.EigenDAConfig.RetrieveBlobTimeout,
 		},
 	}
 
