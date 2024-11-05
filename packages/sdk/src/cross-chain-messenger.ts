@@ -55,6 +55,7 @@ import {
   IBridgeAdapter,
   ProvenWithdrawal,
   LowLevelMessage,
+  IERC721BridgeAdapter,
 } from './interfaces'
 import {
   toSignerOrProvider,
@@ -482,8 +483,8 @@ export class CrossChainMessenger {
   public async getBridgeForTokenPair(
     l1Token: AddressLike,
     l2Token: AddressLike
-  ): Promise<IBridgeAdapter> {
-    const bridges: IBridgeAdapter[] = []
+  ): Promise<IBridgeAdapter | IERC721BridgeAdapter> {
+    const bridges: Array<IBridgeAdapter | IERC721BridgeAdapter> = []
     for (const bridge of Object.values(this.bridges)) {
       if (await bridge.supportsTokenPair(l1Token, l2Token)) {
         bridges.push(bridge)
@@ -1560,7 +1561,7 @@ export class CrossChainMessenger {
     opts?: {
       signer?: Signer
     }
-  ): Promise<BigNumber> {
+  ): Promise<BigNumber | boolean> {
     const bridge = await this.getBridgeForTokenPair(l1Token, l2Token)
     return bridge.approval(l1Token, l2Token, opts?.signer || this.l1Signer)
   }
@@ -1626,6 +1627,68 @@ export class CrossChainMessenger {
         amount,
         opts
       )
+    )
+  }
+
+  /**
+   * depositERC721
+   */
+  public async depositERC721(
+    l1Token: AddressLike,
+    l2Token: AddressLike,
+    tokenId: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      l2GasLimit?: NumberLike
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l1Signer).sendTransaction(
+      await this.populateTransaction.depositERC721(
+        l1Token,
+        l2Token,
+        tokenId,
+        opts
+      )
+    )
+  }
+
+  /**
+   * withdrawERC721
+   */
+  public async withdrawERC721(
+    l1Token: AddressLike,
+    l2Token: AddressLike,
+    tokenId: NumberLike,
+    opts?: {
+      recipient?: AddressLike
+      signer?: Signer
+      l2GasLimit?: NumberLike
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l2Signer).sendTransaction(
+      await this.populateTransaction.withdrawERC721(
+        l1Token,
+        l2Token,
+        tokenId,
+        opts
+      )
+    )
+  }
+
+  public async approveERC721(
+    l1Token: AddressLike,
+    l2Token: AddressLike,
+    opts?: {
+      signer?: Signer
+      l1GasLimit?: NumberLike
+      overrides?: Overrides
+    }
+  ): Promise<TransactionResponse> {
+    return (opts?.signer || this.l1Signer).sendTransaction(
+      await this.populateTransaction.approveERC721(l1Token, l2Token, opts)
     )
   }
 
@@ -1955,6 +2018,34 @@ export class CrossChainMessenger {
       return bridge.populateTransaction.deposit(l1Token, l2Token, amount, opts)
     },
 
+    approveERC721: async (
+      l1Token: AddressLike,
+      l2Token: AddressLike,
+      opts?: {
+        overrides?: Overrides
+      }
+    ): Promise<TransactionRequest> => {
+      const bridge = (await this.getBridgeForTokenPair(
+        l1Token,
+        l2Token
+      )) as IERC721BridgeAdapter
+      return bridge.populateTransaction.approve(l1Token, l2Token, opts)
+    },
+
+    depositERC721: async (
+      l1Token: AddressLike,
+      l2Token: AddressLike,
+      tokenId: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        l2GasLimit?: NumberLike
+        overrides?: Overrides
+      }
+    ): Promise<TransactionRequest> => {
+      const bridge = await this.getBridgeForTokenPair(l1Token, l2Token)
+      return bridge.populateTransaction.deposit(l1Token, l2Token, tokenId, opts)
+    },
+
     /**
      * Generates a transaction for withdrawing some ERC20 tokens back to the L1 chain.
      *
@@ -1977,6 +2068,23 @@ export class CrossChainMessenger {
     ): Promise<TransactionRequest> => {
       const bridge = await this.getBridgeForTokenPair(l1Token, l2Token)
       return bridge.populateTransaction.withdraw(l1Token, l2Token, amount, opts)
+    },
+    withdrawERC721: async (
+      l1Token: AddressLike,
+      l2Token: AddressLike,
+      tokenId: NumberLike,
+      opts?: {
+        recipient?: AddressLike
+        overrides?: Overrides
+      }
+    ): Promise<TransactionRequest> => {
+      const bridge = await this.getBridgeForTokenPair(l1Token, l2Token)
+      return bridge.populateTransaction.withdraw(
+        l1Token,
+        l2Token,
+        tokenId,
+        opts
+      )
     },
   }
 

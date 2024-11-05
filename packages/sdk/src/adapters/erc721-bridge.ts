@@ -8,19 +8,19 @@ import {
   CallOverrides,
 } from 'ethers'
 import {
+  BlockTag,
   TransactionRequest,
   TransactionResponse,
-  BlockTag,
 } from '@ethersproject/abstract-provider'
-import { l1DevPredeploys, predeploys } from '@eth-optimism/contracts'
 import { getContractInterface } from '@eth-optimism/contracts-bedrock'
+import { l1DevPredeploys, predeploys } from '@eth-optimism/contracts'
 import { hexStringEquals } from '@eth-optimism/core-utils'
 
 import { CrossChainMessenger } from '../cross-chain-messenger'
 import {
-  IBridgeAdapter,
   NumberLike,
   AddressLike,
+  IERC721BridgeAdapter,
   TokenBridgeMessage,
   MessageDirection,
 } from '../interfaces'
@@ -29,7 +29,7 @@ import { toAddress } from '../utils'
 /**
  * Bridge adapter for any token bridge that uses the standard token bridge interface.
  */
-export class StandardBridgeAdapter implements IBridgeAdapter {
+export class ERC721BridgeAdapter implements IERC721BridgeAdapter {
   public messenger: CrossChainMessenger
   public l1Bridge: Contract
   public l2Bridge: Contract
@@ -50,12 +50,12 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     this.messenger = opts.messenger
     this.l1Bridge = new Contract(
       toAddress(opts.l1Bridge),
-      getContractInterface('L1StandardBridge'),
+      getContractInterface('L1ERC721Bridge'),
       this.messenger.l1Provider
     )
     this.l2Bridge = new Contract(
       toAddress(opts.l2Bridge),
-      getContractInterface('L2StandardBridge'),
+      getContractInterface('L2ERC721Bridge'),
       this.messenger.l2Provider
     )
   }
@@ -68,7 +68,7 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     }
   ): Promise<TokenBridgeMessage[]> {
     const events = await this.l1Bridge.queryFilter(
-      this.l1Bridge.filters.ERC20DepositInitiated(
+      this.l1Bridge.filters.ERC721BridgeInitiated(
         undefined,
         undefined,
         address
@@ -78,23 +78,14 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     )
 
     return events
-      .filter((event) => {
-        // Specifically filter out ETH. ETH deposits and withdrawals are handled by the ETH bridge
-        // adapter. Bridges that are not the ETH bridge should not be able to handle or even
-        // present ETH deposits or withdrawals.
-        return (
-          !hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          !hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
-        )
-      })
       .map((event) => {
         return {
           direction: MessageDirection.L1_TO_L2,
           from: event.args.from,
           to: event.args.to,
-          l1Token: event.args.l1Token,
-          l2Token: event.args.l2Token,
-          amount: event.args.amount,
+          l1Token: event.args.localToken,
+          l2Token: event.args.remoteToken,
+          tokenId: event.args.tokenId,
           data: event.args.extraData,
           logIndex: event.logIndex,
           blockNumber: event.blockNumber,
@@ -115,28 +106,23 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     }
   ): Promise<TokenBridgeMessage[]> {
     const events = await this.l2Bridge.queryFilter(
-      this.l2Bridge.filters.WithdrawalInitiated(undefined, undefined, address),
+      this.l2Bridge.filters.ERC721BridgeInitiated(
+        undefined,
+        undefined,
+        address
+      ),
       opts?.fromBlock,
       opts?.toBlock
     )
 
     return events
-      .filter((event) => {
-        // Specifically filter out ETH. ETH deposits and withdrawals are handled by the ETH bridge
-        // adapter. Bridges that are not the ETH bridge should not be able to handle or even
-        // present ETH deposits or withdrawals.
-        return (
-          !hexStringEquals(event.args.l1Token, ethers.constants.AddressZero) &&
-          !hexStringEquals(event.args.l2Token, predeploys.OVM_ETH)
-        )
-      })
       .map((event) => {
         return {
           direction: MessageDirection.L2_TO_L1,
           from: event.args.from,
           to: event.args.to,
-          l1Token: event.args.l1Token,
-          l2Token: event.args.l2Token,
+          l1Token: event.args.remoteToken,
+          l2Token: event.args.localToken,
           amount: event.args.amount,
           data: event.args.extraData,
           logIndex: event.logIndex,
@@ -157,7 +143,7 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     try {
       const contract = new Contract(
         toAddress(l2Token),
-        getContractInterface('OptimismMintableERC20'),
+        getContractInterface('OptimismMintableERC721'),
         this.messenger.l2Provider
       )
       // Don't support ETH deposits or withdrawals via this bridge.
@@ -175,18 +161,16 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       ) {
         return false
       }
-
       // Make sure the L1 token matches.
-      const remoteL1Token = await contract.l1Token()
-      if (!remoteL1Token) {
-        return false
-      }
+      const remoteL1Token = await contract.remoteToken()
+
       if (!hexStringEquals(remoteL1Token, toAddress(l1Token))) {
         return false
       }
 
       // Make sure the L2 bridge matches.
-      const remoteL2Bridge = await contract.l2Bridge()
+      const remoteL2Bridge = await contract.bridge()
+      console.log('remoteL2Bridge', remoteL2Bridge)
       if (!hexStringEquals(remoteL2Bridge, this.l2Bridge.address)) {
         return false
       }
@@ -210,38 +194,40 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     l1Token: AddressLike,
     l2Token: AddressLike,
     signer: ethers.Signer
-  ): Promise<BigNumber> {
+  ): Promise<boolean> {
     if (!(await this.supportsTokenPair(l1Token, l2Token))) {
       throw new Error(`token pair not supported by bridge`)
     }
 
     const token = new Contract(
       toAddress(l1Token),
-      getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+      getContractInterface('OptimismMintableERC721'),
       this.messenger.l1Provider
     )
 
-    return token.allowance(await signer.getAddress(), this.l1Bridge.address)
+    return token.isApprovedForAll(
+      await signer.getAddress(),
+      this.l1Bridge.address
+    )
   }
 
   public async approve(
     l1Token: AddressLike,
     l2Token: AddressLike,
-    amount: NumberLike,
     signer: Signer,
     opts?: {
       overrides?: Overrides
     }
   ): Promise<TransactionResponse> {
     return signer.sendTransaction(
-      await this.populateTransaction.approve(l1Token, l2Token, amount, opts)
+      await this.populateTransaction.approve(l1Token, l2Token, opts)
     )
   }
 
   public async deposit(
     l1Token: AddressLike,
     l2Token: AddressLike,
-    amount: NumberLike,
+    tokenId: NumberLike,
     signer: Signer,
     opts?: {
       recipient?: AddressLike
@@ -250,14 +236,14 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     }
   ): Promise<TransactionResponse> {
     return signer.sendTransaction(
-      await this.populateTransaction.deposit(l1Token, l2Token, amount, opts)
+      await this.populateTransaction.deposit(l1Token, l2Token, tokenId, opts)
     )
   }
 
   public async withdraw(
     l1Token: AddressLike,
     l2Token: AddressLike,
-    amount: NumberLike,
+    tokenId: NumberLike,
     signer: Signer,
     opts?: {
       recipient?: AddressLike
@@ -265,7 +251,7 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     }
   ): Promise<TransactionResponse> {
     return signer.sendTransaction(
-      await this.populateTransaction.withdraw(l1Token, l2Token, amount, opts)
+      await this.populateTransaction.withdraw(l1Token, l2Token, tokenId, opts)
     )
   }
 
@@ -273,7 +259,6 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     approve: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
       opts?: {
         overrides?: Overrides
       }
@@ -284,13 +269,13 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
 
       const token = new Contract(
         toAddress(l1Token),
-        getContractInterface('OptimismMintableERC20'), // Any ERC20 will do
+        getContractInterface('OptimismMintableERC721'),
         this.messenger.l1Provider
       )
 
-      return token.populateTransaction.approve(
+      return token.populateTransaction.setApprovalForAll(
         this.l1Bridge.address,
-        amount,
+        true,
         opts?.overrides || {}
       )
     },
@@ -298,7 +283,7 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     deposit: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
+      tokenId: NumberLike,
       opts?: {
         recipient?: AddressLike
         l2GasLimit?: NumberLike
@@ -310,21 +295,21 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       }
 
       if (opts?.recipient === undefined) {
-        return this.l1Bridge.populateTransaction.depositERC20(
+        return this.l1Bridge.populateTransaction.bridgeERC721(
           toAddress(l1Token),
           toAddress(l2Token),
-          amount,
-          opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
+          tokenId,
+          opts?.l2GasLimit || 400000,
           '0x', // No data.
           opts?.overrides || {}
         )
       } else {
-        return this.l1Bridge.populateTransaction.depositERC20To(
+        return this.l1Bridge.populateTransaction.bridgeERC721To(
           toAddress(l1Token),
           toAddress(l2Token),
           toAddress(opts.recipient),
-          amount,
-          opts?.l2GasLimit || 200_000, // Default to 200k gas limit.
+          tokenId,
+          opts?.l2GasLimit || 400000,
           '0x', // No data.
           opts?.overrides || {}
         )
@@ -334,9 +319,10 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     withdraw: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
+      tokenId: NumberLike,
       opts?: {
         recipient?: AddressLike
+        l1GasLimit?: NumberLike
         overrides?: Overrides
       }
     ): Promise<TransactionRequest> => {
@@ -345,19 +331,21 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       }
 
       if (opts?.recipient === undefined) {
-        return this.l2Bridge.populateTransaction.withdraw(
+        return this.l2Bridge.populateTransaction.bridgeERC721(
           toAddress(l2Token),
-          amount,
-          0, // L1 gas not required.
+          toAddress(l1Token),
+          tokenId,
+          opts?.l1GasLimit || 4_000_000,
           '0x', // No data.
           opts?.overrides || {}
         )
       } else {
-        return this.l2Bridge.populateTransaction.withdrawTo(
+        return this.l2Bridge.populateTransaction.bridgeERC721(
           toAddress(l2Token),
+          toAddress(l1Token),
           toAddress(opts.recipient),
-          amount,
-          0, // L1 gas not required.
+          tokenId,
+          opts?.l1GasLimit || 4_000_000,
           '0x', // No data.
           opts?.overrides || {}
         )
@@ -369,20 +357,19 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
     approve: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
       opts?: {
         overrides?: CallOverrides
       }
     ): Promise<BigNumber> => {
       return this.messenger.l1Provider.estimateGas(
-        await this.populateTransaction.approve(l1Token, l2Token, amount, opts)
+        await this.populateTransaction.approve(l1Token, l2Token, opts)
       )
     },
 
     deposit: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
+      tokenId: NumberLike,
       opts?: {
         recipient?: AddressLike
         l2GasLimit?: NumberLike
@@ -390,21 +377,21 @@ export class StandardBridgeAdapter implements IBridgeAdapter {
       }
     ): Promise<BigNumber> => {
       return this.messenger.l1Provider.estimateGas(
-        await this.populateTransaction.deposit(l1Token, l2Token, amount, opts)
+        await this.populateTransaction.deposit(l1Token, l2Token, tokenId, opts)
       )
     },
 
     withdraw: async (
       l1Token: AddressLike,
       l2Token: AddressLike,
-      amount: NumberLike,
+      tokenId: NumberLike,
       opts?: {
         recipient?: AddressLike
         overrides?: CallOverrides
       }
     ): Promise<BigNumber> => {
       return this.messenger.l2Provider.estimateGas(
-        await this.populateTransaction.withdraw(l1Token, l2Token, amount, opts)
+        await this.populateTransaction.withdraw(l1Token, l2Token, tokenId, opts)
       )
     },
   }

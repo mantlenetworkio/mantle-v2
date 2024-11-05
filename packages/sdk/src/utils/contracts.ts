@@ -9,6 +9,7 @@ import {
   StandardBridgeAdapter,
   ETHBridgeAdapter,
   MNTBridgeAdapter,
+  ERC721BridgeAdapter,
 } from '../adapters'
 import {
   CONTRACT_ADDRESSES,
@@ -177,6 +178,15 @@ export const getBridgeAdapters = (
               opts?.contracts?.l1?.L1StandardBridge ||
               CONTRACT_ADDRESSES[l2ChainId].l1.L1StandardBridge,
             l2Bridge: predeploys.L2StandardBridge,
+          },
+          ERC721: {
+            Adapter: ERC721BridgeAdapter,
+            l1Bridge:
+              opts?.contracts?.l1?.L1ERC721Bridge ||
+              CONTRACT_ADDRESSES[l2ChainId].l1.L1ERC721Bridge,
+            l2Bridge:
+              opts?.contracts?.l2?.L2ERC721Bridge ||
+              CONTRACT_ADDRESSES[l2ChainId].l2.L2ERC721Bridge,
           },
           ETH: {
             Adapter: ETHBridgeAdapter,
