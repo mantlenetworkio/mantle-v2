@@ -291,7 +291,7 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 				if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
 					data, blobHashes, err := dataFromEigenDa(ds.cfg, txs, ds.eigenDaSyncer, ds.metrics, log.New("origin", ds.id), ds.batcherAddr)
 					if err != nil {
-						return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+						return nil, NewTemporaryError(fmt.Errorf("failed to open eigenda calldata source: %w", err))
 					}
 					log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
 					if ds.blobsFetcher == nil && len(blobHashes) > 0 {
@@ -540,7 +540,7 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSynce
 					BatchHeaderHash: base64.StdEncoding.EncodeToString(frameRef.BatchHeaderHash),
 					BlobIndex:       frameRef.BlobIndex,
 				})
-				log.Warn("could not retrieve data from EigenDA", "request", string(retrieveReqJSON), "err", err)
+				log.Warn("could not retrieve data from EigenDA", "err", err, "request", string(retrieveReqJSON))
 				return nil, nil, err
 			}
 			log.Info("Successfully retrieved data from EigenDA", "quorum id", frameRef.QuorumIds[0], "confirmation block number", frameRef.ReferenceBlockNumber, "blob length", frameRef.BlobLength)
