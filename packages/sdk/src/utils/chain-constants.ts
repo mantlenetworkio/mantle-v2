@@ -8,7 +8,7 @@ import {
   OEContractsLike,
   OEL2ContractsLike,
 } from '../interfaces'
-import { ERC20BridgeAdapter, StandardBridgeAdapter } from '../adapters'
+import { ERC20BridgeAdapter } from '../adapters'
 
 export const DEPOSIT_CONFIRMATION_BLOCKS: {
   [ChainID in L2ChainID]: number
@@ -135,7 +135,7 @@ export const CONTRACT_ADDRESSES: {
         ('0x242a33ca49C564caFC9C83C700b79f1074c42A0D' as const),
       OptimismPortal: '0xc54cb22944F2bE476E02dECfCD7e3E7d3e15A8Fb' as const,
       L2OutputOracle: '0x31d543e7BE1dA6eFDc2206Ef7822879045B9f481' as const,
-      L1ERC721Bridge: '0x2cc62eCBb6C99eb687ACc079cE367eaFEC007222' as const,
+      L1ERC721Bridge: '0xCAF8938b6C4A27a96AaAfbb7228Fd613D40EA70a' as const,
     },
     l2: DEFAULT_L2_CONTRACT_ADDRESSES,
   },
