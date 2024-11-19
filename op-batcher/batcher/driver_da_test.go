@@ -12,7 +12,6 @@ import (
 	"io"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/Layr-Labs/datalayr/common/logging"
@@ -696,16 +695,9 @@ func TestDisperseBlobAuthenticated(t *testing.T) {
 	//signer, _ := eigenda.NewLocalBlobSigner("0xff4476671982ec7fea451f53cb8dbcc64bdd7851087077a6de73b0cb8f757124")
 	//signer, _ := eigenda.NewHsmBlobSigner(hsmCreden, "projects/mantle-381302/locations/global/keyRings/qa/cryptoKeys/proposer-qa/cryptoKeyVersions/1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEQVp/Zdt0r7Clidd6dG0wQj7SGD4738oXZHrnygN6XoI1eD2gAUa6/tisBUMKwl/ysrmJf1CAjCdWO0Kst3YFcw==")
 	//fmt.Println("pubkey", signer.GetAccountID())
-	da, _ := eigenda.NewEigenDAClient(
-		eigenda.Config{
-			RPC:                      "disperser-holesky.eigenda.xyz:443",
-			StatusQueryTimeout:       time.Minute * 10,
-			StatusQueryRetryInterval: time.Second * 5,
-			RPCTimeout:               time.Minute,
-		}, log.New(context.Background()),
-	)
+	da := eigenda.NewEigenDAClient(eigenda.Config{}, nil, nil)
 
-	data, _, err := da.DisperseBlobAuthenticated(context.Background(), common.Hex2Bytes("D4A7E1Bd8015057293f0D0A557088c286942e84b"))
+	data, err := da.DisperseBlob(context.Background(), common.Hex2Bytes("D4A7E1Bd8015057293f0D0A557088c286942e84b"))
 	if err != nil {
 		t.Errorf("RetrieveBlob err:%v", err)
 		return

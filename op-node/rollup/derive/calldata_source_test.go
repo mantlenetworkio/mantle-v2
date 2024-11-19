@@ -1,10 +1,7 @@
 package derive
 
 import (
-	"context"
 	"crypto/ecdsa"
-	"encoding/base64"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -20,10 +17,8 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
-	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 )
 
 type testTx struct {
@@ -150,56 +145,5 @@ func TestRLPEncodeDecodeEthData(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRetrieveBlob(t *testing.T) {
-	da := eigenda.EigenDA{
-		Config: eigenda.Config{
-			RPC: "disperser-holesky.eigenda.xyz:443",
-		},
-
-		Log: log.New(context.Background()),
-	}
-
-	batchHeaderHashHex, _ := base64.StdEncoding.DecodeString("kUAZym2iKlQmOkm9x0Cg42QLBgrFEnssvQ1p3uszYpg=")
-	fmt.Printf("%x\n", batchHeaderHashHex)
-	data, err := da.RetrieveBlob(context.Background(), batchHeaderHashHex, 207)
-	if err != nil {
-		t.Errorf("RetrieveBlob err:%v", err)
-		return
-	}
-	fmt.Printf("RetrieveBlob %d\n", len(data))
-}
-
 func TestRetrieveBlobTx(t *testing.T) {
-}
-
-func TestRetrieveFromDaIndexer(t *testing.T) {
-	eigenDA := eigenda.Config{
-		RPC: "disperser-holesky.eigenda.xyz:443",
-	}
-
-	eigenDaSyncer := da.NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &da.MantleDataStoreConfig{
-		MantleDaIndexerSocket: "127.0.0.1:32111",
-		MantleDAIndexerEnable: true,
-	}, nil)
-
-	out := []eth.Data{}
-
-	if eigenDaSyncer.IsDaIndexer() {
-		data, err := eigenDaSyncer.RetrievalFramesFromDaIndexer("0x8494e3e2c70933fc69b82bc0a851f77716d385b52fa8f386df29b819c717be9b")
-		if err != nil {
-			fmt.Println("Retrieval frames from eigenDa indexer error", "err", err)
-			return
-		}
-		outData := []eth.Data{}
-		err = rlp.DecodeBytes(data, &outData)
-		if err != nil {
-			fmt.Println("Decode retrieval frames in error,skip wrong data", "err", err)
-			return
-		}
-		out = append(out, outData...)
-
-		fmt.Println(len(out))
-		return
-	}
-
 }

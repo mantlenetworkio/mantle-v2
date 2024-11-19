@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 
 	"github.com/urfave/cli"
@@ -254,18 +255,6 @@ var (
 		EnvVar:   prefixEnvVar("L2_SKIP_SYNC_START_CHECK"),
 		Required: false,
 	}
-	DARPC = cli.StringFlag{
-		Name:   "da-rpc",
-		Usage:  "Data Availability RPC",
-		Value:  "http://da:26658",
-		EnvVar: prefixEnvVar("DA_RPC"),
-	}
-	DARPCTimeout = cli.DurationFlag{
-		Name:   "da-rpc-timeout",
-		Usage:  "Data Availability RPC Timeout",
-		Value:  5 * time.Second,
-		EnvVar: prefixEnvVar("DA_RPC_TIMEOUT"),
-	}
 	/* Optional Flags */
 	BeaconAddr = cli.StringFlag{
 		Name:   "l1.beacon",
@@ -342,8 +331,6 @@ var optionalFlags = []cli.Flag{
 	MantleDaIndexerSocketFlag,
 	MantleDAIndexerEnableFlag,
 	RPCEnableAdmin,
-	DARPC,
-	DARPCTimeout,
 }
 
 // Flags contains the list of configuration options available to the binary.
@@ -352,6 +339,7 @@ var Flags []cli.Flag
 func init() {
 	optionalFlags = append(optionalFlags, p2pFlags...)
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
+	optionalFlags = append(optionalFlags, eigenda.CLIFlags(EnvVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...)
 }
 

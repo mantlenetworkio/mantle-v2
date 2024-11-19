@@ -212,11 +212,7 @@ type EigenDADataStore struct {
 func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *eigenda.Config, cfg *MantleDataStoreConfig, m eigenda.Metrics) *EigenDADataStore {
 	var daClient eigenda.IEigenDA
 	if daCfg != nil {
-		daClient = &eigenda.EigenDA{
-			Log:      log,
-			Config:   *daCfg,
-			Metricer: m,
-		}
+		daClient = eigenda.NewEigenDAClient(*daCfg, log, m)
 	}
 	return &EigenDADataStore{
 		daClient: daClient,
@@ -229,8 +225,15 @@ func (da *EigenDADataStore) IsDaIndexer() bool {
 	return da.Cfg.MantleDAIndexerEnable
 }
 
-func (da *EigenDADataStore) RetrieveBlob(BatchHeaderHash []byte, BlobIndex uint32) ([]byte, error) {
-	return da.daClient.RetrieveBlob(da.Ctx, BatchHeaderHash, BlobIndex)
+func (da *EigenDADataStore) RetrieveBlob(batchHeaderHash []byte, blobIndex uint32, commitment []byte) ([]byte, error) {
+	if len(commitment) == 0 {
+		return da.daClient.RetrieveBlob(da.Ctx, batchHeaderHash, blobIndex)
+	}
+	return da.daClient.RetrieveBlobWithCommitment(da.Ctx, commitment)
+}
+
+func (da *EigenDADataStore) RetrieveBlobWithCommitment(commitment []byte) ([]byte, error) {
+	return da.daClient.RetrieveBlobWithCommitment(da.Ctx, commitment)
 }
 
 func (da *EigenDADataStore) RetrievalFramesFromDaIndexer(txHash string) ([]byte, error) {
