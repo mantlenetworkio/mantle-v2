@@ -50,6 +50,9 @@ type Config struct {
 	Sync sync.Config
 
 	DA eigenda.Config
+
+	// Path to store safe head database. Disabled when set to empty string
+	SafeDBPath string
 }
 
 type RPCConfig struct {

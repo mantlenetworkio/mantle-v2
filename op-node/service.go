@@ -99,8 +99,9 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
 			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
 		},
-		Sync: *syncConfig,
-		DA:   daCfg,
+		SafeDBPath: ctx.String(flags.SafeDBPath.Name),
+		Sync:       *syncConfig,
+		DA:         daCfg,
 	}
 	beacon := NewBeaconEndpointConfig(ctx)
 	if beacon.Check() == nil {

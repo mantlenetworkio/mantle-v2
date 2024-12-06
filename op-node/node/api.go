@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/version"
 )
@@ -33,6 +35,10 @@ type driverClient interface {
 type rpcMetrics interface {
 	// RecordRPCServerRequest returns a function that records the duration of serving the given RPC method
 	RecordRPCServerRequest(method string) func()
+}
+
+type SafeDBReader interface {
+	SafeHeadAtL1(ctx context.Context, l1BlockNum uint64) (l1 eth.BlockID, l2 eth.BlockID, err error)
 }
 
 type adminAPI struct {
@@ -69,15 +75,17 @@ type nodeAPI struct {
 	config *rollup.Config
 	client l2EthClient
 	dr     driverClient
+	safeDB SafeDBReader
 	log    log.Logger
 	m      rpcMetrics
 }
 
-func NewNodeAPI(config *rollup.Config, l2Client l2EthClient, dr driverClient, log log.Logger, m rpcMetrics) *nodeAPI {
+func NewNodeAPI(config *rollup.Config, l2Client l2EthClient, dr driverClient, safeDB SafeDBReader, log log.Logger, m rpcMetrics) *nodeAPI {
 	return &nodeAPI{
 		config: config,
 		client: l2Client,
 		dr:     dr,
+		safeDB: safeDB,
 		log:    log,
 		m:      m,
 	}
@@ -127,6 +135,21 @@ func (n *nodeAPI) OutputAtBlock(ctx context.Context, number hexutil.Uint64) (*et
 		WithdrawalStorageRoot: proof.StorageHash,
 		StateRoot:             head.Root(),
 		Status:                status,
+	}, nil
+}
+
+func (n *nodeAPI) SafeHeadAtL1Block(ctx context.Context, number hexutil.Uint64) (*eth.SafeHeadResponse, error) {
+	recordDur := n.m.RecordRPCServerRequest("optimism_safeHeadAtL1Block")
+	defer recordDur()
+	l1Block, safeHead, err := n.safeDB.SafeHeadAtL1(ctx, uint64(number))
+	if errors.Is(err, safedb.ErrNotFound) {
+		return nil, err
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get safe head at l1 block %s: %w", number, err)
+	}
+	return &eth.SafeHeadResponse{
+		L1Block:  l1Block,
+		SafeHead: safeHead,
 	}, nil
 }
 

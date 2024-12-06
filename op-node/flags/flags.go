@@ -281,6 +281,13 @@ var (
 		Usage:  "If true, all sidecars are fetched and filtered locally. Workaround for buggy Beacon nodes.",
 		EnvVar: prefixEnvVar("L1_BEACON_FETCH_ALL_SIDECARS"),
 	}
+
+	SafeDBPath = cli.StringFlag{
+		Name:   "safedb.path",
+		Usage:  "File path used to persist safe head update data. Disabled if not set.",
+		EnvVar: prefixEnvVar("SAFEDB_PATH"),
+		Hidden: true,
+	}
 )
 
 var requiredFlags = []cli.Flag{
@@ -331,6 +338,7 @@ var optionalFlags = []cli.Flag{
 	MantleDaIndexerSocketFlag,
 	MantleDAIndexerEnableFlag,
 	RPCEnableAdmin,
+	SafeDBPath,
 }
 
 // Flags contains the list of configuration options available to the binary.

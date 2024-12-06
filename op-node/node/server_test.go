@@ -107,10 +107,11 @@ func TestOutputAtBlock(t *testing.T) {
 	l2Client.ExpectGetProof(predeploys.L2ToL1MessagePasserAddr, []common.Hash{}, "0x8512bee03061475e4b069171f7b406097184f16b22c3f5c97c0abfc49591c524", &result, nil)
 
 	drClient := &mockDriverClient{}
+	safeReader := &mockSafeDBReader{}
 	status := randomSyncStatus(rand.New(rand.NewSource(123)))
 	drClient.ExpectBlockRefWithStatus(0xdcdc89, ref, status, nil)
 
-	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, log, "0.0", metrics.NoopMetrics)
+	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, safeReader, log, "0.0", metrics.NoopMetrics)
 	require.NoError(t, err)
 	require.NoError(t, server.Start())
 	defer server.Stop()
@@ -135,6 +136,8 @@ func TestVersion(t *testing.T) {
 	log := testlog.Logger(t, log.LvlError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
+	safeReader := &mockSafeDBReader{}
+
 	rpcCfg := &RPCConfig{
 		ListenAddr: "localhost",
 		ListenPort: 0,
@@ -142,7 +145,7 @@ func TestVersion(t *testing.T) {
 	rollupCfg := &rollup.Config{
 		// ignore other rollup config info in this test
 	}
-	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, log, "0.0", metrics.NoopMetrics)
+	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, safeReader, log, "0.0", metrics.NoopMetrics)
 	assert.NoError(t, err)
 	assert.NoError(t, server.Start())
 	defer server.Stop()
@@ -175,6 +178,8 @@ func TestSyncStatus(t *testing.T) {
 	log := testlog.Logger(t, log.LvlError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
+	safeReader := &mockSafeDBReader{}
+
 	rng := rand.New(rand.NewSource(1234))
 	status := randomSyncStatus(rng)
 	drClient.On("SyncStatus").Return(status)
@@ -186,7 +191,7 @@ func TestSyncStatus(t *testing.T) {
 	rollupCfg := &rollup.Config{
 		// ignore other rollup config info in this test
 	}
-	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, log, "0.0", metrics.NoopMetrics)
+	server, err := newRPCServer(context.Background(), rpcCfg, rollupCfg, l2Client, drClient, safeReader, log, "0.0", metrics.NoopMetrics)
 	assert.NoError(t, err)
 	assert.NoError(t, server.Start())
 	defer server.Stop()
@@ -227,4 +232,17 @@ func (c *mockDriverClient) StartSequencer(ctx context.Context, blockHash common.
 
 func (c *mockDriverClient) StopSequencer(ctx context.Context) (common.Hash, error) {
 	return c.Mock.MethodCalled("StopSequencer").Get(0).(common.Hash), nil
+}
+
+type mockSafeDBReader struct {
+	mock.Mock
+}
+
+func (m *mockSafeDBReader) SafeHeadAtL1(ctx context.Context, l1BlockNum uint64) (l1Hash eth.BlockID, l2Hash eth.BlockID, err error) {
+	r := m.Mock.MethodCalled("SafeHeadAtL1", l1BlockNum)
+	return r[0].(eth.BlockID), r[1].(eth.BlockID), *r[2].(*error)
+}
+
+func (m *mockSafeDBReader) ExpectSafeHeadAtL1(l1BlockNum uint64, l1 eth.BlockID, safeHead eth.BlockID, err error) {
+	m.Mock.On("SafeHeadAtL1", l1BlockNum).Return(l1, safeHead, &err)
 }
