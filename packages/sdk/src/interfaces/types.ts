@@ -8,6 +8,7 @@ import { Contract, BigNumber } from 'ethers'
 
 import { CrossChainMessenger } from '../cross-chain-messenger'
 import { IBridgeAdapter } from './bridge-adapter'
+import { IERC721BridgeAdapter } from './erc721-bridge-adapter'
 
 /**
  * L1 network chain IDs
@@ -41,6 +42,7 @@ export interface OEL1Contracts {
   AddressManager: Contract
   L1CrossDomainMessenger: Contract
   L1StandardBridge: Contract
+  L1ERC721Bridge: Contract
   StateCommitmentChain: Contract
   CanonicalTransactionChain: Contract
   BondManager: Contract
@@ -58,6 +60,7 @@ export interface OEL1Contracts {
 export interface OEL2Contracts {
   L2CrossDomainMessenger: Contract
   L2StandardBridge: Contract
+  L2ERC721Bridge: Contract
   L2ToL1MessagePasser: Contract
   BVM_L1BlockNumber: Contract
   BVM_L2ToL1MessagePasser: Contract
@@ -67,11 +70,10 @@ export interface OEL2Contracts {
   BVM_SequencerFeeVault: Contract
   WETH: Contract
   //Mantle V1
-  BVM_MANTLE:Contract
-  TssRewardContract:Contract
+  BVM_MANTLE: Contract
+  TssRewardContract: Contract
   //Bedrock
   BedrockMessagePasser: Contract
-
 }
 
 /**
@@ -117,7 +119,7 @@ export interface BridgeAdapterData {
       messenger: CrossChainMessenger
       l1Bridge: AddressLike
       l2Bridge: AddressLike
-    }) => IBridgeAdapter
+    }) => IBridgeAdapter | IERC721BridgeAdapter
     l1Bridge: AddressLike
     l2Bridge: AddressLike
   }
@@ -127,7 +129,7 @@ export interface BridgeAdapterData {
  * Something that looks like the list of custom bridges.
  */
 export interface BridgeAdapters {
-  [name: string]: IBridgeAdapter
+  [name: string]: IBridgeAdapter | IERC721BridgeAdapter
 }
 
 /**
@@ -229,7 +231,8 @@ export interface TokenBridgeMessage {
   to: string
   l1Token: string
   l2Token: string
-  amount: BigNumber
+  amount?: BigNumber
+  tokenId?: BigNumber
   data: string
   logIndex: number
   blockNumber: number
