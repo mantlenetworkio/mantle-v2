@@ -11,4 +11,5 @@ type IEigenDA interface {
 	RetrieveBlobWithCommitment(ctx context.Context, commitment []byte) ([]byte, error)
 	DisperseBlob(ctx context.Context, txData []byte) (*disperser.BlobInfo, error)
 	GetBlobStatus(ctx context.Context, requestID []byte) (*disperser.BlobStatusReply, error)
+	GetBlobExtraInfo(ctx context.Context, commitment []byte) (map[string]interface{}, error)
 }
