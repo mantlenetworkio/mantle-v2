@@ -7,10 +7,19 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/stretchr/testify/require"
 )
+
+type mockMetrics struct{}
+
+func (m *mockMetrics) RecordInterval(method string) func(error) {
+	return func(error) {}
+}
 
 func TestNewEigenDAProxy_RetrieveBlob(t *testing.T) {
 	requestId := make([]byte, 189)
@@ -197,4 +206,55 @@ func TestNewEigenDAProxy_GetBlobStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBlobExtraInfo(t *testing.T) {
+	cfg := Config{
+		ProxyUrl:            "http://localhost:3100",
+		DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
+		DisperseBlobTimeout: 10 * time.Minute,
+		RetrieveBlobTimeout: 10 * time.Second,
+	}
+	logger := log.New()
+	metrics := &mockMetrics{}
+	client := NewEigenDAClient(cfg, logger, metrics)
+
+	t.Run("GetBlobExtraInfo with valid commitment", func(t *testing.T) {
+		ctx := context.Background()
+		// test1: DisperseBlob then GetBlobExtraInfo
+		blob := []byte("test data")
+		blobInfo, err := client.DisperseBlob(ctx, blob)
+		require.NoError(t, err)
+
+		commitment, err := EncodeCommitment(blobInfo)
+		require.NoError(t, err)
+
+		extraInfo, err := client.GetBlobExtraInfo(ctx, commitment)
+		require.NoError(t, err)
+		require.NotEmpty(t, extraInfo)
+	})
+
+	t.Run("GetBlobExtraInfo with zero commitment", func(t *testing.T) {
+		ctx := context.Background()
+		// test1: Encode zero value commitment
+		zeroBlobInfo := &disperser.BlobInfo{
+			BlobHeader: &disperser.BlobHeader{
+				Commitment: &common.G1Commitment{},
+			},
+			BlobVerificationProof: &disperser.BlobVerificationProof{
+				BatchMetadata: &disperser.BatchMetadata{
+					BatchHeader:     &disperser.BatchHeader{},
+					BatchHeaderHash: make([]byte, 32),
+				},
+				BlobIndex: 0,
+			},
+		}
+		commitment, err := EncodeCommitment(zeroBlobInfo)
+		require.NoError(t, err)
+		t.Logf("commitment: %x", commitment)
+		extraInfo, err := client.GetBlobExtraInfo(ctx, commitment)
+		require.NoError(t, err)
+		t.Logf("extraInfo: %v", extraInfo)
+		require.Empty(t, extraInfo)
+	})
 }
