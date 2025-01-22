@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
@@ -187,6 +188,13 @@ func (c CLIConfig) Check() error {
 	}
 	if err := c.EigenDAConfig.Check(); err != nil {
 		return err
+	}
+
+	//Used to ensure that when using an Ethereum blob, a single frame is not larger than MaxBlobDataSize * MaxblobNum
+	//Considering that the frame needs to go through rlp. EncodeToBytes before submitting da, the maximum size after encoding cannot be accurately calculated.
+	//So MaxL1TxSize > MaxBlobDataSize is used here to make a rough judgment
+	if c.MaxL1TxSize > eth.MaxBlobDataSize {
+		return errors.New("MaxL1TxSize must less than MaxBlobDataSize")
 	}
 	return nil
 }
