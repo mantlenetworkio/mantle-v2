@@ -215,7 +215,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 	var err error
 	var wrappedData []byte
 
-	daData, err := l.txAggregatorForEigenDa()
+	daData, encodeData, err := l.txAggregatorForEigenDa()
 	if err != nil {
 		l.log.Error("loopEigenDa txAggregatorForEigenDa err", "err", err)
 		return false, err
@@ -234,7 +234,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		timeoutTime := time.Now().Add(l.EigenDA.DisperseBlobTimeout)
 		for retry := 0; retry < EigenRPCRetryNum; retry++ {
 			l.metr.RecordDaRetry(int32(retry))
-			wrappedData, err = l.disperseEigenDaData(daData)
+			wrappedData, err = l.disperseEigenDaData(encodeData)
 			if err == nil && len(wrappedData) > 0 {
 				eigendaSuccess = true
 				break
@@ -383,13 +383,7 @@ func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, 
 	return candidates, nil
 }
 
-func (l *BatchSubmitter) disperseEigenDaData(data [][]byte) ([]byte, error) {
-	encodeData, err := rlp.EncodeToBytes(data)
-	if err != nil {
-		l.log.Error("op-batcher unable to encode txn", "err", err)
-		return nil, err
-	}
-
+func (l *BatchSubmitter) disperseEigenDaData(encodeData []byte) ([]byte, error) {
 	blobInfo, err := l.eigenDA.DisperseBlob(l.shutdownCtx, encodeData)
 	if err != nil {
 		l.log.Error("Unable to publish batch frameset to EigenDA", "err", err)
@@ -486,9 +480,8 @@ func (l *BatchSubmitter) txAggregator() ([]byte, error) {
 	return transactionByte, nil
 }
 
-func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
-	var tempTxsData, txsData [][]byte
-	var transactionByte []byte
+func (l *BatchSubmitter) txAggregatorForEigenDa() (txsData [][]byte, encodeData []byte, err error) {
+	var tempTxsData [][]byte
 	sortTxIds := make([]txID, 0, len(l.state.daPendingTxData))
 	l.state.daUnConfirmedTxID = l.state.daUnConfirmedTxID[:0]
 	for k := range l.state.daPendingTxData {
@@ -503,25 +496,25 @@ func (l *BatchSubmitter) txAggregatorForEigenDa() ([][]byte, error) {
 		txnBufBytes, err := rlp.EncodeToBytes(tempTxsData)
 		if err != nil {
 			l.log.Error("op-batcher unable to encode txn", "err", err)
-			return nil, err
+			return nil, nil, err
 		}
 		if uint64(len(txnBufBytes)) >= l.RollupMaxSize {
-			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "rollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "transactionByte", len(transactionByte))
+			l.log.Info("op-batcher transactionByte size is more than RollupMaxSize", "rollupMaxSize", l.RollupMaxSize, "txnBufBytes", len(txnBufBytes), "encodeByte", len(encodeData))
 			l.metr.RecordTxOverMaxLimit()
 			break
 		}
 		txsData = tempTxsData
-		transactionByte = txnBufBytes
+		encodeData = txnBufBytes
 		l.state.daUnConfirmedTxID = append(l.state.daUnConfirmedTxID, v)
 		l.log.Info("added frame to daUnConfirmedTxID", "id", v.String())
 	}
 
 	if len(txsData) == 0 {
 		l.log.Error("txsData is empty")
-		return nil, fmt.Errorf("txsData is empty")
+		return nil, nil, fmt.Errorf("txsData is empty")
 	}
 
-	return txsData, nil
+	return txsData, encodeData, nil
 }
 
 func (l *BatchSubmitter) disperseStoreData(txsData []byte) error {
