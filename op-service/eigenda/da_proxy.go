@@ -25,6 +25,9 @@ var ErrNotFound = errors.New("not found")
 // ErrInvalidInput is returned when the input is not valid for posting to the DA storage.
 var ErrInvalidInput = errors.New("invalid input")
 
+// ErrNetwork is returned when there is a eigenda network error.
+var ErrNetwork = errors.New("eigenda network error")
+
 // NewEigenDAClient is an HTTP client to communicate with EigenDA Proxy.
 // It creates commitments and retrieves input data + verifies if needed.
 type EigenDAClient struct {
@@ -147,11 +150,11 @@ func (c *EigenDAClient) DisperseBlob(ctx context.Context, img []byte) (*disperse
 	resp, err := c.disperseClient.Do(req)
 	done(err)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to post store data orirgin error: %w error: %w", err, ErrNetwork)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to store data: %v", resp.StatusCode)
+		return nil, fmt.Errorf("failed to store data status code: %v error: %w", resp.StatusCode, ErrNetwork)
 	}
 
 	b, err := io.ReadAll(resp.Body)

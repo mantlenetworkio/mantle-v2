@@ -123,49 +123,106 @@ func TestNewEigenDAProxy_RetrieveBlobWithCommitment(t *testing.T) {
 
 func TestNewEigenDAProxy_DisperseBlob(t *testing.T) {
 	type fields struct {
-		proxyUrl     string
-		disperserUrl string
-		log          log.Logger
+		client *EigenDAClient
 	}
 	type args struct {
 		ctx context.Context
 		img []byte
 	}
+
+	logger := log.New()
+	metrics := &mockMetrics{}
+
+	client := NewEigenDAClient(Config{
+		ProxyUrl:            "http://localhost:3100",
+		DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
+		DisperseBlobTimeout: 10 * time.Minute,
+		RetrieveBlobTimeout: 10 * time.Second,
+	}, logger, metrics)
+
+	invalidClient := NewEigenDAClient(Config{
+		ProxyUrl:            "http://localhost:3333",
+		DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
+		DisperseBlobTimeout: 10 * time.Minute,
+		RetrieveBlobTimeout: 10 * time.Second,
+	}, logger, metrics)
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *disperser.BlobInfo
-		wantErr bool
+		name           string
+		fields         fields
+		args           args
+		want           *disperser.BlobInfo
+		wantErr        bool
+		wantNetworkErr bool
 	}{
 		{
 			name: "t1",
 			fields: fields{
-				proxyUrl:     "http://127.0.0.1:3100",
-				disperserUrl: "disperser-holesky.eigenda.xyz:443",
-				log:          log.New("test"),
+				client: client,
 			},
 			args: args{
 				ctx: context.Background(),
 				img: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
 			},
-			wantErr: false,
+		},
+		{
+			name: "t2",
+			fields: fields{
+				client: invalidClient,
+			},
+			args: args{
+				ctx: context.Background(),
+				img: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
+			},
+			wantErr:        true,
+			wantNetworkErr: true,
+		},
+		{
+			name: "t3",
+			fields: fields{
+				client: client,
+			},
+			args: args{
+				ctx: context.Background(),
+				img: make([]byte, 30*1024*1024), //larger than eigenda throughput limit
+			},
+			wantErr:        true,
+			wantNetworkErr: true,
+		},
+		{
+			name: "t4",
+			fields: fields{
+				client: client,
+			},
+			args: args{
+				ctx: context.Background(),
+				img: []byte{}, //empty data error
+			},
+			wantErr:        true,
+			wantNetworkErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &EigenDAClient{
-				proxyUrl:     tt.fields.proxyUrl,
-				disperserUrl: tt.fields.disperserUrl,
-				log:          tt.fields.log,
-			}
-			got, err := c.DisperseBlob(tt.args.ctx, tt.args.img)
+			got, err := tt.fields.client.DisperseBlob(tt.args.ctx, tt.args.img)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EigenDAClient.DisperseBlob() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			commitment, err := EncodeCommitment(got)
-			fmt.Printf("%v 0x%x\n", err, commitment)
+			if tt.wantErr {
+				require.Error(t, err)
+				t.Logf("error: %v", err)
+			}
+			if tt.wantNetworkErr {
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNetwork)
+				t.Logf("network error: %v", err)
+			}
+			if !tt.wantErr {
+				commitment, err := EncodeCommitment(got)
+				require.NoError(t, err)
+				fmt.Printf("%v 0x%x\n", err, commitment)
+			}
 		})
 	}
 }

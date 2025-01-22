@@ -234,14 +234,19 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 		timeoutTime := time.Now().Add(l.EigenDA.DisperseBlobTimeout)
 		for retry := 0; retry < EigenRPCRetryNum; retry++ {
 			l.metr.RecordDaRetry(int32(retry))
+			if time.Now().After(timeoutTime) {
+				l.log.Warn("loopEigenDa disperseEigenDaData timeout", "retry time", retry, "err", err)
+				break
+			}
+
 			wrappedData, err = l.disperseEigenDaData(daData)
 			if err == nil && len(wrappedData) > 0 {
 				eigendaSuccess = true
 				break
 			}
 
-			if time.Now().After(timeoutTime) {
-				l.log.Warn("loopEigenDa disperseEigenDaData timeout", "retry time", retry, "err", err)
+			if err != nil && !errors.Is(err, eigenda.ErrNotFound) {
+				l.log.Warn("unrecoverable error in disperseEigenDaData", "retry time", retry, "err", err)
 				break
 			}
 
