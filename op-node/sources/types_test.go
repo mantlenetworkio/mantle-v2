@@ -2,6 +2,7 @@ package sources
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,95 @@ func TestBlockJSON(t *testing.T) {
 		var x rpcHeader
 		require.NoError(t, json.Unmarshal([]byte(testCase.Data), &x))
 		h := x.computeBlockHash()
+		if testCase.OK {
+			require.Equal(t, h, x.Hash, "blockhash should verify ok")
+		} else {
+			require.NotEqual(t, h, x.Hash, "expecting verification error")
+		}
+	}
+}
+
+func TestMekongBlockJSON(t *testing.T) {
+	testCases := []struct {
+		Name string
+		OK   bool
+		Data string
+	}{
+		{Name: "mekong good tx", OK: true, Data: `{
+        "baseFeePerGas": "0x7",
+        "blobGasUsed": "0xc0000",
+        "difficulty": "0x0",
+        "excessBlobGas": "0x2bc0000",
+        "extraData": "0xd883010e0c846765746888676f312e32332e32856c696e7578",
+        "gasLimit": "0x2255100",
+        "gasUsed": "0x21c22",
+        "hash": "0x3e7de3a35410316d684a82fdc872a929fb1d0b3c71587fd55e56973b6b9fa52d",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "miner": "0xf97e180c050e5ab072211ad2c213eb5aee4df134",
+        "mixHash": "0x9259d9d2c8b2e509f443716fe2a1b1345b1b1fc19688c449efbb60a33f73e1d1",
+        "nonce": "0x0000000000000000",
+        "number": "0x808f6",
+        "parentBeaconBlockRoot": "0x5c824288cc30dbd7999dcdb0cb9bcbcfe9f6ab61b54e693946133ebbc5693a11",
+        "parentHash": "0x2d50b46c25b9d051c8d94508fa0f0d0616dba32393b1eaa927ef9b88fe33d836",
+        "receiptsRoot": "0x07d6e9d8d6b2f7700822d8f7b8fb909ce6853554f37b7ed8400eefdd835a5db9",
+        "requestsRoot": "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f",
+        "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+        "size": "0x94c",
+        "stateRoot": "0xf16c8c87f3e9fe37805cc51a55806f9e290b41e60de1d2d825192a0518e5dbb9",
+        "timestamp": "0x6790cb84",
+        "transactions": [
+            "0x55ab784f15a5b15f889e7dbeeb7bd6e4f0a4b9a15d662dcbcd6b593eb3e6afa2",
+            "0xe6f49ec1b9abb1289a39bc7339945fc12880c194e874543c8998846cdce10317",
+            "0xe51faf90b1875e77e602aa7a701407dd80eec74a1f6f7bdfd53790c1a99e2d58",
+            "0xfc269fb140f62953f19d0838abe91e17214d3e29b405b63f3287b57b1a983da7",
+            "0x194336695e7ba3cf64eaa0253485d5aa13aee49bf5fd02be66ae03aee6cfed11",
+            "0xf6d55cf5c4d9fa94d67e456d2633719ab943a1ae480e695e856a78b7eb64cd43"
+        ],
+        "transactionsRoot": "0x18a606ead4bbdbaadcd8ed8596c9f1cab7ea6337d02bcc81245189d90c84d360",
+        "uncles": [],
+        "withdrawals": [],
+        "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+    }`},
+		{Name: "mekong bad tx", OK: false, Data: `{
+        "baseFeePerGas": "0x7",
+        "blobGasUsed": "0xc0000",
+        "difficulty": "0x0",
+        "excessBlobGas": "0x2bc0000",
+        "extraData": "0xd883010e0c846765746888676f312e32332e32856c696e7578",
+        "gasLimit": "0x2255100",
+        "gasUsed": "0x21c22",
+        "hash": "0x3e7de3a35410316d684a82fdc872a929fb1d0b3c71587fd55e56973b6b9fa52d",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "miner": "0xf97e180c050e5ab072211ad2c213eb5aee4df134",
+        "mixHash": "0x9259d9d2c8b2e509f443716fe2a1b1345b1b1fc19688c449efbb60a33f73e1d1",
+        "nonce": "0x0000000000000000",
+        "number": "0x808f6",
+        "parentBeaconBlockRoot": "0x5c824288cc30dbd7999dcdb0cb9bcbcfe9f6ab61b54e693946133ebbc5693a11",
+        "parentHash": "0x2d50b46c25b9d051c8d94508fa0f0d0616dba32393b1eaa927ef9b88fe33d836",
+        "receiptsRoot": "0x07d6e9d8d6b2f7700822d8f7b8fb909ce6853554f37b7ed8400eefdd835a5db9",
+        "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+        "size": "0x94c",
+        "stateRoot": "0xf16c8c87f3e9fe37805cc51a55806f9e290b41e60de1d2d825192a0518e5dbb9",
+        "timestamp": "0x6790cb84",
+        "transactions": [
+            "0x55ab784f15a5b15f889e7dbeeb7bd6e4f0a4b9a15d662dcbcd6b593eb3e6afa2",
+            "0xe6f49ec1b9abb1289a39bc7339945fc12880c194e874543c8998846cdce10317",
+            "0xe51faf90b1875e77e602aa7a701407dd80eec74a1f6f7bdfd53790c1a99e2d58",
+            "0xfc269fb140f62953f19d0838abe91e17214d3e29b405b63f3287b57b1a983da7",
+            "0x194336695e7ba3cf64eaa0253485d5aa13aee49bf5fd02be66ae03aee6cfed11",
+            "0xf6d55cf5c4d9fa94d67e456d2633719ab943a1ae480e695e856a78b7eb64cd43"
+        ],
+        "transactionsRoot": "0x18a606ead4bbdbaadcd8ed8596c9f1cab7ea6337d02bcc81245189d90c84d360",
+        "uncles": [],
+        "withdrawals": [],
+        "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+    }`},
+	}
+	for _, testCase := range testCases {
+		var x rpcHeader
+		require.NoError(t, json.Unmarshal([]byte(testCase.Data), &x))
+		h := x.computeBlockHash()
+		fmt.Printf("computeBlockHash: %x, block hash: %x\n", h, x.Hash)
 		if testCase.OK {
 			require.Equal(t, h, x.Hash, "blockhash should verify ok")
 		} else {
