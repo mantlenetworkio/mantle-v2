@@ -259,7 +259,7 @@ func (l *BatchSubmitter) loadBlocksIntoState(ctx context.Context) error {
 		l.log.Warn("Error calculating L2 block range", "err", err)
 		return err
 	} else if start.Number >= end.Number {
-		return errors.New("start number is >= end number")
+		return errors.New(fmt.Sprintf("start number %d >= end number %d", start.Number, end.Number))
 	}
 
 	var latestBlock *types.Block
