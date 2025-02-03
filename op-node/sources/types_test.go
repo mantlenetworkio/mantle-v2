@@ -35,13 +35,13 @@ func TestBlockJSON(t *testing.T) {
 	}
 }
 
-func TestMekongBlockJSON(t *testing.T) {
+func TestPectraBlockJSON(t *testing.T) {
 	testCases := []struct {
 		Name string
 		OK   bool
 		Data string
 	}{
-		{Name: "mekong good tx", OK: true, Data: `{
+		{Name: "good pectra block", OK: true, Data: `{
         "baseFeePerGas": "0x7",
         "blobGasUsed": "0xc0000",
         "difficulty": "0x0",
@@ -58,7 +58,7 @@ func TestMekongBlockJSON(t *testing.T) {
         "parentBeaconBlockRoot": "0x5c824288cc30dbd7999dcdb0cb9bcbcfe9f6ab61b54e693946133ebbc5693a11",
         "parentHash": "0x2d50b46c25b9d051c8d94508fa0f0d0616dba32393b1eaa927ef9b88fe33d836",
         "receiptsRoot": "0x07d6e9d8d6b2f7700822d8f7b8fb909ce6853554f37b7ed8400eefdd835a5db9",
-        "requestsRoot": "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f",
+        "requestsHash": "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
         "size": "0x94c",
         "stateRoot": "0xf16c8c87f3e9fe37805cc51a55806f9e290b41e60de1d2d825192a0518e5dbb9",
@@ -76,7 +76,7 @@ func TestMekongBlockJSON(t *testing.T) {
         "withdrawals": [],
         "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
     }`},
-		{Name: "mekong bad tx", OK: false, Data: `{
+		{Name: "bad pectra block", OK: false, Data: `{
         "baseFeePerGas": "0x7",
         "blobGasUsed": "0xc0000",
         "difficulty": "0x0",
@@ -115,9 +115,9 @@ func TestMekongBlockJSON(t *testing.T) {
 		var x rpcHeader
 		require.NoError(t, json.Unmarshal([]byte(testCase.Data), &x))
 		h := x.computeBlockHash()
-		fmt.Printf("computeBlockHash: %x, block hash: %x\n", h, x.Hash)
+		fmt.Printf("compute block hash: %x, actual block hash: %x\n", h, x.Hash)
 		if testCase.OK {
-			require.Equal(t, h, x.Hash, "blockhash should verify ok")
+			require.Equal(t, h, x.Hash, "block hash should verify ok")
 		} else {
 			require.NotEqual(t, h, x.Hash, "expecting verification error")
 		}
