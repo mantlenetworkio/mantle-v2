@@ -376,19 +376,8 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 // This will return an empty array if no valid transactions are found.
 func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, txs types.Transactions, log log.Logger) []eth.Data {
 	var out []eth.Data
-	l1Signer := config.L1Signer()
-	for j, tx := range txs {
-		if to := tx.To(); to != nil && *to == config.BatchInboxAddress {
-			seqDataSubmitter, err := l1Signer.Sender(tx) // optimization: only derive sender if To is correct
-			if err != nil {
-				log.Warn("tx in inbox with invalid signature", "index", j, "err", err)
-				continue // bad signature, ignore
-			}
-			// some random L1 user might have sent a transaction to our batch inbox, ignore them
-			if seqDataSubmitter != batcherAddr {
-				log.Warn("tx in inbox with unauthorized submitter", "index", j, "err", err)
-				continue // not an authorized batch submitter, ignore
-			}
+	for _, tx := range txs {
+		if isValidBatchTx(tx, config.L1Signer(), config.BatchInboxAddress, batcherAddr) {
 			out = append(out, tx.Data())
 		}
 	}
@@ -564,9 +553,15 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSynce
 }
 
 // isValidBatchTx returns true if:
-//  1. the transaction has a To() address that matches the batch inbox address, and
-//  2. the transaction has a valid signature from the batcher address
+//  1. the transaction type is any of Legacy, ACL, DynamicFee, Blob, or Deposit (for L3s).
+//  2. the transaction has a To() address that matches the batch inbox address, and
+//  3. the transaction has a valid signature from the batcher address
 func isValidBatchTx(tx *types.Transaction, l1Signer types.Signer, batchInboxAddr, batcherAddr common.Address) bool {
+	// For now, we want to disallow the SetCodeTx type or any future types.
+	if tx.Type() > types.BlobTxType && tx.Type() != types.DepositTxType {
+		return false
+	}
+
 	to := tx.To()
 	if to == nil || *to != batchInboxAddr {
 		return false
