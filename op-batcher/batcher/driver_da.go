@@ -344,6 +344,11 @@ func (l *BatchSubmitter) blobTxCandidates(data [][]byte) ([]*txmgr.TxCandidate, 
 		}
 
 		if len(nextEncodeData) > se.MaxBlobDataSize*MaxblobNum {
+			if len(encodeData) == 0 {
+				err := fmt.Errorf("single frame data size %d larger than max blob transaction maximum size", len(nextEncodeData))
+				l.log.Error("empty encodeData", "err", err)
+				return nil, err
+			}
 			blobs := []*se.Blob{}
 			for idx := 0; idx < len(encodeData); idx += se.MaxBlobDataSize {
 				blobData := encodeData[idx : idx+minInt(len(encodeData)-idx, se.MaxBlobDataSize)]
