@@ -237,7 +237,10 @@ func (c *EigenDAClient) GetBlobExtraInfo(ctx context.Context, commitment []byte)
 	}
 
 	output := make(map[string]interface{})
-	json.Unmarshal(data, &output)
+	err = json.Unmarshal(data, &output)
+	if err != nil {
+		return nil, err
+	}
 
 	return output, nil
 }
