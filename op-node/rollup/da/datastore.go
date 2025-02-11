@@ -7,8 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"crypto/tls"
+
 	"github.com/shurcooL/graphql"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	mdar "github.com/ethereum-optimism/optimism/op-node/rollup/da/interfaceRetrieverServer"
@@ -238,7 +241,7 @@ func (da *EigenDADataStore) RetrieveBlobWithCommitment(commitment []byte) ([]byt
 
 func (da *EigenDADataStore) RetrievalFramesFromDaIndexer(txHash string) ([]byte, error) {
 	log.Info("sync block data from mantle da retriever")
-	conn, err := grpc.Dial(da.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(da.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	if err != nil {
 		log.Error("Connect to da retriever fail", "err", err)
 		return nil, err
