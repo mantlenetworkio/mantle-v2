@@ -114,34 +114,69 @@ func TestRetrieveBlob(t *testing.T) {
 	fmt.Printf("RetrieveBlob %d\n", len(outData))
 }
 
-func TestRetrieveFromDaIndexer(t *testing.T) {
-	eigenDA := eigenda.Config{
-		ProxyUrl: "disperser-holesky.eigenda.xyz:443",
+func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
+	tests := []struct {
+		name         string
+		daConfig     eigenda.Config
+		mantleConfig MantleDataStoreConfig
+		query        string
+		wantErr      bool
+	}{
+		{
+			name: "successful",
+			mantleConfig: MantleDataStoreConfig{
+				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:443",
+				MantleDAIndexerEnable: true,
+			},
+			query:   "0xc2336ace05b2b72325e860c8856cdf477a03970e0cdd44c5f5e1abdf02359167",
+			wantErr: false,
+		},
+		{
+			name: "invalid endpoint",
+			mantleConfig: MantleDataStoreConfig{
+				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:80",
+				MantleDAIndexerEnable: true,
+			},
+			query:   "0xc2336ace05b2b72325e860c8856cdf477a03970e0cdd44c5f5e1abdf02359167",
+			wantErr: true,
+		},
+		{
+			name: "invalid query",
+			mantleConfig: MantleDataStoreConfig{
+				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:443",
+				MantleDAIndexerEnable: true,
+			},
+			query:   "0x00",
+			wantErr: true,
+		},
 	}
 
-	eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &eigenDA, &MantleDataStoreConfig{
-		MantleDaIndexerSocket: "127.0.0.1:32111",
-		MantleDAIndexerEnable: true,
-	}, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &tt.daConfig, &tt.mantleConfig, nil)
 
-	out := []eth.Data{}
+			if !eigenDaSyncer.IsDaIndexer() {
+				t.Fatal("DA indexer should be enabled")
+			}
 
-	if eigenDaSyncer.IsDaIndexer() {
-		data, err := eigenDaSyncer.RetrievalFramesFromDaIndexer("0x8494e3e2c70933fc69b82bc0a851f77716d385b52fa8f386df29b819c717be9b")
-		if err != nil {
-			fmt.Println("Retrieval frames from eigenDa indexer error", "err", err)
-			return
-		}
-		outData := []eth.Data{}
-		err = rlp.DecodeBytes(data, &outData)
-		if err != nil {
-			fmt.Println("Decode retrieval frames in error,skip wrong data", "err", err)
-			return
-		}
-		out = append(out, outData...)
+			data, err := eigenDaSyncer.RetrievalFramesFromDaIndexer(tt.query)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RetrievalFramesFromDaIndexer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 
-		fmt.Println(len(out))
-		return
+			if tt.wantErr {
+				t.Logf("RetrievalFramesFromDaIndexer() error = %v", err)
+				return
+			}
+
+			outData := []eth.Data{}
+			err = rlp.DecodeBytes(data, &outData)
+			if err != nil {
+				t.Fatalf("Failed to decode retrieval frames: %v", err)
+			}
+
+			t.Logf("RetrievalFramesFromDaIndexer() = %v", len(outData))
+		})
 	}
-
 }
