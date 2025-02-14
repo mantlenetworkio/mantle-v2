@@ -34,7 +34,7 @@ var (
 	}
 	MantleHoleskyQA1UpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleHoleskyQA1ChainId,
-		EigenDaUpgradeHeight: big.NewInt(2374100),
+		EigenDaUpgradeHeight: big.NewInt(2374000),
 	}
 	MantleLocalUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleLocalChainId,
