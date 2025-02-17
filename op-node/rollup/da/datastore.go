@@ -165,7 +165,7 @@ func (mda *MantleDataStore) RetrievalFramesFromDa(dataStoreId uint32) ([]byte, e
 
 func (mda *MantleDataStore) RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error) {
 	log.Info("sync block data from mantle da indexer")
-	conn, err := grpc.Dial(mda.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(mda.Cfg.MantleDaIndexerSocket, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	if err != nil {
 		log.Error("Connect to mantle da index retriever fail", "err", err)
 		return nil, err
