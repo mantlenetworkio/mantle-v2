@@ -21,7 +21,7 @@ var (
 var (
 	MantleMainnetUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleMainnetChainId,
-		EigenDaUpgradeHeight: nil,
+		EigenDaUpgradeHeight: big.NewInt(77118600), // 2025-03-19 14:58:32 UTC+8
 	}
 	MantleSepoliaUpgradeConfig = UpgradeChainConfig{
 		ChainID:              MantleSepoliaChainId,
