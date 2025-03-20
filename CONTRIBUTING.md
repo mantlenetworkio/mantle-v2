@@ -68,7 +68,7 @@ Our update process takes the form of a PR merging the `release/X.X.X` branch int
 Our development branch is [`develop`](https://github.com/mantlenetworkio/mantle-v2/tree/develop/).
 Changes that are not backwards compatible and all changes to contracts within `packages/contracts/contracts` MUST be directed towards `develop`.
 
-**Changes to contracts within `packages/contracts/contracts` are usually NOT considered backwards compatible and SHOULD be made against towards `develop` branch**.
+**Changes to contracts within `packages/contracts/contracts` are usually NOT considered backwards compatible and SHOULD be made against `develop` branch**.
 If you're changing or adding a contract and you're unsure about which branch to make a PR into, default to using the `develop` branch.
 
 ### Release candidate branches
