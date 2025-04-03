@@ -3,7 +3,7 @@
 <p><img src="./docs/assets/horizontal_logo.svg" width="800"></p>
 
 <p>
-<h3><a href="https://mantle.xyz">Website</a> &nbsp&nbsp | &nbsp&nbsp&nbsp<a href="https://docs-v2.mantle.xyz">Tech Docs</a>
+<h3><a href="https://mantle.xyz">Website</a> &nbsp&nbsp | &nbsp&nbsp&nbsp<a href="https://docs.mantle.xyz">Tech Docs</a>
 </p>
 
 <p>
@@ -30,19 +30,19 @@
 
 Mantle is a suite of Ethereum scaling solutions including an optimistic rollup and ZK rollup built using an iterative modular chain approach, and supported by Mantle’s native token $MNT.
 
-Mantle V2 is an upgrade of [Mantle V1](https://github.com/mantlenetworkio/mantle), tailored with specific adaptations to work seamlessly within the BedRock infrastructure.
+Mantle V2 is an upgrade of [Mantle V1](https://github.com/mantlenetworkio/mantle), tailored with specific adaptations to work seamlessly within the BedRock infrastructure and now incorporating the latest Everest upgrade.
 
 <br/>
 
 ## What's the difference?
 
-Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has realized significant enhancements, including support for reduced gas fees, shorter deposit times, optimized node performance, and improved Ethereum compatibility, among other benefits. For more detailed information, please refer to this [documentation](https://docs-v2.mantle.xyz/intro/whats-new-in-mantle-v2).
+Through its adaptations to the BedRock upgraded infrastructure, Mantle V2 has realized significant enhancements, including support for reduced gas fees, shorter deposit times, optimized node performance, and improved Ethereum compatibility, among other benefits. For more detailed information, please refer to this [documentation](https://docs.mantle.xyz/network/introduction/whats-new-in-mantle-v2-everest).
 
-Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, for example, Mantle Network will introduce a new DA scheme implemented using EigenDA technology called **MantleDA**.
+Furthermore, due to the modular design of the Mantle Network, it supports a diverse range of components at varying layers. In comparison to OP Stack-based Rollups adapted to complete BedRock upgrades, Mantle V2 offers support for a broader spectrum of technology stacks and modules, for example, Mantle Network introduces a new DA scheme, EigenDA, which can improve data management efficiency and security.
 
 Another significant enhancement involves the adoption of `$MNT` as the native token for Mantle Network, departing from the more common choice of `$ETH` in OP Stack implementations. This adjustment aligns the design more closely with Ethereum's native architecture, leading to reduced development and maintenance costs.
 
-> We encourage you to check out the [**Mantle tech docs**](https://docs-v2.mantle.xyz) to learn more about the inner workings of Mantle.
+> We encourage you to check out the [**Mantle tech docs**](https://docs.mantle.xyz) to learn more about the inner workings of Mantle.
 
 </br>
 
