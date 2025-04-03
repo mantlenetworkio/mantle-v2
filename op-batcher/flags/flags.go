@@ -70,12 +70,6 @@ var (
 		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
 	}
 
-	MantleDaNodeFlag = cli.IntFlag{
-		Name:   "mantle-da-node",
-		Usage:  "The number of nodes in MantleDA",
-		Value:  4,
-		EnvVar: opservice.PrefixEnvVar(EnvVarPrefix, "MANTLE_DA_NODE"),
-	}
 	SubSafetyMarginFlag = cli.Uint64Flag{
 		Name: "sub-safety-margin",
 		Usage: "The batcher tx submission safety margin (in #L1-blocks) to subtract " +
@@ -143,7 +137,6 @@ var optionalFlags = []cli.Flag{
 	GraphPollingDurationFlag,
 	GraphProviderFlag,
 	RollUpMaxSizeFlag,
-	MantleDaNodeFlag,
 }
 
 func init() {

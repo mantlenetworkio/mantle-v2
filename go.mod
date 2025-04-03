@@ -4,13 +4,10 @@ go 1.19
 
 replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v1.1.1
 
-replace github.com/Layr-Labs/datalayr/common v0.0.0 => ./datalayr/common
-
 replace github.com/ethereum-optimism/optimism/bss-core v0.0.0 => ./bss-core
 
 require (
 	cloud.google.com/go/kms v1.12.1
-	github.com/Layr-Labs/datalayr/common v0.0.0
 	github.com/Layr-Labs/eigenda/api v0.6.1
 	github.com/btcsuite/btcd v0.23.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1

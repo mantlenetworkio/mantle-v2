@@ -37,7 +37,6 @@ type OpNode struct {
 	l1Source      *sources.L1Client     // L1 Client to fetch data from
 	l2Driver      *driver.Driver        // L2 Engine to Sync
 	l2Source      *sources.EngineClient // L2 Execution Engine RPC bindings
-	daSyncer      *da.MantleDataStore
 	eigenDaSyncer *da.EigenDADataStore
 	rpcSync       *sources.SyncClient // Alt-sync RPC client, optional (may be nil)
 	server        *rpcServer          // RPC server hosting the rollup-node API
@@ -210,10 +209,9 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		return err
 	}
 
-	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
-	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, &cfg.DatastoreConfig, n.metrics)
+	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, n.metrics)
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer)
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer)
 
 	return nil
 }

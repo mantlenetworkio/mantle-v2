@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
-	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
@@ -24,6 +23,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/node"
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
@@ -60,8 +60,6 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	datastoreConfig := NewMantleDataStoreConfig(ctx)
-
 	syncConfig := NewSyncConfig(ctx)
 
 	daCfg, err := NewEigenDAConfig(ctx)
@@ -90,7 +88,6 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
 			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
 		},
-		DatastoreConfig:     datastoreConfig,
 		P2P:                 p2pConfig,
 		P2PSigner:           p2pSignerSetup,
 		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
@@ -227,23 +224,6 @@ func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
 	return logger, nil
 }
 
-func NewMantleDataStoreConfig(ctx *cli.Context) datastore.MantleDataStoreConfig {
-	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
-	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
-	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
-	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
-	mantleDaIndexerSocket := ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name)
-	mantleDAIndexerEnable := ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name)
-	return datastore.MantleDataStoreConfig{
-		RetrieverSocket:          retrieverSocket,
-		RetrieverTimeout:         retrieverTimeout,
-		GraphProvider:            graphProvider,
-		DataStorePollingDuration: dataStorePollingDuration,
-		MantleDaIndexerSocket:    mantleDaIndexerSocket,
-		MantleDAIndexerEnable:    mantleDAIndexerEnable,
-	}
-}
-
 func NewSyncConfig(ctx *cli.Context) *sync.Config {
 	return &sync.Config{
 		EngineSync:         ctx.Bool(flags.L2EngineSyncEnabled.Name),
@@ -251,11 +231,15 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 	}
 }
 
-func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
-	return eigenda.Config{
-		ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
-		DisperserUrl:        ctx.String(eigenda.EigenDADisperserUrlFlagName),
-		DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
-		RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
+func NewEigenDAConfig(ctx *cli.Context) (da.Config, error) {
+	return da.Config{
+		Config: eigenda.Config{
+			ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
+			DisperserUrl:        ctx.String(eigenda.EigenDADisperserUrlFlagName),
+			DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
+			RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
+		},
+		MantleDaIndexerSocket: ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name),
+		MantleDAIndexerEnable: ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name),
 	}, nil
 }

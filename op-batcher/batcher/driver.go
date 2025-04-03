@@ -10,16 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
@@ -128,32 +123,32 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, err
 	}
 	if rcfg.MantleDaSwitch {
-		if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
-			return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
-		}
-		dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
+		// if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
+		// 	return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
+		// }
+		// dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
 
-		if len(cfg.GraphProvider) == 0 {
-			return nil, fmt.Errorf("graph node provider url is empty")
-		}
-		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
-		if err != nil {
-			return nil, err
-		}
-		parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
-		if err != nil {
-			return nil, err
-		}
-		eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
-		if err != nil {
-			return nil, err
-		}
+		// if len(cfg.GraphProvider) == 0 {
+		// 	return nil, fmt.Errorf("graph node provider url is empty")
+		// }
+		// dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
-		batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
-		batcherCfg.DataLayrServiceManagerContract = dataLayrContract
-		batcherCfg.DataLayrServiceManagerABI = parsed
-		batcherCfg.GraphClient = graphClient
+		//graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
+		// batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
+		// batcherCfg.DataLayrServiceManagerContract = dataLayrContract
+		// batcherCfg.DataLayrServiceManagerABI = parsed
+		//batcherCfg.GraphClient = graphClient
 
 	}
 	return NewBatchSubmitter(ctx, batcherCfg, l, m)

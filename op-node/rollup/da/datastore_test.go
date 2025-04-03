@@ -7,73 +7,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Layr-Labs/datalayr/common/graphView"
 	"github.com/ethereum-optimism/optimism/l2geth/rlp"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/shurcooL/graphql"
 	"google.golang.org/protobuf/proto"
 )
 
-func TestMantleDataStore_RetrievalFramesFromDaIndexer(t *testing.T) {
-	type fields struct {
-		Ctx           context.Context
-		Cfg           *MantleDataStoreConfig
-		GraphClient   *graphView.GraphClient
-		GraphqlClient *graphql.Client
-	}
-	type args struct {
-		dataStoreId uint32
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		{
-			name: "t1",
-			fields: fields{
-				Ctx: context.Background(),
-				Cfg: &MantleDataStoreConfig{
-					MantleDaIndexerSocket: "da-indexer-api-sepolia-qa6.qa.gomantle.org:80",
-				},
-				GraphClient:   &graphView.GraphClient{},
-				GraphqlClient: &graphql.Client{},
-			},
-			args: args{
-				dataStoreId: 10138,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mda := &MantleDataStore{
-				Ctx:           tt.fields.Ctx,
-				Cfg:           tt.fields.Cfg,
-				GraphClient:   tt.fields.GraphClient,
-				GraphqlClient: tt.fields.GraphqlClient,
-			}
-			got, err := mda.RetrievalFramesFromDaIndexer(tt.args.dataStoreId)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MantleDataStore.RetrievalFramesFromDaIndexer() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			fmt.Println("got:", len(got))
-		})
-	}
-}
-
 func TestRetrieveBlob(t *testing.T) {
 	// da := eigenda.NewEigenDAClient(
-	cfg := eigenda.Config{
-		DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
-		ProxyUrl:            "http://127.0.0.1:3100",
-		DisperseBlobTimeout: 20 * time.Minute,
-		RetrieveBlobTimeout: 20 * time.Minute,
+	cfg := Config{
+		Config: eigenda.Config{
+			DisperserUrl:        "disperser-holesky.eigenda.xyz:443",
+			ProxyUrl:            "http://127.0.0.1:3100",
+			DisperseBlobTimeout: 20 * time.Minute,
+			RetrieveBlobTimeout: 20 * time.Minute,
+		},
 	}
 	// 	log.New(context.Background()),
 	// 	nil,
@@ -86,7 +36,7 @@ func TestRetrieveBlob(t *testing.T) {
 		return
 	}
 	frame := calldataFrame.Value.(*op_service.CalldataFrame_FrameRef)
-	da := NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil, nil)
+	da := NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil)
 	fmt.Printf("%x\n%x\n", frame.FrameRef.BatchHeaderHash, frame.FrameRef.Commitment)
 	data, err := da.RetrieveBlob(frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex, nil)
 	if err != nil {
@@ -116,15 +66,14 @@ func TestRetrieveBlob(t *testing.T) {
 
 func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
 	tests := []struct {
-		name         string
-		daConfig     eigenda.Config
-		mantleConfig MantleDataStoreConfig
-		query        string
-		wantErr      bool
+		name     string
+		daConfig Config
+		query    string
+		wantErr  bool
 	}{
 		{
 			name: "successful",
-			mantleConfig: MantleDataStoreConfig{
+			daConfig: Config{
 				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:443",
 				MantleDAIndexerEnable: true,
 			},
@@ -133,7 +82,7 @@ func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
 		},
 		{
 			name: "invalid endpoint",
-			mantleConfig: MantleDataStoreConfig{
+			daConfig: Config{
 				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:80",
 				MantleDAIndexerEnable: true,
 			},
@@ -142,7 +91,7 @@ func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
 		},
 		{
 			name: "invalid query",
-			mantleConfig: MantleDataStoreConfig{
+			daConfig: Config{
 				MantleDaIndexerSocket: "da-index-grpc-sepolia-qa7.s7.gomantle.org:443",
 				MantleDAIndexerEnable: true,
 			},
@@ -153,7 +102,7 @@ func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &tt.daConfig, &tt.mantleConfig, nil)
+			eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &tt.daConfig, nil)
 
 			if !eigenDaSyncer.IsDaIndexer() {
 				t.Fatal("DA indexer should be enabled")

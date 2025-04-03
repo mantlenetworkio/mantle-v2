@@ -11,9 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
-
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
@@ -60,7 +57,6 @@ type Config struct {
 	DataLayrServiceManagerAddr     common.Address
 	DataLayrServiceManagerContract *bindings.ContractDataLayrServiceManager
 	DataLayrServiceManagerABI      *abi.ABI
-	GraphClient                    *graphView.GraphClient
 
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
@@ -165,7 +161,6 @@ type CLIConfig struct {
 	PprofConfig      oppprof.CLIConfig
 	CompressorConfig compressor.CLIConfig
 
-	EigenLogConfig logging.Config
 	EigenDAConfig  eigenda.CLIConfig
 	SkipEigenDaRpc bool
 }
@@ -219,7 +214,6 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
 		GraphProvider:          ctx.GlobalString(flags.GraphProviderFlag.Name),
 		RollupMaxSize:          ctx.GlobalUint64(flags.RollUpMaxSizeFlag.Name),
-		MantleDaNodes:          ctx.GlobalInt(flags.MantleDaNodeFlag.Name),
 		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
 		SkipEigenDaRpc:         ctx.GlobalBool(flags.SkipEigenDaRpcFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
@@ -228,7 +222,6 @@ func NewConfig(ctx *cli.Context) CLIConfig {
 		MetricsConfig:          opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:            oppprof.ReadCLIConfig(ctx),
 		CompressorConfig:       compressor.ReadCLIConfig(ctx),
-		EigenLogConfig:         logging.ReadCLIConfig(ctx),
 		EigenDAConfig:          eigenda.ReadCLIConfig(ctx),
 	}
 }
