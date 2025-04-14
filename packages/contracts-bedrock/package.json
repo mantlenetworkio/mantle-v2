@@ -78,7 +78,7 @@
     "command-exists": "1.2.9",
     "dotenv": "^16.0.0",
     "ds-test": "https://github.com/dapphub/ds-test.git#9310e879db8ba3ea6d5c6489a579118fd264a3f5",
-    "ethereum-waffle": "^3.0.0",
+    "ethereum-waffle": "^4.0.10",
     "forge-std": "https://github.com/foundry-rs/forge-std.git#46264e9788017fc74f9f58b7efa0bc6e1df6d410",
     "glob": "^7.1.6",
     "hardhat": "^2.9.6",
