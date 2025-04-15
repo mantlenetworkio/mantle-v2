@@ -25,7 +25,7 @@ import (
 // correctly identifies when a pending channel is timed out.
 func TestPendingChannelTimeout(t *testing.T) {
 	// Create a new channel manager with a ChannelTimeout
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		ChannelTimeout: 100,
 	}, nil)
@@ -68,7 +68,7 @@ func TestPendingChannelTimeout(t *testing.T) {
 // TestChannelManagerReturnsErrReorg ensures that the channel manager
 // detects a reorg when it has cached L1 blocks.
 func TestChannelManagerReturnsErrReorg(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	a := types.NewBlock(&types.Header{
@@ -98,7 +98,7 @@ func TestChannelManagerReturnsErrReorg(t *testing.T) {
 // TestChannelManagerReturnsErrReorgWhenDrained ensures that the channel manager
 // detects a reorg even if it does not have any blocks inside it.
 func TestChannelManagerReturnsErrReorgWhenDrained(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize: 120_000,
@@ -123,7 +123,7 @@ func TestChannelManagerReturnsErrReorgWhenDrained(t *testing.T) {
 
 // TestChannelManagerNextTxData checks the nextTxData function.
 func TestChannelManagerNextTxData(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	// Nil pending channel should return EOF
@@ -166,7 +166,7 @@ func TestChannelManager_Clear(t *testing.T) {
 	require := require.New(t)
 
 	// Create a channel manager
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		// Need to set the channel timeout here so we don't clear pending
@@ -241,7 +241,7 @@ func TestChannelManager_Clear(t *testing.T) {
 // TestChannelManagerTxConfirmed checks the [ChannelManager.TxConfirmed] function.
 func TestChannelManagerTxConfirmed(t *testing.T) {
 	// Create a channel manager
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		// Need to set the channel timeout here so we don't clear pending
 		// channels on confirmation. This would result in [TxConfirmed]
@@ -294,7 +294,7 @@ func TestChannelManagerTxConfirmed(t *testing.T) {
 // TestChannelManagerTxFailed checks the [ChannelManager.TxFailed] function.
 func TestChannelManagerTxFailed(t *testing.T) {
 	// Create a channel manager
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{}, nil)
 
 	// Let's add a valid pending transaction to the channel
@@ -336,7 +336,7 @@ func TestChannelManagerTxFailed(t *testing.T) {
 func TestChannelManager_TxResend(t *testing.T) {
 	require := require.New(t)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize: 120_000,
@@ -379,7 +379,7 @@ func TestChannelManager_TxResend(t *testing.T) {
 func TestChannelManagerCloseBeforeFirstUse(t *testing.T) {
 	require := require.New(t)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize:   100,
@@ -406,7 +406,7 @@ func TestChannelManagerCloseBeforeFirstUse(t *testing.T) {
 // channel frames.
 func TestChannelManagerCloseNoPendingChannel(t *testing.T) {
 	require := require.New(t)
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize:   100,
@@ -445,7 +445,7 @@ func TestChannelManagerCloseNoPendingChannel(t *testing.T) {
 // new channel frames after this point.
 func TestChannelManagerClosePendingChannel(t *testing.T) {
 	require := require.New(t)
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize:   1000,
@@ -490,7 +490,7 @@ func TestChannelManagerClosePendingChannel(t *testing.T) {
 // have successfully landed on chain.
 func TestChannelManagerCloseAllTxsFailed(t *testing.T) {
 	require := require.New(t)
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics,
 		ChannelConfig{
 			MaxFrameSize:   1000,

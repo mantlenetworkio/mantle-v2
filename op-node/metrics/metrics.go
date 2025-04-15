@@ -66,7 +66,7 @@ type Metricer interface {
 	Document() []metrics.DocumentedMetric
 	RecordChannelInputBytes(num int)
 
-	// MantleDA
+	// DA
 	RecordParseDataStoreId(dataStoreId uint32)
 	RecordFrames(frameSize int)
 

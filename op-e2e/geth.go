@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
+
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -15,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
@@ -130,7 +133,7 @@ func initL1Geth(cfg *SystemConfig, genesis *core.Genesis, opts ...GethOption) (*
 		return nil, nil, err
 	}
 	// Activate merge
-	l1Eth.Merger().FinalizePoS()
+	//l1Eth.Merger().FinalizePoS()
 
 	// Instead of running a whole beacon node, we run this fake-proof-of-stake sidecar that sequences L1 blocks using the Engine API.
 	l1Node.RegisterLifecycle(&fakePoS{
@@ -264,19 +267,19 @@ type GethOption func(ethCfg *ethconfig.Config, nodeCfg *node.Config) error
 // init a geth node.
 func initL2Geth(name string, l2ChainID *big.Int, genesis *core.Genesis, jwtPath string, opts ...GethOption) (*node.Node, *eth.Ethereum, error) {
 	ethConfig := &ethconfig.Config{
-		NetworkId: l2ChainID.Uint64(),
-		Genesis:   genesis,
+		NetworkId:   genesis.Config.ChainID.Uint64(),
+		Genesis:     genesis,
+		StateScheme: rawdb.HashScheme,
 		Miner: miner.Config{
-			Etherbase:         common.Address{},
-			Notify:            nil,
-			NotifyFull:        false,
-			ExtraData:         nil,
-			GasFloor:          0,
-			GasCeil:           0,
-			GasPrice:          nil,
-			Recommit:          0,
-			Noverify:          false,
-			NewPayloadTimeout: 0,
+			PendingFeeRecipient: common.Address{},
+			ExtraData:           nil,
+			GasCeil:             0,
+			GasPrice:            nil,
+			// enough to build blocks within 1 second, but high enough to avoid unnecessary test CPU cycles.
+			Recommit: time.Millisecond * 400,
+		},
+		TxPool: legacypool.Config{
+			NoLocals: true,
 		},
 	}
 	nodeConfig := &node.Config{
@@ -340,6 +343,7 @@ func createGethNode(l2 bool, nodeCfg *node.Config, ethCfg *ethconfig.Config, pri
 
 	// PR 25459 changed this to only default in CLI, but not in default programmatic RPC selection.
 	// PR 25642 fixed it for the mobile version only...
+	// TODO: recover this once we have a new version of op-geth
 	utils.RegisterFilterAPI(n, backend.APIBackend, ethCfg)
 
 	n.RegisterAPIs(tracers.APIs(backend.APIBackend))

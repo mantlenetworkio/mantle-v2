@@ -612,7 +612,7 @@ func TestSystemRPCAltSync(t *testing.T) {
 		key:  "afterRollupNodeStart",
 		role: "sequencer",
 		action: func(sCfg *SystemConfig, system *System) {
-			rpc, _ := system.Nodes["sequencer"].Attach() // never errors
+			rpc := system.Nodes["sequencer"].Attach() // never errors
 			cfg.Nodes["verifier"].L2Sync = &rollupNode.PreparedL2SyncEndpoint{
 				Client: client.NewBaseRPCClient(rpc),
 			}
@@ -714,7 +714,7 @@ func TestSystemP2PAltSync(t *testing.T) {
 	// set up our syncer node, connect it to alice/bob
 	cfg.Loggers["syncer"] = testlog.Logger(t, log.LvlInfo).New("role", "syncer")
 	snapLog := log.New()
-	snapLog.SetHandler(log.DiscardHandler())
+	//snapLog.SetHandler(log.DiscardHandler())
 
 	// Create a peer, and hook up alice and bob
 	h, err := sys.Mocknet.GenPeer()
@@ -764,7 +764,7 @@ func TestSystemP2PAltSync(t *testing.T) {
 	_, err = sys.Mocknet.ConnectPeers(sys.RollupNodes["bob"].P2P().Host().ID(), syncerNode.P2P().Host().ID())
 	require.NoError(t, err)
 
-	rpc, err := syncerL2Engine.Attach()
+	rpc := syncerL2Engine.Attach()
 	require.NoError(t, err)
 	l2Verif := ethclient.NewClient(rpc)
 

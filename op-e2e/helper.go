@@ -4,8 +4,6 @@ import (
 	"flag"
 	"os"
 	"testing"
-
-	"github.com/ethereum/go-ethereum/log"
 )
 
 var enableParallelTesting bool = true
@@ -30,8 +28,5 @@ func InitParallel(t *testing.T) {
 	t.Helper()
 	if enableParallelTesting {
 		t.Parallel()
-	}
-	if !verboseGethNodes {
-		log.Root().SetHandler(log.DiscardHandler())
 	}
 }

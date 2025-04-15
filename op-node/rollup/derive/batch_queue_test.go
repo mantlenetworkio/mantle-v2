@@ -77,7 +77,7 @@ func L1Chain(l1Times []uint64) []eth.L1BlockRef {
 // when the safehead's origin is ahead of the pipeline's origin (as is after a reset).
 // This issue was fixed in https://github.com/ethereum-optimism/optimism/pull/3694
 func TestBatchQueueNewOrigin(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	l1 := L1Chain([]uint64{10, 15, 20, 25})
 	safeHead := eth.L2BlockRef{
 		Hash:           mockHash(10, 2),
@@ -136,7 +136,7 @@ func TestBatchQueueNewOrigin(t *testing.T) {
 // TestBatchQueueEager adds a bunch of contiguous batches and asserts that
 // enough calls to `NextBatch` return all of those batches.
 func TestBatchQueueEager(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	l1 := L1Chain([]uint64{10, 20, 30})
 	safeHead := eth.L2BlockRef{
 		Hash:           mockHash(10, 2),
@@ -277,7 +277,7 @@ func TestBatchQueueInvalidInternalAdvance(t *testing.T) {
 }
 
 func TestBatchQueueMissing(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	l1 := L1Chain([]uint64{10, 15, 20, 25})
 	safeHead := eth.L2BlockRef{
 		Hash:           mockHash(10, 2),

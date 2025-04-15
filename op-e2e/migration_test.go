@@ -269,7 +269,6 @@ func TestMigration(t *testing.T) {
 
 	// Don't log state snapshots in test output
 	snapLog := log.New()
-	snapLog.SetHandler(log.DiscardHandler())
 	rollupNodeConfig := &node.Config{
 		L1: &node.L1EndpointConfig{
 			L1NodeAddr:       forkedL1URL,
@@ -345,7 +344,7 @@ func TestMigration(t *testing.T) {
 		PollInterval:    50 * time.Millisecond,
 		TxMgrConfig:     newTxMgrConfig(forkedL1URL, secrets.Batcher),
 		LogConfig: oplog.CLIConfig{
-			Level:  "info",
+			Level:  log.LevelInfo,
 			Format: "text",
 		},
 	}, lgr.New("module", "batcher"), batchermetrics.NoopMetrics)
@@ -364,7 +363,7 @@ func TestMigration(t *testing.T) {
 		AllowNonFinalized: true,
 		TxMgrConfig:       newTxMgrConfig(forkedL1URL, secrets.Proposer),
 		LogConfig: oplog.CLIConfig{
-			Level:  "info",
+			Level:  log.LevelInfo,
 			Format: "text",
 		},
 	}, lgr.New("module", "proposer"), proposermetrics.NoopMetrics)

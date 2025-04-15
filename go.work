@@ -1,9 +1,7 @@
-go 1.18
-
+go 1.23
 
 use (
 	.
 	packages/contracts-bedrock/test-case-generator
 	bss-core
-	l2geth
 )

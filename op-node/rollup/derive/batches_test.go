@@ -517,7 +517,7 @@ func TestValidBatch(t *testing.T) {
 	}
 
 	// Log level can be increased for debugging purposes
-	logger := testlog.Logger(t, log.LvlError)
+	logger := testlog.Logger(t, log.LevelError)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {

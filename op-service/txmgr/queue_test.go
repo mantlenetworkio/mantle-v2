@@ -178,7 +178,7 @@ func TestSend(t *testing.T) {
 				name:    "TEST",
 				cfg:     conf,
 				backend: backend,
-				l:       testlog.Logger(t, log.LvlCrit),
+				l:       testlog.Logger(t, log.LevelCrit),
 				metr:    &metrics.NoopTxMetrics{},
 			}
 

@@ -26,7 +26,7 @@ import (
 )
 
 func TestOutputAtBlock(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 
 	// Test data for Merkle Patricia Trie: proof the eth2 deposit contract account contents (mainnet).
 	headerTestData := `
@@ -132,7 +132,7 @@ func TestOutputAtBlock(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
 	rpcCfg := &RPCConfig{
@@ -172,7 +172,7 @@ func randomSyncStatus(rng *rand.Rand) *eth.SyncStatus {
 }
 
 func TestSyncStatus(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
 	rng := rand.New(rand.NewSource(1234))

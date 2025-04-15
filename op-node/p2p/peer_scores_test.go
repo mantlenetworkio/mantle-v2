@@ -42,7 +42,7 @@ func (testSuite *PeerScoresTestSuite) SetupTest() {
 	bandScorer, err := p2p.NewBandScorer("0:graylist;")
 	testSuite.NoError(err)
 	testSuite.bandScorer = *bandScorer
-	testSuite.logger = testlog.Logger(testSuite.T(), log.LvlError)
+	testSuite.logger = testlog.Logger(testSuite.T(), log.LevelError)
 }
 
 // TestPeerScores runs the PeerScoresTestSuite.
@@ -65,7 +65,7 @@ func getNetHosts(testSuite *PeerScoresTestSuite, ctx context.Context, n int) []h
 func newGossipSubs(testSuite *PeerScoresTestSuite, ctx context.Context, hosts []host.Host) []*pubsub.PubSub {
 	var psubs []*pubsub.PubSub
 
-	logger := testlog.Logger(testSuite.T(), log.LvlCrit)
+	logger := testlog.Logger(testSuite.T(), log.LevelCrit)
 
 	// For each host, create a default gossipsub router.
 	for _, h := range hosts {

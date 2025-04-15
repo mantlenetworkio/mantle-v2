@@ -7,6 +7,7 @@ import (
 type UpgradeChainConfig struct {
 	ChainID              *big.Int `json:"chainId"`                 // chainId identifies the current chain and is used for replay protection
 	EigenDaUpgradeHeight *big.Int `json:"Eigen_da_upgrade_height"` // Upgrade Da from MantleDA to EigenDA
+	SkadiTime            *uint64  `json:"skadi_time,omitempty"`    // Skadi time
 }
 
 // chain config
@@ -70,4 +71,9 @@ func (cfg *UpgradeChainConfig) IsUseEigenDa(l2Block *big.Int) bool {
 		return true
 	}
 	return false
+}
+
+// IsSkadi returns true if the Skadi hardfork is active at or past the given timestamp.
+func (cfg *UpgradeChainConfig) IsSkadi(timestamp uint64) bool {
+	return cfg.SkadiTime != nil && timestamp >= *cfg.SkadiTime
 }

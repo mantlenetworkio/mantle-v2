@@ -71,7 +71,7 @@ func setupSyncTestData(length uint64) (*rollup.Config, map[uint64]*eth.Execution
 func TestSinglePeerSync(t *testing.T) {
 	t.Parallel() // Takes a while, but can run in parallel
 
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 
 	cfg, payloads, l2Ref := setupSyncTestData(25)
 
@@ -131,7 +131,7 @@ func TestSinglePeerSync(t *testing.T) {
 func TestMultiPeerSync(t *testing.T) {
 	t.Parallel() // Takes a while, but can run in parallel
 
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 
 	cfg, payloads, l2Ref := setupSyncTestData(100)
 

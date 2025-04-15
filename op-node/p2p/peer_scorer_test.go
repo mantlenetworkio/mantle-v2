@@ -32,7 +32,7 @@ func (testSuite *PeerScorerTestSuite) SetupTest() {
 	bandScorer, err := p2p.NewBandScorer("-40:graylist;0:friend;")
 	testSuite.NoError(err)
 	testSuite.bandScorer = bandScorer
-	testSuite.logger = testlog.Logger(testSuite.T(), log.LvlError)
+	testSuite.logger = testlog.Logger(testSuite.T(), log.LevelError)
 }
 
 // TestPeerScorer runs the PeerScorerTestSuite.

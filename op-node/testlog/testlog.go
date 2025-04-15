@@ -18,12 +18,20 @@
 package testlog
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"fmt"
+	"log/slog"
 	"os"
+	"path"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -40,21 +48,8 @@ func init() {
 type Testing interface {
 	Logf(format string, args ...any)
 	Helper()
-}
-
-// Handler returns a log handler which logs to the unit test log of t.
-func Handler(t Testing, level log.Lvl) log.Handler {
-	return log.LvlFilterHandler(level, &handler{t, log.TerminalFormat(false)})
-}
-
-type handler struct {
-	t   Testing
-	fmt log.Format
-}
-
-func (h *handler) Log(r *log.Record) error {
-	h.t.Logf("%s", h.fmt.Format(r))
-	return nil
+	Name() string
+	Cleanup(func())
 }
 
 // logger implements log.Logger such that all output goes to the unit test log via
@@ -62,32 +57,89 @@ func (h *handler) Log(r *log.Record) error {
 // helpers, so the file and line number in unit test output correspond to the call site
 // which emitted the log message.
 type logger struct {
-	t  Testing
-	l  log.Logger
-	mu *sync.Mutex
-	h  *bufHandler
-}
-
-type bufHandler struct {
-	buf []*log.Record
-	fmt log.Format
-}
-
-func (h *bufHandler) Log(r *log.Record) error {
-	h.buf = append(h.buf, r)
-	return nil
+	t   Testing
+	l   log.Logger
+	mu  *sync.Mutex
+	buf *bytes.Buffer
 }
 
 // Logger returns a logger which logs to the unit test log of t.
-func Logger(t Testing, level log.Lvl) log.Logger {
-	l := &logger{
-		t:  t,
-		l:  log.New(),
-		mu: new(sync.Mutex),
-		h:  &bufHandler{fmt: log.TerminalFormat(useColorInTestLog)},
+func Logger(t Testing, level slog.Level) log.Logger {
+	return LoggerWithHandlerMod(t, level, func(h slog.Handler) slog.Handler { return h })
+}
+
+func LoggerWithHandlerMod(t Testing, level slog.Level, handlerMod func(slog.Handler) slog.Handler) log.Logger {
+	l := &logger{t: t, mu: new(sync.Mutex), buf: new(bytes.Buffer)}
+
+	var handler slog.Handler
+	if outdir := os.Getenv("OP_TESTLOG_FILE_LOGGER_OUTDIR"); outdir != "" {
+		handler = fileHandler(t, outdir, level)
 	}
-	l.l.SetHandler(log.LvlFilterHandler(level, l.h))
+
+	// Check if handler is nil here because setupFileLogger will return nil if it fails to
+	// create the logfile.
+	if handler == nil {
+		handler = log.NewTerminalHandlerWithLevel(l.buf, level, useColorInTestLog)
+	}
+
+	handler = handlerMod(handler)
+	l.l = log.NewLogger(handler)
+
 	return l
+}
+
+var (
+	alnumRegexp = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	flMtx       sync.Mutex
+	flHandlers  = make(map[string]slog.Handler)
+	rootSetup   sync.Once
+)
+
+func fileHandler(t Testing, outdir string, level slog.Level) slog.Handler {
+	rootSetup.Do(func() {
+		f, err := os.OpenFile(path.Join(outdir, fmt.Sprintf("root-%d.log", os.Getpid())), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			t.Logf("failed to open root log file: %v", err)
+			return
+		}
+
+		rootHdlr := log.NewTerminalHandlerWithLevel(bufio.NewWriter(f), level, false)
+		oplog.SetGlobalLogHandler(rootHdlr)
+		t.Logf("redirecting root logger to %s", f.Name())
+	})
+
+	testName := fmt.Sprintf(
+		"%s-%d.log",
+		alnumRegexp.ReplaceAllString(strings.ReplaceAll(t.Name(), "/", "-"), ""),
+		os.Getpid(),
+	)
+
+	flMtx.Lock()
+	defer flMtx.Unlock()
+
+	if h, ok := flHandlers[testName]; ok {
+		return h
+	}
+
+	logPath := path.Join(outdir, testName)
+	dw := newDeferredWriter(logPath)
+	t.Cleanup(func() {
+		if err := dw.Close(); err != nil {
+			t.Logf("failed to close log file %s: %v", logPath, err)
+		}
+
+		flMtx.Lock()
+		delete(flHandlers, testName)
+		flMtx.Unlock()
+	})
+	t.Logf("writing test log to %s", logPath)
+	h := log.NewTerminalHandlerWithLevel(dw, level, false)
+	flHandlers[testName] = h
+	return h
+}
+
+func (l *logger) Handler() slog.Handler {
+	return l.l.Handler()
 }
 
 func (l *logger) Trace(msg string, ctx ...any) {
@@ -134,20 +186,34 @@ func (l *logger) Crit(msg string, ctx ...any) {
 	l.t.Helper()
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.l.Crit(msg, ctx...)
+	// We can't use l.l.Crit because that will exit the program before we can flush the buffer.
+	l.l.Write(log.LevelCrit, msg, ctx...)
+	l.flush()
+	os.Exit(1)
+}
+
+func (l *logger) Log(level slog.Level, msg string, ctx ...any) {
+	l.t.Helper()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.l.Log(level, msg, ctx...)
 	l.flush()
 }
 
+func (l *logger) Write(level slog.Level, msg string, ctx ...any) {
+	l.Log(level, msg, ctx...)
+}
+
 func (l *logger) New(ctx ...any) log.Logger {
-	return &logger{l.t, l.l.New(ctx...), l.mu, l.h}
+	return &logger{l.t, l.l.New(ctx...), l.mu, l.buf}
 }
 
-func (l *logger) GetHandler() log.Handler {
-	return l.l.GetHandler()
+func (l *logger) With(ctx ...any) log.Logger {
+	return l.New(ctx...)
 }
 
-func (l *logger) SetHandler(h log.Handler) {
-	l.l.SetHandler(h)
+func (l *logger) Enabled(ctx context.Context, level slog.Level) bool {
+	return l.l.Enabled(ctx, level)
 }
 
 // flush writes all buffered messages and clears the buffer.
@@ -160,10 +226,23 @@ func (l *logger) flush() {
 	if decorationLen <= padLength {
 		padding = padLength - decorationLen
 	}
-	for _, r := range l.h.buf {
-		l.t.Logf("%*s%s", padding, "", l.h.fmt.Format(r))
+
+	scanner := bufio.NewScanner(l.buf)
+	for scanner.Scan() {
+		l.internalFlush("%*s%s", padding, "", scanner.Text())
 	}
-	l.h.buf = nil
+	l.buf.Reset()
+}
+
+func (l *logger) internalFlush(format string, args ...any) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warn("testlog: panic during flush", "recover", r)
+		}
+	}()
+
+	l.t.Helper()
+	l.t.Logf(format, args...)
 }
 
 // The Go testing lib uses the runtime package to get info about the calling site, and then decorates the line.
@@ -192,4 +271,43 @@ func estimateInfoLen(frameSkip int) int {
 	} else {
 		return 8
 	}
+}
+
+type deferredWriter struct {
+	name  string
+	w     *bufio.Writer
+	close func() error
+	mtx   sync.Mutex
+}
+
+func newDeferredWriter(name string) *deferredWriter {
+	return &deferredWriter{name: name}
+}
+
+func (w *deferredWriter) Write(p []byte) (n int, err error) {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+
+	if w.w == nil {
+		f, err := os.OpenFile(w.name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return 0, err
+		}
+		w.w = bufio.NewWriter(f)
+		w.close = f.Close
+	}
+
+	return w.w.Write(p)
+}
+
+func (w *deferredWriter) Close() error {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+	if w.w == nil {
+		return nil
+	}
+	if err := w.w.Flush(); err != nil {
+		return err
+	}
+	return w.close()
 }

@@ -22,7 +22,7 @@ type PeerGaterTestSuite struct {
 // SetupTest sets up the test suite.
 func (testSuite *PeerGaterTestSuite) SetupTest() {
 	testSuite.mockGater = &p2pMocks.ConnectionGater{}
-	testSuite.logger = testlog.Logger(testSuite.T(), log.LvlError)
+	testSuite.logger = testlog.Logger(testSuite.T(), log.LevelError)
 }
 
 // TestPeerGater runs the PeerGaterTestSuite.

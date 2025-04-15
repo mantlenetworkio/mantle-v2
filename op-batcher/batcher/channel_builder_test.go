@@ -139,7 +139,7 @@ func newMiniL2BlockWithNumberParent(numTx int, number *big.Int, parent common.Ha
 		BaseFee:    big.NewInt(10),
 		Difficulty: common.Big0,
 		Number:     big.NewInt(100),
-	}, nil, nil, nil, trie.NewStackTrie(nil))
+	}, nil, nil, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 	l1InfoTx, err := derive.L1InfoDeposit(0, eth.BlockToInfo(l1Block), eth.SystemConfig{}, false)
 	if err != nil {
 		panic(err)

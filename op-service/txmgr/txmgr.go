@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -580,33 +579,48 @@ func (m *SimpleTxManager) increaseGasPrice(ctx context.Context, tx *types.Transa
 	return signedTx
 }
 
-// suggestGasPriceCaps suggests what the new tip & new basefee should be based on the current L1 conditions
+// SuggestGasPriceCaps suggests what the new tip, base fee, and blob base fee should be based on
+// the current L1 conditions. `blobBaseFee` will be nil if 4844 is not yet active.
+// Note that an error will be returned if MaxTipCap or MaxBaseFee is exceeded.
 func (m *SimpleTxManager) suggestGasPriceCaps(ctx context.Context) (*big.Int, *big.Int, *big.Int, error) {
 	cCtx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 	defer cancel()
-	tip, err := m.backend.SuggestGasTipCap(cCtx)
+
+	estimatorFn := DefaultGasPriceEstimatorFn
+
+	tip, baseFee, blobFee, err := estimatorFn(cCtx, m.backend)
 	if err != nil {
 		m.metr.RPCError()
-		return nil, nil, nil, fmt.Errorf("failed to fetch the suggested gas tip cap: %w", err)
-	} else if tip == nil {
-		return nil, nil, nil, errors.New("the suggested tip was nil")
-	}
-	cCtx, cancel = context.WithTimeout(ctx, m.cfg.NetworkTimeout)
-	defer cancel()
-	head, err := m.backend.HeaderByNumber(cCtx, nil)
-	if err != nil {
-		m.metr.RPCError()
-		return nil, nil, nil, fmt.Errorf("failed to fetch the suggested basefee: %w", err)
-	} else if head.BaseFee == nil {
-		return nil, nil, nil, errors.New("txmgr does not support pre-london blocks that do not have a basefee")
+		return nil, nil, nil, fmt.Errorf("failed to get gas price estimates: %w", err)
 	}
 
-	var blobFee *big.Int
-	if head.ExcessBlobGas != nil {
-		blobFee = eip4844.CalcBlobFee(*head.ExcessBlobGas)
+	m.metr.RecordTipCap(tip)
+	m.metr.RecordBaseFee(baseFee)
+	m.metr.RecordBlobBaseFee(blobFee)
+
+	// Enforce minimum base fee and tip cap
+	minTipCap := m.cfg.MinTipCap
+	maxTipCap := m.cfg.MaxTipCap
+	minBaseFee := m.cfg.MinBaseFee
+	maxBaseFee := m.cfg.MaxBaseFee
+
+	if minTipCap != nil && tip.Cmp(minTipCap) == -1 {
+		m.l.Debug("Enforcing min tip cap", "minTipCap", minTipCap, "origTipCap", tip)
+		tip = new(big.Int).Set(minTipCap)
+	}
+	if maxTipCap != nil && tip.Cmp(maxTipCap) > 0 {
+		return nil, nil, nil, fmt.Errorf("tip is too high: %v, cap:%v", tip, maxTipCap)
 	}
 
-	return tip, head.BaseFee, blobFee, nil
+	if minBaseFee != nil && baseFee.Cmp(minBaseFee) == -1 {
+		m.l.Debug("Enforcing min base fee", "minBaseFee", minBaseFee, "origBaseFee", baseFee)
+		baseFee = new(big.Int).Set(minBaseFee)
+	}
+	if maxBaseFee != nil && baseFee.Cmp(maxBaseFee) > 0 {
+		return nil, nil, nil, fmt.Errorf("baseFee is too high: %v, cap:%v", baseFee, maxBaseFee)
+	}
+
+	return tip, baseFee, blobFee, nil
 }
 
 // calcThresholdValue returns ceil(x * priceBumpPercent / 100) for non-blob txs, or
@@ -685,8 +699,8 @@ func MakeSidecar(blobs []*eth.Blob) (*types.BlobTxSidecar, []common.Hash, error)
 	sidecar := &types.BlobTxSidecar{}
 	blobHashes := []common.Hash{}
 	for i, blob := range blobs {
-		rawBlob := *blob.KZGBlob()
-		sidecar.Blobs = append(sidecar.Blobs, rawBlob)
+		rawBlob := blob.KZGBlob()
+		sidecar.Blobs = append(sidecar.Blobs, *rawBlob)
 		commitment, err := kzg4844.BlobToCommitment(rawBlob)
 		if err != nil {
 			return nil, nil, fmt.Errorf("cannot compute KZG commitment of blob %d in tx candidate: %w", i, err)

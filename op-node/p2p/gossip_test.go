@@ -20,7 +20,7 @@ import (
 )
 
 func TestGuardGossipValidator(t *testing.T) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	val := guardGossipValidator(logger, func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 		if id == "mallory" {
 			panic("mallory was here")
@@ -41,7 +41,7 @@ func TestGuardGossipValidator(t *testing.T) {
 }
 
 func TestVerifyBlockSignature(t *testing.T) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	cfg := &rollup.Config{
 		L2ChainID: big.NewInt(100),
 	}

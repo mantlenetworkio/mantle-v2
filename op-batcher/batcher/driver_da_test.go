@@ -33,7 +33,7 @@ import (
 )
 
 func TestIsChannelFull(t *testing.T) {
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 	m := NewChannelManager(log, metrics.NoopMetrics, ChannelConfig{
 		ChannelTimeout: 100,
 	}, nil)

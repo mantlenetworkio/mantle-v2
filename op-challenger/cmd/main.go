@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	challenger "github.com/ethereum-optimism/optimism/op-challenger/challenger"
@@ -77,9 +76,6 @@ func run(args []string, action ConfigAction) error {
 
 func setupLogging(ctx *cli.Context) (log.Logger, error) {
 	logCfg := oplog.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		return nil, fmt.Errorf("log config error: %w", err)
-	}
 	logger := oplog.NewLogger(logCfg)
 	return logger, nil
 }

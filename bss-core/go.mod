@@ -1,6 +1,6 @@
 module github.com/ethereum-optimism/optimism/bss-core
 
-go 1.18
+go 1.23
 
 require (
 	cloud.google.com/go v0.65.0

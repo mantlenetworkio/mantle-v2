@@ -266,7 +266,7 @@ func TestGarbageBatch(gt *testing.T) {
 	dp := e2eutils.MakeDeployParams(t, p)
 	for _, garbageKind := range GarbageKinds {
 		sd := e2eutils.Setup(t, dp, defaultAlloc)
-		log := testlog.Logger(t, log.LvlError)
+		log := testlog.Logger(t, log.LevelError)
 		miner, engine, sequencer := setupSequencerTest(t, sd, log)
 
 		_, verifier := setupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), &sync.Config{})
@@ -348,7 +348,7 @@ func TestExtendedTimeWithoutL1Batches(gt *testing.T) {
 	}
 	dp := e2eutils.MakeDeployParams(t, p)
 	sd := e2eutils.Setup(t, dp, defaultAlloc)
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	miner, engine, sequencer := setupSequencerTest(t, sd, log)
 
 	_, verifier := setupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), &sync.Config{})
