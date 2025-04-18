@@ -18,24 +18,23 @@ import (
 
 type L1ClientConfig struct {
 	EthClientConfig
-
-	L1BlockRefsCacheSize int
 }
 
 func L1ClientDefaultConfig(config *rollup.Config, trustRPC bool, kind RPCProviderKind) *L1ClientConfig {
 	// Cache 3/2 worth of sequencing window of receipts and txs
 	span := int(config.SeqWindowSize) * 3 / 2
-	fullSpan := span
-	if span > 1000 { // sanity cap. If a large sequencing window is configured, do not make the cache too large
-		span = 1000
-	}
+	return &L1ClientSimpleConfig(trustRPC, kind, span)
+}
+
+func L1ClientSimpleConfig(trustRPC bool, kind RPCProviderKind, cacheSize int) *L1ClientConfig {
+
 	return &L1ClientConfig{
 		EthClientConfig: EthClientConfig{
 			// receipts and transactions are cached per block
-			ReceiptsCacheSize:     span,
-			TransactionsCacheSize: span,
-			HeadersCacheSize:      span,
-			PayloadsCacheSize:     span,
+			ReceiptsCacheSize:     cacheSize,
+			TransactionsCacheSize: cacheSize,
+			HeadersCacheSize:      cacheSize,
+			PayloadsCacheSize:     cacheSize,
 			MaxRequestsPerBatch:   20, // TODO: tune batch param
 			MaxConcurrentRequests: 10,
 			TrustRPC:              trustRPC,
@@ -44,7 +43,6 @@ func L1ClientDefaultConfig(config *rollup.Config, trustRPC bool, kind RPCProvide
 			MethodResetDuration:   time.Minute,
 		},
 		// Not bounded by span, to cover find-sync-start range fully for speedy recovery after errors.
-		L1BlockRefsCacheSize: fullSpan,
 	}
 }
 

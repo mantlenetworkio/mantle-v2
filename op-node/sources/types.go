@@ -206,6 +206,13 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 	return &headerInfo{hdr.Hash, hdr.createGethHeader()}, nil
 }
 
+func (hdr *rpcHeader) BlockID() eth.BlockID {
+	return eth.BlockID{
+		Hash:   hdr.Hash,
+		Number: uint64(hdr.Number),
+	}
+}
+
 type rpcBlock struct {
 	rpcHeader
 	Transactions []*types.Transaction `json:"transactions"`
@@ -242,7 +249,7 @@ func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInf
 	return info, block.Transactions, nil
 }
 
-func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload, error) {
+func (block *rpcBlock) ExecutionPayloadEnvelope(trustCache bool) (*eth.ExecutionPayloadEnvelope, error) {
 	if err := block.checkPostMerge(); err != nil {
 		return nil, err
 	}
@@ -265,7 +272,7 @@ func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload,
 		opaqueTxs[i] = data
 	}
 
-	return &eth.ExecutionPayload{
+	payload := &eth.ExecutionPayload{
 		ParentHash:    block.ParentHash,
 		FeeRecipient:  block.Coinbase,
 		StateRoot:     eth.Bytes32(block.Root),
@@ -280,6 +287,12 @@ func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload,
 		BaseFeePerGas: baseFee,
 		BlockHash:     block.Hash,
 		Transactions:  opaqueTxs,
+	}
+
+	return &eth.ExecutionPayloadEnvelope{
+		ParentBeaconBlockRoot: block.ParentBeaconRoot,
+		ExecutionPayload:      payload,
+		RequestsHash:          block.RequestsHash,
 	}, nil
 }
 

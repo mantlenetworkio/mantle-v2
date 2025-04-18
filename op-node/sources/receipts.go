@@ -9,11 +9,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 )
+
+type ReceiptsProvider interface {
+	// FetchReceipts returns a block info and all of the receipts associated with transactions in the block.
+	// It verifies the receipt hash in the block header against the receipt hash of the fetched receipts
+	// to ensure that the execution engine did not fail to return any receipts.
+	FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (types.Receipts, error)
+}
 
 // validateReceipts validates that the receipt contents are valid.
 // Warning: contractAddress is not verified, since it is a more expensive operation for data we do not use.
@@ -88,243 +94,6 @@ func validateReceipts(block eth.BlockID, receiptHash common.Hash, txHashes []com
 	return nil
 }
 
-func makeReceiptRequest(txHash common.Hash) (*types.Receipt, rpc.BatchElem) {
-	out := new(types.Receipt)
-	return out, rpc.BatchElem{
-		Method: "eth_getTransactionReceipt",
-		Args:   []any{txHash},
-		Result: &out, // receipt may become nil, double pointer is intentional
-	}
-}
-
-// Cost break-down sources:
-// Alchemy: https://docs.alchemy.com/reference/compute-units
-// QuickNode: https://www.quicknode.com/docs/ethereum/api_credits
-// Infura: no pricing table available.
-//
-// Receipts are encoded the same everywhere:
-//
-//     blockHash, blockNumber, transactionIndex, transactionHash, from, to, cumulativeGasUsed, gasUsed,
-//     contractAddress, logs, logsBloom, status, effectiveGasPrice, type.
-//
-// Note that Alchemy/Geth still have a "root" field for legacy reasons,
-// but ethereum does not compute state-roots per tx anymore, so quicknode and others do not serve this data.
-
-// RPCProviderKind identifies an RPC provider, used to hint at the optimal receipt fetching approach.
-type RPCProviderKind string
-
-const (
-	RPCKindAlchemy    RPCProviderKind = "alchemy"
-	RPCKindQuickNode  RPCProviderKind = "quicknode"
-	RPCKindInfura     RPCProviderKind = "infura"
-	RPCKindParity     RPCProviderKind = "parity"
-	RPCKindNethermind RPCProviderKind = "nethermind"
-	RPCKindDebugGeth  RPCProviderKind = "debug_geth"
-	RPCKindErigon     RPCProviderKind = "erigon"
-	RPCKindBasic      RPCProviderKind = "basic" // try only the standard most basic receipt fetching
-	RPCKindAny        RPCProviderKind = "any"   // try any method available
-)
-
-var RPCProviderKinds = []RPCProviderKind{
-	RPCKindAlchemy,
-	RPCKindQuickNode,
-	RPCKindInfura,
-	RPCKindParity,
-	RPCKindNethermind,
-	RPCKindDebugGeth,
-	RPCKindErigon,
-	RPCKindBasic,
-	RPCKindAny,
-}
-
-func (kind RPCProviderKind) String() string {
-	return string(kind)
-}
-
-func (kind *RPCProviderKind) Set(value string) error {
-	if !ValidRPCProviderKind(RPCProviderKind(value)) {
-		return fmt.Errorf("unknown rpc kind: %q", value)
-	}
-	*kind = RPCProviderKind(value)
-	return nil
-}
-
-func ValidRPCProviderKind(value RPCProviderKind) bool {
-	for _, k := range RPCProviderKinds {
-		if k == value {
-			return true
-		}
-	}
-	return false
-}
-
-// ReceiptsFetchingMethod is a bitfield with 1 bit for each receipts fetching type.
-// Depending on errors, tx counts and preferences the code may select different sets of fetching methods.
-type ReceiptsFetchingMethod uint64
-
-func (r ReceiptsFetchingMethod) String() string {
-	out := ""
-	x := r
-	addMaybe := func(m ReceiptsFetchingMethod, v string) {
-		if x&m != 0 {
-			out += v
-			x ^= x & m
-		}
-		if x != 0 { // add separator if there are entries left
-			out += ", "
-		}
-	}
-	addMaybe(EthGetTransactionReceiptBatch, "eth_getTransactionReceipt (batched)")
-	addMaybe(AlchemyGetTransactionReceipts, "alchemy_getTransactionReceipts")
-	addMaybe(DebugGetRawReceipts, "debug_getRawReceipts")
-	addMaybe(ParityGetBlockReceipts, "parity_getBlockReceipts")
-	addMaybe(EthGetBlockReceipts, "eth_getBlockReceipts")
-	addMaybe(^ReceiptsFetchingMethod(0), "unknown") // if anything is left, describe it as unknown
-	return out
-}
-
-const (
-	// EthGetTransactionReceiptBatch is standard per-tx receipt fetching with JSON-RPC batches.
-	// Available in: standard, everywhere.
-	//   - Alchemy: 15 CU / tx
-	//   - Quicknode: 2 credits / tx
-	// Method: eth_getTransactionReceipt
-	// See: https://ethereum.github.io/execution-apis/api-documentation/
-	EthGetTransactionReceiptBatch ReceiptsFetchingMethod = 1 << iota
-	// AlchemyGetTransactionReceipts is a special receipt fetching method provided by Alchemy.
-	// Available in:
-	//   - Alchemy: 250 CU total
-	// Method: alchemy_getTransactionReceipts
-	// Params:
-	//   - object with "blockNumber" or "blockHash" field
-	// Returns: "array of receipts" - docs lie, array is wrapped in a struct with single "receipts" field
-	// See: https://docs.alchemy.com/reference/alchemy-gettransactionreceipts#alchemy_gettransactionreceipts
-	AlchemyGetTransactionReceipts
-	// DebugGetRawReceipts is a debug method from Geth, faster by avoiding serialization and metadata overhead.
-	// Ideal for fast syncing from a local geth node.
-	// Available in:
-	//   - Geth: free
-	//   - QuickNode: 22 credits maybe? Unknown price, undocumented ("debug_getblockreceipts" exists in table though?)
-	// Method: debug_getRawReceipts
-	// Params:
-	//   - string presenting a block number or hash
-	// Returns: list of strings, hex encoded RLP of receipts data. "consensus-encoding of all receipts in a single block"
-	// See: https://geth.ethereum.org/docs/rpc/ns-debug#debug_getrawreceipts
-	DebugGetRawReceipts
-	// ParityGetBlockReceipts is an old parity method, which has been adopted by Nethermind and some RPC providers.
-	// Available in:
-	//   - Alchemy: 500 CU total
-	//   - QuickNode: 59 credits - docs are wrong, not actually available anymore.
-	//   - Any open-ethereum/parity legacy: free
-	//   - Nethermind: free
-	// Method: parity_getBlockReceipts
-	// Params:
-	//   Parity: "quantity or tag"
-	//   Alchemy: string with block hash, number in hex, or block tag.
-	//   Nethermind: very flexible: tag, number, hex or object with "requireCanonical"/"blockHash" fields.
-	// Returns: array of receipts
-	// See:
-	//   - Parity: https://openethereum.github.io/JSONRPC-parity-module#parity_getblockreceipts
-	//   - QuickNode: undocumented.
-	//   - Alchemy: https://docs.alchemy.com/reference/eth-getblockreceipts
-	//   - Nethermind: https://docs.nethermind.io/nethermind/ethereum-client/json-rpc/parity#parity_getblockreceipts
-	ParityGetBlockReceipts
-	// EthGetBlockReceipts is a non-standard receipt fetching method in the eth namespace,
-	// supported by some RPC platforms and Erigon.
-	// Available in:
-	//   - Alchemy: 500 CU total  (and deprecated)
-	//   - Erigon: free
-	//   - QuickNode: 59 credits total       (does not seem to work with block hash arg, inaccurate docs)
-	// Method: eth_getBlockReceipts
-	// Params:
-	//   - QuickNode: string, "quantity or tag", docs say incl. block hash, but API does not actually accept it.
-	//   - Alchemy: string, block hash / num (hex) / block tag
-	// Returns: array of receipts
-	// See:
-	//   - QuickNode: https://www.quicknode.com/docs/ethereum/eth_getBlockReceipts
-	//   - Alchemy: https://docs.alchemy.com/reference/eth-getblockreceipts
-	EthGetBlockReceipts
-
-	// Other:
-	//  - 250 credits, not supported, strictly worse than other options. In quicknode price-table.
-	// qn_getBlockWithReceipts - in price table, ? undocumented, but in quicknode "Single Flight RPC" description
-	// qn_getReceipts          - in price table, ? undocumented, but in quicknode "Single Flight RPC" description
-	// debug_getBlockReceipts  - ? undocumented, shows up in quicknode price table, not available.
-)
-
-// AvailableReceiptsFetchingMethods selects receipt fetching methods based on the RPC provider kind.
-func AvailableReceiptsFetchingMethods(kind RPCProviderKind) ReceiptsFetchingMethod {
-	switch kind {
-	case RPCKindAlchemy:
-		return AlchemyGetTransactionReceipts | EthGetBlockReceipts | EthGetTransactionReceiptBatch
-	case RPCKindQuickNode:
-		return DebugGetRawReceipts | EthGetBlockReceipts | EthGetTransactionReceiptBatch
-	case RPCKindInfura:
-		// Infura is big, but sadly does not support more optimized receipts fetching methods (yet?)
-		return EthGetTransactionReceiptBatch
-	case RPCKindParity:
-		return ParityGetBlockReceipts | EthGetTransactionReceiptBatch
-	case RPCKindNethermind:
-		return ParityGetBlockReceipts | EthGetTransactionReceiptBatch
-	case RPCKindDebugGeth:
-		return DebugGetRawReceipts | EthGetTransactionReceiptBatch
-	case RPCKindErigon:
-		return EthGetBlockReceipts | EthGetTransactionReceiptBatch
-	case RPCKindBasic:
-		return EthGetTransactionReceiptBatch
-	case RPCKindAny:
-		// if it's any kind of RPC provider, then try all methods
-		return AlchemyGetTransactionReceipts | EthGetBlockReceipts |
-			DebugGetRawReceipts | ParityGetBlockReceipts | EthGetTransactionReceiptBatch
-	default:
-		return EthGetTransactionReceiptBatch
-	}
-}
-
-// PickBestReceiptsFetchingMethod selects an RPC method that is still available,
-// and optimal for fetching the given number of tx receipts from the specified provider kind.
-func PickBestReceiptsFetchingMethod(kind RPCProviderKind, available ReceiptsFetchingMethod, txCount uint64) ReceiptsFetchingMethod {
-	// If we have optimized methods available, it makes sense to use them, but only if the cost is
-	// lower than fetching transactions one by one with the standard receipts RPC method.
-	if kind == RPCKindAlchemy {
-		if available&AlchemyGetTransactionReceipts != 0 && txCount > 250/15 {
-			return AlchemyGetTransactionReceipts
-		}
-		if available&EthGetBlockReceipts != 0 && txCount > 500/15 {
-			return EthGetBlockReceipts
-		}
-		return EthGetTransactionReceiptBatch
-	} else if kind == RPCKindQuickNode {
-		if available&DebugGetRawReceipts != 0 {
-			return DebugGetRawReceipts
-		}
-		if available&EthGetBlockReceipts != 0 && txCount > 59/2 {
-			return EthGetBlockReceipts
-		}
-		return EthGetTransactionReceiptBatch
-	}
-	// in order of preference (based on cost): check available methods
-	if available&AlchemyGetTransactionReceipts != 0 {
-		return AlchemyGetTransactionReceipts
-	}
-	if available&DebugGetRawReceipts != 0 {
-		return DebugGetRawReceipts
-	}
-	if available&EthGetBlockReceipts != 0 {
-		return EthGetBlockReceipts
-	}
-	if available&ParityGetBlockReceipts != 0 {
-		return ParityGetBlockReceipts
-	}
-	// otherwise fall back on per-tx fetching
-	return EthGetTransactionReceiptBatch
-}
-
-type rpcClient interface {
-	CallContext(ctx context.Context, result any, method string, args ...any) error
-	BatchCallContext(ctx context.Context, b []rpc.BatchElem) error
-}
-
 // receiptsFetchingJob runs the receipt fetching for a specific block,
 // and can re-run and adapt based on the fetching method preferences and errors communicated with the requester.
 type receiptsFetchingJob struct {
@@ -397,11 +166,6 @@ func (job *receiptsFetchingJob) runFetcher(ctx context.Context) error {
 	job.fetcher = nil
 	job.txHashes = nil
 	return nil
-}
-
-// receiptsWrapper is a decoding type util. Alchemy in particular wraps the receipts array result.
-type receiptsWrapper struct {
-	Receipts []*types.Receipt `json:"receipts"`
 }
 
 // runAltMethod retrieves the result by fetching all receipts at once,

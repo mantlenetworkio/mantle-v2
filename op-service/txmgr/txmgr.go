@@ -146,6 +146,8 @@ type TxCandidate struct {
 	// Blobs to send along in the tx (optional). If len(Blobs) > 0 then a blob tx
 	// will be sent instead of a DynamicFeeTx.
 	Blobs []*eth.Blob
+	// Value is the value to be used in the constructed tx.
+	Value *big.Int
 }
 
 // Send is used to publish a transaction with incrementally higher gas prices

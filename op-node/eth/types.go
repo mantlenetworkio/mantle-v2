@@ -123,7 +123,27 @@ type Uint256Quantity = uint256.Int
 
 type Data = hexutil.Bytes
 
-type PayloadID = engine.PayloadID
+type (
+	PayloadID   = engine.PayloadID
+	PayloadInfo struct {
+		ID        PayloadID
+		Timestamp uint64
+	}
+)
+
+type ExecutionPayloadEnvelope struct {
+	ParentBeaconBlockRoot *common.Hash      `json:"parentBeaconBlockRoot,omitempty"`
+	ExecutionPayload      *ExecutionPayload `json:"executionPayload"`
+	RequestsHash          *common.Hash      `json:"requestsHash,omitempty"`
+}
+
+func (env *ExecutionPayloadEnvelope) ID() BlockID {
+	return env.ExecutionPayload.ID()
+}
+
+func (env *ExecutionPayloadEnvelope) String() string {
+	return fmt.Sprintf("envelope(%s)", env.ID())
+}
 
 type ExecutionPayload struct {
 	ParentHash    common.Hash     `json:"parentHash"`
