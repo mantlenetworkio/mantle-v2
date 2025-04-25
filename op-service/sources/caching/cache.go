@@ -5,6 +5,7 @@ import lru "github.com/hashicorp/golang-lru/v2"
 type Metrics interface {
 	CacheAdd(label string, cacheSize int, evicted bool)
 	CacheGet(label string, hit bool)
+	CachePeek(label string, hit bool)
 }
 
 // LRUCache wraps hashicorp *lru.Cache and tracks cache metrics
@@ -18,6 +19,14 @@ func (c *LRUCache[K, V]) Get(key K) (value V, ok bool) {
 	value, ok = c.inner.Get(key)
 	if c.m != nil {
 		c.m.CacheGet(c.label, ok)
+	}
+	return value, ok
+}
+
+func (c *LRUCache[K, V]) Peek(key K) (value V, ok bool) {
+	value, ok = c.inner.Peek(key)
+	if c.m != nil {
+		c.m.CachePeek(c.label, ok)
 	}
 	return value, ok
 }

@@ -249,7 +249,7 @@ func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInf
 	return info, block.Transactions, nil
 }
 
-func (block *rpcBlock) ExecutionPayloadEnvelope(trustCache bool) (*eth.ExecutionPayloadEnvelope, error) {
+func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload, error) {
 	if err := block.checkPostMerge(); err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (block *rpcBlock) ExecutionPayloadEnvelope(trustCache bool) (*eth.Execution
 		opaqueTxs[i] = data
 	}
 
-	payload := &eth.ExecutionPayload{
+	return &eth.ExecutionPayload{
 		ParentHash:    block.ParentHash,
 		FeeRecipient:  block.Coinbase,
 		StateRoot:     eth.Bytes32(block.Root),
@@ -287,12 +287,6 @@ func (block *rpcBlock) ExecutionPayloadEnvelope(trustCache bool) (*eth.Execution
 		BaseFeePerGas: baseFee,
 		BlockHash:     block.Hash,
 		Transactions:  opaqueTxs,
-	}
-
-	return &eth.ExecutionPayloadEnvelope{
-		ParentBeaconBlockRoot: block.ParentBeaconRoot,
-		ExecutionPayload:      payload,
-		RequestsHash:          block.RequestsHash,
 	}, nil
 }
 

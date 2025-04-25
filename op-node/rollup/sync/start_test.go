@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	smetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"

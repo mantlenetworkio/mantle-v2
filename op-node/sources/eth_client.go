@@ -113,7 +113,7 @@ type EthClient struct {
 
 	// cache payloads by hash
 	// common.Hash -> *eth.ExecutionPayload
-	payloadsCache *caching.LRUCache[common.Hash, *eth.ExecutionPayloadEnvelope]
+	payloadsCache *caching.LRUCache[common.Hash, *eth.ExecutionPayload]
 
 	// cache BlockRef by hash
 	// common.Hash -> eth.BlockRef
@@ -140,7 +140,7 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 		log:               log,
 		transactionsCache: caching.NewLRUCache[common.Hash, types.Transactions](metrics, "txs", config.TransactionsCacheSize),
 		headersCache:      caching.NewLRUCache[common.Hash, eth.BlockInfo](metrics, "headers", config.HeadersCacheSize),
-		payloadsCache:     caching.NewLRUCache[common.Hash, *eth.ExecutionPayloadEnvelope](metrics, "payloads", config.PayloadsCacheSize),
+		payloadsCache:     caching.NewLRUCache[common.Hash, *eth.ExecutionPayload](metrics, "payloads", config.PayloadsCacheSize),
 		blockRefsCache:    caching.NewLRUCache[common.Hash, eth.L1BlockRef](metrics, "blockrefs", config.BlockRefsCacheSize),
 	}, nil
 }
@@ -223,7 +223,7 @@ func (s *EthClient) blockCall(ctx context.Context, method string, id rpcBlockID)
 	return info, txs, nil
 }
 
-func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockID) (*eth.ExecutionPayloadEnvelope, error) {
+func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockID) (*eth.ExecutionPayload, error) {
 	var block *rpcBlock
 	err := s.client.CallContext(ctx, &block, method, id.Arg(), true)
 	if err != nil {
@@ -232,15 +232,15 @@ func (s *EthClient) payloadCall(ctx context.Context, method string, id rpcBlockI
 	if block == nil {
 		return nil, ethereum.NotFound
 	}
-	envelope, err := block.ExecutionPayloadEnvelope(s.trustRPC)
+	payload, err := block.ExecutionPayload(s.trustRPC)
 	if err != nil {
 		return nil, err
 	}
-	if err := id.CheckID(envelope.ExecutionPayload.ID()); err != nil {
+	if err := id.CheckID(payload.ID()); err != nil {
 		return nil, fmt.Errorf("fetched payload does not match requested ID: %w", err)
 	}
-	s.payloadsCache.Add(envelope.ExecutionPayload.BlockHash, envelope)
-	return envelope, nil
+	s.payloadsCache.Add(payload.BlockHash, payload)
+	return payload, nil
 }
 
 // ChainID fetches the chain id of the internal RPC.
@@ -254,7 +254,7 @@ func (s *EthClient) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 func (s *EthClient) InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error) {
-	if header, ok := s.headersCache.Get(hash); ok {
+	if header, ok := s.headersCache.Peek(hash); ok {
 		return header.(eth.BlockInfo), nil
 	}
 	return s.headerCall(ctx, "eth_getBlockByHash", hashID(hash))
@@ -271,8 +271,8 @@ func (s *EthClient) InfoByLabel(ctx context.Context, label eth.BlockLabel) (eth.
 }
 
 func (s *EthClient) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error) {
-	if header, ok := s.headersCache.Get(hash); ok {
-		if txs, ok := s.transactionsCache.Get(hash); ok {
+	if header, ok := s.headersCache.Peek(hash); ok {
+		if txs, ok := s.transactionsCache.Peek(hash); ok {
 			return header, txs, nil
 		}
 	}
@@ -289,18 +289,22 @@ func (s *EthClient) InfoAndTxsByLabel(ctx context.Context, label eth.BlockLabel)
 	return s.blockCall(ctx, "eth_getBlockByNumber", label)
 }
 
-func (s *EthClient) PayloadByHash(ctx context.Context, hash common.Hash) (*eth.ExecutionPayloadEnvelope, error) {
+func (s *EthClient) PayloadByHash(ctx context.Context, hash common.Hash) (*eth.ExecutionPayload, error) {
 	if payload, ok := s.payloadsCache.Get(hash); ok {
 		return payload, nil
 	}
 	return s.payloadCall(ctx, "eth_getBlockByHash", hashID(hash))
 }
 
-func (s *EthClient) PayloadByNumber(ctx context.Context, number uint64) (*eth.ExecutionPayloadEnvelope, error) {
+func (s *EthClient) CachePayloadByHash(payload *eth.ExecutionPayload) bool {
+	return s.payloadsCache.Add(payload.BlockHash, payload)
+}
+
+func (s *EthClient) PayloadByNumber(ctx context.Context, number uint64) (*eth.ExecutionPayload, error) {
 	return s.payloadCall(ctx, "eth_getBlockByNumber", numberID(number))
 }
 
-func (s *EthClient) PayloadByLabel(ctx context.Context, label eth.BlockLabel) (*eth.ExecutionPayloadEnvelope, error) {
+func (s *EthClient) PayloadByLabel(ctx context.Context, label eth.BlockLabel) (*eth.ExecutionPayload, error) {
 	return s.payloadCall(ctx, "eth_getBlockByNumber", label)
 }
 
@@ -308,17 +312,33 @@ func (s *EthClient) PayloadByLabel(ctx context.Context, label eth.BlockLabel) (*
 // It verifies the receipt hash in the block header against the receipt hash of the fetched receipts
 // to ensure that the execution engine did not fail to return any receipts.
 func (s *EthClient) FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error) {
+	blockInfo, receipts, err, _ := s.fetchReceiptsInner(ctx, blockHash, false)
+	return blockInfo, receipts, err
+}
+
+func (s *EthClient) PreFetchReceipts(ctx context.Context, blockHash common.Hash) (bool, error) {
+	_, _, err, isFull := s.fetchReceiptsInner(ctx, blockHash, true)
+	if err != nil {
+		return false, err
+	}
+	if isFull {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *EthClient) fetchReceiptsInner(ctx context.Context, blockHash common.Hash, isPreFetch bool) (eth.BlockInfo, types.Receipts, error, bool) {
 	info, txs, err := s.InfoAndTxsByHash(ctx, blockHash)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, err, false
 	}
 
 	txHashes, _ := eth.TransactionsToHashes(txs), eth.ToBlockID(info)
-	receipts, err := s.recProvider.FetchReceipts(ctx, info, txHashes)
+	receipts, err, isFull := s.recProvider.FetchReceipts(ctx, info, txHashes, isPreFetch)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, err, isFull
 	}
-	return info, receipts, nil
+	return info, receipts, nil, isFull
 }
 
 // GetProof returns an account proof result, with any optional requested storage proofs.
@@ -422,4 +442,8 @@ func (s *EthClient) BlockRefByHash(ctx context.Context, hash common.Hash) (eth.B
 	ref := eth.InfoToL1BlockRef(info)
 	s.blockRefsCache.Add(ref.Hash, ref)
 	return ref, nil
+}
+
+func (s *EthClient) GetRecProvider() ReceiptsProvider {
+	return s.recProvider
 }

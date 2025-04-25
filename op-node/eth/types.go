@@ -131,20 +131,6 @@ type (
 	}
 )
 
-type ExecutionPayloadEnvelope struct {
-	ParentBeaconBlockRoot *common.Hash      `json:"parentBeaconBlockRoot,omitempty"`
-	ExecutionPayload      *ExecutionPayload `json:"executionPayload"`
-	RequestsHash          *common.Hash      `json:"requestsHash,omitempty"`
-}
-
-func (env *ExecutionPayloadEnvelope) ID() BlockID {
-	return env.ExecutionPayload.ID()
-}
-
-func (env *ExecutionPayloadEnvelope) String() string {
-	return fmt.Sprintf("envelope(%s)", env.ID())
-}
-
 type ExecutionPayload struct {
 	ParentHash    common.Hash     `json:"parentHash"`
 	FeeRecipient  common.Address  `json:"feeRecipient"`

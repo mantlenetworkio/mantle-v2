@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	sclient "github.com/ethereum-optimism/optimism/op-service/client"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"

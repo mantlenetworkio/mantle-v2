@@ -10,11 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
+	"github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/sources/caching"
 )
 
 type L2ClientConfig struct {
@@ -67,11 +67,11 @@ type L2Client struct {
 
 	// cache L2BlockRef by hash
 	// common.Hash -> eth.L2BlockRef
-	l2BlockRefsCache *caching.LRUCache
+	l2BlockRefsCache *caching.LRUCache[common.Hash, eth.L2BlockRef]
 
 	// cache SystemConfig by L2 hash
 	// common.Hash -> eth.SystemConfig
-	systemConfigsCache *caching.LRUCache
+	systemConfigsCache *caching.LRUCache[common.Hash, eth.SystemConfig]
 }
 
 // NewL2Client constructs a new L2Client instance. The L2Client is a thin wrapper around the EthClient with added functions
@@ -86,8 +86,8 @@ func NewL2Client(client client.RPC, log log.Logger, metrics caching.Metrics, con
 	return &L2Client{
 		EthClient:          ethClient,
 		rollupCfg:          config.RollupCfg,
-		l2BlockRefsCache:   caching.NewLRUCache(metrics, "blockrefs", config.L2BlockRefsCacheSize),
-		systemConfigsCache: caching.NewLRUCache(metrics, "systemconfigs", config.L1ConfigsCacheSize),
+		l2BlockRefsCache:   caching.NewLRUCache[common.Hash, eth.L2BlockRef](metrics, "blockrefs", config.L2BlockRefsCacheSize),
+		systemConfigsCache: caching.NewLRUCache[common.Hash, eth.SystemConfig](metrics, "systemconfigs", config.L1ConfigsCacheSize),
 	}, nil
 }
 
@@ -130,7 +130,7 @@ func (s *L2Client) L2BlockRefByNumber(ctx context.Context, num uint64) (eth.L2Bl
 // The returned BlockRef may not be in the canonical chain.
 func (s *L2Client) L2BlockRefByHash(ctx context.Context, hash common.Hash) (eth.L2BlockRef, error) {
 	if ref, ok := s.l2BlockRefsCache.Get(hash); ok {
-		return ref.(eth.L2BlockRef), nil
+		return ref, nil
 	}
 
 	payload, err := s.PayloadByHash(ctx, hash)
@@ -150,7 +150,7 @@ func (s *L2Client) L2BlockRefByHash(ctx context.Context, hash common.Hash) (eth.
 // The returned [eth.SystemConfig] may not be in the canonical chain when the hash is not canonical.
 func (s *L2Client) SystemConfigByL2Hash(ctx context.Context, hash common.Hash) (eth.SystemConfig, error) {
 	if ref, ok := s.systemConfigsCache.Get(hash); ok {
-		return ref.(eth.SystemConfig), nil
+		return ref, nil
 	}
 
 	payload, err := s.PayloadByHash(ctx, hash)
