@@ -162,3 +162,7 @@ func (v *OrderCache[V]) AddAndRemove(key uint64, value V) {
 		v.m.CacheAdd(v.label, v.data.Len(), false)
 	}
 }
+
+func (v *OrderCache[V]) GetMin() V {
+	return v.data.Min().(item[V]).value
+}

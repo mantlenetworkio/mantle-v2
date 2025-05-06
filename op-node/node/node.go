@@ -51,6 +51,8 @@ type OpNode struct {
 	resourcesClose context.CancelFunc
 
 	beacon *ssources.L1BeaconClient
+	//L1 receipts pre fetcher
+	l1PreFetcher *sources.PreFetcher
 }
 
 // The OpNode handles incoming gossip
@@ -88,6 +90,9 @@ func (n *OpNode) init(ctx context.Context, cfg *Config, snapshotLog log.Logger) 
 	if err := n.initL1(ctx, cfg); err != nil {
 		return err
 	}
+	// l1 receipts cache
+	n.initL1ReceiptsPreFetcher()
+
 	if err := n.initRuntimeConfig(ctx, cfg); err != nil {
 		return err
 	}
@@ -162,7 +167,13 @@ func (n *OpNode) initL1(ctx context.Context, cfg *Config) error {
 		cfg.L1EpochPollInterval, time.Second*10)
 	n.l1FinalizedSub = eth.PollBlockChanges(n.resourcesCtx, n.log, n.l1Source, n.OnNewL1Finalized, eth.Finalized,
 		cfg.L1EpochPollInterval, time.Second*10)
+
 	return nil
+}
+
+func (n *OpNode) initL1ReceiptsPreFetcher() {
+	// new L1 receipts pre fetcher
+	n.l1PreFetcher = sources.NewPreFetcher(n.l1Source, n.log, n.metrics.L1SourceCache)
 }
 
 func (n *OpNode) initRuntimeConfig(ctx context.Context, cfg *Config) error {
@@ -212,7 +223,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
 	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, &cfg.DatastoreConfig, n.metrics)
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer)
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer, n.l1PreFetcher)
 
 	return nil
 }
@@ -367,6 +378,11 @@ func (n *OpNode) Start(ctx context.Context) error {
 			return err
 		}
 		n.log.Info("Started L2-RPC sync service")
+	}
+	// start l1 receipts pre fetcher thread
+	if err := n.l1PreFetcher.Start(); err != nil {
+		n.log.Error("Could not start L1 PreFetcher", "err", err)
+		return err
 	}
 
 	return nil

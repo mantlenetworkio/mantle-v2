@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -21,5 +20,5 @@ func DialRollupClientWithTimeout(ctx context.Context, url string, timeout time.D
 		return nil, err
 	}
 
-	return sources.NewRollupClient(client.NewBaseRPCClient(rpcCl)), nil
+	return sources.NewRollupClient(NewBaseRPCClient(rpcCl)), nil
 }

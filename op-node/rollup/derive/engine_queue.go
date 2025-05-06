@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"io"
 	"time"
 
@@ -140,13 +141,15 @@ type EngineQueue struct {
 	metrics   Metrics
 	l1Fetcher L1Fetcher
 
+	l1PreFetcher *sources.PreFetcher
+
 	syncCfg *sync.Config
 }
 
 var _ EngineControl = (*EngineQueue)(nil)
 
 // NewEngineQueue creates a new EngineQueue, which should be Reset(origin) before use.
-func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config) *EngineQueue {
+func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config, l1PreFetcher *sources.PreFetcher) *EngineQueue {
 	return &EngineQueue{
 		log:            log,
 		cfg:            cfg,
@@ -157,6 +160,7 @@ func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics M
 		prev:           prev,
 		l1Fetcher:      l1Fetcher,
 		syncCfg:        syncCfg,
+		l1PreFetcher:   l1PreFetcher,
 	}
 }
 
@@ -413,6 +417,7 @@ func (eq *EngineQueue) postProcessSafeL2() {
 			eq.log.Debug("updated finality-data", "last_l1", last.L1Block, "last_l2", last.L2Block)
 		}
 	}
+	eq.l1Fetcher.ClearReceiptsCache(eq.safeHead.L1Origin.Number)
 }
 
 func (eq *EngineQueue) logSyncProgress(reason string) {
@@ -802,6 +807,10 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 	l1Cfg, err := eq.engine.SystemConfigByL2Hash(ctx, pipelineL2.Hash)
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch L1 config of L2 block %s: %w", pipelineL2.ID(), err))
+	}
+	err = eq.l1PreFetcher.Reset(ctx, pipelineOrigin.Number)
+	if err != nil {
+		return NewTemporaryError(fmt.Errorf("failed to reset L1 start block for L1 pre fetcher  %s: %w", pipelineOrigin.ID(), err))
 	}
 	eq.log.Debug("Reset engine queue", "safeHead", safe, "unsafe", unsafe, "safe_timestamp", safe.Time, "unsafe_timestamp", unsafe.Time, "l1Origin", l1Origin)
 	eq.unsafeHead = unsafe

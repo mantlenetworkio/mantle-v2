@@ -1,11 +1,10 @@
-package driver
+package sources
 
 import (
 	"context"
 	"fmt"
 	"github.com/cenkalti/backoff"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/sources/caching"
 	"github.com/ethereum/go-ethereum/log"
 	gosync "sync"
@@ -15,31 +14,32 @@ import (
 const maxConcurent = 16
 
 type PreFetcher struct {
-	l1 *sources.L1Client
-
+	l1      *L1Client
 	resetL1 chan uint64
 
-	metrics caching.Metrics
+	l1BlockCache *caching.OrderCache[eth.L1BlockRef]
 
 	log    log.Logger
 	wg     gosync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
+	done   chan struct{}
 }
 
 func NewPreFetcher(
-	l1 *sources.L1Client,
+	l1 *L1Client,
 	log log.Logger,
 	metrics caching.Metrics,
 ) *PreFetcher {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &PreFetcher{
-		l1:      l1,
-		resetL1: make(chan uint64, 1),
-		metrics: metrics,
-		log:     log,
-		ctx:     ctx,
-		cancel:  cancel,
+		l1:           l1,
+		resetL1:      make(chan uint64, 1),
+		l1BlockCache: caching.NewOrderCache[eth.L1BlockRef](metrics, "receipts", 12),
+		log:          log,
+		ctx:          ctx,
+		cancel:       cancel,
+		done:         make(chan struct{}),
 	}
 }
 
@@ -52,6 +52,7 @@ func (p *PreFetcher) Start() error {
 
 func (p *PreFetcher) Close() error {
 	p.cancel()
+	p.done <- struct{}{}
 	p.wg.Wait()
 	return nil
 }
@@ -71,22 +72,26 @@ func (p *PreFetcher) evenLoop() {
 	defer p.log.Info("receipts pre fetcher returned")
 	defer p.cancel()
 	var lastUnsafeL1 uint64
-	cache := caching.NewOrderCache[eth.L1BlockRef](p.metrics, "receipts", 12)
 	for {
 		select {
 		case number := <-p.resetL1:
 			lastUnsafeL1 = number
-			cache.RemoveAll()
+			p.l1BlockCache.RemoveAll()
 			p.l1.GetRecProvider().GetReceiptsCache().RemoveAll()
 		case <-p.ctx.Done():
+			return
+		case <-p.done:
 			return
 		default:
 			if lastUnsafeL1 == 0 {
 				continue
 			}
+			if p.l1.GetRecProvider().GetReceiptsCache().IsFull() {
+				continue
+			}
 			blockRef, err := p.l1.BlockRefByLabel(p.ctx, eth.Unsafe)
 			if err != nil {
-				p.log.Debug("failed to fetch the latest block", "err", err)
+				p.log.Debug("failed to fetch the unsafe latest block", "err", err)
 				time.Sleep(2 * time.Second)
 				continue
 			}
@@ -95,7 +100,20 @@ func (p *PreFetcher) evenLoop() {
 				time.Sleep(2 * time.Second)
 				continue
 			}
+			//check l1 reorg
+			v, b := p.checkL1Reorg(&lastUnsafeL1)
+			if !b {
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			if lastUnsafeL1 != v {
+				lastUnsafeL1 = v
+			}
 
+			if err := p.processBatch(p.ctx, &lastUnsafeL1, blockRef.Number); err != nil {
+				p.log.Debug("failed to process batch", "err", err)
+				time.Sleep(2 * time.Second)
+			}
 		}
 	}
 }
@@ -116,10 +134,10 @@ type WorkerPool struct {
 	taskChan chan BlockFetchTask
 	done     chan struct{}
 	log      log.Logger
-	l1       *sources.L1Client
+	l1       *L1Client
 }
 
-func NewWorkerPool(workers int, log log.Logger, l1 *sources.L1Client) *WorkerPool {
+func NewWorkerPool(workers int, log log.Logger, l1 *L1Client) *WorkerPool {
 	return &WorkerPool{
 		workers:  workers,
 		taskChan: make(chan BlockFetchTask),
@@ -154,7 +172,7 @@ func (wp *WorkerPool) processTask(task BlockFetchTask) {
 	ctx, cancel := context.WithTimeout(task.ctx, 30*time.Second)
 	defer cancel()
 
-	// 创建退避策略
+	// Create a backoff strategy
 	b := backoff.NewExponentialBackOff()
 	b.InitialInterval = 100 * time.Millisecond
 	b.MaxInterval = 5 * time.Second
@@ -162,7 +180,7 @@ func (wp *WorkerPool) processTask(task BlockFetchTask) {
 	b.Multiplier = 2
 	b.RandomizationFactor = 0.1
 
-	// 使用 backoff.WithContext 来支持上下文取消
+	// Use backoff.WithContext to support context cancellation
 	backoffCtx := backoff.WithContext(b, ctx)
 
 	operation := func() error {
@@ -173,7 +191,7 @@ func (wp *WorkerPool) processTask(task BlockFetchTask) {
 		return fmt.Errorf("failed to fetch block")
 	}
 
-	// 使用 Retry 进行重试
+	// Use Retry to perform retries
 	err := backoff.Retry(operation, backoffCtx)
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
@@ -218,30 +236,25 @@ func (wp *WorkerPool) tryFetchBlock(ctx context.Context, blockNumber uint64) *et
 	return &blockInfo
 }
 
-func (p *PreFetcher) processBatch(ctx context.Context, currentL1Block *uint64) error {
-	// 获取最新区块
-	blockRef, err := p.l1.L1BlockRefByLabel(ctx, eth.Unsafe)
-	if err != nil {
-		return fmt.Errorf("fetch latest block ref: %w", err)
-	}
+func (p *PreFetcher) processBatch(ctx context.Context, currentL1Block *uint64, l1UnsafeBlockNumber uint64) error {
 
-	// 计算任务数量
-	taskCount := p.calculateTaskCount(*currentL1Block, blockRef.Number)
+	// calculate task
+	taskCount := p.calculateTaskCount(*currentL1Block, l1UnsafeBlockNumber)
 	if taskCount == 0 {
 		return nil
 	}
 
-	// 创建结果通道
+	// create result chan
 	results := make(chan eth.L1BlockRef, taskCount)
 
-	// 创建工作池
+	// create fetch receipts pool
 	pool := NewWorkerPool(maxConcurent, p.log, p.l1)
 	pool.Start()
 	defer pool.Stop()
 
-	// 提交任务
+	// submit a task
 	startBlock := *currentL1Block
-	for i := uint64(0); i < uint64(taskCount); i++ {
+	for i := uint64(1); i <= uint64(taskCount); i++ {
 		task := BlockFetchTask{
 			blockNumber: startBlock + i,
 			ctx:         ctx,
@@ -250,18 +263,17 @@ func (p *PreFetcher) processBatch(ctx context.Context, currentL1Block *uint64) e
 		pool.taskChan <- task
 	}
 
-	// 收集结果
-	blockInfos := make([]eth.L1BlockRef, 0, taskCount)
-	for i := 0; i < taskCount; i++ {
+	// Collect results
+	for i := 1; i <= taskCount; i++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case result := <-results:
-			blockInfos = append(blockInfos, result)
+			p.l1BlockCache.AddAndRemove(result.Number, result)
 		}
 	}
 
-	// 更新当前区块
+	// update current l1 block
 	*currentL1Block = startBlock + uint64(taskCount)
 
 	return nil
@@ -272,10 +284,35 @@ func (p *PreFetcher) calculateTaskCount(current, latest uint64) int {
 		return 0
 	}
 
-	remaining := latest - current + 1
+	remaining := latest - current
 
 	if remaining >= maxConcurent {
 		return maxConcurent
 	}
 	return int(remaining)
+}
+
+func (p *PreFetcher) checkL1Reorg(lastUnsafeL1 *uint64) (uint64, bool) {
+	//check L1 reorg
+	minCacheBlock := p.l1BlockCache.GetMin()
+
+	maxNumber := *lastUnsafeL1
+	for i := maxNumber; i >= minCacheBlock.Number; i-- {
+		latestL1Block, err := p.l1.BlockRefByNumber(p.ctx, i)
+		if err != nil {
+			p.log.Warn("failed to fetch the cache latest block", "err", err)
+			return i, false
+		}
+
+		if cacheL1, ok := p.l1BlockCache.Get(i, true); ok {
+			if latestL1Block.Hash == cacheL1.Hash {
+				return i, true
+			}
+		} else {
+			p.log.Warn("check l1 reorg, can not get cache from l1BlockCache, there maybe something wrong, check!", "lastUnsafeL1", i)
+		}
+	}
+	p.log.Error("minCacheBlock is different, reorg deeper than 12 also occurred on L1", "min cache block num", minCacheBlock.Number, "hash", minCacheBlock.Hash)
+	return minCacheBlock.Number, false
+
 }

@@ -18,6 +18,15 @@ type RPCErrFaker struct {
 	ErrFn func() error
 }
 
+func (r RPCErrFaker) Subscribe(ctx context.Context, namespace string, channel any, args ...any) (ethereum.Subscription, error) {
+	if r.ErrFn != nil {
+		if err := r.ErrFn(); err != nil {
+			return nil, err
+		}
+	}
+	return r.RPC.Subscribe(ctx, namespace, channel, args...)
+}
+
 func (r RPCErrFaker) Close() {
 	r.RPC.Close()
 }
@@ -40,13 +49,13 @@ func (r RPCErrFaker) BatchCallContext(ctx context.Context, b []rpc.BatchElem) er
 	return r.RPC.BatchCallContext(ctx, b)
 }
 
-func (r RPCErrFaker) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
-	if r.ErrFn != nil {
-		if err := r.ErrFn(); err != nil {
-			return nil, err
-		}
-	}
-	return r.RPC.EthSubscribe(ctx, channel, args...)
-}
+//func (r RPCErrFaker) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
+//	if r.ErrFn != nil {
+//		if err := r.ErrFn(); err != nil {
+//			return nil, err
+//		}
+//	}
+//	return r.RPC.EthSubscribe(ctx, channel, args...)
+//}
 
 var _ client.RPC = (*RPCErrFaker)(nil)

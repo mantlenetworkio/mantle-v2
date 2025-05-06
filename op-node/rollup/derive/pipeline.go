@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"io"
 
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -86,7 +87,7 @@ type DerivationPipeline struct {
 }
 
 // NewDerivationPipeline creates a derivation pipeline, which should be reset before use.
-func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, l1Blobs L1BlobsFetcher, engine Engine, daSyncer DaSyncer, metrics Metrics, syncCfg *sync.Config, eigenDaSyncer EigenDaSyncer) *DerivationPipeline {
+func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, l1Blobs L1BlobsFetcher, engine Engine, daSyncer DaSyncer, metrics Metrics, syncCfg *sync.Config, eigenDaSyncer EigenDaSyncer, l1PreFetcher *sources.PreFetcher) *DerivationPipeline {
 
 	// Pull stages
 	l1Traversal := NewL1Traversal(log, cfg, l1Fetcher)
@@ -100,7 +101,7 @@ func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetch
 	attributesQueue := NewAttributesQueue(log, cfg, attrBuilder, batchQueue)
 
 	// Step stages
-	eng := NewEngineQueue(log, cfg, engine, metrics, attributesQueue, l1Fetcher, syncCfg)
+	eng := NewEngineQueue(log, cfg, engine, metrics, attributesQueue, l1Fetcher, syncCfg, l1PreFetcher)
 	dataSrc.RegisterEngineQueue(eng)
 
 	// Reset from engine queue then up from L1 Traversal. The stages do not talk to each other during

@@ -58,7 +58,7 @@ func (p *CachingReceiptsProvider) FetchReceipts(ctx context.Context, blockInfo e
 	var isFull bool
 
 	if v, ok := p.cache.Get(block.Number, !isPreFetch); ok && v.BlockHash == block.Hash {
-		return v.receipts, nil, isFull
+		return v.Receipts, nil, isFull
 	}
 
 	mu := p.getOrCreateFetchingLock(block.Hash)
@@ -69,7 +69,7 @@ func (p *CachingReceiptsProvider) FetchReceipts(ctx context.Context, blockInfo e
 		// we might have created a new lock above while the old
 		// fetching job completed.
 		p.deleteFetchingLock(block.Hash)
-		return v.receipts, nil, isFull
+		return v.Receipts, nil, isFull
 	}
 
 	isFull = p.cache.IsFull()
@@ -82,7 +82,7 @@ func (p *CachingReceiptsProvider) FetchReceipts(ctx context.Context, blockInfo e
 		return nil, err, isFull
 	}
 
-	p.cache.AddIfNotFull(block.Number, &ReceiptsHashPair{BlockHash: block.Hash, receipts: r})
+	p.cache.AddIfNotFull(block.Number, &ReceiptsHashPair{BlockHash: block.Hash, Receipts: r})
 	// result now in cache, can delete fetching lock
 	p.deleteFetchingLock(block.Hash)
 	return r, nil, isFull
