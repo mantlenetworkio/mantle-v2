@@ -12,9 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type attributesWithParent struct {
@@ -28,11 +28,11 @@ type NextAttributesProvider interface {
 }
 
 type Engine interface {
-	GetPayload(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error)
+	GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error)
 	ForkchoiceUpdate(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error)
-	NewPayload(ctx context.Context, payload *eth.ExecutionPayload) (*eth.PayloadStatusV1, error)
-	PayloadByHash(context.Context, common.Hash) (*eth.ExecutionPayload, error)
-	PayloadByNumber(context.Context, uint64) (*eth.ExecutionPayload, error)
+	NewPayload(ctx context.Context, payload *eth.ExecutionPayload, parentBeaconBlockRoot *common.Hash) (*eth.PayloadStatusV1, error)
+	PayloadByHash(context.Context, common.Hash) (*eth.ExecutionPayloadEnvelope, error)
+	PayloadByNumber(context.Context, uint64) (*eth.ExecutionPayloadEnvelope, error)
 	L2BlockRefByLabel(ctx context.Context, label eth.BlockLabel) (eth.L2BlockRef, error)
 	L2BlockRefByHash(ctx context.Context, l2Hash common.Hash) (eth.L2BlockRef, error)
 	SystemConfigL2Fetcher
@@ -55,12 +55,12 @@ type EngineControl interface {
 	// If updateSafe, the resulting block will be marked as a safe block.
 	StartPayload(ctx context.Context, parent eth.L2BlockRef, attrs *eth.PayloadAttributes, updateSafe bool) (errType BlockInsertionErrType, err error)
 	// ConfirmPayload requests the engine to complete the current block. If no block is being built, or if it fails, an error is returned.
-	ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayload, errTyp BlockInsertionErrType, err error)
+	ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error)
 	// CancelPayload requests the engine to stop building the current block without making it canonical.
 	// This is optional, as the engine expires building jobs that are left uncompleted, but can still save resources.
 	CancelPayload(ctx context.Context, force bool) error
 	// BuildingPayload indicates if a payload is being built, and onto which block it is being built, and whether or not it is a safe payload.
-	BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool)
+	BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadInfo, safe bool)
 }
 
 // Max memory used for buffering unsafe payloads
@@ -109,7 +109,7 @@ type EngineQueue struct {
 	engineSyncTarget eth.L2BlockRef
 
 	buildingOnto eth.L2BlockRef
-	buildingID   eth.PayloadID
+	buildingInfo eth.PayloadInfo
 	buildingSafe bool
 
 	// Track when the rollup node changes the forkchoice without engine action,
@@ -179,18 +179,18 @@ func (eq *EngineQueue) SetEngineSyncTarget(head eth.L2BlockRef) {
 	eq.metrics.RecordL2Ref("l2_engineSyncTarget", head)
 }
 
-func (eq *EngineQueue) AddUnsafePayload(payload *eth.ExecutionPayload) {
-	if payload == nil {
+func (eq *EngineQueue) AddUnsafePayload(envelope *eth.ExecutionPayloadEnvelope) {
+	if envelope == nil {
 		eq.log.Warn("cannot add nil unsafe payload")
 		return
 	}
-	if err := eq.unsafePayloads.Push(payload); err != nil {
-		eq.log.Warn("Could not add unsafe payload", "id", payload.ID(), "timestamp", uint64(payload.Timestamp), "err", err)
+	if err := eq.unsafePayloads.Push(envelope); err != nil {
+		eq.log.Warn("Could not add unsafe payload", "id", envelope.ExecutionPayload.ID(), "timestamp", uint64(envelope.ExecutionPayload.Timestamp), "err", err)
 		return
 	}
-	p := eq.unsafePayloads.Peek()
-	eq.metrics.RecordUnsafePayloadsBuffer(uint64(eq.unsafePayloads.Len()), eq.unsafePayloads.MemSize(), p.ID())
-	eq.log.Trace("Next unsafe payload to process", "next", p.ID(), "timestamp", uint64(p.Timestamp))
+	e := eq.unsafePayloads.Peek()
+	eq.metrics.RecordUnsafePayloadsBuffer(uint64(eq.unsafePayloads.Len()), eq.unsafePayloads.MemSize(), e.ExecutionPayload.ID())
+	eq.log.Trace("Next unsafe payload to process", "next", e.ExecutionPayload.ID(), "timestamp", uint64(e.ExecutionPayload.Timestamp))
 }
 
 func (eq *EngineQueue) Finalize(l1Origin eth.L1BlockRef) {
@@ -477,8 +477,8 @@ func (eq *EngineQueue) checkForkchoiceUpdatedStatus(status eth.ExecutePayloadSta
 }
 
 func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
-	first := eq.unsafePayloads.Peek()
-
+	envelope := eq.unsafePayloads.Peek()
+	first := envelope.ExecutionPayload
 	if uint64(first.BlockNumber) <= eq.safeHead.Number {
 		eq.log.Info("skipping unsafe payload, since it is older than safe head", "safe", eq.safeHead.ID(), "unsafe", first.ID(), "payload", first.ID())
 		eq.unsafePayloads.Pop()
@@ -506,7 +506,7 @@ func (eq *EngineQueue) tryNextUnsafePayload(ctx context.Context) error {
 		return nil
 	}
 
-	status, err := eq.engine.NewPayload(ctx, first)
+	status, err := eq.engine.NewPayload(ctx, envelope.ExecutionPayload, envelope.ParentBeaconBlockRoot)
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to update insert payload: %w", err))
 	}
@@ -597,7 +597,7 @@ func (eq *EngineQueue) consolidateNextSafeAttributes(ctx context.Context) error 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
-	payload, err := eq.engine.PayloadByNumber(ctx, eq.safeHead.Number+1)
+	envelope, err := eq.engine.PayloadByNumber(ctx, eq.safeHead.Number+1)
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
 			// engine may have restarted, or inconsistent safe head. We need to reset
@@ -605,12 +605,12 @@ func (eq *EngineQueue) consolidateNextSafeAttributes(ctx context.Context) error 
 		}
 		return NewTemporaryError(fmt.Errorf("failed to get existing unsafe payload to compare against derived attributes from L1: %w", err))
 	}
-	if err := AttributesMatchBlock(eq.safeAttributes.attributes, eq.safeHead.Hash, payload, eq.log); err != nil {
+	if err := AttributesMatchBlock(eq.safeAttributes.attributes, eq.safeHead.Hash, envelope.ExecutionPayload, eq.log); err != nil {
 		eq.log.Warn("L2 reorg: existing unsafe block does not match derived attributes from L1", "err", err, "unsafe", eq.unsafeHead, "safe", eq.safeHead)
 		// geth cannot wind back a chain without reorging to a new, previously non-canonical, block
 		return eq.forceNextSafeAttributes(ctx)
 	}
-	ref, err := PayloadToBlockRef(payload, &eq.cfg.Genesis)
+	ref, err := PayloadToBlockRef(envelope.ExecutionPayload, &eq.cfg.Genesis)
 	if err != nil {
 		return NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
@@ -681,8 +681,8 @@ func (eq *EngineQueue) StartPayload(ctx context.Context, parent eth.L2BlockRef, 
 	if eq.isEngineSyncing() {
 		return BlockInsertTemporaryErr, fmt.Errorf("engine is in progess of p2p sync")
 	}
-	if eq.buildingID != (eth.PayloadID{}) {
-		eq.log.Warn("did not finish previous block building, starting new building now", "prev_onto", eq.buildingOnto, "prev_payload_id", eq.buildingID, "new_onto", parent)
+	if eq.buildingInfo.ID != (eth.PayloadID{}) {
+		eq.log.Warn("did not finish previous block building, starting new building now", "prev_onto", eq.buildingOnto, "prev_payload_id", eq.buildingInfo.ID, "new_onto", parent)
 		// TODO: maybe worth it to force-cancel the old payload ID here.
 	}
 	fc := eth.ForkchoiceState{
@@ -694,14 +694,14 @@ func (eq *EngineQueue) StartPayload(ctx context.Context, parent eth.L2BlockRef, 
 	if err != nil {
 		return errTyp, err
 	}
-	eq.buildingID = id
+	eq.buildingInfo = eth.PayloadInfo{ID: id, Timestamp: uint64(attrs.Timestamp)}
 	eq.buildingSafe = updateSafe
 	eq.buildingOnto = parent
 	return BlockInsertOK, nil
 }
 
-func (eq *EngineQueue) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayload, errTyp BlockInsertionErrType, err error) {
-	if eq.buildingID == (eth.PayloadID{}) {
+func (eq *EngineQueue) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
+	if eq.buildingInfo.ID == (eth.PayloadID{}) {
 		return nil, BlockInsertPrestateErr, fmt.Errorf("cannot complete payload building: not currently building a payload")
 	}
 	if eq.buildingOnto.Hash != eq.unsafeHead.Hash { // E.g. when safe-attributes consolidation fails, it will drop the existing work.
@@ -712,11 +712,11 @@ func (eq *EngineQueue) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPa
 		SafeBlockHash:      eq.safeHead.Hash,
 		FinalizedBlockHash: eq.finalized.Hash,
 	}
-	payload, errTyp, err := ConfirmPayload(ctx, eq.log, eq.engine, fc, eq.buildingID, eq.buildingSafe)
+	envelope, errTyp, err := ConfirmPayload(ctx, eq.log, eq.engine, fc, eq.buildingInfo, eq.buildingSafe)
 	if err != nil {
-		return nil, errTyp, fmt.Errorf("failed to complete building on top of L2 chain %s, id: %s, error (%d): %w", eq.buildingOnto, eq.buildingID, errTyp, err)
+		return nil, errTyp, fmt.Errorf("failed to complete building on top of L2 chain %s, id: %s, error (%d): %w", eq.buildingOnto, eq.buildingInfo.ID, errTyp, err)
 	}
-	ref, err := PayloadToBlockRef(payload, &eq.cfg.Genesis)
+	ref, err := PayloadToBlockRef(envelope.ExecutionPayload, &eq.cfg.Genesis)
 	if err != nil {
 		return nil, BlockInsertPayloadErr, NewResetError(fmt.Errorf("failed to decode L2 block ref from payload: %w", err))
 	}
@@ -732,18 +732,18 @@ func (eq *EngineQueue) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPa
 		eq.metrics.RecordL2Ref("l2_safe", ref)
 	}
 	eq.resetBuildingState()
-	return payload, BlockInsertOK, nil
+	return envelope, BlockInsertOK, nil
 }
 
 func (eq *EngineQueue) CancelPayload(ctx context.Context, force bool) error {
-	if eq.buildingID == (eth.PayloadID{}) { // only cancel if there is something to cancel.
+	if eq.buildingInfo.ID == (eth.PayloadID{}) { // only cancel if there is something to cancel.
 		return nil
 	}
 	// the building job gets wrapped up as soon as the payload is retrieved, there's no explicit cancel in the Engine API
-	eq.log.Error("cancelling old block sealing job", "payload", eq.buildingID)
-	_, err := eq.engine.GetPayload(ctx, eq.buildingID)
+	eq.log.Error("cancelling old block sealing job", "payload", eq.buildingInfo.ID)
+	_, err := eq.engine.GetPayload(ctx, eq.buildingInfo)
 	if err != nil {
-		eq.log.Error("failed to cancel block building job", "payload", eq.buildingID, "err", err)
+		eq.log.Error("failed to cancel block building job", "payload", eq.buildingInfo.ID, "err", err)
 		if !force {
 			return err
 		}
@@ -752,12 +752,12 @@ func (eq *EngineQueue) CancelPayload(ctx context.Context, force bool) error {
 	return nil
 }
 
-func (eq *EngineQueue) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool) {
-	return eq.buildingOnto, eq.buildingID, eq.buildingSafe
+func (eq *EngineQueue) BuildingPayload() (onto eth.L2BlockRef, info eth.PayloadInfo, safe bool) {
+	return eq.buildingOnto, eq.buildingInfo, eq.buildingSafe
 }
 
 func (eq *EngineQueue) resetBuildingState() {
-	eq.buildingID = eth.PayloadID{}
+	eq.buildingInfo = eth.PayloadInfo{ID: eth.PayloadID{}}
 	eq.buildingOnto = eth.L2BlockRef{}
 	eq.buildingSafe = false
 }
@@ -827,7 +827,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 // UnsafeL2SyncTarget retrieves the first queued-up L2 unsafe payload, or a zeroed reference if there is none.
 func (eq *EngineQueue) UnsafeL2SyncTarget() eth.L2BlockRef {
 	if first := eq.unsafePayloads.Peek(); first != nil {
-		ref, err := PayloadToBlockRef(first, &eq.cfg.Genesis)
+		ref, err := PayloadToBlockRef(first.ExecutionPayload, &eq.cfg.Genesis)
 		if err != nil {
 			return eth.L2BlockRef{}
 		}

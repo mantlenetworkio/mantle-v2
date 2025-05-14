@@ -14,13 +14,13 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	sclient "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	ssources "github.com/ethereum-optimism/optimism/op-service/sources"
 )
@@ -409,36 +409,36 @@ func (n *OpNode) OnNewL1Finalized(ctx context.Context, sig eth.L1BlockRef) {
 	}
 }
 
-func (n *OpNode) PublishL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error {
-	n.tracer.OnPublishL2Payload(ctx, payload)
+func (n *OpNode) PublishL2Payload(ctx context.Context, envelope *eth.ExecutionPayloadEnvelope) error {
+	n.tracer.OnPublishL2Payload(ctx, envelope)
 
 	// publish to p2p, if we are running p2p at all
 	if n.p2pNode != nil {
 		if n.p2pSigner == nil {
-			return fmt.Errorf("node has no p2p signer, payload %s cannot be published", payload.ID())
+			return fmt.Errorf("node has no p2p signer, payload %s cannot be published", envelope.ID())
 		}
-		n.log.Info("Publishing signed execution payload on p2p", "id", payload.ID())
-		return n.p2pNode.GossipOut().PublishL2Payload(ctx, payload, n.p2pSigner)
+		n.log.Info("Publishing signed execution payload on p2p", "id", envelope.ID())
+		return n.p2pNode.GossipOut().PublishL2Payload(ctx, envelope, n.p2pSigner)
 	}
 	// if p2p is not enabled then we just don't publish the payload
 	return nil
 }
 
-func (n *OpNode) OnUnsafeL2Payload(ctx context.Context, from peer.ID, payload *eth.ExecutionPayload) error {
+func (n *OpNode) OnUnsafeL2Payload(ctx context.Context, from peer.ID, envelope *eth.ExecutionPayloadEnvelope) error {
 	// ignore if it's from ourselves
 	if n.p2pNode != nil && from == n.p2pNode.Host().ID() {
 		return nil
 	}
 
-	n.tracer.OnUnsafeL2Payload(ctx, from, payload)
+	n.tracer.OnUnsafeL2Payload(ctx, from, envelope)
 
-	n.log.Info("Received signed execution payload from p2p", "id", payload.ID(), "peer", from)
+	n.log.Info("Received signed execution payload from p2p", "id", envelope.ID(), "peer", from)
 
 	// Pass on the event to the L2 Engine
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
-	if err := n.l2Driver.OnUnsafeL2Payload(ctx, payload); err != nil {
-		n.log.Warn("failed to notify engine driver of new L2 payload", "err", err, "id", payload.ID())
+	if err := n.l2Driver.OnUnsafeL2Payload(ctx, envelope); err != nil {
+		n.log.Warn("failed to notify engine driver of new L2 payload", "err", err, "id", envelope.ID())
 	}
 
 	return nil

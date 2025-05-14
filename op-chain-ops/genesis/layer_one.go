@@ -7,13 +7,11 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 
@@ -21,6 +19,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/deployer"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
+	"github.com/ethereum-optimism/optimism/op-service/backends"
 )
 
 var (
@@ -120,7 +119,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 	}
 	gasLimit := uint64(config.L2GenesisBlockGasLimit)
 	if gasLimit == 0 {
-		gasLimit = defaultL2GasLimit
+		gasLimit = defaultGasLimit
 	}
 	baseFee := config.L2GenesisBlockBaseFeePerGas
 	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {
@@ -258,14 +257,18 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 	}
 
 	for _, dep := range deployments {
-		st, err := stateDB.StorageTrie(dep.Address)
+		st, err := stateDB.OpenStorageTrie(dep.Address)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open storage trie of %s: %w", dep.Address, err)
 		}
 		if st == nil {
 			return nil, fmt.Errorf("missing account %s in state, address: %s", dep.Name, dep.Address)
 		}
-		iter := trie.NewIterator(st.NodeIterator(nil))
+		nodeIter, err := st.NodeIterator(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create node iterator for storage, err: %s", err)
+		}
+		iter := trie.NewIterator(nodeIter)
 
 		depAddr := dep.Address
 		if strings.HasSuffix(dep.Name, "Proxy") {
@@ -309,7 +312,7 @@ func deployL1Contracts(config *DeployConfig, backend *backends.SimulatedBackend)
 	}
 	gasLimit := uint64(config.L2GenesisBlockGasLimit)
 	if gasLimit == 0 {
-		gasLimit = defaultL2GasLimit
+		gasLimit = defaultGasLimit
 	}
 	baseFee := config.L2GenesisBlockBaseFeePerGas
 	if baseFee.ToInt().Cmp(big.NewInt(0)) == 0 {

@@ -15,10 +15,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
@@ -442,16 +442,16 @@ func (l *BatchSubmitter) publishTxToL1(ctx context.Context, queue *txmgr.Queue[t
 func (l *BatchSubmitter) sendTransaction(txdata txData, queue *txmgr.Queue[txData], receiptsCh chan txmgr.TxReceipt[txData]) {
 	// Do the gas estimation offline. A value of 0 will cause the [txmgr] to estimate the gas limit.
 	data := txdata.Bytes()
-	intrinsicGas, err := core.IntrinsicGas(data, nil, false, true, true, false)
+	floorDataGas, err := core.FloorDataGas(data)
 	if err != nil {
-		l.log.Error("Failed to calculate intrinsic gas", "error", err)
+		// We log instead of return an error here because the txmgr will do its own gas estimation.
+		l.log.Warn("Failed to calculate floor data gas", "err", err)
 		return
 	}
-
 	candidate := txmgr.TxCandidate{
 		To:       &l.Rollup.BatchInboxAddress,
 		TxData:   data,
-		GasLimit: intrinsicGas,
+		GasLimit: floorDataGas,
 	}
 	queue.Send(txdata, candidate, receiptsCh)
 }

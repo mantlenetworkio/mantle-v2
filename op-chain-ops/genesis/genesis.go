@@ -15,10 +15,17 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-// defaultL2GasLimit represents the default gas limit for an L2 block.
+var (
+	// BedrockTransitionBlockExtraData represents the extradata
+	// set in the very first bedrock block. This value must be
+	// less than 32 bytes long or it will create an invalid block.
+	BedrockTransitionBlockExtraData = []byte("BEDROCK")
+)
+
 const (
-	defaultL2GasLimit = 30_000_000
-	defaultL2BaseFee  = 1_000_000_000
+	// defaultGasLimit represents the default gas limit for a genesis block.
+	defaultGasLimit  = 30_000_000
+	defaultL2BaseFee = 1_000_000_000
 )
 
 // NewL2Genesis will create a new L2 genesis
@@ -37,36 +44,51 @@ func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, erro
 	}
 
 	optimismChainConfig := params.ChainConfig{
-		ChainID:                       new(big.Int).SetUint64(config.L2ChainID),
-		HomesteadBlock:                big.NewInt(0),
-		DAOForkBlock:                  nil,
-		DAOForkSupport:                false,
-		EIP150Block:                   big.NewInt(0),
-		EIP155Block:                   big.NewInt(0),
-		EIP158Block:                   big.NewInt(0),
-		ByzantiumBlock:                big.NewInt(0),
-		ConstantinopleBlock:           big.NewInt(0),
-		PetersburgBlock:               big.NewInt(0),
-		IstanbulBlock:                 big.NewInt(0),
-		MuirGlacierBlock:              big.NewInt(0),
-		BerlinBlock:                   big.NewInt(0),
-		LondonBlock:                   big.NewInt(0),
-		ArrowGlacierBlock:             big.NewInt(0),
-		GrayGlacierBlock:              big.NewInt(0),
-		MergeNetsplitBlock:            big.NewInt(0),
-		TerminalTotalDifficulty:       big.NewInt(0),
-		TerminalTotalDifficultyPassed: true,
-		BedrockBlock:                  new(big.Int).SetUint64(uint64(config.L2GenesisBlockNumber)),
-		RegolithTime:                  config.RegolithTime(block.Time()),
+		ChainID:                 new(big.Int).SetUint64(config.L2ChainID),
+		HomesteadBlock:          big.NewInt(0),
+		DAOForkBlock:            nil,
+		DAOForkSupport:          false,
+		EIP150Block:             big.NewInt(0),
+		EIP155Block:             big.NewInt(0),
+		EIP158Block:             big.NewInt(0),
+		ByzantiumBlock:          big.NewInt(0),
+		ConstantinopleBlock:     big.NewInt(0),
+		PetersburgBlock:         big.NewInt(0),
+		IstanbulBlock:           big.NewInt(0),
+		MuirGlacierBlock:        big.NewInt(0),
+		BerlinBlock:             big.NewInt(0),
+		LondonBlock:             big.NewInt(0),
+		ArrowGlacierBlock:       big.NewInt(0),
+		GrayGlacierBlock:        big.NewInt(0),
+		MergeNetsplitBlock:      big.NewInt(0),
+		TerminalTotalDifficulty: big.NewInt(0),
+		BedrockBlock:            new(big.Int).SetUint64(uint64(config.L2GenesisBlockNumber)),
+		RegolithTime:            config.RegolithTime(block.Time()),
 		Optimism: &params.OptimismConfig{
 			EIP1559Denominator: eip1559Denom,
 			EIP1559Elasticity:  eip1559Elasticity,
 		},
 	}
 
+	mantleUpgradeChainConfig := params.GetUpgradeConfigForMantle(optimismChainConfig.ChainID)
+	if mantleUpgradeChainConfig != nil {
+		optimismChainConfig.BaseFeeTime = mantleUpgradeChainConfig.BaseFeeTime
+		optimismChainConfig.BVMETHMintUpgradeTime = mantleUpgradeChainConfig.BVMETHMintUpgradeTime
+		optimismChainConfig.MetaTxV2UpgradeTime = mantleUpgradeChainConfig.MetaTxV2UpgradeTime
+		optimismChainConfig.MetaTxV3UpgradeTime = mantleUpgradeChainConfig.MetaTxV3UpgradeTime
+		optimismChainConfig.ProxyOwnerUpgradeTime = mantleUpgradeChainConfig.ProxyOwnerUpgradeTime
+		optimismChainConfig.MantleEverestTime = mantleUpgradeChainConfig.MantleEverestTime
+		optimismChainConfig.MantleSkadiTime = mantleUpgradeChainConfig.MantleSkadiTime
+
+		// active standard EVM version (shanghai/cancun/prague)  in mantle skadi time
+		optimismChainConfig.ShanghaiTime = mantleUpgradeChainConfig.MantleSkadiTime
+		optimismChainConfig.CancunTime = mantleUpgradeChainConfig.MantleSkadiTime
+		optimismChainConfig.PragueTime = mantleUpgradeChainConfig.MantleSkadiTime
+	}
+
 	gasLimit := config.L2GenesisBlockGasLimit
 	if gasLimit == 0 {
-		gasLimit = defaultL2GasLimit
+		gasLimit = defaultGasLimit
 	}
 	baseFee := config.L2GenesisBlockBaseFeePerGas
 	if baseFee == nil {
@@ -95,7 +117,7 @@ func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, erro
 		GasUsed:    uint64(config.L2GenesisBlockGasUsed),
 		ParentHash: config.L2GenesisBlockParentHash,
 		BaseFee:    baseFee.ToInt(),
-		Alloc:      map[common.Address]core.GenesisAccount{},
+		Alloc:      map[common.Address]types.Account{},
 	}, nil
 }
 
@@ -134,12 +156,11 @@ func NewL1Genesis(config *DeployConfig) (*core.Genesis, error) {
 	} else {
 		chainConfig.MergeNetsplitBlock = big.NewInt(0)
 		chainConfig.TerminalTotalDifficulty = big.NewInt(0)
-		chainConfig.TerminalTotalDifficultyPassed = true
 	}
 
 	gasLimit := config.L1GenesisBlockGasLimit
 	if gasLimit == 0 {
-		gasLimit = 15_000_000
+		gasLimit = defaultGasLimit
 	}
 	baseFee := config.L1GenesisBlockBaseFeePerGas
 	if baseFee == nil {

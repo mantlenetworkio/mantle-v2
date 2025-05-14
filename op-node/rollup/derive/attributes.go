@@ -3,14 +3,12 @@ package derive
 import (
 	"context"
 	"fmt"
-
+	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
 // L1ReceiptsFetcher fetches L1 header info and receipts for the payload attributes derivation (the info tx and deposits)
@@ -113,6 +111,18 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		sysConfig.BaseFee = nil
 	}
 
+	var (
+		withdrawals      *types.Withdrawals
+		parentBeaconRoot *common.Hash
+	)
+	if ba.cfg.IsMantleSkadi(nextL2Time) {
+		withdrawals = &types.Withdrawals{}
+		parentBeaconRoot = l1Info.ParentBeaconRoot()
+		if parentBeaconRoot == nil { // default to zero hash if there is no beacon-block-root available
+			parentBeaconRoot = new(common.Hash)
+		}
+	}
+	
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
 		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),
@@ -121,5 +131,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),
 		BaseFee:               sysConfig.BaseFee,
+		Withdrawals:           withdrawals,
+		ParentBeaconBlockRoot: parentBeaconRoot,
 	}, nil
 }

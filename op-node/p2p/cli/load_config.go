@@ -10,24 +10,22 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/sync"
 	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-node/flags"
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
-
-	"github.com/urfave/cli"
-
-	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 func NewConfig(ctx *cli.Context, blockTime uint64) (*p2p.Config, error) {
 	conf := &p2p.Config{}
 
-	if ctx.GlobalBool(flags.DisableP2P.Name) {
+	if ctx.Bool(flags.DisableP2P.Name) {
 		conf.DisableP2P = true
 		return conf, nil
 	}
@@ -70,7 +68,7 @@ func NewConfig(ctx *cli.Context, blockTime uint64) (*p2p.Config, error) {
 		return nil, fmt.Errorf("failed to load p2p topic scoring options: %w", err)
 	}
 
-	conf.EnableReqRespSync = ctx.GlobalBool(flags.SyncReqRespFlag.Name)
+	conf.EnableReqRespSync = ctx.Bool(flags.SyncReqRespFlag.Name)
 
 	return conf, nil
 }
@@ -92,7 +90,7 @@ func validatePort(p uint) (uint16, error) {
 //
 // If the topic scoring options are not set, then the default topic scoring.
 func loadTopicScoringParams(conf *p2p.Config, ctx *cli.Context, blockTime uint64) error {
-	scoringLevel := ctx.GlobalString(flags.TopicScoring.Name)
+	scoringLevel := ctx.String(flags.TopicScoring.Name)
 	if scoringLevel != "" {
 		// Set default block topic scoring parameters
 		// See prysm: https://github.com/prysmaticlabs/prysm/blob/develop/beacon-chain/p2p/gossip_scoring_params.go
@@ -112,7 +110,7 @@ func loadTopicScoringParams(conf *p2p.Config, ctx *cli.Context, blockTime uint64
 //
 // If the scoring level is not set, no scoring is enabled.
 func loadPeerScoringParams(conf *p2p.Config, ctx *cli.Context, blockTime uint64) error {
-	scoringLevel := ctx.GlobalString(flags.PeerScoring.Name)
+	scoringLevel := ctx.String(flags.PeerScoring.Name)
 	if scoringLevel != "" {
 		peerScoreParams, err := p2p.GetPeerScoreParams(scoringLevel, blockTime)
 		if err != nil {
@@ -126,7 +124,7 @@ func loadPeerScoringParams(conf *p2p.Config, ctx *cli.Context, blockTime uint64)
 
 // loadPeerScoreBands loads [p2p.BandScorer] from the CLI context.
 func loadPeerScoreBands(conf *p2p.Config, ctx *cli.Context) error {
-	scoreBands := ctx.GlobalString(flags.PeerScoreBands.Name)
+	scoreBands := ctx.String(flags.PeerScoreBands.Name)
 	bandScorer, err := p2p.NewBandScorer(scoreBands)
 	if err != nil {
 		return err
@@ -137,13 +135,13 @@ func loadPeerScoreBands(conf *p2p.Config, ctx *cli.Context) error {
 
 // loadBanningOption loads whether or not to ban peers from the CLI context.
 func loadBanningOption(conf *p2p.Config, ctx *cli.Context) error {
-	ban := ctx.GlobalBool(flags.Banning.Name)
+	ban := ctx.Bool(flags.Banning.Name)
 	conf.BanningEnabled = ban
 	return nil
 }
 
 func loadListenOpts(conf *p2p.Config, ctx *cli.Context) error {
-	listenIP := ctx.GlobalString(flags.ListenIP.Name)
+	listenIP := ctx.String(flags.ListenIP.Name)
 	if listenIP != "" { // optional
 		conf.ListenIP = net.ParseIP(listenIP)
 		if conf.ListenIP == nil {
@@ -151,11 +149,11 @@ func loadListenOpts(conf *p2p.Config, ctx *cli.Context) error {
 		}
 	}
 	var err error
-	conf.ListenTCPPort, err = validatePort(ctx.GlobalUint(flags.ListenTCPPort.Name))
+	conf.ListenTCPPort, err = validatePort(ctx.Uint(flags.ListenTCPPort.Name))
 	if err != nil {
 		return fmt.Errorf("bad listen TCP port: %w", err)
 	}
-	conf.ListenUDPPort, err = validatePort(ctx.GlobalUint(flags.ListenUDPPort.Name))
+	conf.ListenUDPPort, err = validatePort(ctx.Uint(flags.ListenUDPPort.Name))
 	if err != nil {
 		return fmt.Errorf("bad listen UDP port: %w", err)
 	}
@@ -163,20 +161,20 @@ func loadListenOpts(conf *p2p.Config, ctx *cli.Context) error {
 }
 
 func loadDiscoveryOpts(conf *p2p.Config, ctx *cli.Context) error {
-	if ctx.GlobalBool(flags.NoDiscovery.Name) {
+	if ctx.Bool(flags.NoDiscovery.Name) {
 		conf.NoDiscovery = true
 	}
 
 	var err error
-	conf.AdvertiseTCPPort, err = validatePort(ctx.GlobalUint(flags.AdvertiseTCPPort.Name))
+	conf.AdvertiseTCPPort, err = validatePort(ctx.Uint(flags.AdvertiseTCPPort.Name))
 	if err != nil {
 		return fmt.Errorf("bad advertised TCP port: %w", err)
 	}
-	conf.AdvertiseUDPPort, err = validatePort(ctx.GlobalUint(flags.AdvertiseUDPPort.Name))
+	conf.AdvertiseUDPPort, err = validatePort(ctx.Uint(flags.AdvertiseUDPPort.Name))
 	if err != nil {
 		return fmt.Errorf("bad advertised UDP port: %w", err)
 	}
-	adIP := ctx.GlobalString(flags.AdvertiseIP.Name)
+	adIP := ctx.String(flags.AdvertiseIP.Name)
 	if adIP != "" { // optional
 		ips, err := net.LookupIP(adIP)
 		if err != nil {
@@ -194,7 +192,7 @@ func loadDiscoveryOpts(conf *p2p.Config, ctx *cli.Context) error {
 		}
 	}
 
-	dbPath := ctx.GlobalString(flags.DiscoveryPath.Name)
+	dbPath := ctx.String(flags.DiscoveryPath.Name)
 	if dbPath == "" {
 		dbPath = "opnode_discovery_db"
 	}
@@ -207,7 +205,7 @@ func loadDiscoveryOpts(conf *p2p.Config, ctx *cli.Context) error {
 	}
 
 	conf.Bootnodes = p2p.DefaultBootnodes
-	records := strings.Split(ctx.GlobalString(flags.Bootnodes.Name), ",")
+	records := strings.Split(ctx.String(flags.Bootnodes.Name), ",")
 	for i, recordB64 := range records {
 		recordB64 = strings.TrimSpace(recordB64)
 		if recordB64 == "" { // ignore empty records
@@ -224,7 +222,7 @@ func loadDiscoveryOpts(conf *p2p.Config, ctx *cli.Context) error {
 }
 
 func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
-	addrs := strings.Split(ctx.GlobalString(flags.StaticPeers.Name), ",")
+	addrs := strings.Split(ctx.String(flags.StaticPeers.Name), ",")
 	for i, addr := range addrs {
 		addr = strings.TrimSpace(addr)
 		if addr == "" {
@@ -237,7 +235,7 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		conf.StaticPeers = append(conf.StaticPeers, a)
 	}
 
-	for _, v := range strings.Split(ctx.GlobalString(flags.HostMux.Name), ",") {
+	for _, v := range strings.Split(ctx.String(flags.HostMux.Name), ",") {
 		v = strings.ToLower(strings.TrimSpace(v))
 		switch v {
 		case "yamux":
@@ -249,7 +247,7 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		}
 	}
 
-	secArr := strings.Split(ctx.GlobalString(flags.HostSecurity.Name), ",")
+	secArr := strings.Split(ctx.String(flags.HostSecurity.Name), ",")
 	for _, v := range secArr {
 		v = strings.ToLower(strings.TrimSpace(v))
 		switch v {
@@ -267,16 +265,16 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 		}
 	}
 
-	conf.PeersLo = ctx.GlobalUint(flags.PeersLo.Name)
-	conf.PeersHi = ctx.GlobalUint(flags.PeersHi.Name)
-	conf.PeersGrace = ctx.GlobalDuration(flags.PeersGrace.Name)
-	conf.NAT = ctx.GlobalBool(flags.NAT.Name)
-	conf.UserAgent = ctx.GlobalString(flags.UserAgent.Name)
-	conf.TimeoutNegotiation = ctx.GlobalDuration(flags.TimeoutNegotiation.Name)
-	conf.TimeoutAccept = ctx.GlobalDuration(flags.TimeoutAccept.Name)
-	conf.TimeoutDial = ctx.GlobalDuration(flags.TimeoutDial.Name)
+	conf.PeersLo = ctx.Uint(flags.PeersLo.Name)
+	conf.PeersHi = ctx.Uint(flags.PeersHi.Name)
+	conf.PeersGrace = ctx.Duration(flags.PeersGrace.Name)
+	conf.NAT = ctx.Bool(flags.NAT.Name)
+	conf.UserAgent = ctx.String(flags.UserAgent.Name)
+	conf.TimeoutNegotiation = ctx.Duration(flags.TimeoutNegotiation.Name)
+	conf.TimeoutAccept = ctx.Duration(flags.TimeoutAccept.Name)
+	conf.TimeoutDial = ctx.Duration(flags.TimeoutDial.Name)
 
-	peerstorePath := ctx.GlobalString(flags.PeerstorePath.Name)
+	peerstorePath := ctx.String(flags.PeerstorePath.Name)
 	if peerstorePath == "" {
 		return errors.New("peerstore path must be specified, use 'memory' to explicitly not persist peer records")
 	}
@@ -297,11 +295,11 @@ func loadLibp2pOpts(conf *p2p.Config, ctx *cli.Context) error {
 }
 
 func loadNetworkPrivKey(ctx *cli.Context) (*crypto.Secp256k1PrivateKey, error) {
-	raw := ctx.GlobalString(flags.P2PPrivRaw.Name)
+	raw := ctx.String(flags.P2PPrivRaw.Name)
 	if raw != "" {
 		return parsePriv(raw)
 	}
-	keyPath := ctx.GlobalString(flags.P2PPrivPath.Name)
+	keyPath := ctx.String(flags.P2PPrivPath.Name)
 	if keyPath == "" {
 		return nil, errors.New("no p2p private key path specified, cannot auto-generate key without path")
 	}
@@ -351,10 +349,10 @@ func parsePriv(data string) (*crypto.Secp256k1PrivateKey, error) {
 }
 
 func loadGossipOptions(conf *p2p.Config, ctx *cli.Context) error {
-	conf.MeshD = ctx.GlobalInt(flags.GossipMeshDFlag.Name)
-	conf.MeshDLo = ctx.GlobalInt(flags.GossipMeshDloFlag.Name)
-	conf.MeshDHi = ctx.GlobalInt(flags.GossipMeshDhiFlag.Name)
-	conf.MeshDLazy = ctx.GlobalInt(flags.GossipMeshDlazyFlag.Name)
-	conf.FloodPublish = ctx.GlobalBool(flags.GossipFloodPublishFlag.Name)
+	conf.MeshD = ctx.Int(flags.GossipMeshDFlag.Name)
+	conf.MeshDLo = ctx.Int(flags.GossipMeshDloFlag.Name)
+	conf.MeshDHi = ctx.Int(flags.GossipMeshDhiFlag.Name)
+	conf.MeshDLazy = ctx.Int(flags.GossipMeshDlazyFlag.Name)
+	conf.FloodPublish = ctx.Bool(flags.GossipFloodPublishFlag.Name)
 	return nil
 }

@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	seth "github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
 )
