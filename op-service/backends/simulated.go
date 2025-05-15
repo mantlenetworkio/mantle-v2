@@ -993,6 +993,10 @@ func (fb *filterBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscr
 	return fb.bc.SubscribeLogsEvent(ch)
 }
 
+func (fb *filterBackend) CurrentView() *filtermaps.ChainView {
+	panic("not supported")
+}
+
 func (fb *filterBackend) NewMatcherBackend() filtermaps.MatcherBackend {
 	panic("not supported")
 }
