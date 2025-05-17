@@ -105,7 +105,7 @@ func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPay
 	switch method := s.evp.NewPayloadVersion(uint64(payload.Timestamp)); method {
 	case eth.NewPayloadV4:
 		err = s.client.CallContext(execCtx, &result, string(method), payload, []common.Hash{}, parentBeaconBlockRoot, []hexutil.Bytes{})
-	case eth.NewPayloadV1:
+	case eth.NewPayloadV2:
 		err = s.client.CallContext(execCtx, &result, string(method), payload)
 	default:
 		return nil, fmt.Errorf("unsupported NewPayload version: %s", method)

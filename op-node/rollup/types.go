@@ -356,7 +356,7 @@ func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 	if c.IsMantleSkadi(timestamp) {
 		return eth.NewPayloadV4
 	} else {
-		return eth.NewPayloadV1
+		return eth.NewPayloadV2
 	}
 }
 
@@ -365,7 +365,7 @@ func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 	if c.IsMantleSkadi(timestamp) {
 		return eth.GetPayloadV4
 	} else {
-		return eth.GetPayloadV1
+		return eth.GetPayloadV2
 	}
 }
 
