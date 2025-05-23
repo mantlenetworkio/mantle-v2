@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 import { Test } from "forge-std/Test.sol";
-import { ResourceMetering } from "../L1/ResourceMetering.sol";
-import { Proxy } from "../universal/Proxy.sol";
-import { Constants } from "../libraries/Constants.sol";
+import { ResourceMetering } from "src/L1/ResourceMetering.sol";
+import { Proxy } from "src/universal/Proxy.sol";
+import { Constants } from "src/libraries/Constants.sol";
 
 contract MeterUser is ResourceMetering {
     ResourceMetering.ResourceConfig public innerConfig;

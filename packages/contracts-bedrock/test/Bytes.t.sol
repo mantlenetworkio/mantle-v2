@@ -1,7 +1,7 @@
 pragma solidity 0.8.15;
 
 import { Test } from "forge-std/Test.sol";
-import { Bytes } from "../libraries/Bytes.sol";
+import { Bytes } from "src/libraries/Bytes.sol";
 
 contract Bytes_slice_Test is Test {
     /**

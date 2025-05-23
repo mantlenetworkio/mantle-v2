@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import { CommonTest } from "./CommonTest.t.sol";
-import { DeployerWhitelist } from "../legacy/DeployerWhitelist.sol";
+import { DeployerWhitelist } from "src/legacy/DeployerWhitelist.sol";
 
 contract DeployerWhitelist_Test is CommonTest {
     DeployerWhitelist list;

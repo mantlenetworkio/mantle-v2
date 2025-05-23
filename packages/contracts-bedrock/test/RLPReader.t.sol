@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import { stdError } from "forge-std/Test.sol";
 import { CommonTest } from "./CommonTest.t.sol";
-import { RLPReader } from "../libraries/rlp/RLPReader.sol";
+import { RLPReader } from "src/libraries/rlp/RLPReader.sol";
 
 contract RLPReader_readBytes_Test is CommonTest {
     function test_readBytes_bytestring00_succeeds() external {

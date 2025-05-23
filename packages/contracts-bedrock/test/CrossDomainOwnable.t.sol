@@ -2,8 +2,8 @@
 pragma solidity 0.8.15;
 
 import { CommonTest, Portal_Initializer } from "./CommonTest.t.sol";
-import { CrossDomainOwnable } from "../L2/CrossDomainOwnable.sol";
-import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
+import { CrossDomainOwnable } from "src/L2/CrossDomainOwnable.sol";
+import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
 import { Vm, VmSafe } from "forge-std/Vm.sol";
 import { Bytes32AddressLib } from "@rari-capital/solmate/src/utils/Bytes32AddressLib.sol";
 
@@ -54,8 +54,8 @@ contract CrossDomainOwnableThroughPortal_Test is Portal_Initializer {
 
         vm.prank(alice);
         op.depositTransaction({
-            _ethTxValue : 0,
-            _mntValue : 0,
+            _ethTxValue: 0,
+            _mntValue: 0,
             _to: address(setter),
             _mntTxValue: 0,
             _gasLimit: 30_000,

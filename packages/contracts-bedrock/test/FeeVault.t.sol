@@ -3,10 +3,10 @@ pragma solidity 0.8.15;
 
 import { Bridge_Initializer } from "./CommonTest.t.sol";
 
-import { L1FeeVault } from "../L2/L1FeeVault.sol";
-import { BaseFeeVault } from "../L2/BaseFeeVault.sol";
-import { StandardBridge } from "../universal/StandardBridge.sol";
-import { Predeploys } from "../libraries/Predeploys.sol";
+import { L1FeeVault } from "src/L2/L1FeeVault.sol";
+import { BaseFeeVault } from "src/L2/BaseFeeVault.sol";
+import { StandardBridge } from "src/universal/StandardBridge.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
 
 // Test the implementations of the FeeVault
 contract FeeVault_Test is Bridge_Initializer {

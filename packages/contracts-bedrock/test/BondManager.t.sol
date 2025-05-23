@@ -3,25 +3,21 @@ pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
 
-import "../libraries/DisputeTypes.sol";
+import "src/libraries/DisputeTypes.sol";
 
-import { IDisputeGame } from "../dispute/IDisputeGame.sol";
-import { IBondManager } from "../dispute/IBondManager.sol";
+import { IDisputeGame } from "src/dispute/IDisputeGame.sol";
+import { IBondManager } from "src/dispute/IBondManager.sol";
 
-import { DisputeGameFactory } from "../dispute/DisputeGameFactory.sol";
+import { DisputeGameFactory } from "src/dispute/DisputeGameFactory.sol";
 
-import { BondManager } from "../dispute/BondManager.sol";
+import { BondManager } from "src/dispute/BondManager.sol";
 
 contract BondManager_Test is Test {
     DisputeGameFactory factory;
     BondManager bm;
 
     // DisputeGameFactory events
-    event DisputeGameCreated(
-        address indexed disputeProxy,
-        GameType indexed gameType,
-        Claim indexed rootClaim
-    );
+    event DisputeGameCreated(address indexed disputeProxy, GameType indexed gameType, Claim indexed rootClaim);
 
     // BondManager events
     event BondPosted(bytes32 bondId, address owner, uint256 expiration, uint256 amount);
@@ -42,12 +38,7 @@ contract BondManager_Test is Test {
     /**
      * @notice Tests that posting a bond succeeds.
      */
-    function testFuzz_post_succeeds(
-        bytes32 bondId,
-        address owner,
-        uint256 minClaimHold,
-        uint256 amount
-    ) public {
+    function testFuzz_post_succeeds(bytes32 bondId, address owner, uint256 minClaimHold, uint256 amount) public {
         vm.assume(owner != address(0));
         vm.assume(owner != address(bm));
         vm.assume(owner != address(this));
@@ -67,12 +58,8 @@ contract BondManager_Test is Test {
         bm.post{ value: amount }(bondId, owner, minClaimHold);
 
         // Validate the bond
-        (
-            address newFetchedOwner,
-            uint256 fetchedExpiration,
-            bytes32 fetchedBondId,
-            uint256 bondAmount
-        ) = bm.bonds(bondId);
+        (address newFetchedOwner, uint256 fetchedExpiration, bytes32 fetchedBondId, uint256 bondAmount) =
+            bm.bonds(bondId);
         assertEq(newFetchedOwner, owner);
         assertEq(fetchedExpiration, block.timestamp + minClaimHold);
         assertEq(fetchedBondId, bondId);
@@ -87,7 +74,9 @@ contract BondManager_Test is Test {
         address owner,
         uint256 minClaimHold,
         uint256 amount
-    ) public {
+    )
+        public
+    {
         vm.assume(owner != address(0));
         amount = amount / 2;
         vm.assume(amount != 0);
@@ -106,11 +95,7 @@ contract BondManager_Test is Test {
     /**
      * @notice Posting with the zero address as the owner fails.
      */
-    function testFuzz_post_zeroAddress_reverts(
-        bytes32 bondId,
-        uint256 minClaimHold,
-        uint256 amount
-    ) public {
+    function testFuzz_post_zeroAddress_reverts(bytes32 bondId, uint256 minClaimHold, uint256 amount) public {
         address owner = address(0);
         vm.deal(address(this), amount);
         vm.expectRevert("BondManager: Owner cannot be the zero address.");
@@ -120,11 +105,7 @@ contract BondManager_Test is Test {
     /**
      * @notice Posting zero value bonds should revert.
      */
-    function testFuzz_post_zeroAddress_reverts(
-        bytes32 bondId,
-        address owner,
-        uint256 minClaimHold
-    ) public {
+    function testFuzz_post_zeroAddress_reverts(bytes32 bondId, address owner, uint256 minClaimHold) public {
         vm.assume(owner != address(0));
         uint256 amount = 0;
         vm.deal(address(this), amount);
@@ -154,7 +135,9 @@ contract BondManager_Test is Test {
         address owner,
         uint256 minClaimHold,
         uint256 amount
-    ) public {
+    )
+        public
+    {
         vm.assume(owner != address(0));
         vm.assume(owner != address(bm));
         vm.assume(owner != address(this));
@@ -178,7 +161,9 @@ contract BondManager_Test is Test {
         address owner,
         uint256 minClaimHold,
         uint256 amount
-    ) public {
+    )
+        public
+    {
         vm.assume(owner != address(0));
         vm.assume(owner != address(bm));
         vm.assume(owner != address(this));
@@ -198,11 +183,7 @@ contract BondManager_Test is Test {
     /**
      * @notice Seizing a bond should succeed if the game resolves.
      */
-    function testFuzz_seize_succeeds(
-        bytes32 bondId,
-        uint256 minClaimHold,
-        bytes calldata extraData
-    ) public {
+    function testFuzz_seize_succeeds(bytes32 bondId, uint256 minClaimHold, bytes calldata extraData) public {
         unchecked {
             vm.assume(block.timestamp + minClaimHold > minClaimHold);
         }
@@ -240,7 +221,7 @@ contract BondManager_Test is Test {
         assertEq(address(spawned).balance, 1 ether);
 
         // Validate that the bond was deleted
-        (address newFetchedOwner, , , ) = bm.bonds(bondId);
+        (address newFetchedOwner,,,) = bm.bonds(bondId);
         assertEq(newFetchedOwner, address(0));
     }
 
@@ -253,11 +234,7 @@ contract BondManager_Test is Test {
     /**
      * @notice Seizing and splitting a bond should succeed if the game resolves.
      */
-    function testFuzz_seizeAndSplit_succeeds(
-        bytes32 bondId,
-        uint256 minClaimHold,
-        bytes calldata extraData
-    ) public {
+    function testFuzz_seizeAndSplit_succeeds(bytes32 bondId, uint256 minClaimHold, bytes calldata extraData) public {
         unchecked {
             vm.assume(block.timestamp + minClaimHold > minClaimHold);
         }
@@ -300,7 +277,7 @@ contract BondManager_Test is Test {
         }
 
         // Validate that the bond was deleted
-        (address newFetchedOwner, , , ) = bm.bonds(bondId);
+        (address newFetchedOwner,,,) = bm.bonds(bondId);
         assertEq(newFetchedOwner, address(0));
     }
 
@@ -313,26 +290,21 @@ contract BondManager_Test is Test {
     /**
      * @notice Bonds can be reclaimed after the specified amount of time.
      */
-    function testFuzz_reclaim_succeeds(
-        bytes32 bondId,
-        address owner,
-        uint256 minClaimHold,
-        uint256 amount
-    ) public {
+    function testFuzz_reclaim_succeeds(bytes32 bondId, address owner, uint256 minClaimHold, uint256 amount) public {
         vm.assume(owner != address(0));
         vm.assume(owner.code.length == 0);
         vm.assume(amount != 0);
         unchecked {
             vm.assume(block.timestamp + minClaimHold > minClaimHold);
         }
-        assumeNoPrecompiles(owner);
+        assumeNotPrecompile(owner);
 
         // Post the bond
         vm.deal(address(this), amount);
         bm.post{ value: amount }(bondId, owner, minClaimHold);
 
         // We can't claim if the block.timestamp is less than the bond expiration.
-        (, uint256 expiration, , ) = bm.bonds(bondId);
+        (, uint256 expiration,,) = bm.bonds(bondId);
         if (expiration > block.timestamp) {
             vm.prank(owner);
             vm.expectRevert("BondManager: Bond isn't claimable yet.");
@@ -384,9 +356,9 @@ contract MockAttestationDisputeGame is IDisputeGame {
         ed = _ed;
     }
 
-    receive() external payable {}
+    receive() external payable { }
 
-    fallback() external payable {}
+    fallback() external payable { }
 
     function splitResolve() public {
         challengers = [address(1), address(2)];
@@ -398,7 +370,6 @@ contract MockAttestationDisputeGame is IDisputeGame {
      * Initializable Functions
      * -------------------------------------------
      */
-
     function initialize() external {
         /* noop */
     }
@@ -408,7 +379,6 @@ contract MockAttestationDisputeGame is IDisputeGame {
      * IVersioned Functions
      * -------------------------------------------
      */
-
     function version() external pure returns (string memory _version) {
         return "0.1.0";
     }
@@ -418,7 +388,6 @@ contract MockAttestationDisputeGame is IDisputeGame {
      * IDisputeGame Functions
      * -------------------------------------------
      */
-
     function createdAt() external pure override returns (Timestamp _createdAt) {
         return Timestamp.wrap(uint64(0));
     }

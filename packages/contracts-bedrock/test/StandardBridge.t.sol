@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { StandardBridge } from "../universal/StandardBridge.sol";
+import { StandardBridge } from "src/universal/StandardBridge.sol";
 import { CommonTest } from "./CommonTest.t.sol";
-import {
-    OptimismMintableERC20,
-    ILegacyMintableERC20
-} from "../universal/OptimismMintableERC20.sol";
+import { OptimismMintableERC20, ILegacyMintableERC20 } from "src/universal/OptimismMintableERC20.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
@@ -15,30 +12,28 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  *         internal functions so they can be more easily tested directly.
  */
 contract StandardBridgeTester is StandardBridge {
-    constructor(address payable _messenger, address payable _otherBridge)
-        StandardBridge(_messenger, _otherBridge)
-    {}
+    constructor(address payable _messenger, address payable _otherBridge) StandardBridge(_messenger, _otherBridge) { }
 
     function isOptimismMintableERC20(address _token) external view returns (bool) {
         return _isOptimismMintableERC20(_token);
     }
 
-    function isCorrectTokenPair(address _mintableToken, address _otherToken)
-        external
-        view
-        returns (bool)
-    {
+    function isCorrectTokenPair(address _mintableToken, address _otherToken) external view returns (bool) {
         return _isCorrectTokenPair(_mintableToken, _otherToken);
     }
 
-    receive() external payable override {}
+    receive() external payable override { }
 
     function finalizeBridgeMNT(
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public payable override {}
+    )
+        public
+        payable
+        override
+    { }
 
     function _initiateBridgeMNT(
         address _from,
@@ -46,8 +41,10 @@ contract StandardBridgeTester is StandardBridge {
         uint256 _amount,
         uint32 _minGasLimit,
         bytes memory _extraData
-    ) internal override {}
-
+    )
+        internal
+        override
+    { }
 }
 
 /**
@@ -55,15 +52,15 @@ contract StandardBridgeTester is StandardBridge {
  * @notice Simple implementation of the legacy OptimismMintableERC20.
  */
 contract LegacyMintable is ERC20, ILegacyMintableERC20 {
-    constructor(string memory _name, string memory _ticker) ERC20(_name, _ticker) {}
+    constructor(string memory _name, string memory _ticker) ERC20(_name, _ticker) { }
 
     function l1Token() external pure returns (address) {
         return address(0);
     }
 
-    function mint(address _to, uint256 _amount) external pure {}
+    function mint(address _to, uint256 _amount) external pure { }
 
-    function burn(address _from, uint256 _amount) external pure {}
+    function burn(address _from, uint256 _amount) external pure { }
 
     /**
      * @notice Implements ERC165. This implementation should not be changed as
@@ -73,9 +70,8 @@ contract LegacyMintable is ERC20, ILegacyMintableERC20 {
      */
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
         bytes4 firstSupportedInterface = bytes4(keccak256("supportsInterface(bytes4)")); // ERC165
-        bytes4 secondSupportedInterface = ILegacyMintableERC20.l1Token.selector ^
-            ILegacyMintableERC20.mint.selector ^
-            ILegacyMintableERC20.burn.selector;
+        bytes4 secondSupportedInterface = ILegacyMintableERC20.l1Token.selector ^ ILegacyMintableERC20.mint.selector
+            ^ ILegacyMintableERC20.burn.selector;
         return _interfaceId == firstSupportedInterface || _interfaceId == secondSupportedInterface;
     }
 }
@@ -94,10 +90,7 @@ contract StandardBridge_Stateless_Test is CommonTest {
     function setUp() public override {
         super.setUp();
 
-        bridge = new StandardBridgeTester({
-            _messenger: payable(address(0)),
-            _otherBridge: payable(address(0))
-        });
+        bridge = new StandardBridgeTester({ _messenger: payable(address(0)), _otherBridge: payable(address(0)) });
 
         mintable = new OptimismMintableERC20({
             _bridge: address(0),

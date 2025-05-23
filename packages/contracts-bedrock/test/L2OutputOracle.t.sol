@@ -3,9 +3,9 @@ pragma solidity 0.8.15;
 
 import { stdError } from "forge-std/Test.sol";
 import { L2OutputOracle_Initializer, NextImpl } from "./CommonTest.t.sol";
-import { L2OutputOracle } from "../L1/L2OutputOracle.sol";
-import { Proxy } from "../universal/Proxy.sol";
-import { Types } from "../libraries/Types.sol";
+import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
+import { Proxy } from "src/universal/Proxy.sol";
+import { Types } from "src/libraries/Types.sol";
 
 contract L2OutputOracleTest is L2OutputOracle_Initializer {
     bytes32 proposedOutput1 = keccak256(abi.encode(1));

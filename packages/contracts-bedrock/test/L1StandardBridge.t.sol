@@ -2,17 +2,17 @@
 pragma solidity 0.8.15;
 
 import { Bridge_Initializer } from "./CommonTest.t.sol";
-import { StandardBridge } from "../universal/StandardBridge.sol";
-import { OptimismPortal } from "../L1/OptimismPortal.sol";
-import { L2StandardBridge } from "../L2/L2StandardBridge.sol";
-import { CrossDomainMessenger } from "../universal/CrossDomainMessenger.sol";
-import { Predeploys } from "../libraries/Predeploys.sol";
-import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
+import { StandardBridge } from "src/universal/StandardBridge.sol";
+import { OptimismPortal } from "src/L1/OptimismPortal.sol";
+import { L2StandardBridge } from "src/L2/L2StandardBridge.sol";
+import { CrossDomainMessenger } from "src/universal/CrossDomainMessenger.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
+import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { stdStorage, StdStorage } from "forge-std/Test.sol";
-import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
-import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
-import { L1MantleToken } from "../local/TestMantleToken.sol";
+import { L2CrossDomainMessenger } from "src/L2/L2CrossDomainMessenger.sol";
+import { L1CrossDomainMessenger } from "src/L1/L1CrossDomainMessenger.sol";
+import { L1MantleToken } from "src/local/TestMantleToken.sol";
 
 
 contract L1StandardBridge_Getter_Test is Bridge_Initializer {

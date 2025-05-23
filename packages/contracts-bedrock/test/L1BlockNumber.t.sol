@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 import { Test } from "forge-std/Test.sol";
-import { L1Block } from "../L2/L1Block.sol";
-import { L1BlockNumber } from "../legacy/L1BlockNumber.sol";
-import { Predeploys } from "../libraries/Predeploys.sol";
+import { L1Block } from "src/L2/L1Block.sol";
+import { L1BlockNumber } from "src/legacy/L1BlockNumber.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
 
 contract L1BlockNumberTest is Test {
     L1Block lb;

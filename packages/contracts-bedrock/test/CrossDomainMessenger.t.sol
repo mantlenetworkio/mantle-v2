@@ -2,12 +2,12 @@
 pragma solidity 0.8.15;
 
 import { Messenger_Initializer, Reverter, CallerCaller, CommonTest } from "./CommonTest.t.sol";
-import { L1CrossDomainMessenger } from "../L1/L1CrossDomainMessenger.sol";
+import { L1CrossDomainMessenger } from "src/L1/L1CrossDomainMessenger.sol";
 
 // Libraries
-import { Predeploys } from "../libraries/Predeploys.sol";
-import { Hashing } from "../libraries/Hashing.sol";
-import { Encoding } from "../libraries/Encoding.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
+import { Hashing } from "src/libraries/Hashing.sol";
+import { Encoding } from "src/libraries/Encoding.sol";
 
 // CrossDomainMessenger_Test is for testing functionality which is common to both the L1 and L2
 // CrossDomainMessenger contracts. For simplicity, we use the L1 Messenger as the test contract.
@@ -29,9 +29,7 @@ contract CrossDomainMessenger_BaseGas_Test is Messenger_Initializer {
      *         This guarantees that the messengers will always pass sufficient
      *         gas to the OptimismPortal.
      */
-    function testFuzz_baseGas_portalMinGasLimit_succeeds(bytes memory _data, uint32 _minGasLimit)
-        external
-    {
+    function testFuzz_baseGas_portalMinGasLimit_succeeds(bytes memory _data, uint32 _minGasLimit) external {
         vm.assume(_data.length <= type(uint64).max);
         uint64 baseGas = L1Messenger.baseGas(_data, _minGasLimit);
         uint64 minGasLimit = op.minimumGasLimit(uint64(_data.length));
@@ -69,7 +67,7 @@ contract ExternalRelay is CommonTest {
             _sender: _innerSender,
             _target: address(this),
             _mntValue: 0,
-            _ethValue : 0,
+            _ethValue: 0,
             _gasLimit: 0,
             _data: callMessage
         });
@@ -83,7 +81,7 @@ contract ExternalRelay is CommonTest {
             _sender: _innerSender,
             _target: address(this),
             _mntValue: 0,
-            _ethValue : 0,
+            _ethValue: 0,
             _minGasLimit: 0,
             _message: callMessage
         });
@@ -162,7 +160,7 @@ contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
             _sender: sender,
             _target: target,
             _mntValue: 0,
-            _ethValue : 0,
+            _ethValue: 0,
             _gasLimit: gasLimit,
             _data: callMessage
         });
@@ -175,7 +173,7 @@ contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
             _sender: sender,
             _target: target,
             _mntValue: 0,
-            _ethValue : 0,
+            _ethValue: 0,
             _minGasLimit: gasLimit,
             _message: callMessage
         });

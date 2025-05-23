@@ -2,12 +2,11 @@
 pragma solidity 0.8.15;
 
 import { BVMETH_Initializer } from "./CommonTest.t.sol";
-import { L2ToL1MessagePasser } from "../L2/L2ToL1MessagePasser.sol";
-import { Types } from "../libraries/Types.sol";
-import { Hashing } from "../libraries/Hashing.sol";
+import { L2ToL1MessagePasser } from "src/L2/L2ToL1MessagePasser.sol";
+import { Types } from "src/libraries/Types.sol";
+import { Hashing } from "src/libraries/Hashing.sol";
 
 contract L2ToL1MessagePasserTest is BVMETH_Initializer {
-
     event MessagePassed(
         uint256 indexed nonce,
         address indexed sender,
@@ -30,7 +29,9 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
         uint256 _ethValue,
         uint256 _gasLimit,
         bytes memory _data
-    ) external {
+    )
+        external
+    {
         uint256 nonce = messagePasser.messageNonce();
 
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
@@ -65,30 +66,15 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
     // Test: initiateWithdrawal should emit the correct log when called by a contract
     function test_initiateWithdrawal_fromContract_succeeds() external {
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
-            Types.WithdrawalTransaction(
-                messagePasser.messageNonce(),
-                address(this),
-                address(4),
-                100,
-                0,
-                64000,
-                hex""
-            )
+            Types.WithdrawalTransaction(messagePasser.messageNonce(), address(this), address(4), 100, 0, 64000, hex"")
         );
 
         vm.expectEmit(true, true, true, true);
         emit MessagePassed(
-            messagePasser.messageNonce(),
-            address(this),
-            address(4),
-            100,
-            0,
-            64000,
-            hex"",
-            withdrawalHash
+            messagePasser.messageNonce(), address(this), address(4), 100, 0, 64000, hex"", withdrawalHash
         );
 
-        vm.deal(address(this), 2**64);
+        vm.deal(address(this), 2 ** 64);
         messagePasser.initiateWithdrawal{ value: 100 }(0, address(4), 64000, hex"");
     }
 
@@ -97,13 +83,13 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
         uint256 gasLimit = 64000;
         address target = address(4);
         uint256 mntValue = 100;
-        uint256 ethValue =0;
+        uint256 ethValue = 0;
         bytes memory data = hex"ff";
         uint256 nonce = messagePasser.messageNonce();
 
         // EOA emulation
         vm.prank(alice, alice);
-        vm.deal(alice, 2**64);
+        vm.deal(alice, 2 ** 64);
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction(nonce, alice, target, mntValue, ethValue, gasLimit, data)
         );
@@ -122,10 +108,7 @@ contract L2ToL1MessagePasserTest is BVMETH_Initializer {
     // Test: burn should destroy the ETH held in the contract
     function test_burn_succeeds() external {
         messagePasser.initiateWithdrawal{ value: NON_ZERO_VALUE }(
-            ZERO_VALUE,
-            NON_ZERO_ADDRESS,
-            NON_ZERO_GASLIMIT,
-            NON_ZERO_DATA
+            ZERO_VALUE, NON_ZERO_ADDRESS, NON_ZERO_GASLIMIT, NON_ZERO_DATA
         );
 
         assertEq(address(messagePasser).balance, NON_ZERO_VALUE);

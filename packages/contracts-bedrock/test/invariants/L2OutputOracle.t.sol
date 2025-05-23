@@ -1,7 +1,7 @@
 pragma solidity 0.8.15;
 
-import { L2OutputOracle_Initializer } from "../CommonTest.t.sol";
-import { L2OutputOracle } from "../../L1/L2OutputOracle.sol";
+import { L2OutputOracle_Initializer } from "test/CommonTest.t.sol";
+import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
 import { Vm } from "forge-std/Vm.sol";
 
 contract L2OutputOracle_Proposer {
@@ -21,7 +21,9 @@ contract L2OutputOracle_Proposer {
         uint256 _l2BlockNumber,
         bytes32 _l1BlockHash,
         uint256 _l1BlockNumber
-    ) external {
+    )
+        external
+    {
         // Act as the proposer and propose a new output.
         vm.prank(oracle.PROPOSER());
         oracle.proposeL2Output(_outputRoot, _l2BlockNumber, _l1BlockHash, _l1BlockNumber);

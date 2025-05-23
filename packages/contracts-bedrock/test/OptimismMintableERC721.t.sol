@@ -2,16 +2,11 @@
 pragma solidity 0.8.15;
 
 import { ERC721, IERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {
-    IERC721Enumerable
-} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import { IERC721Enumerable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC721Bridge_Initializer } from "./CommonTest.t.sol";
-import {
-    OptimismMintableERC721,
-    IOptimismMintableERC721
-} from "../universal/OptimismMintableERC721.sol";
+import { OptimismMintableERC721, IOptimismMintableERC721 } from "src/universal/OptimismMintableERC721.sol";
 
 contract OptimismMintableERC721_Test is ERC721Bridge_Initializer {
     ERC721 internal L1Token;
@@ -28,13 +23,7 @@ contract OptimismMintableERC721_Test is ERC721Bridge_Initializer {
 
         // Set up the token pair.
         L1Token = new ERC721("L1Token", "L1T");
-        L2Token = new OptimismMintableERC721(
-            address(L2Bridge),
-            1,
-            address(L1Token),
-            "L2Token",
-            "L2T"
-        );
+        L2Token = new OptimismMintableERC721(address(L2Bridge), 1, address(L1Token), "L2Token", "L2T");
 
         // Label the addresses for nice traces.
         vm.label(address(L1Token), "L1ERC721Token");

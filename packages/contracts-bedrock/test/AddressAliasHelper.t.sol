@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import { Test } from "forge-std/Test.sol";
-import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
+import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
 
 contract AddressAliasHelper_applyAndUndo_Test is Test {
     /**

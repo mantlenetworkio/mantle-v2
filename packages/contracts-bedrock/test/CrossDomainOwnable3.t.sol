@@ -3,10 +3,10 @@ pragma solidity 0.8.15;
 
 import { Bytes32AddressLib } from "@rari-capital/solmate/src/utils/Bytes32AddressLib.sol";
 import { CommonTest, Messenger_Initializer } from "./CommonTest.t.sol";
-import { CrossDomainOwnable3 } from "../L2/CrossDomainOwnable3.sol";
-import { AddressAliasHelper } from "../vendor/AddressAliasHelper.sol";
-import { Hashing } from "../libraries/Hashing.sol";
-import { Encoding } from "../libraries/Encoding.sol";
+import { CrossDomainOwnable3 } from "src/L2/CrossDomainOwnable3.sol";
+import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
+import { Hashing } from "src/libraries/Hashing.sol";
+import { Encoding } from "src/libraries/Encoding.sol";
 
 contract XDomainSetter3 is CrossDomainOwnable3 {
     uint256 public value;
@@ -27,11 +27,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
     /**
      * @notice CrossDomainOwnable3.sol transferOwnership event
      */
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner,
-        bool isLocal
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner, bool isLocal);
 
     function setUp() public override {
         super.setUp();
@@ -101,13 +97,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
         bytes memory message = abi.encodeWithSelector(XDomainSetter3.set.selector, 1);
 
         bytes32 hash = Hashing.hashCrossDomainMessage(
-            Encoding.encodeVersionedNonce(nonce, 1),
-            sender,
-            target,
-            mntValue,
-            ethValue,
-            minGasLimit,
-            message
+            Encoding.encodeVersionedNonce(nonce, 1), sender, target, mntValue, ethValue, minGasLimit, message
         );
 
         // It should be a failed message. The revert is caught,
@@ -117,13 +107,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
 
         vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger)));
         L2Messenger.relayMessage(
-            Encoding.encodeVersionedNonce(nonce, 1),
-            sender,
-            target,
-            mntValue,
-            ethValue,
-            minGasLimit,
-            message
+            Encoding.encodeVersionedNonce(nonce, 1), sender, target, mntValue, ethValue, minGasLimit, message
         );
 
         assertEq(setter.value(), 0);
