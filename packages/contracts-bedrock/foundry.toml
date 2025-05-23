@@ -1,16 +1,18 @@
 [profile.default]
 src = 'contracts'
 out = 'forge-artifacts'
+script = 'scripts'
 optimizer = true
 optimizer_runs = 999999
 
 remappings = [
-  '@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
-  '@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
-  '@rari-capital/solmate/=node_modules/@rari-capital/solmate',
+  '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts',
+  '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts',
+  '@rari-capital/solmate/=lib/solmate',
   "@cwia/=node_modules/clones-with-immutable-args/src",
-  'forge-std/=node_modules/forge-std/src',
-  'ds-test/=node_modules/ds-test/src'
+  'forge-std/=lib/forge-std/src',
+  'ds-test/=lib/forge-std/lib/ds-test/src',
+  '@solady/=lib/solady/src'
 ]
 extra_output = ['devdoc', 'userdoc', 'metadata', 'storageLayout']
 bytecode_hash = 'none'
@@ -23,6 +25,12 @@ no_match_contract = 'EchidnaFuzz'
 fs_permissions = [
   { 'access'='read-write', 'path'='./.resource-metering.csv' },
 ]
+
+[fmt]
+line_length=120
+multiline_func_header='all'
+bracket_spacing=true
+wrap_comments=true
 
 [profile.ci]
 fuzz_runs = 512

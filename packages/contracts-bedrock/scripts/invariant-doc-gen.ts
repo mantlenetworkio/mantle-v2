@@ -10,8 +10,8 @@ const BASE_INVARIANTS_DIR = path.join(
 )
 const BASE_ECHIDNA_DIR = path.join(__dirname, '..', 'contracts', 'echidna')
 const BASE_DOCS_DIR = path.join(__dirname, '..', 'invariant-docs')
-const BASE_ECHIDNA_GH_URL = '../contracts/echidna/'
-const BASE_INVARIANT_GH_URL = '../contracts/test/invariants/'
+const BASE_ECHIDNA_GH_URL = '../src/echidna/'
+const BASE_INVARIANT_GH_URL = '../src/test/invariants/'
 const NATSPEC_INV = '@custom:invariant'
 const BLOCK_COMMENT_PREFIX_REGEX = /\*(\/)?/
 const BLOCK_COMMENT_HEADER_REGEX = /\*\s(.)+/

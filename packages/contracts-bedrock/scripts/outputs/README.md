@@ -5,7 +5,7 @@ A collection of scripts to interact with the L2OutputOracle.
 ### Output Deletion
 
 [DeleteOutput](./DeleteOutput.s.sol) contains a variety of functions that deal
-with deleting an output root from the [L2OutputOracle](../../contracts/L1/L2OutputOracle.sol).
+with deleting an output root from the [L2OutputOracle](../../src/L1/L2OutputOracle.sol).
 
 To delete an output root, the script can be run as follows, where `<L2_OUTPUT_INDEX>` is
 the index of the posted output to delete.
@@ -26,7 +26,7 @@ These are outlined below.
 ### Retrieving an L2 Block Number
 
 The output's associated L2 block number can be retrieved using the following command, where
-`<L2_OUTPUT_INDEX>` is the index of the output in the [L2OutputOracle](../../contracts/L1/L2OutputOracle.sol).
+`<L2_OUTPUT_INDEX>` is the index of the output in the [L2OutputOracle](../../src/L1/L2OutputOracle.sol).
 
 ```bash
 $ forge script scripts/output/DeleteOutput.s.sol \
