@@ -10,4 +10,7 @@ interface IL1CrossDomainMessenger {
     /// @param _portal Address of the OptimismPortal contract on this network
     /// @param l1mnt   Address of the Mantle Token on L1
     function __constructor__(IOptimismPortal _portal, address l1mnt) external;
+
+    function PORTAL() external view returns (IOptimismPortal);
+    function L1_MNT_ADDRESS() external view returns (address);
 }

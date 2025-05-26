@@ -8,4 +8,8 @@ interface IL1StandardBridge {
     /// @param _messenger Address of the L1CrossDomainMessenger
     /// @param _l1mnt    Address of the Mantle Token on L1
     function __constructor__(address payable _messenger, address _l1mnt) external;
+
+    function L1_MNT_ADDRESS() external view returns (address);
+    function OTHER_BRIDGE() external view returns (address);
+    function MESSENGER() external view returns (address);
 }

@@ -7,7 +7,7 @@ import { Script } from "forge-std/Script.sol";
 import { LibString } from "@solady/utils/LibString.sol";
 
 // Interfaces
-// import { IResourceMetering } from "interfaces/L1/IResourceMetering.sol";
+import { IResourceMetering } from "interfaces/L1/IResourceMetering.sol";
 // import {
 //     IOPContractsManager,
 //     IOPContractsManagerGameTypeAdder,
@@ -26,9 +26,9 @@ import { IL2OutputOracle } from "interfaces/L1/IL2OutputOracle.sol";
 
 // import { IProxyAdmin } from "interfaces/universal/IProxyAdmin.sol";
 import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
-// import { Solarray } from "scripts/libraries/Solarray.sol";
+import { Solarray } from "scripts/libraries/Solarray.sol";
 
-import { ResourceMetering } from "src/L1/ResourceMetering.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
 
 contract DeployImplementations is Script {
     struct Input {
@@ -39,12 +39,14 @@ contract DeployImplementations is Script {
         uint64 systemConfig_gasLimit;
         uint256 systemConfig_baseFee;
         address systemConfig_unsafeBlockSigner;
-        ResourceMetering.ResourceConfig systemConfig_config;
+        IResourceMetering.ResourceConfig systemConfig_config;
         IOptimismPortal optimismPortal;
         address l1mnt;
-        address l1ERC721Bridge_messenger;
+        IL1CrossDomainMessenger l1CrossDomainMessenger;
+        IL2OutputOracle l2OutputOracle;
+        ISystemConfig systemConfig;
+        IL1StandardBridge l1StandardBridge;
         address l1ERC721Bridge_otherBridge;
-        address l1StandardBridge_messenger;
         uint256 l2OutputOracle_submissionInterval;
         uint256 l2OutputOracle_l2BlockTime;
         uint256 l2OutputOracle_startingBlockNumber;
@@ -52,11 +54,8 @@ contract DeployImplementations is Script {
         address l2OutputOracle_proposer;
         address l2OutputOracle_challenger;
         uint256 l2OutputOracle_finalizationPeriodSeconds;
-        IL2OutputOracle l2OutputOracle;
         address optimismPortal_guardian;
         bool optimismPortal_paused;
-        ISystemConfig systemConfig;
-        address erc20Factory_bridge;
         // This is used in opcm to signal which version of the L1 smart contracts is deployed.
         // It takes the format of `op-contracts/v*.*.*`.
         string l1ContractsRelease;
@@ -84,11 +83,9 @@ contract DeployImplementations is Script {
     // -------- Core Deployment Methods --------
 
     function run(Input memory _input) public returns (Output memory output_) {
-        // assertValidInput(_input);
+        assertValidInput(_input);
 
         // Deploy the implementations.
-        // deploySuperchainConfigImpl(output_);
-        // deployProtocolVersionsImpl(output_);
         deploySystemConfigImpl(_input, output_);
         deployL1CrossDomainMessengerImpl(_input, output_);
         deployL1ERC721BridgeImpl(_input, output_);
@@ -96,17 +93,11 @@ contract DeployImplementations is Script {
         deployOptimismMintableERC20FactoryImpl(_input, output_);
         deployOptimismPortalImpl(_input, output_);
         deployL2OutputOracleImpl(_input, output_);
-        // deployETHLockboxImpl(output_);
-        // deployDelayedWETHImpl(_input, output_);
-        // deployPreimageOracleSingleton(_input, output_);
-        // deployMipsSingleton(_input, output_);
-        // deployDisputeGameFactoryImpl(output_);
-        // deployAnchorStateRegistryImpl(_input, output_);
 
         // Deploy the OP Contracts Manager with the new implementations set.
         // deployOPContractsManager(_input, output_);
 
-        // assertValidOutput(_input, output_);
+        assertValidOutput(_input, output_);
     }
 
     // -------- Deployment Steps --------
@@ -264,10 +255,9 @@ contract DeployImplementations is Script {
         IL1CrossDomainMessenger impl = IL1CrossDomainMessenger(
             DeployUtils.create1({
                 _name: "L1CrossDomainMessenger",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IL1CrossDomainMessenger.__constructor__, (
-                    _input.optimismPortal,
-                    _input.l1mnt
-                )))
+                _args: DeployUtils.encodeConstructor(
+                    abi.encodeCall(IL1CrossDomainMessenger.__constructor__, (_input.optimismPortal, _input.l1mnt))
+                )
             })
         );
         vm.label(address(impl), "L1CrossDomainMessengerImpl");
@@ -278,10 +268,12 @@ contract DeployImplementations is Script {
         IL1ERC721Bridge impl = IL1ERC721Bridge(
             DeployUtils.create1({
                 _name: "L1ERC721Bridge",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IL1ERC721Bridge.__constructor__, (
-                    _input.l1ERC721Bridge_messenger,
-                    _input.l1ERC721Bridge_otherBridge
-                )))
+                _args: DeployUtils.encodeConstructor(
+                    abi.encodeCall(
+                        IL1ERC721Bridge.__constructor__,
+                        (address(_input.l1CrossDomainMessenger), _input.l1ERC721Bridge_otherBridge)
+                    )
+                )
             })
         );
         vm.label(address(impl), "L1ERC721BridgeImpl");
@@ -292,10 +284,11 @@ contract DeployImplementations is Script {
         IL1StandardBridge impl = IL1StandardBridge(
             DeployUtils.create1({
                 _name: "L1StandardBridge",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IL1StandardBridge.__constructor__, (
-                    payable(_input.l1StandardBridge_messenger),
-                    _input.l1mnt
-                )))
+                _args: DeployUtils.encodeConstructor(
+                    abi.encodeCall(
+                        IL1StandardBridge.__constructor__, (payable(address(_input.l1CrossDomainMessenger)), _input.l1mnt)
+                    )
+                )
             })
         );
         vm.label(address(impl), "L1StandardBridgeImpl");
@@ -306,9 +299,9 @@ contract DeployImplementations is Script {
         IOptimismMintableERC20Factory impl = IOptimismMintableERC20Factory(
             DeployUtils.create1({
                 _name: "OptimismMintableERC20Factory",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IOptimismMintableERC20Factory.__constructor__, (
-                    _input.erc20Factory_bridge
-                )))
+                _args: DeployUtils.encodeConstructor(
+                    abi.encodeCall(IOptimismMintableERC20Factory.__constructor__, (address(_input.l1StandardBridge)))
+                )
             })
         );
         vm.label(address(impl), "OptimismMintableERC20FactoryImpl");
@@ -320,13 +313,16 @@ contract DeployImplementations is Script {
             DeployUtils.create1({
                 _name: "OptimismPortal2",
                 _args: DeployUtils.encodeConstructor(
-                    abi.encodeCall(IOptimismPortal.__constructor__, (
-                        _input.l2OutputOracle,
-                        _input.optimismPortal_guardian,
-                        _input.optimismPortal_paused,
-                        _input.systemConfig,
-                        _input.l1mnt
-                    ))
+                    abi.encodeCall(
+                        IOptimismPortal.__constructor__,
+                        (
+                            _input.l2OutputOracle,
+                            _input.optimismPortal_guardian,
+                            _input.optimismPortal_paused,
+                            _input.systemConfig,
+                            _input.l1mnt
+                        )
+                    )
                 )
             })
         );
@@ -338,15 +334,20 @@ contract DeployImplementations is Script {
         IL2OutputOracle impl = IL2OutputOracle(
             DeployUtils.create1({
                 _name: "L2OutputOracle",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IL2OutputOracle.__constructor__, (
-                    _input.l2OutputOracle_submissionInterval,
-                    _input.l2OutputOracle_l2BlockTime,
-                    _input.l2OutputOracle_startingBlockNumber,
-                    _input.l2OutputOracle_startingTimestamp,
-                    _input.l2OutputOracle_proposer,
-                    _input.l2OutputOracle_challenger,
-                    _input.l2OutputOracle_finalizationPeriodSeconds
-                )))
+                _args: DeployUtils.encodeConstructor(
+                    abi.encodeCall(
+                        IL2OutputOracle.__constructor__,
+                        (
+                            _input.l2OutputOracle_submissionInterval,
+                            _input.l2OutputOracle_l2BlockTime,
+                            _input.l2OutputOracle_startingBlockNumber,
+                            _input.l2OutputOracle_startingTimestamp,
+                            _input.l2OutputOracle_proposer,
+                            _input.l2OutputOracle_challenger,
+                            _input.l2OutputOracle_finalizationPeriodSeconds
+                        )
+                    )
+                )
             })
         );
         vm.label(address(impl), "L2OutputOracleImpl");
@@ -432,181 +433,113 @@ contract DeployImplementations is Script {
     //     _output.opcmInteropMigrator = impl;
     // }
 
-    // function assertValidInput(Input memory _input) private pure {
-    //     require(_input.withdrawalDelaySeconds != 0, "DeployImplementations: withdrawalDelaySeconds not set");
-    //     require(_input.minProposalSizeBytes != 0, "DeployImplementations: minProposalSizeBytes not set");
-    //     require(_input.challengePeriodSeconds != 0, "DeployImplementations: challengePeriodSeconds not set");
-    //     require(
-    //         _input.challengePeriodSeconds <= type(uint64).max, "DeployImplementations: challengePeriodSeconds too
-    // large"
-    //     );
-    //     require(_input.proofMaturityDelaySeconds != 0, "DeployImplementations: proofMaturityDelaySeconds not set");
-    //     require(
-    //         _input.disputeGameFinalityDelaySeconds != 0,
-    //         "DeployImplementations: disputeGameFinalityDelaySeconds not set"
-    //     );
-    //     require(_input.mipsVersion != 0, "DeployImplementations: mipsVersion not set");
-    //     require(!LibString.eq(_input.l1ContractsRelease, ""), "DeployImplementations: l1ContractsRelease not set");
-    //     require(
-    //         address(_input.superchainConfigProxy) != address(0), "DeployImplementations: superchainConfigProxy not
-    // set"
-    //     );
-    //     require(
-    //         address(_input.protocolVersionsProxy) != address(0), "DeployImplementations: protocolVersionsProxy not
-    // set"
-    //     );
-    //     require(
-    //         address(_input.superchainProxyAdmin) != address(0), "DeployImplementations: superchainProxyAdmin not set"
-    //     );
-    //     require(address(_input.upgradeController) != address(0), "DeployImplementations: upgradeController not set");
+    function assertValidInput(Input memory _input) private pure {
+        // todo:
+        // if deployer != controller, check portal guardian
+        require(address(_input.l1mnt) != address(0), "DeployImplementations: l1mnt not set");
+
+        require(_input.l2OutputOracle_l2BlockTime > 0, "DeployImplementations: l2BlockTime not set");
+        require(
+            _input.l2OutputOracle_submissionInterval > _input.l2OutputOracle_l2BlockTime,
+            "DeployImplementations: submissionInterval must be greater than the l2BlockTime"
+        );
+        // require(!LibString.eq(_input.l1ContractsRelease, ""), "DeployImplementations: l1ContractsRelease not set");
+        // require(address(_input.upgradeController) != address(0), "DeployImplementations: upgradeController not set");
+    }
+
+    function assertValidOutput(Input memory _input, Output memory _output) private view {
+        address[] memory addrs = Solarray.addresses(
+            // address(_output.opcm),
+            address(_output.systemConfigImpl),
+            address(_output.l1CrossDomainMessengerImpl),
+            address(_output.l1ERC721BridgeImpl),
+            address(_output.l1StandardBridgeImpl),
+            address(_output.optimismMintableERC20FactoryImpl),
+            address(_output.optimismPortalImpl),
+            address(_output.l2OutputOracleImpl)
+        );
+
+        DeployUtils.assertValidContractAddresses(addrs);
+
+        assertValidL1CrossDomainMessengerImpl(_input, _output);
+        assertValidL1ERC721BridgeImpl(_input, _output);
+        assertValidL1StandardBridgeImpl(_input, _output);
+        // assertValidOpcm(_input, _output);
+        assertValidOptimismMintableERC20FactoryImpl(_input, _output);
+        assertValidOptimismPortalImpl(_input, _output);
+        assertValidSystemConfigImpl(_input, _output);
+        assertValidL2OutputOracleImpl(_input, _output);
+    }
+
+    // function assertValidOpcm(Input memory _input, Output memory _output) private view {
+    //     IOPContractsManager impl = IOPContractsManager(address(_output.opcm));
+    //     require(address(impl.superchainConfig()) == address(_input.superchainConfigProxy), "OPCMI-10");
+    //     require(address(impl.protocolVersions()) == address(_input.protocolVersionsProxy), "OPCMI-20");
+    //     require(impl.upgradeController() == _input.upgradeController, "OPCMI-30");
     // }
 
-    // function assertValidOutput(Input memory _input, Output memory _output) private view {
-    //     // With 12 addresses, we'd get a stack too deep error if we tried to do this inline as a
-    //     // single call to `Solarray.addresses`. So we split it into two calls.
-    //     address[] memory addrs1 = Solarray.addresses(
-    //         address(_output.opcm),
-    //         address(_output.optimismPortalImpl),
-    //         address(_output.delayedWETHImpl),
-    //         address(_output.preimageOracleSingleton),
-    //         address(_output.mipsSingleton),
-    //         address(_output.superchainConfigImpl),
-    //         address(_output.protocolVersionsImpl)
-    //     );
+    function assertValidL2OutputOracleImpl(Input memory _input, Output memory _output) private view {
+        IL2OutputOracle oracle = _output.l2OutputOracleImpl;
 
-    //     address[] memory addrs2 = Solarray.addresses(
-    //         address(_output.systemConfigImpl),
-    //         address(_output.l1CrossDomainMessengerImpl),
-    //         address(_output.l1ERC721BridgeImpl),
-    //         address(_output.l1StandardBridgeImpl),
-    //         address(_output.optimismMintableERC20FactoryImpl),
-    //         address(_output.disputeGameFactoryImpl),
-    //         address(_output.anchorStateRegistryImpl),
-    //         address(_output.ethLockboxImpl)
-    //     );
+        require(oracle.SUBMISSION_INTERVAL() == _input.l2OutputOracle_submissionInterval, "L2OO-10");
+        require(oracle.L2_BLOCK_TIME() == _input.l2OutputOracle_l2BlockTime, "L2OO-20");
+        require(oracle.PROPOSER() == _input.l2OutputOracle_proposer, "L2OO-30");
+        require(oracle.CHALLENGER() == _input.l2OutputOracle_challenger, "L2OO-40");
+        require(oracle.FINALIZATION_PERIOD_SECONDS() == _input.l2OutputOracle_finalizationPeriodSeconds, "L2OO-50");
+    }
 
-    //     DeployUtils.assertValidContractAddresses(Solarray.extend(addrs1, addrs2));
+    function assertValidOptimismPortalImpl(Input memory _input, Output memory _output) private view {
+        IOptimismPortal portal = _output.optimismPortalImpl;
 
-    //     assertValidDelayedWETHImpl(_input, _output);
-    //     assertValidDisputeGameFactoryImpl(_input, _output);
-    //     assertValidAnchorStateRegistryImpl(_input, _output);
-    //     assertValidL1CrossDomainMessengerImpl(_input, _output);
-    //     assertValidL1ERC721BridgeImpl(_input, _output);
-    //     assertValidL1StandardBridgeImpl(_input, _output);
-    //     assertValidMipsSingleton(_input, _output);
-    //     assertValidOpcm(_input, _output);
-    //     assertValidOptimismMintableERC20FactoryImpl(_input, _output);
-    //     assertValidOptimismPortalImpl(_input, _output);
-    //     assertValidETHLockboxImpl(_input, _output);
-    //     assertValidPreimageOracleSingleton(_input, _output);
-    //     assertValidSystemConfigImpl(_input, _output);
-    // }
+        require(address(portal.L2_ORACLE()) == address(_input.l2OutputOracle), "PORTAL-10");
+        require(address(portal.GUARDIAN()) == _input.optimismPortal_guardian, "PORTAL-20");
+        require(address(portal.SYSTEM_CONFIG()) == address(_input.systemConfig), "PORTAL-30");
+        require(address(portal.L1_MNT_ADDRESS()) == address(_input.l1mnt), "PORTAL-40");
+    }
 
-    // // function assertValidOpcm(Input memory _input, Output memory _output) private view {
-    // //     IOPContractsManager impl = IOPContractsManager(address(_output.opcm));
-    // //     require(address(impl.superchainConfig()) == address(_input.superchainConfigProxy), "OPCMI-10");
-    // //     require(address(impl.protocolVersions()) == address(_input.protocolVersionsProxy), "OPCMI-20");
-    // //     require(impl.upgradeController() == _input.upgradeController, "OPCMI-30");
-    // // }
+    function assertValidSystemConfigImpl(Input memory _input, Output memory _output) private view {
+        ISystemConfig systemConfig = _output.systemConfigImpl;
 
-    // function assertValidL2OutputOracleImpl(Input memory, Output memory _output) private view {
-    //     // todo
-    // }
+        require(systemConfig.owner() == _input.systemConfig_owner, "SYSCON-10");
+        require(systemConfig.overhead() == _input.systemConfig_overhead, "SYSCON-20");
+        require(systemConfig.scalar() == _input.systemConfig_scalar, "SYSCON-30");
+        require(systemConfig.batcherHash() == _input.systemConfig_batcherHash, "SYSCON-40");
+        require(systemConfig.unsafeBlockSigner() == _input.systemConfig_unsafeBlockSigner, "SYSCON-50");
 
-    // function assertValidOptimismPortalImpl(Input memory, Output memory _output) private view {
-    //     IOptimismPortal portal = _output.optimismPortalImpl;
+        IResourceMetering.ResourceConfig memory resourceConfig = systemConfig.resourceConfig();
+        require(resourceConfig.maxResourceLimit == 20_000_000, "SYSCON-60");
+        require(resourceConfig.elasticityMultiplier == 10, "SYSCON-70");
+        require(resourceConfig.baseFeeMaxChangeDenominator == 8, "SYSCON-80");
+        require(resourceConfig.systemTxMaxGas == 1_000_000, "SYSCON-90");
+        require(resourceConfig.minimumBaseFee == 1 gwei, "SYSCON-100");
+        require(resourceConfig.maximumBaseFee == type(uint128).max, "SYSCON-110");
+    }
 
-    //     DeployUtils.assertInitialized({ _contractAddress: address(portal), _isProxy: false, _slot: 0, _offset: 0 });
+    function assertValidL1CrossDomainMessengerImpl(Input memory _input, Output memory _output) private view {
+        IL1CrossDomainMessenger messenger = _output.l1CrossDomainMessengerImpl;
 
-    //     require(address(portal.anchorStateRegistry()) == address(0), "PORTAL-10");
-    //     require(address(portal.systemConfig()) == address(0), "PORTAL-20");
-    //     require(portal.l2Sender() == address(0), "PORTAL-30");
+        require(address(messenger.PORTAL()) == address(_input.optimismPortal), "L1xDM-10");
+        require(address(messenger.L1_MNT_ADDRESS()) == address(_input.l1mnt), "L1xDM-20");
+    }
 
-    //     // This slot is the custom gas token _balance and this check ensures
-    //     // that it stays unset for forwards compatibility with custom gas token.
-    //     require(vm.load(address(portal), bytes32(uint256(61))) == bytes32(0), "PORTAL-40");
+    function assertValidL1ERC721BridgeImpl(Input memory _input, Output memory _output) private view {
+        IL1ERC721Bridge bridge = _output.l1ERC721BridgeImpl;
 
-    //     require(address(portal.ethLockbox()) == address(0), "PORTAL-50");
-    // }
+        require(address(bridge.MESSENGER()) == address(_input.l1CrossDomainMessenger), "L721B-10");
+        require(address(bridge.OTHER_BRIDGE()) == address(Predeploys.L2_ERC721_BRIDGE), "L721B-20");
+    }
 
-    // function assertValidSystemConfigImpl(Input memory, Output memory _output) private view {
-    //     ISystemConfig systemConfig = _output.systemConfigImpl;
+    function assertValidL1StandardBridgeImpl(Input memory _input, Output memory _output) private view {
+        IL1StandardBridge bridge = _output.l1StandardBridgeImpl;
 
-    //     DeployUtils.assertInitialized({ _contractAddress: address(systemConfig), _isProxy: false, _slot: 0, _offset:
-    // 0 });
+        require(address(bridge.MESSENGER()) == address(_input.l1CrossDomainMessenger), "L1SB-10");
+        require(address(bridge.OTHER_BRIDGE()) == address(Predeploys.L2_STANDARD_BRIDGE), "L1SB-20");
+        require(address(bridge.L1_MNT_ADDRESS()) == address(_input.l1mnt), "L1SB-30");
+    }
 
-    //     require(systemConfig.owner() == address(0), "SYSCON-10");
-    //     require(systemConfig.overhead() == 0, "SYSCON-20");
-    //     require(systemConfig.scalar() == 0, "SYSCON-30");
-    //     require(systemConfig.basefeeScalar() == 0, "SYSCON-40");
-    //     require(systemConfig.blobbasefeeScalar() == 0, "SYSCON-50");
-    //     require(systemConfig.batcherHash() == bytes32(0), "SYSCON-60");
-    //     require(systemConfig.gasLimit() == 0, "SYSCON-70");
-    //     require(systemConfig.unsafeBlockSigner() == address(0), "SYSCON-80");
+    function assertValidOptimismMintableERC20FactoryImpl(Input memory _input, Output memory _output) private view {
+        IOptimismMintableERC20Factory factory = _output.optimismMintableERC20FactoryImpl;
 
-    //     IResourceMetering.ResourceConfig memory resourceConfig = systemConfig.resourceConfig();
-    //     require(resourceConfig.maxResourceLimit == 0, "SYSCON-90");
-    //     require(resourceConfig.elasticityMultiplier == 0, "SYSCON-100");
-    //     require(resourceConfig.baseFeeMaxChangeDenominator == 0, "SYSCON-110");
-    //     require(resourceConfig.systemTxMaxGas == 0, "SYSCON-120");
-    //     require(resourceConfig.minimumBaseFee == 0, "SYSCON-130");
-    //     require(resourceConfig.maximumBaseFee == 0, "SYSCON-140");
-
-    //     require(systemConfig.startBlock() == type(uint256).max, "SYSCON-150");
-    //     require(systemConfig.batchInbox() == address(0), "SYSCON-160");
-    //     require(systemConfig.l1CrossDomainMessenger() == address(0), "SYSCON-170");
-    //     require(systemConfig.l1ERC721Bridge() == address(0), "SYSCON-180");
-    //     require(systemConfig.l1StandardBridge() == address(0), "SYSCON-190");
-    //     require(systemConfig.optimismPortal() == address(0), "SYSCON-200");
-    //     require(systemConfig.optimismMintableERC20Factory() == address(0), "SYSCON-210");
-    // }
-
-    // function assertValidL1CrossDomainMessengerImpl(Input memory, Output memory _output) private view {
-    //     IL1CrossDomainMessenger messenger = _output.l1CrossDomainMessengerImpl;
-
-    //     DeployUtils.assertInitialized({ _contractAddress: address(messenger), _isProxy: false, _slot: 0, _offset: 20
-    // });
-
-    //     require(address(messenger.OTHER_MESSENGER()) == address(0), "L1xDM-10");
-    //     require(address(messenger.otherMessenger()) == address(0), "L1xDM-20");
-    //     require(address(messenger.PORTAL()) == address(0), "L1xDM-30");
-    //     require(address(messenger.portal()) == address(0), "L1xDM-40");
-    //     require(address(messenger.systemConfig()) == address(0), "L1xDM-50");
-
-    //     bytes32 xdmSenderSlot = vm.load(address(messenger), bytes32(uint256(204)));
-    //     require(address(uint160(uint256(xdmSenderSlot))) == address(0), "L1xDM-60");
-    // }
-
-    // function assertValidL1ERC721BridgeImpl(Input memory, Output memory _output) private view {
-    //     IL1ERC721Bridge bridge = _output.l1ERC721BridgeImpl;
-
-    //     DeployUtils.assertInitialized({ _contractAddress: address(bridge), _isProxy: false, _slot: 0, _offset: 0 });
-
-    //     require(address(bridge.OTHER_BRIDGE()) == address(0), "L721B-10");
-    //     require(address(bridge.otherBridge()) == address(0), "L721B-20");
-    //     require(address(bridge.MESSENGER()) == address(0), "L721B-30");
-    //     require(address(bridge.messenger()) == address(0), "L721B-40");
-    //     require(address(bridge.systemConfig()) == address(0), "L721B-50");
-    // }
-
-    // function assertValidL1StandardBridgeImpl(Input memory, Output memory _output) private view {
-    //     IL1StandardBridge bridge = _output.l1StandardBridgeImpl;
-
-    //     DeployUtils.assertInitialized({ _contractAddress: address(bridge), _isProxy: false, _slot: 0, _offset: 0 });
-
-    //     require(address(bridge.MESSENGER()) == address(0), "L1SB-10");
-    //     require(address(bridge.messenger()) == address(0), "L1SB-20");
-    //     require(address(bridge.OTHER_BRIDGE()) == address(0), "L1SB-30");
-    //     require(address(bridge.otherBridge()) == address(0), "L1SB-40");
-    //     require(address(bridge.systemConfig()) == address(0), "L1SB-50");
-    // }
-
-    // function assertValidOptimismMintableERC20FactoryImpl(Input memory, Output memory _output) private view {
-    //     IOptimismMintableERC20Factory factory = _output.optimismMintableERC20FactoryImpl;
-
-    //     DeployUtils.assertInitialized({ _contractAddress: address(factory), _isProxy: false, _slot: 0, _offset: 0 });
-
-    //     require(address(factory.BRIDGE()) == address(0), "MERC20F-10");
-    //     require(address(factory.bridge()) == address(0), "MERC20F-20");
-    // }
+        require(address(factory.BRIDGE()) == address(_input.l1StandardBridge), "MERC20F-10");
+    }
 }

@@ -332,36 +332,35 @@ library DeployUtils {
     //     );
     // }
 
-    // /// @notice Asserts that the given list of addresses does not contain duplicates.
-    // /// @param _addrs Addresses to check.
-    // function assertUniqueAddresses(address[] memory _addrs) internal pure {
-    //     // All addresses should be unique.
-    //     for (uint256 i = 0; i < _addrs.length; i++) {
-    //         for (uint256 j = i + 1; j < _addrs.length; j++) {
-    //             require(
-    //                 _addrs[i] != _addrs[j],
-    //                 string.concat(
-    //                     "DeployUtils: check failed, duplicates at ", LibString.toString(i), ",",
-    // LibString.toString(j)
-    //                 )
-    //             );
-    //         }
-    //     }
-    // }
+    /// @notice Asserts that the given list of addresses does not contain duplicates.
+    /// @param _addrs Addresses to check.
+    function assertUniqueAddresses(address[] memory _addrs) internal pure {
+        // All addresses should be unique.
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            for (uint256 j = i + 1; j < _addrs.length; j++) {
+                require(
+                    _addrs[i] != _addrs[j],
+                    string.concat(
+                        "DeployUtils: check failed, duplicates at ", LibString.toString(i), ",", LibString.toString(j)
+                    )
+                );
+            }
+        }
+    }
 
-    // /// @notice Asserts that the given addresses are valid contract addresses.
-    // /// @param _addrs Addresses to check.
-    // function assertValidContractAddresses(address[] memory _addrs) internal view {
-    //     // Assert that all addresses are non-zero and have code.
-    //     // We use LibString to avoid the need for adding cheatcodes to this contract.
-    //     for (uint256 i = 0; i < _addrs.length; i++) {
-    //         address who = _addrs[i];
-    //         assertValidContractAddress(who);
-    //     }
+    /// @notice Asserts that the given addresses are valid contract addresses.
+    /// @param _addrs Addresses to check.
+    function assertValidContractAddresses(address[] memory _addrs) internal view {
+        // Assert that all addresses are non-zero and have code.
+        // We use LibString to avoid the need for adding cheatcodes to this contract.
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            address who = _addrs[i];
+            assertValidContractAddress(who);
+        }
 
-    //     // All addresses should be unique.
-    //     assertUniqueAddresses(_addrs);
-    // }
+        // All addresses should be unique.
+        assertUniqueAddresses(_addrs);
+    }
 
     // /// @dev Asserts that for a given contract the value of a storage slot at an offset is 1 (if a proxy contract) or
     // ///      type(uint8).max (if an implementation contract).

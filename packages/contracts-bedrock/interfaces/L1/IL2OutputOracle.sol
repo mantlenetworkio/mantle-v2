@@ -20,5 +20,12 @@ interface IL2OutputOracle {
         address _proposer,
         address _challenger,
         uint256 _finalizationPeriodSeconds
-    ) external;
+    )
+        external;
+
+    function SUBMISSION_INTERVAL() external view returns (uint256);
+    function L2_BLOCK_TIME() external view returns (uint256);
+    function PROPOSER() external view returns (address);
+    function CHALLENGER() external view returns (address);
+    function FINALIZATION_PERIOD_SECONDS() external view returns (uint256);
 }

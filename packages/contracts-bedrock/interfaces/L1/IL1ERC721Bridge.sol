@@ -8,4 +8,7 @@ interface IL1ERC721Bridge {
     /// @param _messenger   Address of the CrossDomainMessenger on this network
     /// @param _otherBridge Address of the ERC721 bridge on the other network
     function __constructor__(address _messenger, address _otherBridge) external;
+
+    function MESSENGER() external view returns (address);
+    function OTHER_BRIDGE() external view returns (address);
 }

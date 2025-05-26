@@ -30,8 +30,9 @@ import { Types } from "scripts/libraries/Types.sol";
 import { IOptimismPortal } from "interfaces/L1/IOptimismPortal.sol";
 import { IL2OutputOracle } from "interfaces/L1/IL2OutputOracle.sol";
 import { ISystemConfig } from "interfaces/L1/ISystemConfig.sol";
-
-import { ResourceMetering } from "src/L1/ResourceMetering.sol";
+import { IResourceMetering } from "interfaces/L1/IResourceMetering.sol";
+import { IL1CrossDomainMessenger } from "interfaces/L1/IL1CrossDomainMessenger.sol";
+import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 
 /// @title Deploy
 /// @notice Script used to deploy a bedrock system. The entire system is deployed within the `run` function.
@@ -148,7 +149,7 @@ contract Deploy is Deployer {
             systemConfig_gasLimit: uint64(cfg.l2GenesisBlockGasLimit()),
             systemConfig_baseFee: cfg.l2GenesisBlockBaseFeePerGas(),
             systemConfig_unsafeBlockSigner: cfg.p2pSequencerAddress(),
-            systemConfig_config: ResourceMetering.ResourceConfig({
+            systemConfig_config: IResourceMetering.ResourceConfig({
                 maxResourceLimit: 20_000_000,
                 elasticityMultiplier: 10,
                 baseFeeMaxChangeDenominator: 8,
@@ -158,9 +159,11 @@ contract Deploy is Deployer {
             }),
             optimismPortal: IOptimismPortal(address(0)),
             l1mnt: cfg.l1MantleToken(),
-            l1ERC721Bridge_messenger: address(0),
+            l1CrossDomainMessenger: IL1CrossDomainMessenger(address(0)),
+            l2OutputOracle: IL2OutputOracle(address(0)),
+            systemConfig: ISystemConfig(address(0)),
+            l1StandardBridge: IL1StandardBridge(address(0)),
             l1ERC721Bridge_otherBridge: address(0),
-            l1StandardBridge_messenger: address(0),
             l2OutputOracle_submissionInterval: cfg.l2OutputOracleSubmissionInterval(),
             l2OutputOracle_l2BlockTime: cfg.l2BlockTime(),
             l2OutputOracle_startingBlockNumber: 0,
@@ -168,11 +171,8 @@ contract Deploy is Deployer {
             l2OutputOracle_proposer: cfg.l2OutputOracleProposer(),
             l2OutputOracle_challenger: cfg.l2OutputOracleChallenger(),
             l2OutputOracle_finalizationPeriodSeconds: cfg.finalizationPeriodSeconds(),
-            l2OutputOracle: IL2OutputOracle(address(0)),
             optimismPortal_guardian: cfg.portalGuardian(),
             optimismPortal_paused: true,
-            systemConfig: ISystemConfig(address(0)),
-            erc20Factory_bridge: address(0),
             l1ContractsRelease: "dev",
             upgradeController: cfg.finalSystemOwner()
         });
@@ -194,12 +194,13 @@ contract Deploy is Deployer {
             L1ERC721Bridge: address(dio.l1ERC721BridgeImpl)
         });
 
-        ChainAssertions.checkL1CrossDomainMessenger({ _contracts: impls, _vm: vm, _isProxy: false });
-        ChainAssertions.checkL1StandardBridge({ _contracts: impls, _isProxy: false });
+        ChainAssertions.checkL1CrossDomainMessenger({ _contracts: impls, _cfg: cfg, _isProxy: false });
+        ChainAssertions.checkL1StandardBridge({ _contracts: impls, _cfg: cfg, _isProxy: false });
         ChainAssertions.checkL1ERC721Bridge({ _contracts: impls, _isProxy: false });
         ChainAssertions.checkOptimismPortal({ _contracts: impls, _cfg: cfg, _isProxy: false });
-        ChainAssertions.checkL2OutputOracle({ _contracts: impls, _isProxy: false });
+        ChainAssertions.checkL2OutputOracle({ _contracts: impls, _cfg: cfg, _isProxy: false });
         ChainAssertions.checkOptimismMintableERC20Factory({ _contracts: impls, _isProxy: false });
+        ChainAssertions.checkSystemConfig({ _contracts: impls, _cfg: cfg, _isProxy: false });
 
         // ChainAssertions.checkOPContractsManager({
         //     _impls: impls,
@@ -208,7 +209,6 @@ contract Deploy is Deployer {
         //     _mips: IMIPS(address(dio.mipsSingleton)),
         //     _superchainProxyAdmin: superchainProxyAdmin
         // });
-        ChainAssertions.checkSystemConfig({ _contracts: impls, _cfg: cfg, _isProxy: false });
     }
 
     // /// @notice Deploy all of the OP Chain specific contracts
