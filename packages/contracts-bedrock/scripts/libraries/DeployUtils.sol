@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 // Scripts
 import { Vm } from "forge-std/Vm.sol";
 import { console2 as console } from "forge-std/console2.sol";
-// import { Artifacts } from "scripts/Artifacts.s.sol";
+import { Artifacts } from "scripts/Artifacts.s.sol";
 
 // // Libraries
 import { LibString } from "@solady/utils/LibString.sol";
@@ -36,42 +36,42 @@ library DeployUtils {
         assertValidContractAddress(addr_);
     }
 
-    // /// @notice Deploys a contract with the given name and arguments via CREATE and saves the result.
-    // /// @param _save Artifacts contract.
-    // /// @param _name Name of the contract to deploy.
-    // /// @param _nick Nickname to save the address to.
-    // /// @param _args ABI-encoded constructor arguments.
-    // /// @return addr_ Address of the deployed contract.
-    // function create1AndSave(
-    //     Artifacts _save,
-    //     string memory _name,
-    //     string memory _nick,
-    //     bytes memory _args
-    // )
-    //     internal
-    //     returns (address payable addr_)
-    // {
-    //     console.log("Deploying %s", _nick);
-    //     addr_ = create1(_name, _args);
-    //     _save.save(_nick, addr_);
-    //     console.log("%s deployed at %s", _nick, addr_);
-    // }
+    /// @notice Deploys a contract with the given name and arguments via CREATE and saves the result.
+    /// @param _save Artifacts contract.
+    /// @param _name Name of the contract to deploy.
+    /// @param _nick Nickname to save the address to.
+    /// @param _args ABI-encoded constructor arguments.
+    /// @return addr_ Address of the deployed contract.
+    function create1AndSave(
+        Artifacts _save,
+        string memory _name,
+        string memory _nick,
+        bytes memory _args
+    )
+        internal
+        returns (address payable addr_)
+    {
+        console.log("Deploying %s", _nick);
+        addr_ = create1(_name, _args);
+        _save.save(_nick, addr_);
+        console.log("%s deployed at %s", _nick, addr_);
+    }
 
-    // /// @notice Deploys a contract with the given name and arguments via CREATE and saves the result.
-    // /// @param _save Artifacts contract.
-    // /// @param _name Name of the contract to deploy.
-    // /// @param _args ABI-encoded constructor arguments.
-    // /// @return addr_ Address of the deployed contract.
-    // function create1AndSave(
-    //     Artifacts _save,
-    //     string memory _name,
-    //     bytes memory _args
-    // )
-    //     internal
-    //     returns (address payable addr_)
-    // {
-    //     return create1AndSave(_save, _name, _name, _args);
-    // }
+    /// @notice Deploys a contract with the given name and arguments via CREATE and saves the result.
+    /// @param _save Artifacts contract.
+    /// @param _name Name of the contract to deploy.
+    /// @param _args ABI-encoded constructor arguments.
+    /// @return addr_ Address of the deployed contract.
+    function create1AndSave(
+        Artifacts _save,
+        string memory _name,
+        bytes memory _args
+    )
+        internal
+        returns (address payable addr_)
+    {
+        return create1AndSave(_save, _name, _name, _args);
+    }
 
     // /// @notice Deploys a contract with the given name and arguments via CREATE2.
     // /// @param _name Name of the contract to deploy.

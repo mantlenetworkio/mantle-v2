@@ -22,6 +22,8 @@ interface IOptimismPortal {
     )
         external;
 
+    receive() external payable;
+
     function L2_ORACLE() external view returns (IL2OutputOracle);
     function GUARDIAN() external view returns (address);
     function SYSTEM_CONFIG() external view returns (ISystemConfig);

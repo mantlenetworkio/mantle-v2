@@ -15,6 +15,7 @@ import { Config } from "scripts/libraries/Config.sol";
 import { ChainAssertions } from "scripts/deploy/ChainAssertions.sol";
 import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
 import { DeployImplementations } from "scripts/deploy/DeployImplementations.s.sol";
+import { DeployProxies } from "scripts/deploy/DeployProxies.s.sol";
 // import { DeployAltDA } from "scripts/deploy/DeployAltDA.s.sol";
 // import { StandardConstants } from "scripts/deploy/StandardConstants.sol";
 
@@ -25,7 +26,7 @@ import { Types } from "scripts/libraries/Types.sol";
 
 // Interfaces
 // import { IOPContractsManager } from "interfaces/L1/IOPContractsManager.sol";
-// import { IProxy } from "interfaces/universal/IProxy.sol";
+import { IProxy } from "interfaces/universal/IProxy.sol";
 // import { IProxyAdmin } from "interfaces/universal/IProxyAdmin.sol";
 import { IOptimismPortal } from "interfaces/L1/IOptimismPortal.sol";
 import { IL2OutputOracle } from "interfaces/L1/IL2OutputOracle.sol";
@@ -127,7 +128,7 @@ contract Deploy is Deployer {
         deployImplementations();
 
         // Deploy Current OPChain Contracts
-        // deployOpChain();
+        deployOpChain();
 
         console.log("set up op chain!");
     }
@@ -157,7 +158,7 @@ contract Deploy is Deployer {
                 minimumBaseFee: 1 gwei,
                 maximumBaseFee: type(uint128).max
             }),
-            optimismPortal: IOptimismPortal(address(0)),
+            optimismPortal: IOptimismPortal(payable(address(0))),
             l1mnt: cfg.l1MantleToken(),
             l1CrossDomainMessenger: IL1CrossDomainMessenger(address(0)),
             l2OutputOracle: IL2OutputOracle(address(0)),
@@ -211,38 +212,57 @@ contract Deploy is Deployer {
         // });
     }
 
-    // /// @notice Deploy all of the OP Chain specific contracts
-    // function deployOpChain() public {
-    //     console.log("Deploying OP Chain");
+    /// @notice Deploy all of the proxies, ProxyAdmin and AddressManager, for legacy usage. Will be removed once we have
+    /// a bespoke OPCM
+    function deployProxiesAndAddressManager() public {
+        console.log("Deploying proxies and address manager");
 
-    //     // Ensure that the requisite contracts are deployed
-    //     IOPContractsManager opcm = IOPContractsManager(artifacts.mustGetAddress("OPContractsManager"));
+        DeployProxies dp = new DeployProxies();
+        DeployProxies.Output memory dpo = dp.run(msg.sender);
 
-    //     IOPContractsManager.DeployInput memory deployInput = getDeployInput();
-    //     IOPContractsManager.DeployOutput memory deployOutput = opcm.deploy(deployInput);
+        // Save all deploy outputs
+        artifacts.save("AddressManager", address(dpo.addressManager));
+        artifacts.save("ProxyAdmin", address(dpo.proxyAdmin));
+        artifacts.save("L1StandardBridgeProxy", address(dpo.l1StandardBridgeProxy));
+        artifacts.save("L2OutputOracleProxy", address(dpo.l2OutputOracleProxy));
+        artifacts.save("L1CrossDomainMessengerProxy", address(dpo.l1CrossDomainMessengerProxy));
+        artifacts.save("OptimismPortalProxy", address(dpo.optimismPortalProxy));
+        artifacts.save("OptimismMintableERC20FactoryProxy", address(dpo.optimismMintableERC20FactoryProxy));
+        artifacts.save("L1ERC721BridgeProxy", address(dpo.l1ERC721BridgeProxy));
+        artifacts.save("SystemConfigProxy", address(dpo.systemConfigProxy));
+    }
 
-    //     // Store code in the Final system owner address so that it can be used for prank delegatecalls
-    //     // Store "fe" opcode so that accidental calls to this address revert
-    //     vm.etch(cfg.finalSystemOwner(), hex"fe");
+    /// @notice Deploy all of the OP Chain specific contracts
+    function deployOpChain() public {
+        console.log("Deploying OP Chain");
 
-    //     // Save all deploy outputs from the OPCM, in the order they are declared in the DeployOutput struct
-    //     artifacts.save("ProxyAdmin", address(deployOutput.opChainProxyAdmin));
-    //     artifacts.save("AddressManager", address(deployOutput.addressManager));
-    //     artifacts.save("L1ERC721BridgeProxy", address(deployOutput.l1ERC721BridgeProxy));
-    //     artifacts.save("SystemConfigProxy", address(deployOutput.systemConfigProxy));
-    //     artifacts.save("OptimismMintableERC20FactoryProxy", address(deployOutput.optimismMintableERC20FactoryProxy));
-    //     artifacts.save("L1StandardBridgeProxy", address(deployOutput.l1StandardBridgeProxy));
-    //     artifacts.save("L1CrossDomainMessengerProxy", address(deployOutput.l1CrossDomainMessengerProxy));
-    //     artifacts.save("ETHLockboxProxy", address(deployOutput.ethLockboxProxy));
+        // Use legacy SystemDictator for now, and might change to bespoke opcm in future
+        // // Ensure that the requisite contracts are deployed
+        // IOPContractsManager opcm = IOPContractsManager(artifacts.mustGetAddress("OPContractsManager"));
 
-    //     // Fault Proof contracts
-    //     artifacts.save("DisputeGameFactoryProxy", address(deployOutput.disputeGameFactoryProxy));
-    //     artifacts.save("PermissionedDelayedWETHProxy", address(deployOutput.delayedWETHPermissionedGameProxy));
-    //     artifacts.save("AnchorStateRegistryProxy", address(deployOutput.anchorStateRegistryProxy));
-    //     artifacts.save("PermissionedDisputeGame", address(deployOutput.permissionedDisputeGame));
-    //     artifacts.save("OptimismPortalProxy", address(deployOutput.optimismPortalProxy));
-    //     artifacts.save("OptimismPortal2Proxy", address(deployOutput.optimismPortalProxy));
-    // }
+        // IOPContractsManager.DeployInput memory deployInput = getDeployInput();
+        // IOPContractsManager.DeployOutput memory deployOutput = opcm.deploy(deployInput);
+
+        // before deploying SystemDictator, we need to deploy all the proxies as well as the address manager
+        deployProxiesAndAddressManager();
+
+        deployERC1967ProxyWithOwnerCreate1("SystemDictatorProxy", msg.sender);
+
+        // Store code in the Final system owner address so that it can be used for prank delegatecalls
+        // Store "fe" opcode so that accidental calls to this address revert
+        vm.etch(cfg.finalSystemOwner(), hex"fe");
+
+        // Save all deploy outputs from the OPCM, in the order they are declared in the DeployOutput struct
+        // artifacts.save("AddressManager", address(dpo.addressManager));
+        // artifacts.save("ProxyAdmin", address(dpo.proxyAdmin));
+        // artifacts.save("L1StandardBridgeProxy", address(dpo.l1StandardBridgeProxy));
+        // artifacts.save("L2OutputOracleProxy", address(dpo.l2OutputOracleProxy));
+        // artifacts.save("L1CrossDomainMessengerProxy", address(dpo.l1CrossDomainMessengerProxy));
+        // artifacts.save("OptimismPortalProxy", address(dpo.optimismPortalProxy));
+        // artifacts.save("OptimismMintableERC20FactoryProxy", address(dpo.optimismMintableERC20FactoryProxy));
+        // artifacts.save("L1ERC721BridgeProxy", address(dpo.l1ERC721BridgeProxy));
+        // artifacts.save("SystemConfigProxy", address(dpo.systemConfigProxy));
+    }
 
     ////////////////////////////////////////////////////////////////
     //                Proxy Deployment Functions                  //
@@ -272,6 +292,30 @@ contract Deploy is Deployer {
     //     require(EIP1967Helper.getAdmin(address(proxy)) == _proxyOwner, "Deploy: EIP1967Proxy admin not set");
     //     addr_ = address(proxy);
     // }
+
+    /// @notice Deploys an ERC1967Proxy contract with a specified owner using create1.
+    /// @param _name The name of the proxy contract to be deployed.
+    /// @param _proxyOwner The address of the owner of the proxy contract.
+    /// @return addr_ The address of the deployed proxy contract.
+    function deployERC1967ProxyWithOwnerCreate1(
+        string memory _name,
+        address _proxyOwner
+    )
+        public
+        broadcast
+        returns (address addr_)
+    {
+        IProxy proxy = IProxy(
+            DeployUtils.create1AndSave({
+                _save: artifacts,
+                _name: "Proxy",
+                _nick: _name,
+                _args: DeployUtils.encodeConstructor(abi.encodeCall(IProxy.__constructor__, (_proxyOwner)))
+            })
+        );
+        require(proxy.admin() == _proxyOwner, "Deploy: EIP1967Proxy admin not set");
+        addr_ = address(proxy);
+    }
 
     // /// @notice Get the DeployInput struct to use for testing
     // function getDeployInput() public view returns (IOPContractsManager.DeployInput memory) {
