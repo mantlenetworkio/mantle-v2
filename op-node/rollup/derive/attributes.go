@@ -98,6 +98,15 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			l2Parent, nextL2Time, eth.ToBlockID(l1Info), l1Info.Time()))
 	}
 
+	var upgradeTxs []hexutil.Bytes
+	if ba.cfg.IsMantleSkadiActivationBlock(nextL2Time) {
+		skadiUpgradeTxs, err := MantleSkadiNetworkUpgradeTransactions()
+		if err != nil {
+			return nil, NewCriticalError(fmt.Errorf("failed to build skadi network upgrade txs: %w", err))
+		}
+		upgradeTxs = append(upgradeTxs, skadiUpgradeTxs...)
+	}
+
 	l1InfoTx, err := L1InfoDepositBytes(seqNumber, l1Info, sysConfig, ba.cfg.IsRegolith(nextL2Time))
 	if err != nil {
 		return nil, NewCriticalError(fmt.Errorf("failed to create l1InfoTx: %w", err))
@@ -106,6 +115,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	txs := make([]hexutil.Bytes, 0, 1+len(depositTxs))
 	txs = append(txs, l1InfoTx)
 	txs = append(txs, depositTxs...)
+	txs = append(txs, upgradeTxs...)
 
 	if !ba.cfg.IsBaseFee(nextL2Time) {
 		sysConfig.BaseFee = nil
@@ -122,7 +132,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			parentBeaconRoot = new(common.Hash)
 		}
 	}
-	
+
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
 		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),

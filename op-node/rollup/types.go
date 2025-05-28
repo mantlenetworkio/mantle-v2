@@ -80,7 +80,7 @@ type Config struct {
 	// Active if BaseFeeTime != nil && L2 block timestamp >= *BaseFeeTime, inactive otherwise.
 	BaseFeeTime *uint64 `json:"base_fee_time,omitempty"`
 
-	MantleSkadiTime *uint64 `json:"mantleSkadiTime,omitempty"`
+	MantleSkadiTime *uint64 `json:"mantle_skadi_time,omitempty"`
 
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
@@ -284,6 +284,14 @@ func (c *Config) IsMantleSkadi(timestamp uint64) bool {
 	return c.MantleSkadiTime != nil && timestamp >= *c.MantleSkadiTime
 }
 
+// IsMantleSkadiActivationBlock returns whether the specified block is the first block subject to the
+// Mantle Skadi upgrade.
+func (c *Config) IsMantleSkadiActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleSkadi(l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleSkadi(l2BlockTime-c.BlockTime)
+}
+
 // Description outputs a banner describing the important parts of rollup configuration in a human-readable form.
 // Optionally provide a mapping of L2 chain IDs to network names to label the L2 chain with if not unknown.
 // The config should be config.Check()-ed before creating a description.
@@ -344,7 +352,6 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 	}
 	ts := uint64(attr.Timestamp)
 	if c.IsMantleSkadi(ts) {
-		// Cancun
 		return eth.ForkchoiceUpdatedV3
 	} else {
 		return eth.ForkchoiceUpdatedV1

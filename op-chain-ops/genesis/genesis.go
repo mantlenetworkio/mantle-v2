@@ -104,7 +104,7 @@ func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, erro
 		return nil, fmt.Errorf("transition block extradata too long: %d", size)
 	}
 
-	return &core.Genesis{
+	genesis := &core.Genesis{
 		Config:     &optimismChainConfig,
 		Nonce:      uint64(config.L2GenesisBlockNonce),
 		Timestamp:  block.Time(),
@@ -118,7 +118,16 @@ func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, erro
 		ParentHash: config.L2GenesisBlockParentHash,
 		BaseFee:    baseFee.ToInt(),
 		Alloc:      map[common.Address]types.Account{},
-	}, nil
+	}
+
+	if optimismChainConfig.IsMantleSkadi(genesis.Timestamp) {
+		genesis.BlobGasUsed = u64ptr(0)
+		genesis.ExcessBlobGas = u64ptr(0)
+		genesis.Alloc[params.BeaconRootsAddress] = types.Account{Nonce: 1, Code: params.BeaconRootsCode, Balance: common.Big0}
+		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
+	}
+
+	return genesis, nil
 }
 
 // NewL1Genesis will create a new L1 genesis config
@@ -195,4 +204,8 @@ func NewL1Genesis(config *DeployConfig) (*core.Genesis, error) {
 		BaseFee:    baseFee.ToInt(),
 		Alloc:      map[common.Address]core.GenesisAccount{},
 	}, nil
+}
+
+func u64ptr(n uint64) *uint64 {
+	return &n
 }
