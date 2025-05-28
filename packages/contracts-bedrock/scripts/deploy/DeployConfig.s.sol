@@ -34,6 +34,7 @@ contract DeployConfig is Script {
     address public batchSenderAddress;
     uint256 public l2OutputOracleSubmissionInterval;
     int256 internal _l2OutputOracleStartingTimestamp;
+    uint256 public l2OutputOracleStartingBlockNumber;
     address public l2OutputOracleProposer;
     address public l2OutputOracleChallenger;
     uint256 public l2GenesisBlockGasLimit;
@@ -83,6 +84,7 @@ contract DeployConfig is Script {
         batchSenderAddress = stdJson.readAddress(_json, "$.batchSenderAddress");
         l2OutputOracleSubmissionInterval = stdJson.readUint(_json, "$.l2OutputOracleSubmissionInterval");
         _l2OutputOracleStartingTimestamp = stdJson.readInt(_json, "$.l2OutputOracleStartingTimestamp");
+        l2OutputOracleStartingBlockNumber = stdJson.readUint(_json, "$.l2OutputOracleStartingBlockNumber");
         l2OutputOracleProposer = stdJson.readAddress(_json, "$.l2OutputOracleProposer");
         l2OutputOracleChallenger = stdJson.readAddress(_json, "$.l2OutputOracleChallenger");
         l2GenesisBlockGasLimit = stdJson.readUint(_json, "$.l2GenesisBlockGasLimit");

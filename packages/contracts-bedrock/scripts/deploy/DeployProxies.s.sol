@@ -32,20 +32,36 @@ contract DeployProxies is Script {
     }
 
     function run(address _deployer) public returns (Output memory output_) {
+        // deploy AddressManager
         output_.addressManager = IAddressManager(deployAddressManager());
-        output_.proxyAdmin = IProxyAdmin(deployProxyAdmin(_deployer));
-        output_.l1StandardBridgeProxy = IL1StandardBridge(deployL1ChugSplashProxy(output_.proxyAdmin));
+
+        // deploy ProxyAdmin
+        output_.proxyAdmin = IProxyAdmin(deployProxyAdmin(address(this)));
+        output_.proxyAdmin.setAddressManager(output_.addressManager);
+
+        // deploy ERC1967Proxies
         output_.l2OutputOracleProxy = IL2OutputOracle(deployERC1967Proxy(output_.proxyAdmin));
-        output_.l1CrossDomainMessengerProxy =
-            IL1CrossDomainMessenger(deployResolvedDelegateProxy(output_.addressManager, "BVM_L1CrossDomainMessenger"));
         output_.optimismPortalProxy = IOptimismPortal(payable(deployERC1967Proxy(output_.proxyAdmin)));
         output_.optimismMintableERC20FactoryProxy =
             IOptimismMintableERC20Factory(deployERC1967Proxy(output_.proxyAdmin));
         output_.l1ERC721BridgeProxy = IL1ERC721Bridge(deployERC1967Proxy(output_.proxyAdmin));
         output_.systemConfigProxy = ISystemConfig(deployERC1967Proxy(output_.proxyAdmin));
 
-        // transfer ownership of AddressManager to deployer
-        IOwnable(address(output_.addressManager)).transferOwnership(_deployer);
+        // deploy legacy proxies
+        output_.l1StandardBridgeProxy = IL1StandardBridge(deployL1ChugSplashProxy(output_.proxyAdmin));
+        output_.proxyAdmin.setProxyType(address(output_.l1StandardBridgeProxy), IProxyAdmin.ProxyType.CHUGSPLASH);
+
+        output_.l1CrossDomainMessengerProxy =
+            IL1CrossDomainMessenger(deployResolvedDelegateProxy(output_.addressManager, "BVM_L1CrossDomainMessenger"));
+        output_.proxyAdmin.setProxyType(address(output_.l1CrossDomainMessengerProxy), IProxyAdmin.ProxyType.RESOLVED);
+        output_.proxyAdmin.setImplementationName(
+            address(output_.l1CrossDomainMessengerProxy), "BVM_L1CrossDomainMessenger"
+        );
+
+        // transfer ownership of AddressManager to ProxyAdmin
+        IOwnable(address(output_.addressManager)).transferOwnership(address(output_.proxyAdmin));
+        // transfer ownership of ProxyAdmin to deployer
+        output_.proxyAdmin.transferOwnership(_deployer);
 
         vm.label(address(output_.proxyAdmin), "ProxyAdmin");
         vm.label(address(output_.addressManager), "AddressManager");

@@ -25,25 +25,56 @@ import { IL1ERC721Bridge } from "interfaces/L1/IL1ERC721Bridge.sol";
 import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
 import { IL2OutputOracle } from "interfaces/L1/IL2OutputOracle.sol";
+import { IProxyAdmin } from "interfaces/universal/IProxyAdmin.sol";
+import { IAddressManager } from "interfaces/legacy/IAddressManager.sol";
+
+// Contracts
+import { ResourceMetering } from "src/L1/ResourceMetering.sol";
 
 library ChainAssertions {
     Vm internal constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     /// @notice Asserts the correctness of an L1 deployment. This function expects that all contracts
     ///         within the `prox` ContractSet are proxies that have been setup and initialized.
-    function postDeployAssertions(Types.ContractSet memory _prox, DeployConfig _cfg, Vm _vm) internal view {
-        // console.log("Running post-deploy assertions");
-        // IResourceMetering.ResourceConfig memory rcfg = ISystemConfig(_prox.SystemConfig).resourceConfig();
-        // IResourceMetering.ResourceConfig memory dflt = Constants.DEFAULT_RESOURCE_CONFIG();
-        // require(keccak256(abi.encode(rcfg)) == keccak256(abi.encode(dflt)), "CHECK-RCFG-10");
+    function postDeployAssertions(Types.ContractSet memory _prox, DeployConfig _cfg) internal view {
+        console.log("Running post-deploy assertions");
+        IResourceMetering.ResourceConfig memory rcfg = ISystemConfig(_prox.SystemConfig).resourceConfig();
+        ResourceMetering.ResourceConfig memory dflt = Constants.DEFAULT_RESOURCE_CONFIG();
+        require(keccak256(abi.encode(rcfg)) == keccak256(abi.encode(dflt)), "CHECK-RCFG-10");
 
-        // checkSystemConfig({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
-        // checkL1CrossDomainMessenger({ _contracts: _prox, _vm: _vm, _isProxy: true });
-        // checkL1StandardBridge({ _contracts: _prox, _isProxy: true });
-        // checkOptimismMintableERC20Factory({ _contracts: _prox, _isProxy: true });
-        // checkL1ERC721Bridge({ _contracts: _prox, _isProxy: true });
-        // checkOptimismPortal({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
-        // checkL2OutputOracle({ _contracts: _prox, _isProxy: true });
+        checkProxyAdmin({ _contracts: _prox, _cfg: _cfg });
+        checkAddressManager({ _contracts: _prox, _cfg: _cfg });
+        checkSystemConfig({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+        checkL1CrossDomainMessenger({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+        checkL1StandardBridge({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+        checkOptimismMintableERC20Factory({ _contracts: _prox, _isProxy: true });
+        checkL1ERC721Bridge({ _contracts: _prox, _isProxy: true });
+        checkOptimismPortal({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+        checkL2OutputOracle({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+    }
+
+    /// @notice Asserts that the ProxyAdmin is setup correctly
+    function checkProxyAdmin(Types.ContractSet memory _contracts, DeployConfig _cfg) internal view {
+        IProxyAdmin admin = IProxyAdmin(_contracts.ProxyAdmin);
+        console.log("Running chain assertions on the ProxyAdmin %s", address(admin));
+
+        require(address(admin) != address(0), "CHECK-PROXY-ADMIN-10");
+        require(address(admin.addressManager()) == _contracts.AddressManager, "CHECK-PROXY-ADMIN-20");
+        require(
+            keccak256(abi.encodePacked(admin.implementationName(_contracts.L1CrossDomainMessenger)))
+                == keccak256(abi.encodePacked("BVM_L1CrossDomainMessenger")),
+            "CHECK-PROXY-ADMIN-30"
+        );
+        require(uint8(admin.proxyType(_contracts.L1CrossDomainMessenger)) == 2, "CHECK-PROXY-ADMIN-40");
+        require(uint8(admin.proxyType(_contracts.L1StandardBridge)) == 1, "CHECK-PROXY-ADMIN-50");
+    }
+
+    /// @notice Asserts that the AddressManager is setup correctly
+    function checkAddressManager(Types.ContractSet memory _contracts, DeployConfig _cfg) internal view {
+        IAddressManager manager = IAddressManager(_contracts.AddressManager);
+        console.log("Running chain assertions on the AddressManager %s", address(manager));
+
+        require(address(manager) != address(0), "CHECK-ADDR-MGR-10");
     }
 
     /// @notice Asserts that the SystemConfig is setup correctly
@@ -63,50 +94,35 @@ library ChainAssertions {
         IResourceMetering.ResourceConfig memory resourceConfig = config.resourceConfig();
 
         if (_isProxy) {
-            //     require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-10");
-            //     require(config.basefeeScalar() == _cfg.basefeeScalar(), "CHECK-SCFG-20");
-            //     require(config.blobbasefeeScalar() == _cfg.blobbasefeeScalar(), "CHECK-SCFG-30");
-            //     require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))),
-            // "CHECK-SCFG-40");
-            //     require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-50");
-            //     require(config.unsafeBlockSigner() == _cfg.p2pSequencerAddress(), "CHECK-SCFG-60");
-            //     require(config.scalar() >> 248 == 1, "CHECK-SCFG-70");
-            //     // Check _config
-            //     IResourceMetering.ResourceConfig memory rconfig = Constants.DEFAULT_RESOURCE_CONFIG();
-            //     require(resourceConfig.maxResourceLimit == rconfig.maxResourceLimit, "CHECK-SCFG-80");
-            //     require(resourceConfig.elasticityMultiplier == rconfig.elasticityMultiplier, "CHECK-SCFG-90");
-            //     require(resourceConfig.baseFeeMaxChangeDenominator == rconfig.baseFeeMaxChangeDenominator,
-            // "CHECK-SCFG-100");
-            //     require(resourceConfig.systemTxMaxGas == rconfig.systemTxMaxGas, "CHECK-SCFG-110");
-            //     require(resourceConfig.minimumBaseFee == rconfig.minimumBaseFee, "CHECK-SCFG-120");
-            //     require(resourceConfig.maximumBaseFee == rconfig.maximumBaseFee, "CHECK-SCFG-130");
-            //     // Depends on start block being set to 0 in `initialize`
-            //     uint256 cfgStartBlock = _cfg.systemConfigStartBlock();
-            //     require(config.startBlock() == (cfgStartBlock == 0 ? block.number : cfgStartBlock),
-            // "CHECK-SCFG-140");
-            //     require(config.batchInbox() == _cfg.batchInboxAddress(), "CHECK-SCFG-150");
-            //     // Check _addresses
-            //     require(config.l1CrossDomainMessenger() == _contracts.L1CrossDomainMessenger, "CHECK-SCFG-160");
-            //     require(config.l1ERC721Bridge() == _contracts.L1ERC721Bridge, "CHECK-SCFG-170");
-            //     require(config.l1StandardBridge() == _contracts.L1StandardBridge, "CHECK-SCFG-180");
-            //     require(config.optimismPortal() == _contracts.OptimismPortal, "CHECK-SCFG-200");
-            //     require(config.optimismMintableERC20Factory() == _contracts.OptimismMintableERC20Factory,
-            // "CHECK-SCFG-210");
-        } else {
-            require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-220");
-            require(config.overhead() == _cfg.gasPriceOracleOverhead(), "CHECK-SCFG-230");
-            require(config.scalar() == _cfg.gasPriceOracleScalar(), "CHECK-SCFG-240");
-            require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))), "CHECK-SCFG-270");
-            require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-280");
-            require(config.baseFee() == _cfg.l2GenesisBlockBaseFeePerGas(), "CHECK-SCFG-290");
-            require(config.unsafeBlockSigner() == _cfg.p2pSequencerAddress(), "CHECK-SCFG-300");
+            require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-10");
+            require(config.overhead() == _cfg.gasPriceOracleOverhead(), "CHECK-SCFG-20");
+            require(config.scalar() == _cfg.gasPriceOracleScalar(), "CHECK-SCFG-30");
+            require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))), "CHECK-SCFG-40");
+            require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-50");
+            require(config.baseFee() == _cfg.l2GenesisBlockBaseFeePerGas(), "CHECK-SCFG-60");
+            require(config.unsafeBlockSigner() == _cfg.p2pSequencerAddress(), "CHECK-SCFG-70");
             // Check _config
-            require(resourceConfig.maxResourceLimit == 20_000_000, "CHECK-SCFG-300");
-            require(resourceConfig.elasticityMultiplier == 10, "CHECK-SCFG-310");
-            require(resourceConfig.baseFeeMaxChangeDenominator == 8, "CHECK-SCFG-320");
-            require(resourceConfig.systemTxMaxGas == 1_000_000, "CHECK-SCFG-330");
-            require(resourceConfig.minimumBaseFee == 1 gwei, "CHECK-SCFG-340");
-            require(resourceConfig.maximumBaseFee == type(uint128).max, "CHECK-SCFG-350");
+            require(resourceConfig.maxResourceLimit == 20_000_000, "CHECK-SCFG-80");
+            require(resourceConfig.elasticityMultiplier == 10, "CHECK-SCFG-90");
+            require(resourceConfig.baseFeeMaxChangeDenominator == 8, "CHECK-SCFG-100");
+            require(resourceConfig.systemTxMaxGas == 1_000_000, "CHECK-SCFG-110");
+            require(resourceConfig.minimumBaseFee == 1 gwei, "CHECK-SCFG-120");
+            require(resourceConfig.maximumBaseFee == type(uint128).max, "CHECK-SCFG-130");
+        } else {
+            require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-210");
+            require(config.overhead() == _cfg.gasPriceOracleOverhead(), "CHECK-SCFG-220");
+            require(config.scalar() == _cfg.gasPriceOracleScalar(), "CHECK-SCFG-230");
+            require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))), "CHECK-SCFG-240");
+            require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-250");
+            require(config.baseFee() == _cfg.l2GenesisBlockBaseFeePerGas(), "CHECK-SCFG-260");
+            require(config.unsafeBlockSigner() == _cfg.p2pSequencerAddress(), "CHECK-SCFG-270");
+            // Check _config
+            require(resourceConfig.maxResourceLimit == 20_000_000, "CHECK-SCFG-280");
+            require(resourceConfig.elasticityMultiplier == 10, "CHECK-SCFG-290");
+            require(resourceConfig.baseFeeMaxChangeDenominator == 8, "CHECK-SCFG-300");
+            require(resourceConfig.systemTxMaxGas == 1_000_000, "CHECK-SCFG-310");
+            require(resourceConfig.minimumBaseFee == 1 gwei, "CHECK-SCFG-320");
+            require(resourceConfig.maximumBaseFee == type(uint128).max, "CHECK-SCFG-330");
         }
     }
 
@@ -121,13 +137,18 @@ library ChainAssertions {
         require(address(oracle) != address(0), "CHECK-L2OO-10");
 
         if (_isProxy) {
-            // todo
-        } else {
             require(oracle.SUBMISSION_INTERVAL() == _cfg.l2OutputOracleSubmissionInterval(), "CHECK-L2OO-20");
             require(oracle.L2_BLOCK_TIME() == _cfg.l2BlockTime(), "CHECK-L2OO-30");
             require(oracle.PROPOSER() == _cfg.l2OutputOracleProposer(), "CHECK-L2OO-40");
             require(oracle.CHALLENGER() == _cfg.l2OutputOracleChallenger(), "CHECK-L2OO-50");
             require(oracle.FINALIZATION_PERIOD_SECONDS() == _cfg.finalizationPeriodSeconds(), "CHECK-L2OO-60");
+            require(oracle.startingBlockNumber() == _cfg.l2OutputOracleStartingBlockNumber(), "CHECK-L2OO-70");
+        } else {
+            require(oracle.SUBMISSION_INTERVAL() == _cfg.l2OutputOracleSubmissionInterval(), "CHECK-L2OO-90");
+            require(oracle.L2_BLOCK_TIME() == _cfg.l2BlockTime(), "CHECK-L2OO-100");
+            require(oracle.PROPOSER() == _cfg.l2OutputOracleProposer(), "CHECK-L2OO-110");
+            require(oracle.CHALLENGER() == _cfg.l2OutputOracleChallenger(), "CHECK-L2OO-120");
+            require(oracle.FINALIZATION_PERIOD_SECONDS() == _cfg.finalizationPeriodSeconds(), "CHECK-L2OO-130");
         }
     }
 
@@ -148,23 +169,11 @@ library ChainAssertions {
         );
         require(address(messenger) != address(0), "CHECK-L1XDM-10");
 
-        // // Check that the contract is initialized
-        // DeployUtils.assertInitialized({ _contractAddress: address(messenger), _isProxy: _isProxy, _slot: 0, _offset:
-        // 20 });
-
         if (_isProxy) {
-            //     require(address(messenger.OTHER_MESSENGER()) == Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-            // "CHECK-L1XDM-20");
-            //     require(address(messenger.otherMessenger()) == Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-            // "CHECK-L1XDM-30");
-            //     require(address(messenger.PORTAL()) == _contracts.OptimismPortal, "CHECK-L1XDM-40");
-            //     require(address(messenger.portal()) == _contracts.OptimismPortal, "CHECK-L1XDM-50");
-            //     require(address(messenger.systemConfig()) == _contracts.SystemConfig, "CHECK-L1XDM-60");
-            //     bytes32 xdmSenderSlot = _vm.load(address(messenger), bytes32(uint256(204)));
-            //     require(address(uint160(uint256(xdmSenderSlot))) == Constants.DEFAULT_L2_SENDER, "CHECK-L1XDM-70");
+            require(address(messenger.PORTAL()) == _contracts.OptimismPortal, "CHECK-L1XDM-20");
         } else {
-            require(address(messenger.PORTAL()) == address(0), "CHECK-L1XDM-100");
-            require(messenger.L1_MNT_ADDRESS() == _cfg.l1MantleToken(), "CHECK-L1XDM-110");
+            require(address(messenger.PORTAL()) == address(0), "CHECK-L1XDM-30");
+            require(messenger.L1_MNT_ADDRESS() == _cfg.l1MantleToken(), "CHECK-L1XDM-40");
         }
     }
 
@@ -185,20 +194,13 @@ library ChainAssertions {
         );
         require(address(bridge) != address(0), "CHECK-L1SB-10");
 
-        // // Check that the contract is initialized
-        // DeployUtils.assertInitialized({ _contractAddress: address(bridge), _isProxy: _isProxy, _slot: 0, _offset: 0
-        // });
-
         if (_isProxy) {
-            //     require(address(bridge.MESSENGER()) == _contracts.L1CrossDomainMessenger, "CHECK-L1SB-20");
-            //     require(address(bridge.messenger()) == _contracts.L1CrossDomainMessenger, "CHECK-L1SB-30");
-            //     require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_STANDARD_BRIDGE, "CHECK-L1SB-40");
-            //     require(address(bridge.otherBridge()) == Predeploys.L2_STANDARD_BRIDGE, "CHECK-L1SB-50");
-            //     require(address(bridge.systemConfig()) == _contracts.SystemConfig, "CHECK-L1SB-60");
+            require(address(bridge.MESSENGER()) == _contracts.L1CrossDomainMessenger, "CHECK-L1SB-20");
+            require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_STANDARD_BRIDGE, "CHECK-L1SB-30");
         } else {
-            require(address(bridge.MESSENGER()) == address(0), "CHECK-L1SB-70");
-            require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_STANDARD_BRIDGE, "CHECK-L1SB-90");
-            require(address(bridge.L1_MNT_ADDRESS()) == _cfg.l1MantleToken(), "CHECK-L1SB-100");
+            require(address(bridge.MESSENGER()) == address(0), "CHECK-L1SB-40");
+            require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_STANDARD_BRIDGE, "CHECK-L1SB-50");
+            require(address(bridge.L1_MNT_ADDRESS()) == _cfg.l1MantleToken(), "CHECK-L1SB-60");
         }
     }
 
@@ -212,13 +214,8 @@ library ChainAssertions {
         );
         require(address(factory) != address(0), "CHECK-MERC20F-10");
 
-        // // Check that the contract is initialized
-        // DeployUtils.assertInitialized({ _contractAddress: address(factory), _isProxy: _isProxy, _slot: 0, _offset: 0
-        // });
-
         if (_isProxy) {
-            //     require(factory.BRIDGE() == _contracts.L1StandardBridge, "CHECK-MERC20F-10");
-            //     require(factory.bridge() == _contracts.L1StandardBridge, "CHECK-MERC20F-20");
+            require(factory.BRIDGE() == _contracts.L1StandardBridge, "CHECK-MERC20F-20");
         } else {
             require(factory.BRIDGE() == address(0), "CHECK-MERC20F-30");
         }
@@ -239,14 +236,11 @@ library ChainAssertions {
         // });
 
         if (_isProxy) {
-            //     require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_ERC721_BRIDGE, "CHECK-L1ERC721B-10");
-            //     require(address(bridge.otherBridge()) == Predeploys.L2_ERC721_BRIDGE, "CHECK-L1ERC721B-20");
-            //     require(address(bridge.MESSENGER()) == _contracts.L1CrossDomainMessenger, "CHECK-L1ERC721B-30");
-            //     require(address(bridge.messenger()) == _contracts.L1CrossDomainMessenger, "CHECK-L1ERC721B-40");
-            //     require(address(bridge.systemConfig()) == _contracts.SystemConfig, "CHECK-L1ERC721B-50");
+            require(address(bridge.MESSENGER()) == _contracts.L1CrossDomainMessenger, "CHECK-L1ERC721B-20");
+            require(bridge.OTHER_BRIDGE() == Predeploys.L2_ERC721_BRIDGE, "CHECK-L1ERC721B-30");
         } else {
-            require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_ERC721_BRIDGE, "CHECK-L1ERC721B-60");
-            require(address(bridge.MESSENGER()) == address(0), "CHECK-L1ERC721B-80");
+            require(address(bridge.OTHER_BRIDGE()) == Predeploys.L2_ERC721_BRIDGE, "CHECK-L1ERC721B-40");
+            require(address(bridge.MESSENGER()) == address(0), "CHECK-L1ERC721B-50");
         }
     }
 
@@ -260,29 +254,26 @@ library ChainAssertions {
         );
         require(address(portal) != address(0), "CHECK-OP2-10");
 
-        // // Check that the contract is initialized
-        // DeployUtils.assertInitialized({ _contractAddress: address(portal), _isProxy: _isProxy, _slot: 0, _offset: 0
-        // });
-
-        // address guardian = _cfg.superchainConfigGuardian();
-        // if (guardian.code.length == 0) {
-        //     console.log("Guardian has no code: %s", guardian);
-        // }
+        address guardian = _cfg.portalGuardian();
+        if (guardian.code.length == 0) {
+            console.log("Guardian has no code: %s", guardian);
+        }
 
         if (_isProxy) {
-            //     require(address(portal.disputeGameFactory()) == _contracts.DisputeGameFactory, "CHECK-OP2-20");
-            //     require(address(portal.anchorStateRegistry()) == _contracts.AnchorStateRegistry, "CHECK-OP2-25");
-            //     require(address(portal.systemConfig()) == _contracts.SystemConfig, "CHECK-OP2-30");
-            //     require(portal.guardian() == guardian, "CHECK-OP2-40");
-            //     require(address(portal.systemConfig()) == address(_contracts.SystemConfig), "CHECK-OP2-50");
-            //     require(portal.paused() == ISystemConfig(_contracts.SystemConfig).paused(), "CHECK-OP2-60");
-            //     require(portal.l2Sender() == Constants.DEFAULT_L2_SENDER, "CHECK-OP2-70");
-            //     require(address(portal.ethLockbox()) == _contracts.ETHLockbox, "CHECK-OP2-80");
+            require(address(portal.L2_ORACLE()) == _contracts.L2OutputOracle, "CHECK-OP2-20");
+            require(portal.GUARDIAN() == _cfg.portalGuardian(), "CHECK-OP2-30");
+            require(address(portal.SYSTEM_CONFIG()) == _contracts.SystemConfig, "CHECK-OP2-40");
+            require(portal.paused() == false, "CHECK-OP2-50");
+            (uint128 prevBaseFee, uint64 prevBoughtGas, uint64 prevBlockNum) =
+                IResourceMetering(address(portal)).params();
+            require(prevBaseFee == 1 gwei, "CHECK-OP2-60");
+            require(prevBoughtGas == 0, "CHECK-OP2-70");
+            require(prevBlockNum != 0, "CHECK-OP2-80");
         } else {
-            require(address(portal.L2_ORACLE()) == address(0), "CHECK-OP2-80");
-            require(address(portal.GUARDIAN()) == _cfg.portalGuardian(), "CHECK-OP2-90");
-            require(address(portal.SYSTEM_CONFIG()) == address(0), "CHECK-OP2-100");
-            require(address(portal.L1_MNT_ADDRESS()) == _cfg.l1MantleToken(), "CHECK-OP2-110");
+            require(address(portal.L2_ORACLE()) == address(0), "CHECK-OP2-90");
+            require(address(portal.GUARDIAN()) == _cfg.portalGuardian(), "CHECK-OP2-100");
+            require(address(portal.SYSTEM_CONFIG()) == address(0), "CHECK-OP2-110");
+            require(address(portal.L1_MNT_ADDRESS()) == _cfg.l1MantleToken(), "CHECK-OP2-120");
         }
     }
 

@@ -23,9 +23,13 @@ interface IL2OutputOracle {
     )
         external;
 
+    function initialize(uint256 _startingBlockNumber, uint256 _startingTimestamp) external;
+
     function SUBMISSION_INTERVAL() external view returns (uint256);
     function L2_BLOCK_TIME() external view returns (uint256);
     function PROPOSER() external view returns (address);
     function CHALLENGER() external view returns (address);
     function FINALIZATION_PERIOD_SECONDS() external view returns (uint256);
+    function startingBlockNumber() external view returns (uint256);
+    function startingTimestamp() external view returns (uint256);
 }

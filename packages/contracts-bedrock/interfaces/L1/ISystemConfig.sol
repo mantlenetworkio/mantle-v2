@@ -27,6 +27,18 @@ interface ISystemConfig {
     )
         external;
 
+    function initialize(
+        address _owner,
+        uint256 _overhead,
+        uint256 _scalar,
+        bytes32 _batcherHash,
+        uint64 _gasLimit,
+        uint256 _baseFee,
+        address _unsafeBlockSigner,
+        IResourceMetering.ResourceConfig memory _config
+    )
+        external;
+
     function owner() external view returns (address);
     function overhead() external view returns (uint256);
     function scalar() external view returns (uint256);

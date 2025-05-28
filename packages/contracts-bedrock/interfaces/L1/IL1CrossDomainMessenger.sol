@@ -11,6 +11,8 @@ interface IL1CrossDomainMessenger {
     /// @param l1mnt   Address of the Mantle Token on L1
     function __constructor__(IOptimismPortal _portal, address l1mnt) external;
 
+    function initialize() external;
+
     function PORTAL() external view returns (IOptimismPortal);
     function L1_MNT_ADDRESS() external view returns (address);
 }

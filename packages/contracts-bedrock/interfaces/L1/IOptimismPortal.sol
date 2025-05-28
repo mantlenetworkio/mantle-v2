@@ -22,10 +22,13 @@ interface IOptimismPortal {
     )
         external;
 
+    function initialize(bool _paused) external;
+
     receive() external payable;
 
     function L2_ORACLE() external view returns (IL2OutputOracle);
     function GUARDIAN() external view returns (address);
     function SYSTEM_CONFIG() external view returns (ISystemConfig);
     function L1_MNT_ADDRESS() external view returns (address);
+    function paused() external view returns (bool);
 }
