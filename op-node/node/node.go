@@ -209,7 +209,10 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 		return err
 	}
 
-	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, n.metrics)
+	n.eigenDaSyncer, err = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, n.metrics)
+	if err != nil {
+		return fmt.Errorf("failed to create EngineDA data store: %w", err)
+	}
 
 	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer)
 

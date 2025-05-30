@@ -28,15 +28,17 @@ type EigenDADataStore struct {
 	Ctx                   context.Context
 }
 
-func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *Config, m eigenda.Metrics) *EigenDADataStore {
-	var daClient eigenda.IEigenDA
-	if daCfg != nil {
-		daClient = eigenda.NewEigenDAClient(daCfg.Config, log, m)
+func NewEigenDADataStore(ctx context.Context, log log.Logger, daCfg *Config, m eigenda.Metrics) (*EigenDADataStore, error) {
+	if daCfg == nil {
+		return nil, fmt.Errorf("da cfg is nil")
 	}
+
 	return &EigenDADataStore{
-		daClient: daClient,
-		Ctx:      ctx,
-	}
+		daClient:              eigenda.NewEigenDAClient(daCfg.Config, log, m),
+		MantleDaIndexerSocket: daCfg.MantleDaIndexerSocket,
+		MantleDAIndexerEnable: daCfg.MantleDAIndexerEnable,
+		Ctx:                   ctx,
+	}, nil
 }
 
 func (da *EigenDADataStore) IsDaIndexer() bool {
