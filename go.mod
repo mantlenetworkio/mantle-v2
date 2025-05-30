@@ -2,8 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.23.0
 
-//replace github.com/ethereum/go-ethereum v1.11.6 => github.com/mantlenetworkio/op-geth v1.1.1
-replace github.com/ethereum/go-ethereum v1.15.11 => /Users/gary/go/src/github.com/mantle-xyz/rde-v3/src/op-geth
+replace github.com/ethereum/go-ethereum v1.15.11 => github.com/mantlenetworkio/op-geth v0.0.0-20250530083012-8c8f90b010a2
 
 require (
 	cloud.google.com/go/kms v1.12.1
