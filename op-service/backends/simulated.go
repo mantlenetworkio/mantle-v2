@@ -977,6 +977,10 @@ func (fb *filterBackend) HistoryPruningCutoff() uint64 {
 	panic("not supported")
 }
 
+func (fb *filterBackend) SubscribeNewPreconfTxEvent(ch chan<- core.NewPreconfTxEvent) event.Subscription {
+	return nullSubscription()
+}
+
 func (fb *filterBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return nullSubscription()
 }
