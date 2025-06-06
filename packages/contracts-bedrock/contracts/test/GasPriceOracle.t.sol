@@ -25,6 +25,18 @@ contract GasPriceOracle_Test is CommonTest {
     uint256 constant l1FeeOverhead = 310;
     uint256 constant l1FeeScalar = 10;
 
+    uint256 constant operatorFeeConstant = 0;
+    uint256 constant operatorFeeScalar = 5490_000000;
+
+    struct TestData {
+        bytes data;
+        uint256 gasUsed;
+        uint256 l1Fee;
+    }
+
+    TestData[] public caseBedrock;
+    TestData[] public caseSkadi;
+
     function setUp() public virtual override {
         super.setUp();
         // place the L1Block contract at the predeploy address
@@ -37,6 +49,11 @@ contract GasPriceOracle_Test is CommonTest {
         // address for simplicity purposes. Nothing in this test
         // requires it to be at a particular address
         gasOracle = new GasPriceOracle();
+        vm.store(address(gasOracle), bytes32(uint256(1)), bytes32(uint256(uint160(address(this)))));
+        gasOracle.setOperator(address(this));
+        gasOracle.setOperatorFeeConstant(operatorFeeConstant);
+        gasOracle.setOperatorFeeScalar(operatorFeeScalar);
+        _prepareTestData();
 
         vm.prank(depositor);
         l1Block.setL1BlockValues({
@@ -56,11 +73,23 @@ contract GasPriceOracle_Test is CommonTest {
     }
 
     function test_getL1GasUsed_succeeds() external {
-        assertEq(gasOracle.getL1GasUsed("dead"), 1462);
+        for (uint256 i = 0; i < caseBedrock.length; i++) {
+            assertEq(gasOracle.getL1GasUsed(caseBedrock[i].data), caseBedrock[i].gasUsed);
+        }
+        _setIsSkadi();
+        for (uint256 i = 0; i < caseSkadi.length; i++) {
+            assertEq(gasOracle.getL1GasUsed(caseSkadi[i].data), caseSkadi[i].gasUsed);
+        }
     }
 
     function test_getL1Fee_succeeds() external {
-        assertEq(gasOracle.getL1Fee("dead"), 1);
+        for (uint256 i = 0; i < caseBedrock.length; i++) {
+            assertEq(gasOracle.getL1Fee(caseBedrock[i].data), caseBedrock[i].l1Fee);
+        }
+        _setIsSkadi();
+        for (uint256 i = 0; i < caseSkadi.length; i++) {
+            assertEq(gasOracle.getL1Fee(caseSkadi[i].data), caseSkadi[i].l1Fee);
+        }
     }
 
     function test_gasPrice_succeeds() external {
@@ -90,9 +119,8 @@ contract GasPriceOracle_Test is CommonTest {
 
     // Removed in bedrock
     function test_setGasPrice_doesNotExist_reverts() external {
-        (bool success, bytes memory returndata) = address(gasOracle).call(
-            abi.encodeWithSignature("setGasPrice(uint256)", 1)
-        );
+        (bool success, bytes memory returndata) =
+            address(gasOracle).call(abi.encodeWithSignature("setGasPrice(uint256)", 1));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
@@ -100,11 +128,71 @@ contract GasPriceOracle_Test is CommonTest {
 
     // Removed in bedrock
     function test_setL1BaseFee_doesNotExist_reverts() external {
-        (bool success, bytes memory returndata) = address(gasOracle).call(
-            abi.encodeWithSignature("setL1BaseFee(uint256)", 1)
-        );
+        (bool success, bytes memory returndata) =
+            address(gasOracle).call(abi.encodeWithSignature("setL1BaseFee(uint256)", 1));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
+    }
+
+    function test_setIsSkadi_succeeds() external {
+        gasOracle.setIsSkadi();
+        assertEq(gasOracle.isSkadi(), true);
+    }
+
+    function test_setIsSkadi_reverts() external {
+        gasOracle.setIsSkadi();
+        vm.expectRevert("isSkadi already set");
+        gasOracle.setIsSkadi();
+    }
+
+    function test_getOverhead_reverts() external {
+        _setIsSkadi();
+        vm.expectRevert("GasPriceOracle: overhead() is deprecated");
+        gasOracle.overhead();
+    }
+
+    function test_getScalar_reverts() external {
+        _setIsSkadi();
+        vm.expectRevert("GasPriceOracle: scalar() is deprecated");
+        gasOracle.scalar();
+    }
+
+    function test_setOperatorFeeConstant_succeeds() external {
+        gasOracle.setOperatorFeeConstant(100);
+        assertEq(gasOracle.operatorFeeConstant(), 100);
+        _setIsSkadi();
+        gasOracle.setOperatorFeeConstant(200);
+        assertEq(gasOracle.operatorFeeConstant(), 200);
+    }
+
+    function test_setOperatorFeeScalar_succeeds() external {
+        gasOracle.setOperatorFeeScalar(100);
+        assertEq(gasOracle.operatorFeeScalar(), 100);
+        _setIsSkadi();
+        gasOracle.setOperatorFeeScalar(200);
+        assertEq(gasOracle.operatorFeeScalar(), 200);
+    }
+
+    function _setIsSkadi() internal {
+        gasOracle.setIsSkadi();
+    }
+
+    function _prepareTestData() internal {
+        caseBedrock.push(
+            TestData({
+                data: hex"0001020304",
+                gasUsed: 4 + 16 * 4 + 68 * 16 + l1FeeOverhead,
+                l1Fee: (4 + 16 * 4 + 68 * 16 + l1FeeOverhead) * basefee * l1FeeScalar / 1e6
+            })
+        );
+
+        caseSkadi.push(
+            TestData({
+                data: hex"0001020304",
+                gasUsed: 4 + 16 * 4 + 68 * 16 + l1FeeOverhead,
+                l1Fee: (4 + 16 * 4 + 68 * 16 + l1FeeOverhead) * basefee * l1FeeScalar / 1e6
+            })
+        );
     }
 }

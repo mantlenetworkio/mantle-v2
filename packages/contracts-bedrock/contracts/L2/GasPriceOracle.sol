@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { Semver } from "../universal/Semver.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { L1Block } from "../L2/L1Block.sol";
+import { Arithmetic } from "../libraries/Arithmetic.sol";
 
 /**
  * @custom:proxied
@@ -29,34 +30,45 @@ contract GasPriceOracle is Semver {
     uint256 public tokenRatio;
     address public owner;
     address public operator;
+    uint256 public operatorFeeConstant;
+    uint256 public operatorFeeScalar;
+
+    uint256[10] public _gap;
+
+    bool public isSkadi;
 
     /**
-     * @custom:semver 1.0.0
+     * @custom:semver 1.1.0
      */
-    constructor() Semver(1, 0, 0) {}
+    constructor() Semver(1, 1, 0) { }
 
-    /**********
-    * Events *
-    **********/
+    /**
+     * Events
+     */
     event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
+    event OperatorFeeConstantUpdated(
+        uint256 indexed previousOperatorFeeConstant, uint256 indexed newOperatorFeeConstant
+    );
+    event OperatorFeeScalarUpdated(uint256 indexed previousOperatorFeeScalar, uint256 indexed newOperatorFeeScalar);
 
-    /**********
-    * Modifiers *
-    **********/
+    /**
+     * Modifiers
+     */
     modifier onlyOwner() {
         require(owner == msg.sender, "Caller is not the owner");
         _;
     }
+
     modifier onlyOperator() {
         require(operator == msg.sender, "Caller is not the operator");
         _;
     }
 
     /**
-    * Allows the owner to modify the operator.
-    * @param _operator New operator
+     * @notice Allows the owner to modify the operator.
+     * @param _operator New operator
      */
     // slither-disable-next-line external-function
     function setOperator(address _operator) external onlyOwner {
@@ -77,8 +89,8 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-    * Allows the operator to modify the token ratio.
-    * @param _tokenRatio New tokenRatio
+     * Allows the operator to modify the token ratio.
+     * @param _tokenRatio New tokenRatio
      */
     // slither-disable-next-line external-function
     function setTokenRatio(uint256 _tokenRatio) external onlyOperator {
@@ -87,21 +99,37 @@ contract GasPriceOracle is Semver {
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
     }
 
-    /**
-     * @notice Computes the L1 portion of the fee based on the size of the rlp encoded input
-     *         transaction, the current L1 base fee, and the various dynamic parameters.
-     *
-     * @param _data Unsigned fully RLP-encoded transaction to get the L1 fee for.
-     *
-     * @return L1 fee that should be paid for the tx
-     */
+    function setIsSkadi() external onlyOperator {
+        require(isSkadi == false, "isSkadi already set");
+        isSkadi = true;
+    }
+
+    function setOperatorFeeConstant(uint256 _operatorFeeConstant) external onlyOperator {
+        uint256 previousOperatorFeeConstant = operatorFeeConstant;
+        operatorFeeConstant = _operatorFeeConstant;
+        emit OperatorFeeConstantUpdated(previousOperatorFeeConstant, operatorFeeConstant);
+    }
+
+    function setOperatorFeeScalar(uint256 _operatorFeeScalar) external onlyOperator {
+        uint256 previousOperatorFeeScalar = operatorFeeScalar;
+        operatorFeeScalar = _operatorFeeScalar;
+        emit OperatorFeeScalarUpdated(previousOperatorFeeScalar, operatorFeeScalar);
+    }
+
+    /// @notice Computes the L1 portion of the fee based on the size of the rlp encoded input
+    ///         transaction, the current L1 base fee, and the various dynamic parameters.
+    /// @param _data Unsigned fully RLP-encoded transaction to get the L1 fee for.
+    /// @return L1 fee that should be paid for the tx
     function getL1Fee(bytes memory _data) external view returns (uint256) {
-        uint256 l1GasUsed = getL1GasUsed(_data);
-        uint256 l1Fee = l1GasUsed * l1BaseFee();
-        uint256 divisor = 10**DECIMALS;
-        uint256 unscaled = l1Fee * scalar();
-        uint256 scaled = unscaled / divisor;
-        return scaled;
+        return _getL1FeeBedrock(_data);
+    }
+
+    function getOperatorFee(uint256 _gasUsed) public view returns (uint256) {
+        if (!isSkadi) {
+            return 0;
+        }
+        return
+            Arithmetic.saturatingAdd(Arithmetic.saturatingMul(_gasUsed, operatorFeeScalar) / 1e6, operatorFeeConstant);
     }
 
     /**
@@ -128,7 +156,8 @@ contract GasPriceOracle is Semver {
      * @return Current fee overhead.
      */
     function overhead() public view returns (uint256) {
-        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).l1FeeOverhead();
+        require(!isSkadi, "GasPriceOracle: overhead() is deprecated");
+        return _overhead();
     }
 
     /**
@@ -137,7 +166,8 @@ contract GasPriceOracle is Semver {
      * @return Current fee scalar.
      */
     function scalar() public view returns (uint256) {
-        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).l1FeeScalar();
+        require(!isSkadi, "GasPriceOracle: scalar() is deprecated");
+        return _scalar();
     }
 
     /**
@@ -159,17 +189,18 @@ contract GasPriceOracle is Semver {
         return DECIMALS;
     }
 
-    /**
-     * @notice Computes the amount of L1 gas used for a transaction. Adds the overhead which
-     *         represents the per-transaction gas overhead of posting the transaction and state
-     *         roots to L1. Adds 68 bytes of padding to account for the fact that the input does
-     *         not have a signature.
-     *
-     * @param _data Unsigned fully RLP-encoded transaction to get the L1 gas for.
-     *
-     * @return Amount of L1 gas used to publish the transaction.
-     */
+    /// @notice Computes the amount of L1 gas used for a transaction. Adds 68 bytes
+    ///         of padding to account for the fact that the input does not have a signature.
+    /// @param _data Unsigned fully RLP-encoded transaction to get the L1 gas for.
+    /// @return Amount of L1 gas used to publish the transaction.
     function getL1GasUsed(bytes memory _data) public view returns (uint256) {
+        return _getCalldataGas(_data) + _overhead();
+    }
+
+    /// @notice L1 gas estimation calculation.
+    /// @param _data Unsigned fully RLP-encoded transaction to get the L1 gas for.
+    /// @return Amount of L1 gas used to publish the transaction.
+    function _getCalldataGas(bytes memory _data) internal pure returns (uint256) {
         uint256 total = 0;
         uint256 length = _data.length;
         for (uint256 i = 0; i < length; i++) {
@@ -179,7 +210,23 @@ contract GasPriceOracle is Semver {
                 total += 16;
             }
         }
-        uint256 unsigned = total + overhead();
-        return unsigned + (68 * 16);
+        return total + (68 * 16);
+    }
+
+    function _overhead() internal view returns (uint256) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).l1FeeOverhead();
+    }
+
+    function _scalar() internal view returns (uint256) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).l1FeeScalar();
+    }
+
+    /// @notice Computation of the L1 portion of the fee for Bedrock.
+    /// @param _data Unsigned fully RLP-encoded transaction to get the L1 fee for.
+    /// @return L1 fee that should be paid for the tx
+    function _getL1FeeBedrock(bytes memory _data) internal view returns (uint256) {
+        uint256 l1GasUsed = _getCalldataGas(_data);
+        uint256 fee = (l1GasUsed + _overhead()) * l1BaseFee() * _scalar();
+        return fee / (10 ** DECIMALS);
     }
 }
