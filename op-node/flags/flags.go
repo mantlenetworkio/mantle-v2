@@ -290,11 +290,11 @@ var (
 		EnvVars: prefixEnvVars("L1_BEACON_FETCH_ALL_SIDECARS"),
 	}
 
-	SafeDBPath = cli.StringFlag{
-		Name:   "safedb.path",
-		Usage:  "File path used to persist safe head update data. Disabled if not set.",
-		EnvVar: prefixEnvVar("SAFEDB_PATH"),
-		Hidden: true,
+	SafeDBPath = &cli.StringFlag{
+		Name:    "safedb.path",
+		Usage:   "File path used to persist safe head update data. Disabled if not set.",
+		EnvVars: prefixEnvVars("SAFEDB_PATH"),
+		Hidden:  true,
 	}
 )
 

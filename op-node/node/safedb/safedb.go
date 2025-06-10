@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -116,7 +116,10 @@ func (d *SafeDB) SafeHeadUpdated(safeHead eth.L2BlockRef, l1Head eth.BlockID) er
 func (d *SafeDB) SafeHeadReset(safeHead eth.L2BlockRef) error {
 	d.m.Lock()
 	defer d.m.Unlock()
-	iter := d.db.NewIter(safeByL1BlockNumKey.IterRange())
+	iter, err := d.db.NewIter(safeByL1BlockNumKey.IterRange())
+	if err != nil {
+		return fmt.Errorf("reset failed to create iterator: %w", err)
+	}
 	defer iter.Close()
 	if valid := iter.SeekGE(safeByL1BlockNumKey.Of(safeHead.L1Origin.Number)); !valid {
 		// Reached end of column without finding any entries to delete
@@ -164,7 +167,10 @@ func (d *SafeDB) SafeHeadReset(safeHead eth.L2BlockRef) error {
 func (d *SafeDB) SafeHeadAtL1(ctx context.Context, l1BlockNum uint64) (l1Block eth.BlockID, safeHead eth.BlockID, err error) {
 	d.m.RLock()
 	defer d.m.RUnlock()
-	iter := d.db.NewIter(safeByL1BlockNumKey.IterRange())
+	iter, err := d.db.NewIter(safeByL1BlockNumKey.IterRange())
+	if err != nil {
+		return
+	}
 	defer iter.Close()
 	if valid := iter.SeekLT(safeByL1BlockNumKey.Of(l1BlockNum + 1)); !valid {
 		err = ErrNotFound
