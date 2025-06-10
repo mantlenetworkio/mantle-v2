@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	opcrypto "github.com/ethereum-optimism/optimism/op-service/crypto"
@@ -42,113 +42,113 @@ const (
 )
 
 var (
-	SequencerHDPathFlag = cli.StringFlag{
+	SequencerHDPathFlag = &cli.StringFlag{
 		Name: "sequencer-hd-path",
 		Usage: "DEPRECATED: The HD path used to derive the sequencer wallet from the " +
 			"mnemonic. The mnemonic flag must also be set.",
-		EnvVar: "OP_BATCHER_SEQUENCER_HD_PATH",
+		EnvVars: []string{"OP_BATCHER_SEQUENCER_HD_PATH"},
 	}
-	L2OutputHDPathFlag = cli.StringFlag{
+	L2OutputHDPathFlag = &cli.StringFlag{
 		Name: "l2-output-hd-path",
 		Usage: "DEPRECATED:The HD path used to derive the l2output wallet from the " +
 			"mnemonic. The mnemonic flag must also be set.",
-		EnvVar: "OP_PROPOSER_L2_OUTPUT_HD_PATH",
+		EnvVars: []string{"OP_PROPOSER_L2_OUTPUT_HD_PATH"},
 	}
 )
 
 func CLIFlags(envPrefix string) []cli.Flag {
 	return append([]cli.Flag{
-		cli.StringFlag{
-			Name:   MnemonicFlagName,
-			Usage:  "The mnemonic used to derive the wallets for either the service",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "MNEMONIC"),
+		&cli.StringFlag{
+			Name:    MnemonicFlagName,
+			Usage:   "The mnemonic used to derive the wallets for either the service",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "MNEMONIC"),
 		},
-		cli.StringFlag{
-			Name:   HDPathFlagName,
-			Usage:  "The HD path used to derive the sequencer wallet from the mnemonic. The mnemonic flag must also be set.",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "HD_PATH"),
+		&cli.StringFlag{
+			Name:    HDPathFlagName,
+			Usage:   "The HD path used to derive the sequencer wallet from the mnemonic. The mnemonic flag must also be set.",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "HD_PATH"),
 		},
-		cli.StringFlag{
-			Name:   PrivateKeyFlagName,
-			Usage:  "The private key to use with the service. Must not be used with mnemonic.",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "PRIVATE_KEY"),
+		&cli.StringFlag{
+			Name:    PrivateKeyFlagName,
+			Usage:   "The private key to use with the service. Must not be used with mnemonic.",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "PRIVATE_KEY"),
 		},
-		cli.Uint64Flag{
-			Name:   NumConfirmationsFlagName,
-			Usage:  "Number of confirmations which we will wait after sending a transaction",
-			Value:  10,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "NUM_CONFIRMATIONS"),
+		&cli.Uint64Flag{
+			Name:    NumConfirmationsFlagName,
+			Usage:   "Number of confirmations which we will wait after sending a transaction",
+			Value:   10,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "NUM_CONFIRMATIONS"),
 		},
-		cli.Uint64Flag{
-			Name:   SafeAbortNonceTooLowCountFlagName,
-			Usage:  "Number of ErrNonceTooLow observations required to give up on a tx at a particular nonce without receiving confirmation",
-			Value:  3,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "SAFE_ABORT_NONCE_TOO_LOW_COUNT"),
+		&cli.Uint64Flag{
+			Name:    SafeAbortNonceTooLowCountFlagName,
+			Usage:   "Number of ErrNonceTooLow observations required to give up on a tx at a particular nonce without receiving confirmation",
+			Value:   3,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "SAFE_ABORT_NONCE_TOO_LOW_COUNT"),
 		},
-		cli.Uint64Flag{
-			Name:   FeeLimitMultiplierFlagName,
-			Usage:  "The multiplier applied to fee suggestions to put a hard limit on fee increases",
-			Value:  5,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_MULTIPLIER"),
+		&cli.Uint64Flag{
+			Name:    FeeLimitMultiplierFlagName,
+			Usage:   "The multiplier applied to fee suggestions to put a hard limit on fee increases",
+			Value:   5,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_MULTIPLIER"),
 		},
-		cli.Float64Flag{
-			Name:   FeeLimitThresholdFlagName,
-			Usage:  "The minimum threshold (in GWei) at which fee bumping starts to be capped. Allows arbitrary fee bumps below this threshold.",
-			Value:  100.0,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_THRESHOLD"),
+		&cli.Float64Flag{
+			Name:    FeeLimitThresholdFlagName,
+			Usage:   "The minimum threshold (in GWei) at which fee bumping starts to be capped. Allows arbitrary fee bumps below this threshold.",
+			Value:   100.0,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_FEE_LIMIT_THRESHOLD"),
 		},
-		cli.DurationFlag{
-			Name:   ResubmissionTimeoutFlagName,
-			Usage:  "Duration we will wait before resubmitting a transaction to L1",
-			Value:  48 * time.Second,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "RESUBMISSION_TIMEOUT"),
+		&cli.DurationFlag{
+			Name:    ResubmissionTimeoutFlagName,
+			Usage:   "Duration we will wait before resubmitting a transaction to L1",
+			Value:   48 * time.Second,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "RESUBMISSION_TIMEOUT"),
 		},
-		cli.DurationFlag{
-			Name:   NetworkTimeoutFlagName,
-			Usage:  "Timeout for all network operations",
-			Value:  2 * time.Second,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "NETWORK_TIMEOUT"),
+		&cli.DurationFlag{
+			Name:    NetworkTimeoutFlagName,
+			Usage:   "Timeout for all network operations",
+			Value:   2 * time.Second,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "NETWORK_TIMEOUT"),
 		},
-		cli.DurationFlag{
-			Name:   TxSendTimeoutFlagName,
-			Usage:  "Timeout for sending transactions. If 0 it is disabled.",
-			Value:  2 * time.Minute,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_TX_SEND_TIMEOUT"),
+		&cli.DurationFlag{
+			Name:    TxSendTimeoutFlagName,
+			Usage:   "Timeout for sending transactions. If 0 it is disabled.",
+			Value:   2 * time.Minute,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_TX_SEND_TIMEOUT"),
 		},
-		cli.DurationFlag{
-			Name:   TxNotInMempoolTimeoutFlagName,
-			Usage:  "Timeout for aborting a tx send if the tx does not make it to the mempool.",
-			Value:  2 * time.Minute,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_TX_NOT_IN_MEMPOOL_TIMEOUT"),
+		&cli.DurationFlag{
+			Name:    TxNotInMempoolTimeoutFlagName,
+			Usage:   "Timeout for aborting a tx send if the tx does not make it to the mempool.",
+			Value:   2 * time.Minute,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_TX_NOT_IN_MEMPOOL_TIMEOUT"),
 		},
-		cli.DurationFlag{
-			Name:   ReceiptQueryIntervalFlagName,
-			Usage:  "Frequency to poll for receipts",
-			Value:  12 * time.Second,
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "TXMGR_RECEIPT_QUERY_INTERVAL"),
+		&cli.DurationFlag{
+			Name:    ReceiptQueryIntervalFlagName,
+			Usage:   "Frequency to poll for receipts",
+			Value:   12 * time.Second,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_RECEIPT_QUERY_INTERVAL"),
 		},
-		cli.BoolFlag{
-			Name:   EnableHsmFlagName,
-			Usage:  "Whether or not to use cloud hsm",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "ENABLE_HSM"),
+		&cli.BoolFlag{
+			Name:    EnableHsmFlagName,
+			Usage:   "Whether or not to use cloud hsm",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "ENABLE_HSM"),
 		},
-		cli.StringFlag{
-			Name:   HsmAddressFlagName,
-			Usage:  "The address of private-key in hsm",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_ADDRESS"),
-			Value:  "",
+		&cli.StringFlag{
+			Name:    HsmAddressFlagName,
+			Usage:   "The address of private-key in hsm",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "HSM_ADDRESS"),
+			Value:   "",
 		},
-		cli.StringFlag{
-			Name:   HsmAPINameFlagName,
-			Usage:  "The api-name of private-key in hsm",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_API_NAME"),
-			Value:  "",
+		&cli.StringFlag{
+			Name:    HsmAPINameFlagName,
+			Usage:   "The api-name of private-key in hsm",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "HSM_API_NAME"),
+			Value:   "",
 		},
-		cli.StringFlag{
-			Name:   HsmCredenFlagName,
-			Usage:  "The creden of private-key in hsm",
-			EnvVar: opservice.PrefixEnvVar(envPrefix, "HSM_CREDEN"),
-			Value:  "",
+		&cli.StringFlag{
+			Name:    HsmCredenFlagName,
+			Usage:   "The creden of private-key in hsm",
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "HSM_CREDEN"),
+			Value:   "",
 		},
 	}, client.CLIFlags(envPrefix)...)
 }
@@ -206,26 +206,26 @@ func (m CLIConfig) Check() error {
 
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	return CLIConfig{
-		L1RPCURL:                  ctx.GlobalString(L1RPCFlagName),
-		Mnemonic:                  ctx.GlobalString(MnemonicFlagName),
-		HDPath:                    ctx.GlobalString(HDPathFlagName),
-		SequencerHDPath:           ctx.GlobalString(SequencerHDPathFlag.Name),
-		L2OutputHDPath:            ctx.GlobalString(L2OutputHDPathFlag.Name),
-		PrivateKey:                ctx.GlobalString(PrivateKeyFlagName),
+		L1RPCURL:                  ctx.String(L1RPCFlagName),
+		Mnemonic:                  ctx.String(MnemonicFlagName),
+		HDPath:                    ctx.String(HDPathFlagName),
+		SequencerHDPath:           ctx.String(SequencerHDPathFlag.Name),
+		L2OutputHDPath:            ctx.String(L2OutputHDPathFlag.Name),
+		PrivateKey:                ctx.String(PrivateKeyFlagName),
 		SignerCLIConfig:           client.ReadCLIConfig(ctx),
-		NumConfirmations:          ctx.GlobalUint64(NumConfirmationsFlagName),
-		SafeAbortNonceTooLowCount: ctx.GlobalUint64(SafeAbortNonceTooLowCountFlagName),
-		FeeLimitMultiplier:        ctx.GlobalUint64(FeeLimitMultiplierFlagName),
-		FeeLimitThresholdGwei:     ctx.GlobalFloat64(FeeLimitThresholdFlagName),
-		ResubmissionTimeout:       ctx.GlobalDuration(ResubmissionTimeoutFlagName),
-		ReceiptQueryInterval:      ctx.GlobalDuration(ReceiptQueryIntervalFlagName),
-		NetworkTimeout:            ctx.GlobalDuration(NetworkTimeoutFlagName),
-		TxSendTimeout:             ctx.GlobalDuration(TxSendTimeoutFlagName),
-		TxNotInMempoolTimeout:     ctx.GlobalDuration(TxNotInMempoolTimeoutFlagName),
-		EnableHsm:                 ctx.GlobalBool(EnableHsmFlagName),
-		HsmAddress:                ctx.GlobalString(HsmAddressFlagName),
-		HsmAPIName:                ctx.GlobalString(HsmAPINameFlagName),
-		HsmCreden:                 ctx.GlobalString(HsmCredenFlagName),
+		NumConfirmations:          ctx.Uint64(NumConfirmationsFlagName),
+		SafeAbortNonceTooLowCount: ctx.Uint64(SafeAbortNonceTooLowCountFlagName),
+		FeeLimitMultiplier:        ctx.Uint64(FeeLimitMultiplierFlagName),
+		FeeLimitThresholdGwei:     ctx.Float64(FeeLimitThresholdFlagName),
+		ResubmissionTimeout:       ctx.Duration(ResubmissionTimeoutFlagName),
+		ReceiptQueryInterval:      ctx.Duration(ReceiptQueryIntervalFlagName),
+		NetworkTimeout:            ctx.Duration(NetworkTimeoutFlagName),
+		TxSendTimeout:             ctx.Duration(TxSendTimeoutFlagName),
+		TxNotInMempoolTimeout:     ctx.Duration(TxNotInMempoolTimeoutFlagName),
+		EnableHsm:                 ctx.Bool(EnableHsmFlagName),
+		HsmAddress:                ctx.String(HsmAddressFlagName),
+		HsmAPIName:                ctx.String(HsmAPINameFlagName),
+		HsmCreden:                 ctx.String(HsmCredenFlagName),
 	}
 }
 

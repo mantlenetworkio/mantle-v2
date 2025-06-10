@@ -3,14 +3,12 @@ package derive
 import (
 	"context"
 	"fmt"
-
+	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
 // L1ReceiptsFetcher fetches L1 header info and receipts for the payload attributes derivation (the info tx and deposits)
@@ -100,6 +98,15 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			l2Parent, nextL2Time, eth.ToBlockID(l1Info), l1Info.Time()))
 	}
 
+	var upgradeTxs []hexutil.Bytes
+	if ba.cfg.IsMantleSkadiActivationBlock(nextL2Time) {
+		skadiUpgradeTxs, err := MantleSkadiNetworkUpgradeTransactions()
+		if err != nil {
+			return nil, NewCriticalError(fmt.Errorf("failed to build skadi network upgrade txs: %w", err))
+		}
+		upgradeTxs = append(upgradeTxs, skadiUpgradeTxs...)
+	}
+
 	l1InfoTx, err := L1InfoDepositBytes(seqNumber, l1Info, sysConfig, ba.cfg.IsRegolith(nextL2Time))
 	if err != nil {
 		return nil, NewCriticalError(fmt.Errorf("failed to create l1InfoTx: %w", err))
@@ -108,9 +115,22 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	txs := make([]hexutil.Bytes, 0, 1+len(depositTxs))
 	txs = append(txs, l1InfoTx)
 	txs = append(txs, depositTxs...)
+	txs = append(txs, upgradeTxs...)
 
 	if !ba.cfg.IsBaseFee(nextL2Time) {
 		sysConfig.BaseFee = nil
+	}
+
+	var (
+		withdrawals      *types.Withdrawals
+		parentBeaconRoot *common.Hash
+	)
+	if ba.cfg.IsMantleSkadi(nextL2Time) {
+		withdrawals = &types.Withdrawals{}
+		parentBeaconRoot = l1Info.ParentBeaconRoot()
+		if parentBeaconRoot == nil { // default to zero hash if there is no beacon-block-root available
+			parentBeaconRoot = new(common.Hash)
+		}
 	}
 
 	return &eth.PayloadAttributes{
@@ -121,5 +141,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&sysConfig.GasLimit),
 		BaseFee:               sysConfig.BaseFee,
+		Withdrawals:           withdrawals,
+		ParentBeaconBlockRoot: parentBeaconRoot,
 	}, nil
 }

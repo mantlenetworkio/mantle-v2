@@ -3,13 +3,14 @@ package derive
 import (
 	"bytes"
 	"fmt"
+	"github.com/holiman/uint256"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // AttributesMatchBlock checks if the L2 attributes pre-inputs match the output
@@ -43,7 +44,7 @@ func AttributesMatchBlock(attrs *eth.PayloadAttributes, parentHash common.Hash, 
 	}
 	if attrs.BaseFee != nil {
 		log.Info("attributes match block check", "blockNumber", block.BlockNumber, "attrs", attrs.BaseFee.String(), "block", block.BaseFeePerGas.String())
-		if block.BaseFeePerGas.ToBig().Cmp(attrs.BaseFee) != 0 {
+		if (*uint256.Int)(&block.BaseFeePerGas).ToBig().Cmp(attrs.BaseFee) != 0 {
 			return fmt.Errorf("base fee does not match. blockNumber %d. expected %s. got: %s", block.BlockNumber, attrs.BaseFee.String(), block.BaseFeePerGas.String())
 		}
 	}

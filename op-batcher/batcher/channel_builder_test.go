@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	dtest "github.com/ethereum-optimism/optimism/op-node/rollup/derive/test"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -139,7 +139,7 @@ func newMiniL2BlockWithNumberParent(numTx int, number *big.Int, parent common.Ha
 		BaseFee:    big.NewInt(10),
 		Difficulty: common.Big0,
 		Number:     big.NewInt(100),
-	}, nil, nil, nil, trie.NewStackTrie(nil))
+	}, nil, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 	l1InfoTx, err := derive.L1InfoDeposit(0, eth.BlockToInfo(l1Block), eth.SystemConfig{}, false)
 	if err != nil {
 		panic(err)
@@ -154,7 +154,7 @@ func newMiniL2BlockWithNumberParent(numTx int, number *big.Int, parent common.Ha
 	return types.NewBlock(&types.Header{
 		Number:     number,
 		ParentHash: parent,
-	}, txs, nil, nil, trie.NewStackTrie(nil))
+	}, &types.Body{Transactions: txs}, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 }
 
 // addTooManyBlocks adds blocks to the channel until it hits an error,
@@ -521,12 +521,12 @@ func TestChannelBuilder_OutputFramesMaxFrameIndex(t *testing.T) {
 			BaseFee:    common.Big0,
 			Difficulty: common.Big0,
 			Number:     common.Big0,
-		}, nil, nil, nil, trie.NewStackTrie(nil))
+		}, nil, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 		l1InfoTx, _ := derive.L1InfoDeposit(0, eth.BlockToInfo(lBlock), eth.SystemConfig{}, false)
 		txs := []*types.Transaction{types.NewTx(l1InfoTx)}
 		a := types.NewBlock(&types.Header{
 			Number: big.NewInt(0),
-		}, txs, nil, nil, trie.NewStackTrie(nil))
+		}, &types.Body{Transactions: txs}, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 		_, err = cb.AddBlock(a)
 		require.NoError(t, cb.co.Flush())
 		if cb.IsFull() {

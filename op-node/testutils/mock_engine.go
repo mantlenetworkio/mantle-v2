@@ -2,17 +2,18 @@ package testutils
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type MockEngine struct {
 	MockL2Client
 }
 
-func (m *MockEngine) GetPayload(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
-	out := m.Mock.MethodCalled("GetPayload", payloadId)
-	return out[0].(*eth.ExecutionPayload), *out[1].(*error)
+func (m *MockEngine) GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
+	out := m.Mock.MethodCalled("GetPayload", payloadInfo)
+	return out[0].(*eth.ExecutionPayloadEnvelope), *out[1].(*error)
 }
 
 func (m *MockEngine) ExpectGetPayload(payloadId eth.PayloadID, payload *eth.ExecutionPayload, err error) {
@@ -28,7 +29,7 @@ func (m *MockEngine) ExpectForkchoiceUpdate(state *eth.ForkchoiceState, attr *et
 	m.Mock.On("ForkchoiceUpdate", state, attr).Once().Return(result, &err)
 }
 
-func (m *MockEngine) NewPayload(ctx context.Context, payload *eth.ExecutionPayload) (*eth.PayloadStatusV1, error) {
+func (m *MockEngine) NewPayload(ctx context.Context, payload *eth.ExecutionPayload, parentBeaconBlockRoot *common.Hash) (*eth.PayloadStatusV1, error) {
 	out := m.Mock.MethodCalled("NewPayload", payload)
 	return out[0].(*eth.PayloadStatusV1), *out[1].(*error)
 }

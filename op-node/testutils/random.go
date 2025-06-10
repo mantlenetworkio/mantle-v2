@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -229,7 +229,7 @@ func RandomBlockPrependTxs(rng *rand.Rand, txCount int, ptxs ...*types.Transacti
 	}
 	header.GasUsed = cumulativeGasUsed
 	header.GasLimit = cumulativeGasUsed + uint64(rng.Int63n(int64(cumulativeGasUsed)))
-	block := types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil))
+	block := types.NewBlock(header, &types.Body{Transactions: txs}, receipts, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 	logIndex := uint(0)
 	for i, r := range receipts {
 		r.BlockHash = block.Hash()
