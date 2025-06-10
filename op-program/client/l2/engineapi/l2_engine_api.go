@@ -6,9 +6,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/holiman/uint256"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -176,10 +177,10 @@ func (ea *L2EngineAPI) endBlock() (*types.Block, error) {
 	return block, nil
 }
 
-func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
-	ea.log.Trace("L2Engine API request received", "method", "GetPayload", "id", payloadId)
-	if ea.payloadID != payloadId {
-		ea.log.Warn("unexpected payload ID requested for block building", "expected", ea.payloadID, "got", payloadId)
+func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
+	ea.log.Trace("L2Engine API request received", "method", "GetPayload", "id", payloadInfo.ID)
+	if ea.payloadID != payloadInfo.ID {
+		ea.log.Warn("unexpected payload ID requested for block building", "expected", ea.payloadID, "got", payloadInfo.ID)
 		return nil, engine.UnknownPayload
 	}
 	bl, err := ea.endBlock()
@@ -187,7 +188,7 @@ func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadId eth.PayloadID
 		ea.log.Error("failed to finish block building", "err", err)
 		return nil, engine.UnknownPayload
 	}
-	return eth.BlockAsPayload(bl)
+	return eth.BlockAsPayloadEnv(bl, ea.config())
 }
 
 func (ea *L2EngineAPI) ForkchoiceUpdatedV1(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error) {
@@ -291,10 +292,10 @@ func (ea *L2EngineAPI) NewPayloadV1(ctx context.Context, payload *eth.ExecutionP
 		GasUsed:       uint64(payload.GasUsed),
 		Timestamp:     uint64(payload.Timestamp),
 		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: payload.BaseFeePerGas.ToBig(),
+		BaseFeePerGas: (*uint256.Int)(&payload.BaseFeePerGas).ToBig(),
 		BlockHash:     payload.BlockHash,
 		Transactions:  txs,
-	})
+	}, nil, nil, nil, ea.backend.Config())
 	if err != nil {
 		log.Debug("Invalid NewPayload params", "params", payload, "error", err)
 		return &eth.PayloadStatusV1{Status: eth.ExecutionInvalidBlockHash}, nil
@@ -346,4 +347,8 @@ func (ea *L2EngineAPI) invalid(err error, latestValid *types.Header) *eth.Payloa
 	}
 	errorMsg := err.Error()
 	return &eth.PayloadStatusV1{Status: eth.ExecutionInvalid, LatestValidHash: &currentHash, ValidationError: &errorMsg}
+}
+
+func (ea *L2EngineAPI) config() *params.ChainConfig {
+	return ea.backend.Config()
 }

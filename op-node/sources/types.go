@@ -2,20 +2,22 @@ package sources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/holiman/uint256"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/holiman/uint256"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	opseth "github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type BatchCallContextFn func(ctx context.Context, b []rpc.BatchElem) error
@@ -75,6 +77,17 @@ func (h headerInfo) BaseFee() *big.Int {
 	return h.Header.BaseFee
 }
 
+func (h headerInfo) BlobBaseFee() *big.Int {
+	if h.Header.ExcessBlobGas == nil {
+		return nil
+	}
+	return opseth.CalcBlobFeeDefault(h.Header)
+}
+
+func (h headerInfo) ExcessBlobGas() *uint64 {
+	return h.Header.ExcessBlobGas
+}
+
 func (h headerInfo) ReceiptHash() common.Hash {
 	return h.Header.ReceiptHash
 }
@@ -83,8 +96,28 @@ func (h headerInfo) GasUsed() uint64 {
 	return h.Header.GasUsed
 }
 
+func (h headerInfo) GasLimit() uint64 {
+	return h.Header.GasLimit
+}
+
+func (h headerInfo) ParentBeaconRoot() *common.Hash {
+	return h.Header.ParentBeaconRoot
+}
+
 func (h headerInfo) HeaderRLP() ([]byte, error) {
 	return rlp.EncodeToBytes(h.Header)
+}
+
+func (h headerInfo) WithdrawalsRoot() *common.Hash {
+	return h.Header.WithdrawalsHash
+}
+
+func (h headerInfo) MarshalJSON() ([]byte, error) {
+	return h.Header.MarshalJSON()
+}
+
+func (h headerInfo) UnmarshalJSON(input []byte) error {
+	return h.Header.UnmarshalJSON(input)
 }
 
 type rpcHeader struct {
@@ -118,6 +151,9 @@ type rpcHeader struct {
 
 	// ParentBeaconRoot was added by EIP-4788 and is ignored in legacy headers.
 	ParentBeaconRoot *common.Hash `json:"parentBeaconBlockRoot" rlp:"optional"`
+
+	// RequestsHash was added by EIP-7685 and is ignored in legacy headers.
+	RequestsHash *common.Hash `json:"requestsHash" rlp:"optional"`
 
 	// untrusted info included by RPC, may have to be checked
 	Hash common.Hash `json:"hash"`
@@ -185,6 +221,7 @@ func (hdr *rpcHeader) createGethHeader() *types.Header {
 		BlobGasUsed:      blobGasUsed,
 		ExcessBlobGas:    excessBlobGas,
 		ParentBeaconRoot: hdr.ParentBeaconRoot,
+		RequestsHash:     hdr.RequestsHash,
 	}
 }
 
@@ -205,14 +242,65 @@ func (hdr *rpcHeader) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInfo
 type rpcBlock struct {
 	rpcHeader
 	Transactions []*types.Transaction `json:"transactions"`
+	Withdrawals  *types.Withdrawals   `json:"withdrawals,omitempty"`
 }
 
 func (block *rpcBlock) verify() error {
 	if computed := block.computeBlockHash(); computed != block.Hash {
 		return fmt.Errorf("failed to verify block hash: computed %s but RPC said %s", computed, block.Hash)
 	}
+	for i, tx := range block.Transactions {
+		if tx == nil {
+			return fmt.Errorf("block tx %d is nil", i)
+		}
+	}
 	if computed := types.DeriveSha(types.Transactions(block.Transactions), trie.NewStackTrie(nil)); block.TxHash != computed {
 		return fmt.Errorf("failed to verify transactions list: computed %s but RPC said %s", computed, block.TxHash)
+	}
+
+	// Withdrawals validation is different between L1 and L2.
+	// It is possible to determine that it is an L2 block if the first transaction is a deposit.
+	// The genesis block does not have transactions, but does have a known fee-recipient predeploy address.
+	isL2 := (len(block.Transactions) > 0 && block.Transactions[0].IsDepositTx()) ||
+		(block.Number == 0 && block.Coinbase == predeploys.SequencerFeeVaultAddr)
+	if isL2 {
+		if err := block.validateL2Withdrawals(block.Withdrawals, block.WithdrawalsRoot); err != nil {
+			return err
+		}
+	} else {
+		if err := block.validateL1Withdrawals(block.Withdrawals, block.WithdrawalsRoot); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (block *rpcBlock) validateL1Withdrawals(withdrawals *types.Withdrawals, withdrawalsRoot *common.Hash) error {
+	if withdrawalsRoot != nil {
+		if withdrawals == nil {
+			return errors.New("expected withdrawals")
+		}
+		for i, w := range *withdrawals {
+			if w == nil {
+				return fmt.Errorf("block withdrawal %d is null", i)
+			}
+		}
+		if computed := types.DeriveSha(*withdrawals, trie.NewStackTrie(nil)); *withdrawalsRoot != computed {
+			return fmt.Errorf("failed to verify withdrawals list: computed %s but RPC said %s", computed, withdrawalsRoot)
+		}
+	} else {
+		if withdrawals != nil {
+			return fmt.Errorf("expected no withdrawals due to missing withdrawals-root, but got %d", len(*withdrawals))
+		}
+	}
+	return nil
+}
+
+func (block *rpcBlock) validateL2Withdrawals(withdrawals *types.Withdrawals, withdrawalsRoot *common.Hash) error {
+	if withdrawalsRoot != nil {
+		if !(withdrawals != nil && len(*withdrawals) == 0) {
+			return fmt.Errorf("expected empty withdrawals, but got %d", len(*withdrawals))
+		}
 	}
 	return nil
 }
@@ -238,7 +326,7 @@ func (block *rpcBlock) Info(trustCache bool, mustBePostMerge bool) (eth.BlockInf
 	return info, block.Transactions, nil
 }
 
-func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload, error) {
+func (block *rpcBlock) ExecutionPayloadEnvelope(trustCache bool) (*eth.ExecutionPayloadEnvelope, error) {
 	if err := block.checkPostMerge(); err != nil {
 		return nil, err
 	}
@@ -261,21 +349,30 @@ func (block *rpcBlock) ExecutionPayload(trustCache bool) (*eth.ExecutionPayload,
 		opaqueTxs[i] = data
 	}
 
-	return &eth.ExecutionPayload{
-		ParentHash:    block.ParentHash,
-		FeeRecipient:  block.Coinbase,
-		StateRoot:     eth.Bytes32(block.Root),
-		ReceiptsRoot:  eth.Bytes32(block.ReceiptHash),
-		LogsBloom:     block.Bloom,
-		PrevRandao:    eth.Bytes32(block.MixDigest), // mix-digest field is used for prevRandao post-merge
-		BlockNumber:   block.Number,
-		GasLimit:      block.GasLimit,
-		GasUsed:       block.GasUsed,
-		Timestamp:     block.Time,
-		ExtraData:     eth.BytesMax32(block.Extra),
-		BaseFeePerGas: baseFee,
-		BlockHash:     block.Hash,
-		Transactions:  opaqueTxs,
+	payload := &eth.ExecutionPayload{
+		ParentHash:      block.ParentHash,
+		FeeRecipient:    block.Coinbase,
+		StateRoot:       eth.Bytes32(block.Root),
+		ReceiptsRoot:    eth.Bytes32(block.ReceiptHash),
+		LogsBloom:       block.Bloom,
+		PrevRandao:      eth.Bytes32(block.MixDigest), // mix-digest field is used for prevRandao post-merge
+		BlockNumber:     block.Number,
+		GasLimit:        block.GasLimit,
+		GasUsed:         block.GasUsed,
+		Timestamp:       block.Time,
+		ExtraData:       eth.BytesMax32(block.Extra),
+		BaseFeePerGas:   eth.Uint256Quantity(baseFee),
+		BlockHash:       block.Hash,
+		Transactions:    opaqueTxs,
+		Withdrawals:     block.Withdrawals,
+		BlobGasUsed:     block.BlobGasUsed,
+		ExcessBlobGas:   block.ExcessBlobGas,
+		WithdrawalsRoot: block.WithdrawalsRoot,
+	}
+
+	return &eth.ExecutionPayloadEnvelope{
+		ParentBeaconBlockRoot: block.ParentBeaconRoot,
+		ExecutionPayload:      payload,
 	}, nil
 }
 

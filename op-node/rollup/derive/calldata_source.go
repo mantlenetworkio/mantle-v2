@@ -7,11 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
-	"strings"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -19,12 +16,11 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	seth "github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/proto/gen/op_service/v1"
-	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
 const ConfirmDataStoreEventABI = "ConfirmDataStore(uint32,bytes32)"
@@ -51,12 +47,6 @@ type L1BlobsFetcher interface {
 	GetBlobs(ctx context.Context, ref seth.L1BlockRef, hashes []seth.IndexedBlobHash) ([]*seth.Blob, error)
 }
 
-type MantleDaSyncer interface {
-	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
-	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
-	IsDaIndexer() bool
-}
-
 type EigenDaSyncer interface {
 	RetrieveBlob(batchHeaderHash []byte, blobIndex uint32, commitment []byte) ([]byte, error)
 	RetrievalFramesFromDaIndexer(txHash string) ([]byte, error)
@@ -70,15 +60,14 @@ type DataSourceFactory struct {
 	log           log.Logger
 	cfg           *rollup.Config
 	fetcher       L1TransactionFetcher
-	syncer        MantleDaSyncer
 	metrics       Metrics
 	eigenDaSyncer EigenDaSyncer
 	eng           EngineQueueStage
 	blobsFetcher  L1BlobsFetcher
 }
 
-func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, blobsFetcher L1BlobsFetcher, syncer MantleDaSyncer, metrics Metrics, eigenDaSyncer EigenDaSyncer) *DataSourceFactory {
-	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher, syncer: syncer, metrics: metrics, eigenDaSyncer: eigenDaSyncer, blobsFetcher: blobsFetcher}
+func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, blobsFetcher L1BlobsFetcher, metrics Metrics, eigenDaSyncer EigenDaSyncer) *DataSourceFactory {
+	return &DataSourceFactory{log: log, cfg: cfg, fetcher: fetcher, metrics: metrics, eigenDaSyncer: eigenDaSyncer, blobsFetcher: blobsFetcher}
 }
 
 func (ds *DataSourceFactory) RegisterEngineQueue(eng EngineQueueStage) {
@@ -87,7 +76,7 @@ func (ds *DataSourceFactory) RegisterEngineQueue(eng EngineQueueStage) {
 
 // OpenData returns a DataIter. This struct implements the `Next` function.
 func (ds *DataSourceFactory) OpenData(ctx context.Context, id eth.L1BlockRef, batcherAddr common.Address) DataIter {
-	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, ds.syncer, ds.metrics, id, batcherAddr, ds.eigenDaSyncer, ds.eng.SafeL2Head(), ds.blobsFetcher)
+	return NewDataSource(ctx, ds.log, ds.cfg, ds.fetcher, ds.metrics, id, batcherAddr, ds.eigenDaSyncer, ds.eng.SafeL2Head(), ds.blobsFetcher)
 }
 
 // DataSource is a fault tolerant approach to fetching data.
@@ -102,7 +91,6 @@ type DataSource struct {
 	cfg           *rollup.Config // TODO: `DataFromEVMTransactions` should probably not take the full config
 	fetcher       L1TransactionFetcher
 	blobsFetcher  L1BlobsFetcher
-	syncer        MantleDaSyncer
 	metrics       Metrics
 	log           log.Logger
 	eigenDaSyncer EigenDaSyncer
@@ -113,21 +101,33 @@ type DataSource struct {
 
 // NewDataSource creates a new calldata source. It suppresses errors in fetching the L1 block if they occur.
 // If there is an error, it will attempt to fetch the result on the next call to `Next`.
-func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, syncer MantleDaSyncer, metrics Metrics, block eth.L1BlockRef, batcherAddr common.Address, eigenDaSyncer EigenDaSyncer, safeL2Ref eth.L2BlockRef, blobsFetcher L1BlobsFetcher) DataIter {
+func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetcher L1TransactionFetcher, metrics Metrics, block eth.L1BlockRef, batcherAddr common.Address, eigenDaSyncer EigenDaSyncer, safeL2Ref eth.L2BlockRef, blobsFetcher L1BlobsFetcher) DataIter {
 	if cfg.MantleDaSwitch {
-		daUpgradeCfg := upgrade.GetUpgradeConfigForMantle(cfg.L2ChainID)
-		if daUpgradeCfg != nil && daUpgradeCfg.IsUseEigenDa(big.NewInt(int64(safeL2Ref.Number)+1)) {
-			log.Info("Derived by Eigenda da", "EigenDaUpgradeHeight", daUpgradeCfg.EigenDaUpgradeHeight, "safeL2Ref", safeL2Ref, "l1InBoxBlock", block)
-			_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
+		log.Info("Derived by Eigenda da", "safeL2Ref", safeL2Ref, "l1InBoxBlock", block)
+		_, txs, err := fetcher.InfoAndTxsByHash(ctx, block.Hash)
+		if err != nil {
+			log.Error("Fetch txs by hash fail", "err", err)
+			// Here is the original return method keeping op-stack
+			return &DataSource{
+				open:          false,
+				id:            block,
+				cfg:           cfg,
+				fetcher:       fetcher,
+				metrics:       metrics,
+				log:           log,
+				batcherAddr:   batcherAddr,
+				eigenDaSyncer: eigenDaSyncer,
+				safeL2Ref:     safeL2Ref,
+				blobsFetcher:  blobsFetcher,
+			}
+		} else {
+			data, blobHashes, err := dataFromEigenDa(cfg, txs, eigenDaSyncer, metrics, log.New("origin", block), batcherAddr)
 			if err != nil {
-				log.Error("Fetch txs by hash fail", "err", err)
-				// Here is the original return method keeping op-stack
 				return &DataSource{
 					open:          false,
 					id:            block,
 					cfg:           cfg,
 					fetcher:       fetcher,
-					syncer:        syncer,
 					metrics:       metrics,
 					log:           log,
 					batcherAddr:   batcherAddr,
@@ -136,14 +136,14 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 					blobsFetcher:  blobsFetcher,
 				}
 			} else {
-				data, blobHashes, err := dataFromEigenDa(cfg, txs, eigenDaSyncer, metrics, log.New("origin", block), batcherAddr)
-				if err != nil {
+				log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
+				if blobsFetcher == nil && len(blobHashes) > 0 {
+					log.Error("find blob transaction, but blobsFetcher is nil")
 					return &DataSource{
 						open:          false,
 						id:            block,
 						cfg:           cfg,
 						fetcher:       fetcher,
-						syncer:        syncer,
 						metrics:       metrics,
 						log:           log,
 						batcherAddr:   batcherAddr,
@@ -151,16 +151,17 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 						safeL2Ref:     safeL2Ref,
 						blobsFetcher:  blobsFetcher,
 					}
-				} else {
-					log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
-					if blobsFetcher == nil && len(blobHashes) > 0 {
-						log.Error("find blob transaction, but blobsFetcher is nil")
+				}
+				if len(blobHashes) > 0 {
+					// download the actual blob bodies corresponding to the indexed blob hashes
+					log.Info("get data from blob", "client", blobsFetcher, "blobHashes", blobHashes)
+					blobs, err := blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(block), blobHashes)
+					if err != nil {
 						return &DataSource{
 							open:          false,
 							id:            block,
 							cfg:           cfg,
 							fetcher:       fetcher,
-							syncer:        syncer,
 							metrics:       metrics,
 							log:           log,
 							batcherAddr:   batcherAddr,
@@ -169,91 +170,31 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 							blobsFetcher:  blobsFetcher,
 						}
 					}
-					if len(blobHashes) > 0 {
-						// download the actual blob bodies corresponding to the indexed blob hashes
-						log.Info("get data from blob", "client", blobsFetcher, "blobHashes", blobHashes)
-						blobs, err := blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(block), blobHashes)
+					wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
+					for _, blob := range blobs {
+						blobData, err := blob.ToData()
 						if err != nil {
-							return &DataSource{
-								open:          false,
-								id:            block,
-								cfg:           cfg,
-								fetcher:       fetcher,
-								syncer:        syncer,
-								metrics:       metrics,
-								log:           log,
-								batcherAddr:   batcherAddr,
-								eigenDaSyncer: eigenDaSyncer,
-								safeL2Ref:     safeL2Ref,
-								blobsFetcher:  blobsFetcher,
-							}
+							log.Error("ignoring blob due to parse failure", "err", err)
+							continue
 						}
-						wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
-						for _, blob := range blobs {
-							blobData, err := blob.ToData()
-							if err != nil {
-								log.Error("ignoring blob due to parse failure", "err", err)
-								continue
-							}
-							wholeBlobData = append(wholeBlobData, blobData...)
-						}
-						frameData := []eth.Data{}
-						err = rlp.DecodeBytes(wholeBlobData, &frameData)
-						if err != nil {
-							log.Error("DecodeBytes blob failure", "err", err)
-						}
-						data = append(data, frameData...)
-						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
+						wholeBlobData = append(wholeBlobData, blobData...)
 					}
-					metrics.RecordFrames(len(data))
-					return &DataSource{
-						open: true,
-						data: data,
+					frameData := []eth.Data{}
+					err = rlp.DecodeBytes(wholeBlobData, &frameData)
+					if err != nil {
+						log.Error("DecodeBytes blob failure", "err", err)
 					}
-
+					data = append(data, frameData...)
+					log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 				}
-			}
-		} else {
-			log.Info("Derived by mantle da", "MantleDaSwitch", cfg.MantleDaSwitch)
-			_, receipts, err := fetcher.FetchReceipts(ctx, block.Hash)
-			if err != nil {
-				log.Error("Fetch txs by hash fail", "err", err)
-				// Here is the original return method keeping op-stack
+				metrics.RecordFrames(len(data))
 				return &DataSource{
-					open:          false,
-					id:            block,
-					cfg:           cfg,
-					fetcher:       fetcher,
-					syncer:        syncer,
-					metrics:       metrics,
-					log:           log,
-					batcherAddr:   batcherAddr,
-					eigenDaSyncer: eigenDaSyncer,
-					blobsFetcher:  blobsFetcher,
+					open: true,
+					data: data,
 				}
-			} else {
-				data, err := dataFromMantleDa(cfg, receipts, syncer, metrics, log.New("origin", block))
-				if err != nil {
-					return &DataSource{
-						open:          false,
-						id:            block,
-						cfg:           cfg,
-						fetcher:       fetcher,
-						syncer:        syncer,
-						metrics:       metrics,
-						log:           log,
-						batcherAddr:   batcherAddr,
-						eigenDaSyncer: eigenDaSyncer,
-						blobsFetcher:  blobsFetcher,
-					}
-				} else {
-					return &DataSource{
-						open: true,
-						data: data,
-					}
 
-				}
 			}
+
 		}
 
 	}
@@ -266,7 +207,6 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 			id:           block,
 			cfg:          cfg,
 			fetcher:      fetcher,
-			syncer:       syncer,
 			metrics:      metrics,
 			log:          log,
 			batcherAddr:  batcherAddr,
@@ -285,71 +225,54 @@ func NewDataSource(ctx context.Context, log log.Logger, cfg *rollup.Config, fetc
 // otherwise it returns a temporary error if fetching the block returns an error.
 func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 	if !ds.open {
-		if ds.cfg.MantleDaSwitch { // fetch data from mantleDA
-			daUpgradeCfg := upgrade.GetUpgradeConfigForMantle(ds.cfg.L2ChainID)
-			if daUpgradeCfg != nil && daUpgradeCfg.IsUseEigenDa(big.NewInt(int64(ds.safeL2Ref.Number)+1)) {
-				if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
-					data, blobHashes, err := dataFromEigenDa(ds.cfg, txs, ds.eigenDaSyncer, ds.metrics, log.New("origin", ds.id), ds.batcherAddr)
-					if err != nil {
-						return nil, NewTemporaryError(fmt.Errorf("failed to open eigenda calldata source: %w", err))
+		if ds.cfg.MantleDaSwitch { // fetch data from eigenda
+			if _, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash); err == nil {
+				data, blobHashes, err := dataFromEigenDa(ds.cfg, txs, ds.eigenDaSyncer, ds.metrics, log.New("origin", ds.id), ds.batcherAddr)
+				if err != nil {
+					return nil, NewTemporaryError(fmt.Errorf("failed to open eigenda calldata source: %w", err))
+				}
+				log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
+				if ds.blobsFetcher == nil && len(blobHashes) > 0 {
+					log.Error("find blob transaction, but blobsFetcher is nil")
+					return nil, NewResetError(fmt.Errorf("failed to fetch blobs"))
+				}
+				if len(blobHashes) > 0 {
+					// download the actual blob bodies corresponding to the indexed blob hashes
+					log.Info("get data from blob", "client", ds.blobsFetcher, "blobHashes", blobHashes)
+					blobs, err := ds.blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(ds.id), blobHashes)
+					if errors.Is(err, ethereum.NotFound) {
+						// If the L1 block was available, then the blobs should be available too. The only
+						// exception is if the blob retention window has expired, which we will ultimately handle
+						// by failing over to a blob archival service.
+						return nil, NewResetError(fmt.Errorf("failed to fetch blobs: %w", err))
+					} else if err != nil {
+						return nil, NewTemporaryError(fmt.Errorf("failed to fetch blobs: %w", err))
 					}
-					log.Info("get data from eigenda", "size", len(data), "blobHashes", blobHashes)
-					if ds.blobsFetcher == nil && len(blobHashes) > 0 {
-						log.Error("find blob transaction, but blobsFetcher is nil")
-						return nil, NewResetError(fmt.Errorf("failed to fetch blobs"))
-					}
-					if len(blobHashes) > 0 {
-						// download the actual blob bodies corresponding to the indexed blob hashes
-						log.Info("get data from blob", "client", ds.blobsFetcher, "blobHashes", blobHashes)
-						blobs, err := ds.blobsFetcher.GetBlobs(ctx, seth.L1BlockRef(ds.id), blobHashes)
-						if errors.Is(err, ethereum.NotFound) {
-							// If the L1 block was available, then the blobs should be available too. The only
-							// exception is if the blob retention window has expired, which we will ultimately handle
-							// by failing over to a blob archival service.
-							return nil, NewResetError(fmt.Errorf("failed to fetch blobs: %w", err))
-						} else if err != nil {
-							return nil, NewTemporaryError(fmt.Errorf("failed to fetch blobs: %w", err))
-						}
-						wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
-						for _, blob := range blobs {
-							blobData, err := blob.ToData()
-							if err != nil {
-								ds.log.Error("ignoring blob due to parse failure", "err", err)
-								continue
-							}
-							wholeBlobData = append(wholeBlobData, blobData...)
-						}
-						frameData := []eth.Data{}
-						err = rlp.DecodeBytes(wholeBlobData, &frameData)
+					wholeBlobData := make([]byte, 0, len(blobs)*seth.MaxBlobDataSize)
+					for _, blob := range blobs {
+						blobData, err := blob.ToData()
 						if err != nil {
-							log.Error("DecodeBytes blob failure", "err", err)
+							ds.log.Error("ignoring blob due to parse failure", "err", err)
+							continue
 						}
-						data = append(data, frameData...)
-						log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
+						wholeBlobData = append(wholeBlobData, blobData...)
 					}
-					ds.metrics.RecordFrames(len(data))
-					ds.open = true
-					ds.data = data
-				} else if errors.Is(err, ethereum.NotFound) {
-					return nil, NewResetError(fmt.Errorf("failed to open eigen da calldata source: %w", err))
-				} else {
-					return nil, NewTemporaryError(fmt.Errorf("failed to open eigen da calldata source: %w", err))
-				}
-			} else {
-				if _, receipts, err := ds.fetcher.FetchReceipts(ctx, ds.id.Hash); err == nil {
-					data, err := dataFromMantleDa(ds.cfg, receipts, ds.syncer, ds.metrics, log.New("origin", ds.id))
+					frameData := []eth.Data{}
+					err = rlp.DecodeBytes(wholeBlobData, &frameData)
 					if err != nil {
-						return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+						log.Error("DecodeBytes blob failure", "err", err)
 					}
-					ds.open = true
-					ds.data = data
-				} else if errors.Is(err, ethereum.NotFound) {
-					return nil, NewResetError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
-				} else {
-					return nil, NewTemporaryError(fmt.Errorf("failed to open mantle da calldata source: %w", err))
+					data = append(data, frameData...)
+					log.Info("get data from blob tx", "size", len(data), "blobHashes", blobHashes)
 				}
+				ds.metrics.RecordFrames(len(data))
+				ds.open = true
+				ds.data = data
+			} else if errors.Is(err, ethereum.NotFound) {
+				return nil, NewResetError(fmt.Errorf("failed to open eigen da calldata source: %w", err))
+			} else {
+				return nil, NewTemporaryError(fmt.Errorf("failed to open eigen da calldata source: %w", err))
 			}
-
 		} else {
 			_, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.id.Hash)
 			if err == nil { // fetch data from EOA
@@ -376,95 +299,12 @@ func (ds *DataSource) Next(ctx context.Context) (eth.Data, error) {
 // This will return an empty array if no valid transactions are found.
 func DataFromEVMTransactions(config *rollup.Config, batcherAddr common.Address, txs types.Transactions, log log.Logger) []eth.Data {
 	var out []eth.Data
-	l1Signer := config.L1Signer()
-	for j, tx := range txs {
-		if to := tx.To(); to != nil && *to == config.BatchInboxAddress {
-			seqDataSubmitter, err := l1Signer.Sender(tx) // optimization: only derive sender if To is correct
-			if err != nil {
-				log.Warn("tx in inbox with invalid signature", "index", j, "err", err)
-				continue // bad signature, ignore
-			}
-			// some random L1 user might have sent a transaction to our batch inbox, ignore them
-			if seqDataSubmitter != batcherAddr {
-				log.Warn("tx in inbox with unauthorized submitter", "index", j, "err", err)
-				continue // not an authorized batch submitter, ignore
-			}
+	for _, tx := range txs {
+		if isValidBatchTx(tx, config.L1Signer(), config.BatchInboxAddress, batcherAddr) {
 			out = append(out, tx.Data())
 		}
 	}
 	return out
-}
-
-func dataFromMantleDa(config *rollup.Config, receipts types.Receipts, syncer MantleDaSyncer, metrics Metrics, log log.Logger) ([]eth.Data, error) {
-	var out []eth.Data
-	abiUint32, err := abi.NewType("uint32", "uint32", nil)
-	if err != nil {
-		log.Error("Abi new uint32 type error", "err", err)
-		return out, err
-	}
-	abiBytes32, err := abi.NewType("bytes32", "bytes32", nil)
-	if err != nil {
-		log.Error("Abi new bytes32 type error", "err", err)
-		return out, err
-	}
-	confirmDataStoreArgs := abi.Arguments{
-		{
-			Name:    "dataStoreId",
-			Type:    abiUint32,
-			Indexed: false,
-		}, {
-			Name:    "headerHash",
-			Type:    abiBytes32,
-			Indexed: false,
-		},
-	}
-	var dataStoreData = make(map[string]interface{})
-	for _, receipt := range receipts {
-		for _, rLog := range receipt.Logs {
-			if strings.ToLower(rLog.Address.String()) != strings.ToLower(config.DataLayrServiceManagerAddr) {
-				continue
-			}
-			if rLog.Topics[0] != ConfirmDataStoreEventABIHash {
-				continue
-			}
-			if len(rLog.Data) > 0 {
-				err := confirmDataStoreArgs.UnpackIntoMap(dataStoreData, rLog.Data)
-				if err != nil {
-					log.Error("Unpack data into map fail", "err", err)
-					continue
-				}
-				if dataStoreData != nil {
-					nextDataStoreId := dataStoreData["dataStoreId"].(uint32)
-					dataStoreId := nextDataStoreId - 1
-					log.Info("Parse confirmed dataStoreId success", "dataStoreId", dataStoreId, "address", rLog.Address.String())
-					var daFrames []byte
-					if syncer.IsDaIndexer() {
-						daFrames, err = syncer.RetrievalFramesFromDaIndexer(dataStoreId)
-					} else {
-						daFrames, err = syncer.RetrievalFramesFromDa(dataStoreId)
-					}
-					if err != nil {
-						log.Error("Retrieval frames from mantleDa error", "dataStoreId", dataStoreId, "err", err)
-						return out, err
-					}
-					//skip this dataStore id
-					if daFrames == nil {
-						return out, nil
-					}
-					log.Info("Retrieval frames from mantle da success", "daFrames length", len(daFrames), "dataStoreId", dataStoreId)
-					err = rlp.DecodeBytes(daFrames, &out)
-					if err != nil {
-						log.Error("Decode retrieval frames in error,skip wrong data", "err", err, "skip datastore id", dataStoreId)
-						continue
-					}
-					metrics.RecordParseDataStoreId(dataStoreId)
-					log.Info("Decode bytes success", "out length", len(out), "dataStoreId", dataStoreId)
-				}
-				return out, nil
-			}
-		}
-	}
-	return out, nil
 }
 
 func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSyncer EigenDaSyncer, metrics Metrics, log log.Logger, batcherAddr common.Address) ([]eth.Data, []seth.IndexedBlobHash, error) {
@@ -564,9 +404,15 @@ func dataFromEigenDa(config *rollup.Config, txs types.Transactions, eigenDaSynce
 }
 
 // isValidBatchTx returns true if:
-//  1. the transaction has a To() address that matches the batch inbox address, and
-//  2. the transaction has a valid signature from the batcher address
+//  1. the transaction type is any of Legacy, ACL, DynamicFee, Blob, or Deposit (for L3s).
+//  2. the transaction has a To() address that matches the batch inbox address, and
+//  3. the transaction has a valid signature from the batcher address
 func isValidBatchTx(tx *types.Transaction, l1Signer types.Signer, batchInboxAddr, batcherAddr common.Address) bool {
+	// For now, we want to disallow the SetCodeTx type or any future types.
+	if tx.Type() > types.BlobTxType && tx.Type() != types.DepositTxType {
+		return false
+	}
+
 	to := tx.To()
 	if to == nil || *to != batchInboxAddr {
 		return false

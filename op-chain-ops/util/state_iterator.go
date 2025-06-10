@@ -43,7 +43,7 @@ func IterateState(dbFactory DBFactory, address common.Address, cb StateCallback,
 			// Should never happen, so explode if it does.
 			log.Crit("cannot create state db", "err", err)
 		}
-		st, err := db.StorageTrie(address)
+		st, err := db.OpenStorageTrie(address)
 		if err != nil {
 			// Should never happen, so explode if it does.
 			log.Crit("cannot get storage trie", "address", address, "err", err)
@@ -53,8 +53,11 @@ func IterateState(dbFactory DBFactory, address common.Address, cb StateCallback,
 			errCh <- fmt.Errorf("account does not exist: %s", address.Hex())
 			return
 		}
-
-		it := trie.NewIterator(st.NodeIterator(start.Bytes()))
+		nodeIter, err := st.NodeIterator(start.Bytes())
+		if err != nil {
+			log.Crit("failed to create node iterator for storage", "address", address, "err", err)
+		}
+		it := trie.NewIterator(nodeIter)
 
 		// Below code is largely based on db.ForEachStorage. We can't use that
 		// because it doesn't allow us to specify a start and end key.

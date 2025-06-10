@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/stretchr/testify/mock"
@@ -16,8 +17,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 type mockRPC struct {
@@ -176,4 +179,22 @@ func TestEthClient_WrongInfoByHash(t *testing.T) {
 	_, err = s.InfoByHash(ctx, k)
 	require.Error(t, err, "cannot accept the wrong block")
 	m.Mock.AssertExpectations(t)
+}
+
+func TestPectraEthClientFetchReceipts(t *testing.T) {
+	DevnetRPC := "https://rpc.pectra-devnet-5.ethpandaops.io"
+
+	opts := []client.RPCOption{
+		client.WithHttpPollInterval(time.Millisecond * 100),
+		client.WithDialBackoff(10),
+	}
+
+	m := metrics.NewMetrics("default")
+	log := oplog.NewLogger(oplog.DefaultCLIConfig())
+	l1Node, err := client.NewRPC(context.Background(), log, DevnetRPC, opts...)
+	require.NoError(t, err)
+	eClient, err := NewEthClient(client.NewInstrumentedRPC(l1Node, m), log, nil, testEthClientConfig)
+	require.NoError(t, err)
+	_, _, err = eClient.FetchReceipts(context.Background(), common.HexToHash("0x6605114c7d2541cb2adb4a9e56d8ac8e568259678e0372426e8d18e47f807007"))
+	require.NoError(t, err)
 }

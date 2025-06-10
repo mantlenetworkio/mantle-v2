@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +25,9 @@ var ErrNotFound = errors.New("not found")
 // ErrInvalidInput is returned when the input is not valid for posting to the DA storage.
 var ErrInvalidInput = errors.New("invalid input")
 
+// ErrNetwork is returned when there is a eigenda network error.
+var ErrNetwork = errors.New("eigenda network error")
+
 // NewEigenDAClient is an HTTP client to communicate with EigenDA Proxy.
 // It creates commitments and retrieves input data + verifies if needed.
 type EigenDAClient struct {
@@ -42,7 +46,7 @@ const (
 	GenericCommitmentType byte = 1
 )
 
-// EigenDAClient returns a new EigenDA Proxy client.
+// NewEigenDAClient returns a new EigenDA Proxy client.
 func NewEigenDAClient(cfg Config, log log.Logger, m Metrics) *EigenDAClient {
 	return &EigenDAClient{
 		proxyUrl:            cfg.ProxyUrl,
@@ -146,11 +150,11 @@ func (c *EigenDAClient) DisperseBlob(ctx context.Context, img []byte) (*disperse
 	resp, err := c.disperseClient.Do(req)
 	done(err)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to post store data orirgin error: %w error: %w", err, ErrNetwork)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to store data: %v", resp.StatusCode)
+		return nil, fmt.Errorf("failed to store data status code: %v error: %w", resp.StatusCode, ErrNetwork)
 	}
 
 	b, err := io.ReadAll(resp.Body)
@@ -193,6 +197,52 @@ func (c *EigenDAClient) GetBlobStatus(ctx context.Context, requestID []byte) (*d
 	}
 
 	return statusRes, nil
+}
+
+// GetBlobExtraInfo returns the extra data for the given encoded commitment bytes.
+// Currently, it only returns request_id.
+func (c *EigenDAClient) GetBlobExtraInfo(ctx context.Context, commitment []byte) (map[string]interface{}, error) {
+	c.log.Info("Attempting to retrieve blob extra info with commitment", "commitment", hex.EncodeToString(commitment))
+	blobInfo, err := DecodeCommitment(commitment)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode commitment: %w", err)
+	}
+	c.log.Info("Blob info", "BatchHeaderHash", hex.EncodeToString(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeaderHash), "blobIndex", blobInfo.BlobVerificationProof.BlobIndex)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/get_extra/0x%x", c.proxyUrl, commitment), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	done := c.recordInterval("GetBlobExtraInfo")
+	resp, err := c.retrieveClient.Do(req)
+	err = func() error {
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			return ErrNotFound
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to get extra info: %v", resp.StatusCode)
+		}
+		return nil
+	}()
+	done(err)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	output := make(map[string]interface{})
+	err = json.Unmarshal(data, &output)
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }
 
 func (m *EigenDAClient) recordInterval(method string) func(error) {

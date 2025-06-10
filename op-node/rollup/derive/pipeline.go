@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -62,7 +62,7 @@ type EngineQueueStage interface {
 	SetUnsafeHead(head eth.L2BlockRef)
 
 	Finalize(l1Origin eth.L1BlockRef)
-	AddUnsafePayload(payload *eth.ExecutionPayload)
+	AddUnsafePayload(payload *eth.ExecutionPayloadEnvelope)
 	UnsafeL2SyncTarget() eth.L2BlockRef
 	Step(context.Context) error
 }
@@ -86,11 +86,11 @@ type DerivationPipeline struct {
 }
 
 // NewDerivationPipeline creates a derivation pipeline, which should be reset before use.
-func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, l1Blobs L1BlobsFetcher, engine Engine, daSyncer DaSyncer, metrics Metrics, syncCfg *sync.Config, safeHeadListener SafeHeadListener, eigenDaSyncer EigenDaSyncer) *DerivationPipeline {
+func NewDerivationPipeline(log log.Logger, cfg *rollup.Config, l1Fetcher L1Fetcher, l1Blobs L1BlobsFetcher, engine Engine, metrics Metrics, syncCfg *sync.Config, safeHeadListener SafeHeadListener, eigenDaSyncer EigenDaSyncer) *DerivationPipeline {
 
 	// Pull stages
 	l1Traversal := NewL1Traversal(log, cfg, l1Fetcher)
-	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, l1Blobs, daSyncer, metrics, eigenDaSyncer) // auxiliary stage for L1Retrieval
+	dataSrc := NewDataSourceFactory(log, cfg, l1Fetcher, l1Blobs, metrics, eigenDaSyncer) // auxiliary stage for L1Retrieval
 	l1Src := NewL1Retrieval(log, dataSrc, l1Traversal)
 	frameQueue := NewFrameQueue(log, l1Src)
 	bank := NewChannelBank(log, cfg, frameQueue, l1Fetcher)
@@ -167,7 +167,7 @@ func (dp *DerivationPipeline) StartPayload(ctx context.Context, parent eth.L2Blo
 	return dp.eng.StartPayload(ctx, parent, attrs, updateSafe)
 }
 
-func (dp *DerivationPipeline) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayload, errTyp BlockInsertionErrType, err error) {
+func (dp *DerivationPipeline) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
 	return dp.eng.ConfirmPayload(ctx)
 }
 
@@ -175,12 +175,12 @@ func (dp *DerivationPipeline) CancelPayload(ctx context.Context, force bool) err
 	return dp.eng.CancelPayload(ctx, force)
 }
 
-func (dp *DerivationPipeline) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool) {
+func (dp *DerivationPipeline) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadInfo, safe bool) {
 	return dp.eng.BuildingPayload()
 }
 
 // AddUnsafePayload schedules an execution payload to be processed, ahead of deriving it from L1
-func (dp *DerivationPipeline) AddUnsafePayload(payload *eth.ExecutionPayload) {
+func (dp *DerivationPipeline) AddUnsafePayload(payload *eth.ExecutionPayloadEnvelope) {
 	dp.eng.AddUnsafePayload(payload)
 }
 

@@ -10,20 +10,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
@@ -128,32 +123,32 @@ func NewBatchSubmitterFromCLIConfig(cfg CLIConfig, l log.Logger, m metrics.Metri
 		return nil, err
 	}
 	if rcfg.MantleDaSwitch {
-		if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
-			return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
-		}
-		dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
+		// if common.HexToAddress(rcfg.DataLayrServiceManagerAddr) == (common.Address{}) {
+		// 	return nil, fmt.Errorf("rollup type %t , datalayrcontract address is 0", rcfg.MantleDaSwitch)
+		// }
+		// dataLayrServiceManagerAddress := common.HexToAddress(rcfg.DataLayrServiceManagerAddr)
 
-		if len(cfg.GraphProvider) == 0 {
-			return nil, fmt.Errorf("graph node provider url is empty")
-		}
-		dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
-		if err != nil {
-			return nil, err
-		}
-		parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
-		if err != nil {
-			return nil, err
-		}
-		eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
-		if err != nil {
-			return nil, err
-		}
+		// if len(cfg.GraphProvider) == 0 {
+		// 	return nil, fmt.Errorf("graph node provider url is empty")
+		// }
+		// dataLayrContract, err := bindings.NewContractDataLayrServiceManager(dataLayrServiceManagerAddress, l1Client)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// parsed, err := bindings.ContractDataLayrServiceManagerMetaData.GetAbi()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// eigenLogger, err := logging.GetLogger(cfg.EigenLogConfig)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
-		batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
-		batcherCfg.DataLayrServiceManagerContract = dataLayrContract
-		batcherCfg.DataLayrServiceManagerABI = parsed
-		batcherCfg.GraphClient = graphClient
+		//graphClient := graphView.NewGraphClient(cfg.GraphProvider, eigenLogger)
+		// batcherCfg.DataLayrServiceManagerAddr = dataLayrServiceManagerAddress
+		// batcherCfg.DataLayrServiceManagerContract = dataLayrContract
+		// batcherCfg.DataLayrServiceManagerABI = parsed
+		//batcherCfg.GraphClient = graphClient
 
 	}
 	return NewBatchSubmitter(ctx, batcherCfg, l, m)
@@ -259,7 +254,7 @@ func (l *BatchSubmitter) loadBlocksIntoState(ctx context.Context) error {
 		l.log.Warn("Error calculating L2 block range", "err", err)
 		return err
 	} else if start.Number >= end.Number {
-		return errors.New("start number is >= end number")
+		return errors.New(fmt.Sprintf("start number %d >= end number %d", start.Number, end.Number))
 	}
 
 	var latestBlock *types.Block
@@ -447,16 +442,16 @@ func (l *BatchSubmitter) publishTxToL1(ctx context.Context, queue *txmgr.Queue[t
 func (l *BatchSubmitter) sendTransaction(txdata txData, queue *txmgr.Queue[txData], receiptsCh chan txmgr.TxReceipt[txData]) {
 	// Do the gas estimation offline. A value of 0 will cause the [txmgr] to estimate the gas limit.
 	data := txdata.Bytes()
-	intrinsicGas, err := core.IntrinsicGas(data, nil, false, true, true, false)
+	floorDataGas, err := core.FloorDataGas(data)
 	if err != nil {
-		l.log.Error("Failed to calculate intrinsic gas", "error", err)
+		// We log instead of return an error here because the txmgr will do its own gas estimation.
+		l.log.Warn("Failed to calculate floor data gas", "err", err)
 		return
 	}
-
 	candidate := txmgr.TxCandidate{
 		To:       &l.Rollup.BatchInboxAddress,
 		TxData:   data,
-		GasLimit: intrinsicGas,
+		GasLimit: floorDataGas,
 	}
 	queue.Send(txdata, candidate, receiptsCh)
 }

@@ -10,7 +10,7 @@ import (
 	version "github.com/ethereum-optimism/optimism/op-challenger/version"
 
 	log "github.com/ethereum/go-ethereum/log"
-	cli "github.com/urfave/cli"
+	cli "github.com/urfave/cli/v2"
 
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )

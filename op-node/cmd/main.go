@@ -8,14 +8,11 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
-	"github.com/ethereum-optimism/optimism/op-node/cmd/doc"
-
-	"github.com/urfave/cli"
-
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/urfave/cli/v2"
 
 	opnode "github.com/ethereum-optimism/optimism/op-node"
+	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
 	"github.com/ethereum-optimism/optimism/op-node/cmd/genesis"
 	"github.com/ethereum-optimism/optimism/op-node/cmd/p2p"
 	"github.com/ethereum-optimism/optimism/op-node/flags"
@@ -25,6 +22,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/version"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/metrics/doc"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 )
 
@@ -34,19 +32,7 @@ var (
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
-var VersionWithMeta = func() string {
-	v := version.Version
-	if GitCommit != "" {
-		v += "-" + GitCommit[:8]
-	}
-	if GitDate != "" {
-		v += "-" + GitDate
-	}
-	if version.Meta != "" {
-		v += "-" + version.Meta
-	}
-	return v
-}()
+var VersionWithMeta = opservice.FormatVersion(version.Version, GitCommit, GitDate, version.Meta)
 
 func main() {
 	// Set up logger with a default INFO level in case we fail to parse flags,
@@ -60,7 +46,7 @@ func main() {
 	app.Usage = "Optimism Rollup Node"
 	app.Description = "The Optimism Rollup Node derives L2 block inputs from L1 data and drives an external L2 Execution Engine to build a L2 chain."
 	app.Action = RollupNodeMain
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:        "p2p",
 			Subcommands: p2p.Subcommands,
@@ -71,7 +57,7 @@ func main() {
 		},
 		{
 			Name:        "doc",
-			Subcommands: doc.Subcommands,
+			Subcommands: doc.NewSubcommands(metrics.NewMetrics("default")),
 		},
 	}
 
@@ -84,11 +70,9 @@ func main() {
 func RollupNodeMain(ctx *cli.Context) error {
 	log.Info("Initializing Rollup Node")
 	logCfg := oplog.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		log.Error("Unable to create the log config", "error", err)
-		return err
-	}
-	log := oplog.NewLogger(logCfg)
+	log := oplog.NewLogger(oplog.AppOut(ctx), logCfg)
+	oplog.SetGlobalLogHandler(log.Handler())
+
 	opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, log)
 	m := metrics.NewMetrics("default")
 

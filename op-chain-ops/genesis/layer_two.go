@@ -1,10 +1,10 @@
 package genesis
 
 import (
-	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
 )
 
 // BuildL2DeveloperGenesis will build the developer Optimism Genesis

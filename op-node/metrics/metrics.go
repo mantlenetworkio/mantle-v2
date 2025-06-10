@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 const (
@@ -46,7 +46,7 @@ type Metricer interface {
 	RecordSequencingError()
 	RecordPublishingError()
 	RecordDerivationError()
-	RecordReceivedUnsafePayload(payload *eth.ExecutionPayload)
+	RecordReceivedUnsafePayload(payload *eth.ExecutionPayloadEnvelope)
 	recordRef(layer string, name string, num uint64, timestamp uint64, h common.Hash)
 	RecordL1Ref(name string, ref eth.L1BlockRef)
 	RecordL2Ref(name string, ref eth.L2BlockRef)
@@ -560,9 +560,9 @@ func (m *Metrics) RecordDerivationError() {
 	m.DerivationErrors.RecordEvent()
 }
 
-func (m *Metrics) RecordReceivedUnsafePayload(payload *eth.ExecutionPayload) {
+func (m *Metrics) RecordReceivedUnsafePayload(envelope *eth.ExecutionPayloadEnvelope) {
 	m.UnsafePayloads.RecordEvent()
-	m.recordRef("l2", "received_payload", uint64(payload.BlockNumber), uint64(payload.Timestamp), payload.BlockHash)
+	m.recordRef("l2", "received_payload", uint64(envelope.ExecutionPayload.BlockNumber), uint64(envelope.ExecutionPayload.Timestamp), envelope.ExecutionPayload.BlockHash)
 }
 
 func (m *Metrics) recordRef(layer string, name string, num uint64, timestamp uint64, h common.Hash) {
@@ -771,7 +771,7 @@ func (n *noopMetricer) RecordPublishingError() {
 func (n *noopMetricer) RecordDerivationError() {
 }
 
-func (n *noopMetricer) RecordReceivedUnsafePayload(payload *eth.ExecutionPayload) {
+func (n *noopMetricer) RecordReceivedUnsafePayload(payload *eth.ExecutionPayloadEnvelope) {
 }
 
 func (n *noopMetricer) recordRef(layer string, name string, num uint64, timestamp uint64, h common.Hash) {

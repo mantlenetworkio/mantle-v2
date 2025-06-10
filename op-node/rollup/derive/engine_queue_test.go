@@ -14,13 +14,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type fakeAttributesQueue struct {
@@ -972,7 +972,7 @@ func TestBlockBuildingRace(t *testing.T) {
 		GasUsed:       0,
 		Timestamp:     eth.Uint64Quantity(refA1.Time),
 		ExtraData:     nil,
-		BaseFeePerGas: *uint256.NewInt(7),
+		BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
 		BlockHash:     refA1.Hash,
 		Transactions: []eth.Data{
 			a1InfoTx,
@@ -1172,7 +1172,7 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 		GasUsed:       0,
 		Timestamp:     eth.Uint64Quantity(refA1.Time),
 		ExtraData:     nil,
-		BaseFeePerGas: *uint256.NewInt(7),
+		BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
 		BlockHash:     refA1.Hash,
 		Transactions:  []eth.Data{},
 	}

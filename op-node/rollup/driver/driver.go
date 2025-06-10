@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 const (
@@ -22,7 +22,7 @@ type Metrics interface {
 	RecordPublishingError()
 	RecordDerivationError()
 
-	RecordReceivedUnsafePayload(payload *eth.ExecutionPayload)
+	RecordReceivedUnsafePayload(payload *eth.ExecutionPayloadEnvelope)
 
 	RecordL1Ref(name string, ref eth.L1BlockRef)
 	RecordL2Ref(name string, ref eth.L2BlockRef)
@@ -67,7 +67,7 @@ type EigenDaSource interface {
 type DerivationPipeline interface {
 	Reset()
 	Step(ctx context.Context) error
-	AddUnsafePayload(payload *eth.ExecutionPayload)
+	AddUnsafePayload(payload *eth.ExecutionPayloadEnvelope)
 	UnsafeL2SyncTarget() eth.L2BlockRef
 	Finalize(ref eth.L1BlockRef)
 	FinalizedL1() eth.L1BlockRef
@@ -91,15 +91,15 @@ type L1StateIface interface {
 
 type SequencerIface interface {
 	StartBuildingBlock(ctx context.Context) error
-	CompleteBuildingBlock(ctx context.Context) (*eth.ExecutionPayload, error)
+	CompleteBuildingBlock(ctx context.Context) (*eth.ExecutionPayloadEnvelope, error)
 	PlanNextSequencerAction() time.Duration
-	RunNextSequencerAction(ctx context.Context) (*eth.ExecutionPayload, error)
+	RunNextSequencerAction(ctx context.Context) (*eth.ExecutionPayloadEnvelope, error)
 	BuildingOnto() eth.L2BlockRef
 }
 
 type Network interface {
 	// PublishL2Payload is called by the driver whenever there is a new payload to publish, synchronously with the driver main loop.
-	PublishL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error
+	PublishL2Payload(ctx context.Context, payload *eth.ExecutionPayloadEnvelope) error
 }
 
 type AltSync interface {
@@ -122,28 +122,13 @@ type AltSync interface {
 }
 
 // NewDriver composes an events handler that tracks L1 state, triggers L2 derivation, and optionally sequences new L2 blocks.
-func NewDriver(
-	driverCfg *Config,
-	cfg *rollup.Config,
-	l2 L2Chain,
-	l1 L1Chain,
-	l1Blobs derive.L1BlobsFetcher,
-	daSyncer DaSource,
-	altSync AltSync,
-	network Network,
-	log log.Logger,
-	snapshotLog log.Logger,
-	metrics Metrics,
-	safeHeadListener derive.SafeHeadListener,
-	syncCfg *sync.Config,
-	eigenDaSyncer EigenDaSource,
-) *Driver {
+func NewDriver(driverCfg *Config, cfg *rollup.Config, l2 L2Chain, l1 L1Chain, l1Blobs derive.L1BlobsFetcher, altSync AltSync, network Network, log log.Logger, snapshotLog log.Logger, metrics Metrics, safeHeadListener derive.SafeHeadListener, syncCfg *sync.Config, eigenDaSyncer EigenDaSource) *Driver {
 	l1 = NewMeteredL1Fetcher(l1, metrics)
 	l1State := NewL1State(log, metrics)
 	sequencerConfDepth := NewConfDepth(driverCfg.SequencerConfDepth, l1State.L1Head, l1)
 	findL1Origin := NewL1OriginSelector(log, cfg, sequencerConfDepth)
 	verifConfDepth := NewConfDepth(driverCfg.VerifierConfDepth, l1State.L1Head, l1)
-	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l1Blobs, l2, daSyncer, metrics, syncCfg, safeHeadListener, eigenDaSyncer)
+	derivationPipeline := derive.NewDerivationPipeline(log, cfg, verifConfDepth, l1Blobs, l2, metrics, syncCfg, safeHeadListener, eigenDaSyncer)
 	attrBuilder := derive.NewFetchingAttributesBuilder(cfg, l1, l2)
 	engine := derivationPipeline
 	meteredEngine := NewMeteredEngine(cfg, engine, metrics, log)
@@ -169,7 +154,7 @@ func NewDriver(
 		l1HeadSig:        make(chan eth.L1BlockRef, 10),
 		l1SafeSig:        make(chan eth.L1BlockRef, 10),
 		l1FinalizedSig:   make(chan eth.L1BlockRef, 10),
-		unsafeL2Payloads: make(chan *eth.ExecutionPayload, unsafeL2PayloadsChannelBufferSize),
+		unsafeL2Payloads: make(chan *eth.ExecutionPayloadEnvelope, unsafeL2PayloadsChannelBufferSize),
 		altSync:          altSync,
 	}
 }

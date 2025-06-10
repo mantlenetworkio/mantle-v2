@@ -15,10 +15,10 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type testTx struct {
@@ -146,4 +146,75 @@ func TestRLPEncodeDecodeEthData(t *testing.T) {
 }
 
 func TestRetrieveBlobTx(t *testing.T) {
+}
+
+func TestIsValidBatchTx(t *testing.T) {
+	// test setup
+	rng := rand.New(rand.NewSource(12345))
+	privateKey := testutils.InsecureRandomKey(rng)
+	privateKey2 := testutils.InsecureRandomKey(rng)
+	publicKey, _ := privateKey.Public().(*ecdsa.PublicKey)
+	batcherAddr := crypto.PubkeyToAddress(*publicKey)
+	batchInboxAddr := testutils.RandomAddress(rng)
+	//logger := testlog.Logger(t, log.LvlInfo)
+
+	chainId := new(big.Int).SetUint64(rng.Uint64())
+	signer := types.NewPragueSigner(chainId)
+
+	// valid legacy tx
+	txData := &types.LegacyTx{
+		Nonce:    rng.Uint64(),
+		GasPrice: new(big.Int).SetUint64(rng.Uint64()),
+		Gas:      2_000_000,
+		To:       &batchInboxAddr,
+		Value:    big.NewInt(10),
+		Data:     testutils.RandomData(rng, rng.Intn(1000)),
+	}
+	legacyTx, _ := types.SignNewTx(privateKey, signer, txData)
+	res := isValidBatchTx(legacyTx, signer, batchInboxAddr, batcherAddr)
+	require.Equal(t, true, res)
+
+	// valid dynamic fee tx
+	dynamicFeeTxData := &types.DynamicFeeTx{
+		Nonce:     rng.Uint64(),
+		GasTipCap: new(big.Int).SetUint64(rng.Uint64()),
+		GasFeeCap: new(big.Int).SetUint64(rng.Uint64()),
+		Gas:       2_000_000,
+		To:        &batchInboxAddr,
+		Value:     big.NewInt(10),
+		Data:      testutils.RandomData(rng, rng.Intn(1000)),
+	}
+	dynamicFeeTx, _ := types.SignNewTx(privateKey, signer, dynamicFeeTxData)
+	res = isValidBatchTx(dynamicFeeTx, signer, batchInboxAddr, batcherAddr)
+	require.Equal(t, true, res)
+
+	// invalid batcher addr
+	dynamicFeeTx2, _ := types.SignNewTx(privateKey2, signer, dynamicFeeTxData)
+	res = isValidBatchTx(dynamicFeeTx2, signer, batchInboxAddr, batcherAddr)
+	require.Equal(t, false, res)
+
+	// valid blob tx
+	blobHash := testutils.RandomHash(rng)
+	blobTxData := &types.BlobTx{
+		Nonce:      rng.Uint64(),
+		Gas:        2_000_000,
+		To:         batchInboxAddr,
+		Data:       testutils.RandomData(rng, rng.Intn(1000)),
+		BlobHashes: []common.Hash{blobHash},
+	}
+	blobTx, _ := types.SignNewTx(privateKey, signer, blobTxData)
+	res = isValidBatchTx(blobTx, signer, batchInboxAddr, batcherAddr)
+	require.Equal(t, true, res)
+
+	// make sure SetCode transactions are ignored.
+	setCodeTxData := &types.SetCodeTx{
+		Nonce: rng.Uint64(),
+		Gas:   2_000_000,
+		To:    batchInboxAddr,
+		Data:  testutils.RandomData(rng, rng.Intn(1000)),
+	}
+	setCodeTx, err := types.SignNewTx(privateKey, types.NewPragueSigner(chainId), setCodeTxData)
+	require.NoError(t, err)
+	res = isValidBatchTx(setCodeTx, signer, batchInboxAddr, batcherAddr)
+	require.Equal(t, false, res)
 }
