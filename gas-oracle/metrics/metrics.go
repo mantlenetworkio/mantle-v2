@@ -8,22 +8,22 @@ var (
 	GasOracleStats struct {
 		// metrics for L1 base fee, L1 bas price
 		// TokenRatioGauge token_ratio = eth_price / mnt_price
-		TokenRatioGauge metrics.GaugeFloat64
+		TokenRatioGauge *metrics.GaugeFloat64
 		// TokenRatioWithScalarGauge token_ratio = token_ratio * token_ratio_scalar
-		TokenRatioWithScalarGauge metrics.GaugeFloat64
+		TokenRatioWithScalarGauge *metrics.GaugeFloat64
 		// TokenRatioOnchainGauge token_ratio on chain
-		TokenRatioOnchainGauge metrics.GaugeFloat64
+		TokenRatioOnchainGauge *metrics.GaugeFloat64
 		// L1BaseFeeGauge
-		L1BaseFeeGauge metrics.Gauge
+		L1BaseFeeGauge *metrics.Gauge
 		// FeeScalarGauge value to scale the fee up by
-		FeeScalarGauge metrics.Gauge
+		FeeScalarGauge *metrics.Gauge
 		// L1GasPriceGauge l1_base_fee + l1_priority_fee
-		L1GasPriceGauge metrics.Gauge
+		L1GasPriceGauge *metrics.Gauge
 	}
 )
 
 func InitAndRegisterStats(r metrics.Registry) {
-	metrics.Enabled = true
+	metrics.Enable()
 
 	GasOracleStats.TokenRatioGauge = metrics.NewRegisteredGaugeFloat64("token_ratio", r)
 	GasOracleStats.TokenRatioWithScalarGauge = metrics.NewRegisteredGaugeFloat64("token_ratio_with_scalar", r)

@@ -6,9 +6,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type EngineMetrics interface {
@@ -63,34 +63,34 @@ func (m *MeteredEngine) StartPayload(ctx context.Context, parent eth.L2BlockRef,
 	return errType, err
 }
 
-func (m *MeteredEngine) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayload, errTyp derive.BlockInsertionErrType, err error) {
+func (m *MeteredEngine) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp derive.BlockInsertionErrType, err error) {
 	sealingStart := time.Now()
 	// Actually execute the block and add it to the head of the chain.
-	payload, errType, err := m.inner.ConfirmPayload(ctx)
+	envelope, errType, err := m.inner.ConfirmPayload(ctx)
 	if err != nil {
 		m.metrics.RecordSequencingError()
-		return payload, errType, err
+		return envelope, errType, err
 	}
 	now := time.Now()
 	sealTime := now.Sub(sealingStart)
 	buildTime := now.Sub(m.buildingStartTime)
 	m.metrics.RecordSequencerSealingTime(sealTime)
 	m.metrics.RecordSequencerBuildingDiffTime(buildTime - time.Duration(m.cfg.BlockTime)*time.Second)
-	m.metrics.CountSequencedTxs(len(payload.Transactions))
+	m.metrics.CountSequencedTxs(len(envelope.ExecutionPayload.Transactions))
 
 	ref := m.inner.UnsafeL2Head()
 
 	m.log.Debug("Processed new L2 block", "l2_unsafe", ref, "l1_origin", ref.L1Origin,
-		"txs", len(payload.Transactions), "time", ref.Time, "seal_time", sealTime, "build_time", buildTime)
+		"txs", len(envelope.ExecutionPayload.Transactions), "time", ref.Time, "seal_time", sealTime, "build_time", buildTime)
 
-	return payload, errType, err
+	return envelope, errType, err
 }
 
 func (m *MeteredEngine) CancelPayload(ctx context.Context, force bool) error {
 	return m.inner.CancelPayload(ctx, force)
 }
 
-func (m *MeteredEngine) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool) {
+func (m *MeteredEngine) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadInfo, safe bool) {
 	return m.inner.BuildingPayload()
 }
 

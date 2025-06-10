@@ -4,15 +4,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-
-	"github.com/Layr-Labs/datalayr/common/graphView"
-	"github.com/Layr-Labs/datalayr/common/logging"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
@@ -60,7 +57,6 @@ type Config struct {
 	DataLayrServiceManagerAddr     common.Address
 	DataLayrServiceManagerContract *bindings.ContractDataLayrServiceManager
 	DataLayrServiceManagerABI      *abi.ABI
-	GraphClient                    *graphView.GraphClient
 
 	// RollupConfig is queried at startup
 	Rollup *rollup.Config
@@ -165,16 +161,12 @@ type CLIConfig struct {
 	PprofConfig      oppprof.CLIConfig
 	CompressorConfig compressor.CLIConfig
 
-	EigenLogConfig logging.Config
 	EigenDAConfig  eigenda.CLIConfig
 	SkipEigenDaRpc bool
 }
 
 func (c CLIConfig) Check() error {
 	if err := c.RPCConfig.Check(); err != nil {
-		return err
-	}
-	if err := c.LogConfig.Check(); err != nil {
 		return err
 	}
 	if err := c.MetricsConfig.Check(); err != nil {
@@ -203,32 +195,30 @@ func (c CLIConfig) Check() error {
 func NewConfig(ctx *cli.Context) CLIConfig {
 	return CLIConfig{
 		/* Required Flags */
-		L1EthRpc:        ctx.GlobalString(flags.L1EthRpcFlag.Name),
-		L2EthRpc:        ctx.GlobalString(flags.L2EthRpcFlag.Name),
-		RollupRpc:       ctx.GlobalString(flags.RollupRpcFlag.Name),
-		SubSafetyMargin: ctx.GlobalUint64(flags.SubSafetyMarginFlag.Name),
-		PollInterval:    ctx.GlobalDuration(flags.PollIntervalFlag.Name),
+		L1EthRpc:        ctx.String(flags.L1EthRpcFlag.Name),
+		L2EthRpc:        ctx.String(flags.L2EthRpcFlag.Name),
+		RollupRpc:       ctx.String(flags.RollupRpcFlag.Name),
+		SubSafetyMargin: ctx.Uint64(flags.SubSafetyMarginFlag.Name),
+		PollInterval:    ctx.Duration(flags.PollIntervalFlag.Name),
 
 		/* Optional Flags */
-		MaxPendingTransactions: ctx.GlobalUint64(flags.MaxPendingTransactionsFlag.Name),
-		MaxChannelDuration:     ctx.GlobalUint64(flags.MaxChannelDurationFlag.Name),
-		MaxL1TxSize:            ctx.GlobalUint64(flags.MaxL1TxSizeBytesFlag.Name),
-		DisperserSocket:        ctx.GlobalString(flags.DisperserSocketFlag.Name),
-		DisperserTimeout:       ctx.GlobalDuration(flags.DisperserTimeoutFlag.Name),
-		DataStoreDuration:      ctx.GlobalUint64(flags.DataStoreDurationFlag.Name),
-		GraphPollingDuration:   ctx.GlobalDuration(flags.GraphPollingDurationFlag.Name),
-		GraphProvider:          ctx.GlobalString(flags.GraphProviderFlag.Name),
-		RollupMaxSize:          ctx.GlobalUint64(flags.RollUpMaxSizeFlag.Name),
-		MantleDaNodes:          ctx.GlobalInt(flags.MantleDaNodeFlag.Name),
-		Stopped:                ctx.GlobalBool(flags.StoppedFlag.Name),
-		SkipEigenDaRpc:         ctx.GlobalBool(flags.SkipEigenDaRpcFlag.Name),
+		MaxPendingTransactions: ctx.Uint64(flags.MaxPendingTransactionsFlag.Name),
+		MaxChannelDuration:     ctx.Uint64(flags.MaxChannelDurationFlag.Name),
+		MaxL1TxSize:            ctx.Uint64(flags.MaxL1TxSizeBytesFlag.Name),
+		DisperserSocket:        ctx.String(flags.DisperserSocketFlag.Name),
+		DisperserTimeout:       ctx.Duration(flags.DisperserTimeoutFlag.Name),
+		DataStoreDuration:      ctx.Uint64(flags.DataStoreDurationFlag.Name),
+		GraphPollingDuration:   ctx.Duration(flags.GraphPollingDurationFlag.Name),
+		GraphProvider:          ctx.String(flags.GraphProviderFlag.Name),
+		RollupMaxSize:          ctx.Uint64(flags.RollUpMaxSizeFlag.Name),
+		Stopped:                ctx.Bool(flags.StoppedFlag.Name),
+		SkipEigenDaRpc:         ctx.Bool(flags.SkipEigenDaRpcFlag.Name),
 		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
 		RPCConfig:              rpc.ReadCLIConfig(ctx),
 		LogConfig:              oplog.ReadCLIConfig(ctx),
 		MetricsConfig:          opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:            oppprof.ReadCLIConfig(ctx),
 		CompressorConfig:       compressor.ReadCLIConfig(ctx),
-		EigenLogConfig:         logging.ReadCLIConfig(ctx),
 		EigenDAConfig:          eigenda.ReadCLIConfig(ctx),
 	}
 }

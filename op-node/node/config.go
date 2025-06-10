@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 )
 
@@ -38,8 +37,6 @@ type Config struct {
 
 	Pprof oppprof.CLIConfig
 
-	DatastoreConfig da.MantleDataStoreConfig
-
 	// Used to poll the L1 for new finalized or safe blocks
 	L1EpochPollInterval time.Duration
 
@@ -49,7 +46,9 @@ type Config struct {
 
 	Sync sync.Config
 
-	DA eigenda.Config
+	// Path to store safe head database. Disabled when set to empty string
+	SafeDBPath string
+	DA         da.Config
 }
 
 type RPCConfig struct {
@@ -114,7 +113,7 @@ func (cfg *Config) Check() error {
 		}
 	}
 
-	if cfg.Rollup.MantleDaSwitch && !cfg.DatastoreConfig.MantleDAIndexerEnable {
+	if cfg.Rollup.MantleDaSwitch && !cfg.DA.MantleDAIndexerEnable {
 		if cfg.DA.ProxyUrl != "" && cfg.Beacon == nil {
 			return errors.New("beacon config must be set when using eigenda")
 		}

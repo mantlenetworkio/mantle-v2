@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/mantlenetworkio/lithosphere/synchronizer/mantle-da/common/interfaces/interfaceRetrieverServer";
+option go_package = "github.com/mantlenetworkio/mantle-v2/op-node/rollup/da/interfaceRetrieverServer";
 package interfaceRetrieverServer;
 
 service DataRetrieval {

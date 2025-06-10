@@ -13,10 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/backoff"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // Deprecated: use eth.SyncStatus instead.
@@ -68,7 +68,7 @@ type Driver struct {
 
 	// L2 Signals:
 
-	unsafeL2Payloads chan *eth.ExecutionPayload
+	unsafeL2Payloads chan *eth.ExecutionPayloadEnvelope
 
 	l1        L1Chain
 	l2        L2Chain
@@ -131,7 +131,7 @@ func (s *Driver) OnL1Finalized(ctx context.Context, finalized eth.L1BlockRef) er
 	}
 }
 
-func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayload) error {
+func (s *Driver) OnUnsafeL2Payload(ctx context.Context, payload *eth.ExecutionPayloadEnvelope) error {
 	s.log.Debug("On unsafeL2Payloads channel buffer size", "length", len(s.unsafeL2Payloads))
 	select {
 	case <-ctx.Done():
@@ -249,16 +249,16 @@ func (s *Driver) eventLoop() {
 
 		select {
 		case <-sequencerCh:
-			payload, err := s.sequencer.RunNextSequencerAction(ctx)
+			envelope, err := s.sequencer.RunNextSequencerAction(ctx)
 			if err != nil {
 				s.log.Error("Sequencer critical error", "err", err)
 				return
 			}
-			if s.network != nil && payload != nil {
+			if s.network != nil && envelope != nil {
 				// Publishing of unsafe data via p2p is optional.
 				// Errors are not severe enough to change/halt sequencing but should be logged and metered.
-				if err := s.network.PublishL2Payload(ctx, payload); err != nil {
-					s.log.Warn("failed to publish newly created block", "id", payload.ID(), "err", err)
+				if err := s.network.PublishL2Payload(ctx, envelope); err != nil {
+					s.log.Warn("failed to publish newly created block", "id", envelope.ID(), "err", err)
 					s.metrics.RecordPublishingError()
 				}
 			}
@@ -271,16 +271,16 @@ func (s *Driver) eventLoop() {
 			if err != nil {
 				s.log.Warn("failed to check for unsafe L2 blocks to sync", "err", err)
 			}
-		case payload := <-s.unsafeL2Payloads:
+		case envelope := <-s.unsafeL2Payloads:
 			s.snapshot("New unsafe payload")
-			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
-			s.derivation.AddUnsafePayload(payload)
-			s.metrics.RecordReceivedUnsafePayload(payload)
+			s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", envelope.ExecutionPayload.ID())
+			s.derivation.AddUnsafePayload(envelope)
+			s.metrics.RecordReceivedUnsafePayload(envelope)
 			for len(s.unsafeL2Payloads) > 0 {
-				payload = <-s.unsafeL2Payloads
-				s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", payload.ID())
-				s.derivation.AddUnsafePayload(payload)
-				s.metrics.RecordReceivedUnsafePayload(payload)
+				envelope = <-s.unsafeL2Payloads
+				s.log.Info("Optimistically queueing unsafe L2 execution payload", "id", envelope.ExecutionPayload.ID())
+				s.derivation.AddUnsafePayload(envelope)
+				s.metrics.RecordReceivedUnsafePayload(envelope)
 			}
 			reqStep()
 

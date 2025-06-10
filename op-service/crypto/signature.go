@@ -11,17 +11,17 @@ import (
 	"strings"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"google.golang.org/api/option"
-
-	hdwallet "github.com/ethereum-optimism/go-ethereum-hdwallet"
-	bsscore "github.com/ethereum-optimism/optimism/bss-core"
-	opsigner "github.com/ethereum-optimism/optimism/op-signer/client"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"google.golang.org/api/option"
+
+	hdwallet "github.com/ethereum-optimism/go-ethereum-hdwallet"
+	"github.com/ethereum-optimism/optimism/op-service/hsm"
+	opsigner "github.com/ethereum-optimism/optimism/op-signer/client"
 )
 
 func PrivateKeySignerFn(key *ecdsa.PrivateKey, chainID *big.Int) bind.SignerFn {
@@ -77,7 +77,7 @@ func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, 
 		if err != nil {
 			return nil, common.Address{}, err
 		}
-		mk := &bsscore.ManagedKey{
+		mk := &hsm.ManagedKey{
 			KeyName:      hsmAPIName,
 			EthereumAddr: common.HexToAddress(hsmAddress),
 			Gclient:      client,

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	flags "github.com/ethereum-optimism/optimism/op-challenger/flags"
 
@@ -140,19 +140,19 @@ func NewConfigFromCLI(ctx *cli.Context) (*Config, error) {
 	if err := flags.CheckRequired(ctx); err != nil {
 		return nil, err
 	}
-	l1EthRpc := ctx.GlobalString(flags.L1EthRpcFlag.Name)
+	l1EthRpc := ctx.String(flags.L1EthRpcFlag.Name)
 	if l1EthRpc == "" {
 		return nil, ErrMissingL1EthRPC
 	}
-	rollupRpc := ctx.GlobalString(flags.RollupRpcFlag.Name)
+	rollupRpc := ctx.String(flags.RollupRpcFlag.Name)
 	if rollupRpc == "" {
 		return nil, ErrMissingRollupRpc
 	}
-	l2ooAddress := common.HexToAddress(ctx.GlobalString(flags.L2OOAddressFlag.Name))
+	l2ooAddress := common.HexToAddress(ctx.String(flags.L2OOAddressFlag.Name))
 	if l2ooAddress == (common.Address{}) {
 		return nil, ErrMissingL2OOAddress
 	}
-	dgfAddress := common.HexToAddress(ctx.GlobalString(flags.DGFAddressFlag.Name))
+	dgfAddress := common.HexToAddress(ctx.String(flags.DGFAddressFlag.Name))
 	if dgfAddress == (common.Address{}) {
 		return nil, ErrMissingDGFAddress
 	}

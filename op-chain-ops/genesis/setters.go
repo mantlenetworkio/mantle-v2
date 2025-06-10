@@ -2,6 +2,8 @@ package genesis
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
@@ -56,7 +58,7 @@ var (
 func FundDevAccounts(db vm.StateDB) {
 	for _, account := range DevAccounts {
 		db.CreateAccount(account)
-		db.AddBalance(account, devBalance)
+		db.AddBalance(account, devBalance, tracing.BalanceMint)
 	}
 }
 
@@ -95,7 +97,7 @@ func WipePredeployStorage(db vm.StateDB) error {
 		oldNonce := db.GetNonce(*addr)
 		db.CreateAccount(*addr)
 		if oldNonce > 0 {
-			db.SetNonce(*addr, oldNonce)
+			db.SetNonce(*addr, oldNonce, tracing.NonceChangeContractCreator)
 		}
 	}
 
@@ -238,7 +240,7 @@ func SetPrecompileBalances(db vm.StateDB) {
 	for i := 0; i < 256; i++ {
 		addr := common.BytesToAddress([]byte{byte(i)})
 		db.CreateAccount(addr)
-		db.AddBalance(addr, common.Big1)
+		db.AddBalance(addr, uint256.NewInt(1), tracing.BalanceMint)
 	}
 }
 
