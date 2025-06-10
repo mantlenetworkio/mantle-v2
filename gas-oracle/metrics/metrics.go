@@ -19,6 +19,8 @@ var (
 		FeeScalarGauge *metrics.Gauge
 		// L1GasPriceGauge l1_base_fee + l1_priority_fee
 		L1GasPriceGauge *metrics.Gauge
+		// OperatorFeeConstantGauge
+		OperatorFeeConstantGauge *metrics.Gauge
 	}
 )
 
@@ -31,4 +33,5 @@ func InitAndRegisterStats(r metrics.Registry) {
 	GasOracleStats.L1BaseFeeGauge = metrics.NewRegisteredGauge("l1_base_fee", r)
 	GasOracleStats.FeeScalarGauge = metrics.NewRegisteredGauge("fee_scalar", r)
 	GasOracleStats.L1GasPriceGauge = metrics.NewRegisteredGauge("l1_gas_price", r)
+	GasOracleStats.OperatorFeeConstantGauge = metrics.NewRegisteredGauge("operator_fee_constant", r)
 }

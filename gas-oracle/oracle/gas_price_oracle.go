@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/gas-oracle/bindings"
+	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
 	"github.com/ethereum-optimism/optimism/gas-oracle/tokenratio"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -45,6 +46,12 @@ type GasPriceOracle struct {
 	l1Backend  bind.ContractTransactor
 	tokenRatio *tokenratio.Client
 	config     *Config
+	auth       *Auth
+
+	// Operator fee constant update
+	lastOperatorFeeConstant *big.Int              // Cache for the last operator fee constant to avoid contract calls
+	operatorFeeCalculator   OperatorFeeCalculator // Function to calculate operator fee constant
+	explorerClient          *ExplorerClient       // Explorer client for fetching tx count
 }
 
 // Start runs the GasPriceOracle
@@ -69,6 +76,11 @@ func (g *GasPriceOracle) Start() error {
 		"l2-chain-id", g.l2ChainID, "address", address.Hex())
 
 	go g.TokenRatioLoop()
+
+	// Start operator fee update loop if configured
+	if g.config.OperatorFeeUpdateInterval > 0 {
+		go g.OperatorFeeLoop()
+	}
 
 	return nil
 }
@@ -108,7 +120,7 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 	timer := time.NewTicker(time.Duration(g.config.tokenRatioEpochLengthSeconds) * time.Second)
 	defer timer.Stop()
 
-	updateTokenRatio, err := wrapUpdateTokenRatio(g.l1Backend, g.l2Backend, g.tokenRatio, g.config)
+	updateTokenRatio, err := wrapUpdateTokenRatio(g.l1Backend, g.l2Backend, g.tokenRatio, g.config, g.auth)
 	if err != nil {
 		panic(err)
 	}
@@ -120,6 +132,34 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 			}
 		case <-g.ctx.Done():
 			g.Stop()
+		}
+	}
+}
+
+func (g *GasPriceOracle) OperatorFeeLoop() {
+	// Reset to 24 hours if smaller than 24 hours
+	updateInterval := g.config.OperatorFeeUpdateInterval
+	day := uint64(24 * 60 * 60)
+	if updateInterval < day {
+		updateInterval = day
+		log.Info("Operator fee update interval is less than 24 hours, setting to 24 hours")
+	}
+
+	timer := time.NewTicker(time.Duration(updateInterval) * time.Second)
+	defer timer.Stop()
+
+	log.Info("Starting operator fee update loop",
+		"update_interval_seconds", updateInterval)
+
+	for {
+		select {
+		case <-timer.C:
+			if err := g.updateOperatorFeeConstant(); err != nil {
+				log.Error("Failed to update operator fee constant", "error", err)
+			}
+		case <-g.ctx.Done():
+			log.Info("Stopping operator fee update loop")
+			return
 		}
 	}
 }
@@ -192,22 +232,43 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		return nil, errNoPrivateKey
 	}
 
-	log.Info("Creating GasPriceUpdater")
-
+	// Create a transaction signer
+	auth, err := NewAuth(cfg, tokenRatioClient.l2Client)
 	if err != nil {
 		return nil, err
 	}
 
+	// Fetch the current operator fee constant and create a calculator if enabled
+	var currentOperatorFeeConstant *big.Int
+	var operatorFeeCalculator OperatorFeeCalculator
+	if cfg.OperatorFeeUpdateInterval > 0 {
+		log.Info("Operator fee constant update is enabled")
+		currentOperatorFeeConstant, err = contract.OperatorFeeConstant(&bind.CallOpts{
+			Context: context.Background(),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch current operator fee constant: %w", err)
+		}
+		log.Info("Initialized operator fee constant cache", "value", currentOperatorFeeConstant.String())
+		ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(currentOperatorFeeConstant.Int64())
+
+		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars)
+	}
+
 	gpo := GasPriceOracle{
-		l2ChainID:  l2ChainID,
-		l1ChainID:  l1ChainID,
-		ctx:        context.Background(),
-		stop:       make(chan struct{}),
-		contract:   contract,
-		config:     cfg,
-		l2Backend:  tokenRatioClient.l2Client,
-		l1Backend:  tokenRatioClient.l1Client,
-		tokenRatio: tokenRatioClient.tokenRatio,
+		l2ChainID:               l2ChainID,
+		l1ChainID:               l1ChainID,
+		ctx:                     context.Background(),
+		stop:                    make(chan struct{}),
+		contract:                contract,
+		config:                  cfg,
+		l2Backend:               tokenRatioClient.l2Client,
+		l1Backend:               tokenRatioClient.l1Client,
+		tokenRatio:              tokenRatioClient.tokenRatio,
+		auth:                    auth,
+		lastOperatorFeeConstant: currentOperatorFeeConstant,
+		operatorFeeCalculator:   operatorFeeCalculator,
+		explorerClient:          NewExplorerClient(cfg.BlockscoutExplorerURL),
 	}
 
 	if err := gpo.ensure(); err != nil {

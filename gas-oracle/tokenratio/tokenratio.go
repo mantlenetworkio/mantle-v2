@@ -118,6 +118,16 @@ func (c *Client) TokenRatio() float64 {
 	return c.latestRatio
 }
 
+// EthPrice returns the current ETH price in USD
+func (c *Client) EthPrice() float64 {
+	return c.lastEthPrice
+}
+
+// MNTPrice returns the current MNT price in USD
+func (c *Client) MNTPrice() float64 {
+	return c.lastMntPrice
+}
+
 func (c *Client) tokenRatio() (float64, error) {
 	// Todo query token prices concurrent
 	var mntPrices, ethPrices []float64

@@ -7,7 +7,7 @@ LDFLAGSSTRING +=-X main.GitDate=$(GITDATE)
 LDFLAGSSTRING +=-X main.GitVersion=$(VERSION)
 LDFLAGS :=-ldflags "$(LDFLAGSSTRING)"
 
-CONTRACTS_PATH := "../../packages/contracts-bedrock/artifacts/contracts"
+CONTRACTS_PATH := "../packages/contracts-bedrock/artifacts/contracts"
 
 gas-oracle:
 	env GO111MODULE=on go build -v $(LDFLAGS) -o ./bin/gas-oracle ./main.go
