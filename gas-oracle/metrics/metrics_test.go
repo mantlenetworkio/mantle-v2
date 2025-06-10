@@ -20,4 +20,8 @@ func TestInitAndRegisterStats(t *testing.T) {
 	GasOracleStats.FeeScalarGauge.Update(1500000)
 	feeScalar := GasOracleStats.FeeScalarGauge.Value()
 	require.Equal(t, int64(1500000), feeScalar)
+
+	GasOracleStats.OperatorFeeConstantGauge.Update(1000000000)
+	operatorFeeConstant := GasOracleStats.OperatorFeeConstantGauge.Value()
+	require.Equal(t, int64(1000000000), operatorFeeConstant)
 }

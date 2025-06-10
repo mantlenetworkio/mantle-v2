@@ -39,6 +39,14 @@ type Config struct {
 	MetricsEnabled bool
 	MetricsHTTP    string
 	MetricsPort    int
+	// operator fee config
+	OperatorFeeUpdateInterval     uint64
+	OperatorFeeSignificanceFactor float64
+	IntrinsicSp1GasPerTx          uint64
+	IntrinsicSp1GasPerBlock       uint64
+	Sp1PricePerBGasInDollars      float64
+	// mantle explorer config
+	BlockscoutExplorerURL string
 }
 
 // NewConfig creates a new Config
@@ -97,6 +105,16 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.MetricsEnabled = ctx.GlobalBool(flags.MetricsEnabledFlag.Name)
 	cfg.MetricsHTTP = ctx.GlobalString(flags.MetricsHTTPFlag.Name)
 	cfg.MetricsPort = ctx.GlobalInt(flags.MetricsPortFlag.Name)
+
+	cfg.OperatorFeeUpdateInterval = ctx.GlobalUint64(flags.OperatorFeeUpdateIntervalFlag.Name)
+	if cfg.OperatorFeeUpdateInterval > 0 {
+		cfg.OperatorFeeSignificanceFactor = ctx.GlobalFloat64(flags.OperatorFeeSignificanceFactorFlag.Name)
+		cfg.IntrinsicSp1GasPerTx = ctx.GlobalUint64(flags.IntrinsicSp1GasPerTxFlag.Name)
+		cfg.IntrinsicSp1GasPerBlock = ctx.GlobalUint64(flags.IntrinsicSp1GasPerBlockFlag.Name)
+		cfg.Sp1PricePerBGasInDollars = ctx.GlobalFloat64(flags.Sp1PricePerBGasInDollarsFlag.Name)
+	}
+
+	cfg.BlockscoutExplorerURL = ctx.GlobalString(flags.BlockscoutExplorerURLFlag.Name)
 
 	return &cfg
 }

@@ -127,6 +127,36 @@ var (
 		Usage:  "the creden of hsm key",
 		EnvVar: "GAS_PRICE_ORACLE_HSM_CREDEN",
 	}
+	OperatorFeeUpdateIntervalFlag = cli.Uint64Flag{
+		Name:   "operator-fee-update-interval",
+		Usage:  "the interval of updating the operator fee",
+		EnvVar: "GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_INTERVAL",
+	}
+	OperatorFeeSignificanceFactorFlag = cli.Float64Flag{
+		Name:   "operator-fee-significance-factor",
+		Usage:  "the significance factor of updating the operator fee",
+		EnvVar: "GAS_PRICE_ORACLE_OPERATOR_FEE_SIGNIFICANCE_FACTOR",
+	}
+	IntrinsicSp1GasPerTxFlag = cli.Uint64Flag{
+		Name:   "intrinsic-sp1-gas-per-tx",
+		Usage:  "the intrinsic sp1 gas per tx",
+		EnvVar: "GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_TX",
+	}
+	IntrinsicSp1GasPerBlockFlag = cli.Uint64Flag{
+		Name:   "intrinsic-sp1-gas-per-block",
+		Usage:  "the intrinsic sp1 gas per block",
+		EnvVar: "GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_BLOCK",
+	}
+	Sp1PricePerBGasInDollarsFlag = cli.Float64Flag{
+		Name:   "sp1-price-per-bgas-in-dollars",
+		Usage:  "the price of sp1 per bgas in dollars",
+		EnvVar: "GAS_PRICE_ORACLE_SP1_PRICE_PER_BGAS_IN_DOLLARS",
+	}
+	BlockscoutExplorerURLFlag = cli.StringFlag{
+		Name:   "blockscout-explorer-url",
+		Usage:  "the url of the blockscout explorer",
+		EnvVar: "GAS_PRICE_ORACLE_BLOCKSCOUT_EXPLORER_URL",
+	}
 )
 
 var Flags = []cli.Flag{
@@ -152,4 +182,10 @@ var Flags = []cli.Flag{
 	MetricsEnabledFlag,
 	MetricsHTTPFlag,
 	MetricsPortFlag,
+	OperatorFeeUpdateIntervalFlag,
+	OperatorFeeSignificanceFactorFlag,
+	IntrinsicSp1GasPerTxFlag,
+	IntrinsicSp1GasPerBlockFlag,
+	Sp1PricePerBGasInDollarsFlag,
+	BlockscoutExplorerURLFlag,
 }
