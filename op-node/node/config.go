@@ -46,7 +46,9 @@ type Config struct {
 
 	Sync sync.Config
 
-	DA da.Config
+	// Path to store safe head database. Disabled when set to empty string
+	SafeDBPath string
+	DA         da.Config
 }
 
 type RPCConfig struct {

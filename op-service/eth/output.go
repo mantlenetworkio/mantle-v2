@@ -12,3 +12,8 @@ type OutputResponse struct {
 	StateRoot             common.Hash `json:"stateRoot"`
 	Status                *SyncStatus `json:"syncStatus"`
 }
+
+type SafeHeadResponse struct {
+	L1Block  BlockID `json:"l1Block"`
+	SafeHead BlockID `json:"safeHead"`
+}

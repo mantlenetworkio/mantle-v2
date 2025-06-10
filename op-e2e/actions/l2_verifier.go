@@ -56,9 +56,14 @@ type L2API interface {
 	GetProof(ctx context.Context, address common.Address, storage []common.Hash, blockTag string) (*eth.AccountResult, error)
 }
 
-func NewL2Verifier(t Testing, log log.Logger, l1 derive.L1Fetcher, eng L2API, cfg *rollup.Config, syncCfg *sync.Config) *L2Verifier {
+type safeDB interface {
+	derive.SafeHeadListener
+	node.SafeDBReader
+}
+
+func NewL2Verifier(t Testing, log log.Logger, l1 derive.L1Fetcher, eng L2API, cfg *rollup.Config, syncCfg *sync.Config, safeHeadListener safeDB) *L2Verifier {
 	metrics := &testutils.TestDerivationMetrics{}
-	pipeline := derive.NewDerivationPipeline(log, cfg, l1, nil, eng, metrics, syncCfg, nil)
+	pipeline := derive.NewDerivationPipeline(log, cfg, l1, nil, eng, metrics, syncCfg, safeHeadListener, nil)
 	pipeline.Reset()
 
 	rollupNode := &L2Verifier{
@@ -80,7 +85,7 @@ func NewL2Verifier(t Testing, log log.Logger, l1 derive.L1Fetcher, eng L2API, cf
 	apis := []rpc.API{
 		{
 			Namespace:     "optimism",
-			Service:       node.NewNodeAPI(cfg, eng, backend, log, m),
+			Service:       node.NewNodeAPI(cfg, eng, backend, safeHeadListener, log, m),
 			Public:        true,
 			Authenticated: false,
 		},
