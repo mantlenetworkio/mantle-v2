@@ -342,8 +342,6 @@ func (g *GasPriceOracle) updateOperatorFeeConstant() error {
 			"current", currentConstant.String(),
 			"new", newConstant.String())
 
-		// Update the cache with the new value
-		g.lastOperatorFeeConstant = newConstant
 		return g.setOperatorFeeConstant(newConstant)
 	} else {
 		log.Debug("Operator fee constant unchanged or change is below threshold, skipping update",
@@ -363,7 +361,6 @@ func (g *GasPriceOracle) setOperatorFeeConstant(newConstant *big.Int) error {
 
 	log.Info("Operator fee constant update transaction sent",
 		"tx_hash", tx.Hash().Hex())
-	ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(newConstant.Int64())
 
 	// Wait for receipt if configured
 	if g.config.waitForReceipt {
@@ -375,6 +372,10 @@ func (g *GasPriceOracle) setOperatorFeeConstant(newConstant *big.Int) error {
 		log.Info("Operator fee constant update transaction confirmed",
 			"tx_hash", tx.Hash().Hex(),
 			"block_number", receipt.BlockNumber)
+
+		// Update the cache with the new value
+		g.lastOperatorFeeConstant = newConstant
+		ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(newConstant.Int64())
 	}
 
 	return nil
@@ -439,6 +440,10 @@ func (g *GasPriceOracle) setOperatorFeeScalar(newScalar *big.Int) error {
 		log.Info("Operator fee scalar update transaction confirmed",
 			"tx_hash", tx.Hash().Hex(),
 			"block_number", receipt.BlockNumber)
+
+		// Update the cache with the new value
+		g.lastOperatorFeeScalar = newScalar
+		ometrics.GasOracleStats.OperatorFeeScalarGauge.Update(newScalar.Int64())
 	}
 
 	return nil
