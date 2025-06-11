@@ -6,11 +6,11 @@ import (
 )
 
 func TestCalculateOperatorFeeConstant(t *testing.T) {
-	calculator := NewOperatorFeeCalculator(DefaultIntrinsicSp1GasPerTx, DefaultIntrinsicSp1GasPerBlock, DefaultSp1PricePerBGasInDollars)
+	calculator := NewOperatorFeeCalculator(DefaultIntrinsicSp1GasPerTx, DefaultIntrinsicSp1GasPerBlock, DefaultSp1PricePerBGasInDollars, DefaultSp1GasScalar)
 
 	baseTxCount := uint64(200000)
 	baseEthPrice := 2500.0
-	baseConstant, _ := calculator(baseTxCount, baseEthPrice)
+	baseConstant, _ := calculator.CalOperatorFeeConstant(baseTxCount, baseEthPrice)
 	if baseConstant.Cmp(big.NewInt(1447680000000)) != 0 {
 		t.Errorf("baseConstant: %s, expected: %s", baseConstant.String(), "1447680000000")
 	}
@@ -75,7 +75,7 @@ func TestCalculateOperatorFeeConstant(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := calculator(tt.txCount, tt.ethPrice)
+			result, err := calculator.CalOperatorFeeConstant(tt.txCount, tt.ethPrice)
 
 			if tt.expectError {
 				if err == nil {
@@ -90,6 +90,68 @@ func TestCalculateOperatorFeeConstant(t *testing.T) {
 				if tt.expectedSign != result.Cmp(baseConstant) {
 					t.Errorf("calculateOperatorFeeConstant(%d,%f) = %s, expected sign %d, baseConstant: %s",
 						tt.txCount, tt.ethPrice, result.String(), tt.expectedSign, baseConstant.String())
+				}
+			}
+		})
+	}
+}
+
+func TestCalculateOperatorFeeScalar(t *testing.T) {
+	calculator := NewOperatorFeeCalculator(DefaultIntrinsicSp1GasPerTx, DefaultIntrinsicSp1GasPerBlock, DefaultSp1PricePerBGasInDollars, DefaultSp1GasScalar)
+
+	baseEthPrice := 2500.0
+	baseScalar, _ := calculator.CalOperatorFeeScalar(baseEthPrice)
+	if baseScalar.Cmp(big.NewInt(580000000)) != 0 {
+		t.Errorf("baseScalar: %s, expected: %s", baseScalar.String(), "580000000")
+	}
+
+	tests := []struct {
+		name         string
+		ethPrice     float64
+		expectError  bool
+		expectedSign int
+	}{
+		{
+			name:         "zero ETH price",
+			ethPrice:     0.0,
+			expectError:  true,
+			expectedSign: 0,
+		},
+		{
+			name:         "negative ETH price",
+			ethPrice:     -100.0,
+			expectError:  true,
+			expectedSign: 0,
+		},
+		{
+			name:         "ETH price x2",
+			ethPrice:     2 * baseEthPrice,
+			expectError:  false,
+			expectedSign: -1,
+		},
+		{
+			name:         "ETH price x0.5",
+			ethPrice:     0.5 * baseEthPrice,
+			expectError:  false,
+			expectedSign: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := calculator.CalOperatorFeeScalar(tt.ethPrice)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("calculateOperatorFeeScalar(%f) expected error but got none", tt.ethPrice)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("calculateOperatorFeeScalar(%f) unexpected error: %v", tt.ethPrice, err)
+				}
+				if tt.expectedSign != result.Cmp(baseScalar) {
+					t.Errorf("calculateOperatorFeeScalar(%f) = %s, expected sign %d, baseScalar: %s",
+						tt.ethPrice, result.String(), tt.expectedSign, baseScalar.String())
 				}
 			}
 		})

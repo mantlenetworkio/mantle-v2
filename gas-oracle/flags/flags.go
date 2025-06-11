@@ -130,10 +130,20 @@ var (
 		Usage:   "the creden of hsm key",
 		EnvVars: []string{"GAS_PRICE_ORACLE_HSM_CREDEN"},
 	}
-	OperatorFeeUpdateIntervalFlag = &cli.Uint64Flag{
-		Name:    "operator-fee-update-interval",
-		Usage:   "the interval of updating the operator fee",
-		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_INTERVAL"},
+	OperatorFeeUpdateEnabledFlag = &cli.BoolFlag{
+		Name:    "operator-fee-update-enabled",
+		Usage:   "enable the operator fee update",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_ENABLED"},
+	}
+	OperatorFeeConstantUpdateIntervalFlag = &cli.Uint64Flag{
+		Name:    "operator-fee-constant-update-interval",
+		Usage:   "the interval of updating the operator fee constant",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_CONSTANT_UPDATE_INTERVAL"},
+	}
+	OperatorFeeScalarUpdateIntervalFlag = &cli.Uint64Flag{
+		Name:    "operator-fee-scalar-update-interval",
+		Usage:   "the interval of updating the operator fee scalar",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_SCALAR_UPDATE_INTERVAL"},
 	}
 	OperatorFeeSignificanceFactorFlag = &cli.Float64Flag{
 		Name:    "operator-fee-significance-factor",
@@ -155,10 +165,25 @@ var (
 		Usage:   "the price of sp1 per bgas in dollars",
 		EnvVars: []string{"GAS_PRICE_ORACLE_SP1_PRICE_PER_BGAS_IN_DOLLARS"},
 	}
+	Sp1GasScalarFlag = &cli.Uint64Flag{
+		Name:    "sp1-gas-scalar",
+		Usage:   "the scalar of sp1 gas",
+		EnvVars: []string{"GAS_PRICE_ORACLE_SP1_GAS_SCALAR"},
+	}
 	BlockscoutExplorerURLFlag = &cli.StringFlag{
 		Name:    "blockscout-explorer-url",
 		Usage:   "the url of the blockscout explorer",
 		EnvVars: []string{"GAS_PRICE_ORACLE_BLOCKSCOUT_EXPLORER_URL"},
+	}
+	EtherscanExplorerURLFlag = &cli.StringFlag{
+		Name:    "etherscan-explorer-url",
+		Usage:   "the url of the etherscan explorer",
+		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_EXPLORER_URL"},
+	}
+	EtherscanAPIKeyFlag = &cli.StringFlag{
+		Name:    "etherscan-api-key",
+		Usage:   "the api key of the etherscan",
+		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_API_KEY"},
 	}
 )
 
@@ -185,10 +210,15 @@ var Flags = []cli.Flag{
 	MetricsEnabledFlag,
 	MetricsHTTPFlag,
 	MetricsPortFlag,
-	OperatorFeeUpdateIntervalFlag,
+	OperatorFeeUpdateEnabledFlag,
+	OperatorFeeConstantUpdateIntervalFlag,
+	OperatorFeeScalarUpdateIntervalFlag,
 	OperatorFeeSignificanceFactorFlag,
 	IntrinsicSp1GasPerTxFlag,
 	IntrinsicSp1GasPerBlockFlag,
 	Sp1PricePerBGasInDollarsFlag,
+	Sp1GasScalarFlag,
 	BlockscoutExplorerURLFlag,
+	EtherscanExplorerURLFlag,
+	EtherscanAPIKeyFlag,
 }

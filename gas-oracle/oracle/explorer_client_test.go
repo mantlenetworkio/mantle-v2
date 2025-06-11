@@ -5,32 +5,28 @@ import (
 	"testing"
 )
 
-func TestNewExplorerClient(t *testing.T) {
-	client := NewExplorerClient("")
+func TestNewBlockscoutClient(t *testing.T) {
+	client := NewBlockscoutClient("")
 	if client == nil {
-		t.Fatal("NewExplorerClient() returned nil")
+		t.Fatal("NewBlockscoutClient() returned nil")
 	}
 	if client.client == nil {
-		t.Error("ExplorerClient client is nil")
-	}
-	if client.baseURL != DefaultBlockscoutExplorerURL {
-		t.Errorf("Expected baseURL %s, got %s", DefaultBlockscoutExplorerURL, client.baseURL)
+		t.Error("BlockscoutClient client is nil")
 	}
 }
 
-func TestNewExplorerClientWithCustomURL(t *testing.T) {
-	customURL := "https://custom-explorer.com"
-	client := NewExplorerClient(customURL)
+func TestNewEtherscanClient(t *testing.T) {
+	client := NewEtherscanClient("", "")
 	if client == nil {
-		t.Fatal("NewExplorerClient() returned nil")
+		t.Fatal("NewEtherscanClient() returned nil")
 	}
-	if client.baseURL != customURL {
-		t.Errorf("Expected baseURL %s, got %s", customURL, client.baseURL)
+	if client.client == nil {
+		t.Error("EtherscanClient client is nil")
 	}
 }
 
-func TestExplorerClientDailyTxCount(t *testing.T) {
-	client := NewExplorerClient("")
+func TestBlockscoutClientDailyTxCount(t *testing.T) {
+	client := NewBlockscoutClient("")
 
 	// Test the actual API call
 	txCount, err := client.DailyTxCount(context.Background())
