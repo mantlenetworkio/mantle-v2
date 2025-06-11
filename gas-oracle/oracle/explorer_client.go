@@ -112,8 +112,8 @@ func (e *BlockscoutClient) DailyTxCount(ctx context.Context) (uint64, error) {
 
 // DailyTxCount fetches the daily transaction count from the Etherscan-style API
 func (e *EtherscanClient) DailyTxCount(ctx context.Context) (uint64, error) {
-	// Get today's date in YYYY-MM-DD format
-	today := time.Now().Format("2006-01-02")
+	// Get yesterday's date in YYYY-MM-DD format
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 
 	var response EtherscanDailyTxResponse
 
@@ -124,8 +124,8 @@ func (e *EtherscanClient) DailyTxCount(ctx context.Context) (uint64, error) {
 			"chainid":   "1",
 			"module":    "stats",
 			"action":    "dailytx",
-			"startdate": today,
-			"enddate":   today,
+			"startdate": yesterday,
+			"enddate":   yesterday,
 			"sort":      "asc",
 			"apikey":    e.apiKey,
 		}).
@@ -144,7 +144,7 @@ func (e *EtherscanClient) DailyTxCount(ctx context.Context) (uint64, error) {
 	}
 
 	if len(response.Result) == 0 {
-		return 0, fmt.Errorf("no transaction data found for today")
+		return 0, fmt.Errorf("no transaction data found for yesterday (%s)", yesterday)
 	}
 
 	// Get the transaction count from the first (and only) result
