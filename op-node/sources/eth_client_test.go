@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -181,7 +182,7 @@ func TestEthClient_WrongInfoByHash(t *testing.T) {
 	m.Mock.AssertExpectations(t)
 }
 
-func TestPectraEthClientFetchReceipts(t *testing.T) {
+func TestEthClientFetchPectraReceipts(t *testing.T) {
 	DevnetRPC := "https://rpc.pectra-devnet-5.ethpandaops.io"
 
 	opts := []client.RPCOption{
@@ -190,7 +191,7 @@ func TestPectraEthClientFetchReceipts(t *testing.T) {
 	}
 
 	m := metrics.NewMetrics("default")
-	log := oplog.NewLogger(oplog.DefaultCLIConfig())
+	log := oplog.NewLogger(os.Stdout, oplog.DefaultCLIConfig())
 	l1Node, err := client.NewRPC(context.Background(), log, DevnetRPC, opts...)
 	require.NoError(t, err)
 	eClient, err := NewEthClient(client.NewInstrumentedRPC(l1Node, m), log, nil, testEthClientConfig)

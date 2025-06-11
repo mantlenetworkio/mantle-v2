@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
@@ -30,7 +30,7 @@ import (
 // - Both heads are at the tip of their respective chains
 func (c *syncStartTestCase) generateFakeL2(t *testing.T) (*testutils.FakeChainSource, rollup.Genesis) {
 	t.Helper()
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	chain := testutils.NewFakeChainSource([]string{c.L1, c.NewL1}, []string{c.L2}, int(c.GenesisL1Num), log)
 	chain.SetL2Head(len(c.L2) - 1)
 	genesis := testutils.FakeGenesis(c.GenesisL1, c.GenesisL2, int(c.GenesisL1Num))
@@ -81,8 +81,7 @@ func (c *syncStartTestCase) Run(t *testing.T) {
 		Genesis:       genesis,
 		SeqWindowSize: c.SeqWindowSize,
 	}
-	lgr := log.New()
-	lgr.SetHandler(log.DiscardHandler())
+	lgr := log.NewLogger(log.DiscardHandler())
 	result, err := sync.FindL2Heads(context.Background(), cfg, chain, chain, lgr, &sync.Config{})
 	if c.ExpectedErr != nil {
 		require.ErrorIs(t, err, c.ExpectedErr, "expected error")

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 )
@@ -101,7 +101,7 @@ func TestChannelBankSimple(t *testing.T) {
 
 	cfg := &rollup.Config{ChannelTimeout: 10}
 
-	cb := NewChannelBank(testlog.Logger(t, log.LvlCrit), cfg, input, nil)
+	cb := NewChannelBank(testlog.Logger(t, log.LevelCrit), cfg, input, nil)
 
 	// Load the first frame
 	out, err := cb.NextData(context.Background())
@@ -141,7 +141,7 @@ func TestChannelBankDuplicates(t *testing.T) {
 
 	cfg := &rollup.Config{ChannelTimeout: 10}
 
-	cb := NewChannelBank(testlog.Logger(t, log.LvlCrit), cfg, input, nil)
+	cb := NewChannelBank(testlog.Logger(t, log.LevelCrit), cfg, input, nil)
 
 	// Load the first frame
 	out, err := cb.NextData(context.Background())

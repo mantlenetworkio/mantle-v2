@@ -34,10 +34,15 @@ func TestRetrieveBlob(t *testing.T) {
 	calldataFrame := &op_service.CalldataFrame{}
 	err := proto.Unmarshal(calldata[1:], calldataFrame)
 	if err != nil {
+		t.Errorf("Unmarshal err:%v", err)
 		return
 	}
 	frame := calldataFrame.Value.(*op_service.CalldataFrame_FrameRef)
-	da := NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil)
+	da, err := NewEigenDADataStore(context.Background(), log.New("t1"), &cfg, nil)
+	if err != nil {
+		t.Errorf("NewEigenDADataStore err:%v", err)
+		return
+	}
 	fmt.Printf("%x\n%x\n", frame.FrameRef.BatchHeaderHash, frame.FrameRef.Commitment)
 	data, err := da.RetrieveBlob(frame.FrameRef.BatchHeaderHash, frame.FrameRef.BlobIndex, nil)
 	if err != nil {
@@ -103,7 +108,11 @@ func TestEigenDADataStore_RetrieveFromDaIndexer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eigenDaSyncer := NewEigenDADataStore(context.Background(), log.New("t1"), &tt.daConfig, nil)
+			eigenDaSyncer, err := NewEigenDADataStore(context.Background(), log.New("t1"), &tt.daConfig, nil)
+			if err != nil {
+				t.Errorf("NewEigenDADataStore err:%v", err)
+				return
+			}
 
 			if !eigenDaSyncer.IsDaIndexer() {
 				t.Fatal("DA indexer should be enabled")

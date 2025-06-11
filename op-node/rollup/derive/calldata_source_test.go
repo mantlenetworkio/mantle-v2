@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 type testTx struct {
@@ -122,7 +122,7 @@ func TestDataFromEVMTransactions(t *testing.T) {
 			}
 		}
 
-		out := DataFromEVMTransactions(cfg, batcherAddr, txs, testlog.Logger(t, log.LvlCrit))
+		out := DataFromEVMTransactions(cfg, batcherAddr, txs, testlog.Logger(t, log.LevelCrit))
 		require.ElementsMatch(t, expectedData, out)
 	}
 

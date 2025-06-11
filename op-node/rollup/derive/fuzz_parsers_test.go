@@ -5,21 +5,23 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/require"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/google/go-cmp/cmp"
+	"github.com/holiman/uint256"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 var (
@@ -216,13 +218,13 @@ func FuzzUnmarshallLogEvent(f *testing.F) {
 			t.Fatal(err)
 		}
 
-		state, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+		state, err := state.New(common.Hash{}, state.NewDatabase(triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil), nil))
 		if err != nil {
 			t.Fatal(err)
 		}
-		state.SetBalance(from, BytesToBigInt([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}))
+		state.SetBalance(from, uint256.MustFromBig(BytesToBigInt([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})), tracing.BalanceChangeUnspecified)
 		state.SetCode(addr, common.FromHex(bindings.OptimismPortalDeployedBin))
-		_, err = state.Commit(false)
+		_, err = state.Commit(0, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}

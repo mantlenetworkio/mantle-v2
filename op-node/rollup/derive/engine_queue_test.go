@@ -18,9 +18,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 type fakeAttributesQueue struct {
@@ -960,26 +960,28 @@ func TestBlockBuildingRace(t *testing.T) {
 	}, cfg.Genesis.SystemConfig, false)
 
 	require.NoError(t, err)
-	payloadA1 := &eth.ExecutionPayload{
-		ParentHash:    refA1.ParentHash,
-		FeeRecipient:  attrs.SuggestedFeeRecipient,
-		StateRoot:     eth.Bytes32{},
-		ReceiptsRoot:  eth.Bytes32{},
-		LogsBloom:     eth.Bytes256{},
-		PrevRandao:    eth.Bytes32{},
-		BlockNumber:   eth.Uint64Quantity(refA1.Number),
-		GasLimit:      gasLimit,
-		GasUsed:       0,
-		Timestamp:     eth.Uint64Quantity(refA1.Time),
-		ExtraData:     nil,
-		BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
-		BlockHash:     refA1.Hash,
-		Transactions: []eth.Data{
-			a1InfoTx,
+	envelopeA1 := &eth.ExecutionPayloadEnvelope{
+		ExecutionPayload: &eth.ExecutionPayload{
+			ParentHash:    refA1.ParentHash,
+			FeeRecipient:  attrs.SuggestedFeeRecipient,
+			StateRoot:     eth.Bytes32{},
+			ReceiptsRoot:  eth.Bytes32{},
+			LogsBloom:     eth.Bytes256{},
+			PrevRandao:    eth.Bytes32{},
+			BlockNumber:   eth.Uint64Quantity(refA1.Number),
+			GasLimit:      gasLimit,
+			GasUsed:       0,
+			Timestamp:     eth.Uint64Quantity(refA1.Time),
+			ExtraData:     nil,
+			BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
+			BlockHash:     refA1.Hash,
+			Transactions: []eth.Data{
+				a1InfoTx,
+			},
 		},
 	}
-	eng.ExpectGetPayload(id, payloadA1, nil)
-	eng.ExpectNewPayload(payloadA1, &eth.PayloadStatusV1{
+	eng.ExpectGetPayload(id, envelopeA1, nil)
+	eng.ExpectNewPayload(envelopeA1.ExecutionPayload, nil, &eth.PayloadStatusV1{
 		Status:          eth.ExecutionValid,
 		LatestValidHash: &refA1.Hash,
 		ValidationError: nil,
@@ -1160,21 +1162,23 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 		L1Origin:       refA.ID(),
 		SequenceNumber: 2,
 	}
-	payloadA1 := &eth.ExecutionPayload{
-		ParentHash:    refA1.ParentHash,
-		FeeRecipient:  common.Address{},
-		StateRoot:     eth.Bytes32{},
-		ReceiptsRoot:  eth.Bytes32{},
-		LogsBloom:     eth.Bytes256{},
-		PrevRandao:    eth.Bytes32{},
-		BlockNumber:   eth.Uint64Quantity(refA1.Number),
-		GasLimit:      gasLimit,
-		GasUsed:       0,
-		Timestamp:     eth.Uint64Quantity(refA1.Time),
-		ExtraData:     nil,
-		BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
-		BlockHash:     refA1.Hash,
-		Transactions:  []eth.Data{},
+	envelopeA1 := &eth.ExecutionPayloadEnvelope{
+		ExecutionPayload: &eth.ExecutionPayload{
+			ParentHash:    refA1.ParentHash,
+			FeeRecipient:  common.Address{},
+			StateRoot:     eth.Bytes32{},
+			ReceiptsRoot:  eth.Bytes32{},
+			LogsBloom:     eth.Bytes256{},
+			PrevRandao:    eth.Bytes32{},
+			BlockNumber:   eth.Uint64Quantity(refA1.Number),
+			GasLimit:      gasLimit,
+			GasUsed:       0,
+			Timestamp:     eth.Uint64Quantity(refA1.Time),
+			ExtraData:     nil,
+			BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
+			BlockHash:     refA1.Hash,
+			Transactions:  []eth.Data{},
+		},
 	}
 
 	prev := &fakeAttributesQueue{origin: refA}
@@ -1184,7 +1188,7 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 	eq.safeHead = refA0
 	eq.finalized = refA0
 
-	eq.AddUnsafePayload(payloadA1)
+	eq.AddUnsafePayload(envelopeA1)
 
 	err := eq.Step(context.Background())
 	require.Equal(t, EngineP2PSyncing, err)

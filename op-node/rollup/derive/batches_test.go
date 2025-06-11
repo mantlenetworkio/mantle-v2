@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -517,7 +517,7 @@ func TestValidBatch(t *testing.T) {
 	}
 
 	// Log level can be increased for debugging purposes
-	logger := testlog.Logger(t, log.LvlError)
+	logger := testlog.Logger(t, log.LevelError)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
