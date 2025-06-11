@@ -49,9 +49,10 @@ type GasPriceOracle struct {
 	auth       *Auth
 
 	// Operator fee constant update
-	lastOperatorFeeConstant *big.Int              // Cache for the last operator fee constant to avoid contract calls
-	operatorFeeCalculator   OperatorFeeCalculator // Function to calculate operator fee constant
-	explorerClient          *ExplorerClient       // Explorer client for fetching tx count
+	lastOperatorFeeConstant *big.Int                // Cache for the last operator fee constant to avoid contract calls
+	lastOperatorFeeScalar   *big.Int                // Cache for the last operator fee scalar to avoid contract calls
+	operatorFeeCalculator   *OperatorFeeCalculator  // Operator fee calculator
+	explorerClient          ExplorerClientInterface // Explorer client for fetching tx count
 }
 
 // Start runs the GasPriceOracle
@@ -78,7 +79,7 @@ func (g *GasPriceOracle) Start() error {
 	go g.TokenRatioLoop()
 
 	// Start operator fee update loop if configured
-	if g.config.OperatorFeeUpdateInterval > 0 {
+	if g.config.OperatorFeeUpdateEnabled {
 		go g.OperatorFeeLoop()
 	}
 
@@ -138,24 +139,39 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 
 func (g *GasPriceOracle) OperatorFeeLoop() {
 	// Reset to 24 hours if smaller than 24 hours
-	updateInterval := g.config.OperatorFeeUpdateInterval
+	constantUpdateInterval := g.config.OperatorFeeConstantUpdateInterval
+	scalarUpdateInterval := g.config.OperatorFeeScalarUpdateInterval
 	day := uint64(24 * 60 * 60)
-	if updateInterval < day {
-		updateInterval = day
-		log.Info("Operator fee update interval is less than 24 hours, setting to 24 hours")
+	if constantUpdateInterval < day {
+		constantUpdateInterval = day
+		log.Info("Operator fee constant update interval is less than 24 hours, setting to 24 hours")
 	}
 
-	timer := time.NewTicker(time.Duration(updateInterval) * time.Second)
-	defer timer.Stop()
+	if scalarUpdateInterval < g.config.tokenRatioUpdateFrequencySecond {
+		scalarUpdateInterval = g.config.tokenRatioUpdateFrequencySecond
+		log.Info("Operator fee scalar update interval is less than token ratio update frequency, setting to token ratio update frequency")
+	}
+
+	// Create separate timers for constant and scalar updates
+	constantTimer := time.NewTicker(time.Duration(constantUpdateInterval) * time.Second)
+	defer constantTimer.Stop()
+
+	scalarTimer := time.NewTicker(time.Duration(scalarUpdateInterval) * time.Second)
+	defer scalarTimer.Stop()
 
 	log.Info("Starting operator fee update loop",
-		"update_interval_seconds", updateInterval)
+		"constant_update_interval_seconds", constantUpdateInterval,
+		"scalar_update_interval_seconds", scalarUpdateInterval)
 
 	for {
 		select {
-		case <-timer.C:
+		case <-constantTimer.C:
 			if err := g.updateOperatorFeeConstant(); err != nil {
 				log.Error("Failed to update operator fee constant", "error", err)
+			}
+		case <-scalarTimer.C:
+			if err := g.updateOperatorFeeScalar(); err != nil {
+				log.Error("Failed to update operator fee scalar", "error", err)
 			}
 		case <-g.ctx.Done():
 			log.Info("Stopping operator fee update loop")
@@ -240,19 +256,33 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 
 	// Fetch the current operator fee constant and create a calculator if enabled
 	var currentOperatorFeeConstant *big.Int
-	var operatorFeeCalculator OperatorFeeCalculator
-	if cfg.OperatorFeeUpdateInterval > 0 {
-		log.Info("Operator fee constant update is enabled")
-		currentOperatorFeeConstant, err = contract.OperatorFeeConstant(&bind.CallOpts{
-			Context: context.Background(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch current operator fee constant: %w", err)
-		}
-		log.Info("Initialized operator fee constant cache", "value", currentOperatorFeeConstant.String())
-		ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(currentOperatorFeeConstant.Int64())
+	var currentOperatorFeeScalar *big.Int
+	var operatorFeeCalculator *OperatorFeeCalculator
+	var explorerClient ExplorerClientInterface
+	if cfg.OperatorFeeUpdateEnabled {
+		log.Info("Operator fee update is enabled")
 
-		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars)
+		currentOperatorFeeConstant, currentOperatorFeeScalar, err = fetchCurrentOperatorFee(contract)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch current operator fee: %w", err)
+		}
+
+		ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(currentOperatorFeeConstant.Int64())
+		ometrics.GasOracleStats.OperatorFeeScalarGauge.Update(currentOperatorFeeScalar.Int64())
+
+		log.Info("Initialized operator fee constant cache", "value", currentOperatorFeeConstant.String())
+		log.Info("Initialized operator fee scalar cache", "value", currentOperatorFeeScalar.String())
+
+		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars, cfg.Sp1GasScalar)
+
+		if cfg.BlockscoutExplorerURL != "" {
+			explorerClient = NewBlockscoutClient(cfg.BlockscoutExplorerURL)
+		} else {
+			if cfg.EtherscanAPIKey == "" {
+				return nil, fmt.Errorf("etherscan api key is not set")
+			}
+			explorerClient = NewEtherscanClient(cfg.EtherscanExplorerURL, cfg.EtherscanAPIKey)
+		}
 	}
 
 	gpo := GasPriceOracle{
@@ -267,8 +297,9 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		tokenRatio:              tokenRatioClient.tokenRatio,
 		auth:                    auth,
 		lastOperatorFeeConstant: currentOperatorFeeConstant,
+		lastOperatorFeeScalar:   currentOperatorFeeScalar,
 		operatorFeeCalculator:   operatorFeeCalculator,
-		explorerClient:          NewExplorerClient(cfg.BlockscoutExplorerURL),
+		explorerClient:          explorerClient,
 	}
 
 	if err := gpo.ensure(); err != nil {
@@ -276,6 +307,161 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 	}
 
 	return &gpo, nil
+}
+
+// updateOperatorFeeConstant calculate and update operator fee constant
+func (g *GasPriceOracle) updateOperatorFeeConstant() error {
+	// Step 1: Get current ETH price from token ratio client
+	ethPrice := g.tokenRatio.EthPrice()
+
+	// Step 2: Fetch transaction count from the explorer client
+	// DailyTxCountFromUser is the transaction count from the explorer client minus the daily block count
+	txCount, err := g.explorerClient.DailyTxCountFromUser(g.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch transaction count: %w", err)
+	}
+
+	// Step 3: Calculate new operator fee constant using the calculator function
+	newConstant, err := g.operatorFeeCalculator.CalOperatorFeeConstant(txCount, ethPrice)
+	if err != nil {
+		return fmt.Errorf("failed to calculate operator fee constant: %w", err)
+	}
+
+	// Step 4: Get cached operator fee constant
+	currentConstant := g.lastOperatorFeeConstant
+
+	log.Debug("Getting cached operator fee constant", "cached_value", currentConstant.String())
+
+	// Step 5: Only update if the value has changed by more than the significance factor
+	significanceFactor := g.config.OperatorFeeSignificanceFactor
+	if significanceFactor <= 0 {
+		significanceFactor = DefaultSignificanceFactor
+	}
+	if isDifferenceSignificant(currentConstant.Uint64(), newConstant.Uint64(), significanceFactor) {
+		log.Info("Updating operator fee constant - change exceeds threshold",
+			"current", currentConstant.String(),
+			"new", newConstant.String())
+
+		// Update the cache with the new value
+		g.lastOperatorFeeConstant = newConstant
+		return g.setOperatorFeeConstant(newConstant)
+	} else {
+		log.Debug("Operator fee constant unchanged or change is below threshold, skipping update",
+			"current_value", currentConstant.String())
+	}
+
+	return nil
+}
+
+// updateOperatorFeeConstantOnContract updates the operator fee constant on the smart contract
+func (g *GasPriceOracle) setOperatorFeeConstant(newConstant *big.Int) error {
+	// Send transaction to update operator fee constant
+	tx, err := g.contract.SetOperatorFeeConstant(g.auth.Opts(), newConstant)
+	if err != nil {
+		return fmt.Errorf("failed to update operator fee constant: %w", err)
+	}
+
+	log.Info("Operator fee constant update transaction sent",
+		"tx_hash", tx.Hash().Hex())
+	ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(newConstant.Int64())
+
+	// Wait for receipt if configured
+	if g.config.waitForReceipt {
+		// Wait for the receipt
+		receipt, err := waitForReceipt(g.l2Backend, tx)
+		if err != nil {
+			return err
+		}
+		log.Info("Operator fee constant update transaction confirmed",
+			"tx_hash", tx.Hash().Hex(),
+			"block_number", receipt.BlockNumber)
+	}
+
+	return nil
+}
+
+// updateOperatorFeeScalar calculate and update operator fee scalar
+func (g *GasPriceOracle) updateOperatorFeeScalar() error {
+	// Get current ETH price from token ratio client
+	ethPrice := g.tokenRatio.EthPrice()
+
+	// Calculate new operator fee scalar based on ETH price
+	// For now, we'll use a simple calculation - you can customize this logic
+	newScalar, err := g.operatorFeeCalculator.CalOperatorFeeScalar(ethPrice)
+	if err != nil {
+		return fmt.Errorf("failed to calculate operator fee scalar: %w", err)
+	}
+
+	// Get current operator fee scalar from contract
+	currentScalar, err := g.contract.OperatorFeeScalar(&bind.CallOpts{
+		Context: g.ctx,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get current operator fee scalar: %w", err)
+	}
+
+	// Only update if the value has changed by more than the significance factor
+	significanceFactor := g.config.OperatorFeeSignificanceFactor
+	if significanceFactor <= 0 {
+		significanceFactor = DefaultSignificanceFactor
+	}
+	if isDifferenceSignificant(currentScalar.Uint64(), newScalar.Uint64(), significanceFactor) {
+		log.Info("Updating operator fee scalar - change exceeds threshold",
+			"current", currentScalar.String(),
+			"new", newScalar.String())
+
+		return g.setOperatorFeeScalar(newScalar)
+	} else {
+		log.Debug("Operator fee scalar unchanged or change is below threshold, skipping update",
+			"current_value", currentScalar.String())
+	}
+
+	return nil
+}
+
+// setOperatorFeeScalar updates the operator fee scalar on the smart contract
+func (g *GasPriceOracle) setOperatorFeeScalar(newScalar *big.Int) error {
+	// Send transaction to update operator fee scalar
+	tx, err := g.contract.SetOperatorFeeScalar(g.auth.Opts(), newScalar)
+	if err != nil {
+		return fmt.Errorf("failed to update operator fee scalar: %w", err)
+	}
+
+	log.Info("Operator fee scalar update transaction sent",
+		"tx_hash", tx.Hash().Hex())
+
+	// Wait for receipt if configured
+	if g.config.waitForReceipt {
+		// Wait for the receipt
+		receipt, err := waitForReceipt(g.l2Backend, tx)
+		if err != nil {
+			return err
+		}
+		log.Info("Operator fee scalar update transaction confirmed",
+			"tx_hash", tx.Hash().Hex(),
+			"block_number", receipt.BlockNumber)
+	}
+
+	return nil
+}
+
+// fetchCurrentOperatorFee fetches the current operator fee constant and scalar from the contract
+func fetchCurrentOperatorFee(contract *bindings.GasPriceOracle) (*big.Int, *big.Int, error) {
+	currentOperatorFeeConstant, err := contract.OperatorFeeConstant(&bind.CallOpts{
+		Context: context.Background(),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch current operator fee constant: %w", err)
+	}
+
+	currentOperatorFeeScalar, err := contract.OperatorFeeScalar(&bind.CallOpts{
+		Context: context.Background(),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch current operator fee scalar: %w", err)
+	}
+
+	return currentOperatorFeeConstant, currentOperatorFeeScalar, nil
 }
 
 // Ensure that we can actually connect
