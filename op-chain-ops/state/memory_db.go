@@ -105,8 +105,8 @@ func (db *MemoryStateDB) GetBalance(addr common.Address) *uint256.Int {
 	if !ok {
 		return common.U2560
 	}
-	u256Bal, ok := uint256.FromBig(account.Balance)
-	if !ok {
+	u256Bal, overflow := uint256.FromBig(account.Balance)
+	if overflow {
 		return common.U2560
 	}
 	return u256Bal

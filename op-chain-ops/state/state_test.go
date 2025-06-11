@@ -8,15 +8,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/solc"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state/testdata"
-
-	"github.com/stretchr/testify/require"
+	"github.com/ethereum-optimism/optimism/op-service/backends"
 )
 
 var (

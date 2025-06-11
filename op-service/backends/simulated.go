@@ -721,9 +721,9 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	}
 
 	// Set infinite balance to the fake caller account.
-	u256Max, ok := uint256.FromBig(emath.MaxBig256)
-	if !ok {
-		return nil, fmt.Errorf("max big 256 overflows (%d)", emath.MaxBig256)
+	u256Max, overflow := uint256.FromBig(emath.MaxBig256)
+	if overflow {
+		return nil, fmt.Errorf("max big 256 overflows (%s)", emath.MaxBig256.String())
 	}
 	stateDB.SetBalance(call.From, u256Max, tracing.BalanceMint)
 

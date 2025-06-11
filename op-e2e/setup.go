@@ -36,11 +36,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	proposermetrics "github.com/ethereum-optimism/optimism/op-proposer/metrics"
 	l2os "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
@@ -164,7 +164,7 @@ func DefaultSystemConfig(t *testing.T) SystemConfig {
 			"verifier":  testlog.Logger(t, log.LvlInfo).New("role", "verifier"),
 			"sequencer": testlog.Logger(t, log.LvlInfo).New("role", "sequencer"),
 			"batcher":   testlog.Logger(t, log.LvlInfo).New("role", "batcher"),
-			"proposer":  testlog.Logger(t, log.LvlCrit).New("role", "proposer"),
+			"proposer":  testlog.Logger(t, log.LevelCrit).New("role", "proposer"),
 		},
 		GethOptions:           map[string][]GethOption{},
 		P2PTopology:           nil, // no P2P connectivity by default
@@ -505,8 +505,7 @@ func (cfg SystemConfig) Start(_opts ...SystemConfigOption) (*System, error) {
 	}
 
 	// Don't log state snapshots in test output
-	snapLog := log.New()
-	snapLog.SetHandler(log.DiscardHandler())
+	snapLog := log.NewLogger(log.DiscardHandler())
 
 	// Rollup nodes
 
@@ -580,7 +579,7 @@ func (cfg SystemConfig) Start(_opts ...SystemConfigOption) (*System, error) {
 		TxMgrConfig:       newTxMgrConfig(sys.Nodes["l1"].WSEndpoint(), cfg.Secrets.Proposer),
 		AllowNonFinalized: cfg.NonFinalizedProposals,
 		LogConfig: oplog.CLIConfig{
-			Level:  "info",
+			Level:  log.LevelInfo,
 			Format: "text",
 		},
 	}, sys.cfg.Loggers["proposer"], proposermetrics.NoopMetrics)
@@ -609,7 +608,7 @@ func (cfg SystemConfig) Start(_opts ...SystemConfigOption) (*System, error) {
 		PollInterval:    50 * time.Millisecond,
 		TxMgrConfig:     newTxMgrConfig(sys.Nodes["l1"].WSEndpoint(), cfg.Secrets.Batcher),
 		LogConfig: oplog.CLIConfig{
-			Level:  "info",
+			Level:  log.LevelInfo,
 			Format: "text",
 		},
 	}, sys.cfg.Loggers["batcher"], batchermetrics.NoopMetrics)

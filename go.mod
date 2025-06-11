@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.23.0
 
-replace github.com/ethereum/go-ethereum v1.15.11 => github.com/mantlenetworkio/op-geth v0.0.0-20250605114204-873b36d75e2b
+replace github.com/ethereum/go-ethereum v1.15.11 => github.com/mantlenetworkio/op-geth v0.0.0-20250611062612-f2040782a1d0
 
 require (
 	cloud.google.com/go/kms v1.12.1
@@ -10,6 +10,7 @@ require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
+	github.com/cockroachdb/pebble v1.1.2
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum/go-ethereum v1.15.11
@@ -62,7 +63,6 @@ require (
 	github.com/cockroachdb/errors v1.11.3 // indirect
 	github.com/cockroachdb/fifo v0.0.0-20240606204812-0bbfbd93a7ce // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/pebble v1.1.2 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/consensys/bavard v0.1.27 // indirect

@@ -7,26 +7,24 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	rpcclient "github.com/ethereum-optimism/optimism/op-node/client"
-
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	rpcclient "github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-node/version"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
 
 func TestOutputAtBlock(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 
 	// Test data for Merkle Patricia Trie: proof the eth2 deposit contract account contents (mainnet).
 	headerTestData := `
@@ -133,7 +131,7 @@ func TestOutputAtBlock(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
 	safeReader := &mockSafeDBReader{}
@@ -175,7 +173,7 @@ func randomSyncStatus(rng *rand.Rand) *eth.SyncStatus {
 }
 
 func TestSyncStatus(t *testing.T) {
-	log := testlog.Logger(t, log.LvlError)
+	log := testlog.Logger(t, log.LevelError)
 	l2Client := &testutils.MockL2Client{}
 	drClient := &mockDriverClient{}
 	safeReader := &mockSafeDBReader{}

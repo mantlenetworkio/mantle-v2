@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -48,7 +48,7 @@ type OpGeth struct {
 }
 
 func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, error) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	l1Genesis, err := genesis.BuildL1DeveloperGenesis(cfg.DeployConfig)
 	require.Nil(t, err)
 	l1Block := l1Genesis.ToBlock()

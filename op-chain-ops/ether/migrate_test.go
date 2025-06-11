@@ -5,16 +5,16 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-chain-ops/util"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-
-	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/util"
 )
 
 func TestMigrateBalances(t *testing.T) {
@@ -193,10 +193,8 @@ func TestMigrateBalances(t *testing.T) {
 
 func makeLegacyETH(t *testing.T, totalSupply *big.Int, balances map[common.Address]*big.Int, allowances map[common.Address]common.Address) (*state.StateDB, util.DBFactory) {
 	memDB := rawdb.NewMemoryDatabase()
-	db, err := state.New(common.Hash{}, state.NewDatabaseWithConfig(memDB, &trie.Config{
-		Preimages: true,
-		Cache:     1024,
-	}), nil)
+	sdb := state.NewDatabase(triedb.NewDatabase(memDB, &triedb.Config{Preimages: true}), nil)
+	db, err := state.New(types.EmptyRootHash, sdb)
 	require.NoError(t, err)
 
 	db.CreateAccount(OVMETHAddress)
@@ -215,17 +213,14 @@ func makeLegacyETH(t *testing.T, totalSupply *big.Int, balances map[common.Addre
 		db.SetState(OVMETHAddress, CalcAllowanceStorageKey(from, to), common.BigToHash(big.NewInt(1)))
 	}
 
-	root, err := db.Commit(false)
+	root, err := db.Commit(0, false, false)
 	require.NoError(t, err)
 
 	err = db.Database().TrieDB().Commit(root, true)
 	require.NoError(t, err)
 
 	return db, func() (*state.StateDB, error) {
-		return state.New(root, state.NewDatabaseWithConfig(memDB, &trie.Config{
-			Preimages: true,
-			Cache:     1024,
-		}), nil)
+		return state.New(root, state.NewDatabase(triedb.NewDatabase(memDB, &triedb.Config{Preimages: true}), nil))
 	}
 }
 
