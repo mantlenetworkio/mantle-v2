@@ -386,7 +386,6 @@ func (g *GasPriceOracle) updateOperatorFeeScalar() error {
 	ethPrice := g.tokenRatio.EthPrice()
 
 	// Calculate new operator fee scalar based on ETH price
-	// For now, we'll use a simple calculation - you can customize this logic
 	newScalar, err := g.operatorFeeCalculator.CalOperatorFeeScalar(ethPrice)
 	if err != nil {
 		return fmt.Errorf("failed to calculate operator fee scalar: %w", err)
