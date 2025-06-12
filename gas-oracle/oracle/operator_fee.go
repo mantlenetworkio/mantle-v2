@@ -29,18 +29,22 @@ func NewOperatorFeeCalculator(intrinsicSp1GasPerTx, intrinsicSp1GasPerBlock uint
 		intrinsicSp1GasPerTx = DefaultIntrinsicSp1GasPerTx
 		log.Info("Using default intrinsic sp1 gas per tx", "value", intrinsicSp1GasPerTx)
 	}
+	log.Debug("Given intrinsic sp1 gas per tx", "value", intrinsicSp1GasPerTx)
 	if intrinsicSp1GasPerBlock == 0 {
 		intrinsicSp1GasPerBlock = DefaultIntrinsicSp1GasPerBlock
 		log.Info("Using default intrinsic sp1 gas per block", "value", intrinsicSp1GasPerBlock)
 	}
+	log.Debug("Given intrinsic sp1 gas per block", "value", intrinsicSp1GasPerBlock)
 	if sp1PricePerBGasInDollars <= 0 {
 		sp1PricePerBGasInDollars = DefaultSp1PricePerBGasInDollars
 		log.Info("Using default sp1 price per bgas in dollars", "value", sp1PricePerBGasInDollars)
 	}
+	log.Debug("Given sp1 price per bgas in dollars", "value", sp1PricePerBGasInDollars)
 	if sp1GasScalar == 0 {
 		sp1GasScalar = DefaultSp1GasScalar
 		log.Info("Using default sp1 gas scalar", "value", sp1GasScalar)
 	}
+	log.Debug("Given sp1 gas scalar", "value", sp1GasScalar)
 
 	return &OperatorFeeCalculator{
 		intrinsicSp1GasPerTx:     intrinsicSp1GasPerTx,
