@@ -21,31 +21,9 @@ test:
 lint:
 	golangci-lint run ./...
 
-abi:
-	cat $(CONTRACTS_PATH)/L2/GasPriceOracle.sol/GasPriceOracle.json \
-		| jq '{abi,bytecode}' \
-		> abis/GasPriceOracle.json
-
-binding: abi
-	$(eval temp := $(shell mktemp))
-
-	cat abis/GasPriceOracle.json \
-		| jq -r .bytecode > $(temp)
-
-	cat abis/GasPriceOracle.json \
-		| jq .abi \
-		| abigen --pkg bindings \
-		--abi - \
-		--out bindings/gaspriceoracle.go \
-		--type GasPriceOracle \
-		--bin $(temp)
-
-	rm $(temp)
 
 .PHONY: \
 	gas-oracle \
 	clean \
 	test \
 	lint \
-	abi \
-	binding
