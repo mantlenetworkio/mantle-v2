@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
@@ -33,6 +34,12 @@ var (
 	// errNoBaseFee represents the error when the base fee is not found on the
 	// block. This means that the block being queried is pre eip1559
 	errNoBaseFee = errors.New("base fee not found on block")
+)
+
+const (
+	DefaultOperatorFeeUpdateInterval     = 300  // 5 minutes
+	DefaultOperatorFeeSignificanceFactor = 0.05 // 5% threshold
+
 )
 
 // GasPriceOracle manages a hot key that can update the L2 Gas Price
@@ -138,41 +145,46 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 }
 
 func (g *GasPriceOracle) OperatorFeeLoop() {
-	// Reset to 24 hours if smaller than 24 hours
-	constantUpdateInterval := g.config.OperatorFeeConstantUpdateInterval
-	scalarUpdateInterval := g.config.OperatorFeeScalarUpdateInterval
-	day := uint64(24 * 60 * 60)
-	if constantUpdateInterval < day {
-		constantUpdateInterval = day
-		log.Info("Operator fee constant update interval is less than 24 hours, setting to 24 hours")
+	updateInterval := g.config.OperatorFeeUpdateInterval
+	if updateInterval == 0 {
+		updateInterval = DefaultOperatorFeeUpdateInterval
+		log.Info("Operator fee update interval is not set, setting to default", "interval", updateInterval)
 	}
 
-	if scalarUpdateInterval < g.config.tokenRatioUpdateFrequencySecond {
-		scalarUpdateInterval = g.config.tokenRatioUpdateFrequencySecond
-		log.Info("Operator fee scalar update interval is less than token ratio update frequency, setting to token ratio update frequency")
-	}
-
-	// Create separate timers for constant and scalar updates
-	constantTimer := time.NewTicker(time.Duration(constantUpdateInterval) * time.Second)
-	defer constantTimer.Stop()
-
-	scalarTimer := time.NewTicker(time.Duration(scalarUpdateInterval) * time.Second)
-	defer scalarTimer.Stop()
+	timer := time.NewTicker(time.Duration(updateInterval) * time.Second)
+	defer timer.Stop()
 
 	log.Info("Starting operator fee update loop",
-		"constant_update_interval_seconds", constantUpdateInterval,
-		"scalar_update_interval_seconds", scalarUpdateInterval)
+		"update_interval_seconds", updateInterval)
 
 	for {
 		select {
-		case <-constantTimer.C:
-			if err := g.updateOperatorFeeConstant(); err != nil {
-				log.Error("Failed to update operator fee constant", "error", err)
-			}
-		case <-scalarTimer.C:
-			if err := g.updateOperatorFeeScalar(); err != nil {
-				log.Error("Failed to update operator fee scalar", "error", err)
-			}
+		case <-timer.C:
+			var wg sync.WaitGroup
+
+			// Update operator fee constant
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := g.updateOperatorFeeConstant(); err != nil {
+					log.Error("Failed to update operator fee constant", "error", err)
+				} else {
+					log.Debug("Successfully updated operator fee constant")
+				}
+			}()
+
+			// Update operator fee scalar
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := g.updateOperatorFeeScalar(); err != nil {
+					log.Error("Failed to update operator fee scalar", "error", err)
+				} else {
+					log.Debug("Successfully updated operator fee scalar")
+				}
+			}()
+
+			wg.Wait()
 		case <-g.ctx.Done():
 			log.Info("Stopping operator fee update loop")
 			return
@@ -335,7 +347,7 @@ func (g *GasPriceOracle) updateOperatorFeeConstant() error {
 	// Step 5: Only update if the value has changed by more than the significance factor
 	significanceFactor := g.config.OperatorFeeSignificanceFactor
 	if significanceFactor <= 0 {
-		significanceFactor = DefaultSignificanceFactor
+		significanceFactor = DefaultOperatorFeeSignificanceFactor
 	}
 	if isDifferenceSignificant(currentConstant.Uint64(), newConstant.Uint64(), significanceFactor) {
 		log.Info("Updating operator fee constant - change exceeds threshold",
@@ -403,7 +415,7 @@ func (g *GasPriceOracle) updateOperatorFeeScalar() error {
 	// Only update if the value has changed by more than the significance factor
 	significanceFactor := g.config.OperatorFeeSignificanceFactor
 	if significanceFactor <= 0 {
-		significanceFactor = DefaultSignificanceFactor
+		significanceFactor = DefaultOperatorFeeSignificanceFactor
 	}
 	if isDifferenceSignificant(currentScalar.Uint64(), newScalar.Uint64(), significanceFactor) {
 		log.Info("Updating operator fee scalar - change exceeds threshold",
