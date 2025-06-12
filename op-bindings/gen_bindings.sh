@@ -37,7 +37,7 @@ TEMP=$(mktemp -d)
 CWD=$(pwd)
 # Build contracts
 cd ${CONTRACTS_PATH}
-forge inspect ${NAME} abi > ${TEMP}/${TYPE}.abi
+forge inspect ${NAME} abi --json > ${TEMP}/${TYPE}.abi
 forge inspect ${NAME} bytecode > ${TEMP}/${TYPE}.bin
 forge inspect ${NAME} deployedBytecode > ${CWD}/bin/${TYPE_LOWER}_deployed.hex
 
