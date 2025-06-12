@@ -32,7 +32,7 @@ func main() {
 	// Configure the logging
 	app.Before = func(ctx *cli.Context) error {
 		loglevel := ctx.GlobalUint64(flags.LogLevelFlag.Name)
-		log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(loglevel), log.StreamHandler(os.Stdout, log.TerminalFormat(true))))
+		log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(loglevel), log.StreamHandler(os.Stdout, log.TerminalFormat(false))))
 		return nil
 	}
 
@@ -43,16 +43,17 @@ func main() {
 		}
 
 		config := oracle.NewConfig(ctx)
-		gpo, err := oracle.NewGasPriceOracle(config)
-		if err != nil {
-			return err
-		}
 
 		if config.MetricsEnabled {
 			address := fmt.Sprintf("%s:%d", config.MetricsHTTP, config.MetricsPort)
 			log.Info("Enabling stand-alone metrics HTTP endpoint", "address", address)
 			ometrics.Setup(address)
 			ometrics.InitAndRegisterStats(ometrics.DefaultRegistry)
+		}
+
+		gpo, err := oracle.NewGasPriceOracle(config)
+		if err != nil {
+			return err
 		}
 
 		if err := gpo.Start(); err != nil {

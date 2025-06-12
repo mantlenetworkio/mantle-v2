@@ -39,6 +39,18 @@ type Config struct {
 	MetricsEnabled bool
 	MetricsHTTP    string
 	MetricsPort    int
+	// operator fee config
+	OperatorFeeUpdateEnabled      bool
+	OperatorFeeUpdateInterval     uint64
+	OperatorFeeSignificanceFactor float64
+	IntrinsicSp1GasPerTx          uint64
+	IntrinsicSp1GasPerBlock       uint64
+	Sp1PricePerBGasInDollars      float64
+	Sp1GasScalar                  uint64
+	// mantle explorer config
+	BlockscoutExplorerURL string
+	EtherscanExplorerURL  string
+	EtherscanAPIKey       string
 }
 
 // NewConfig creates a new Config
@@ -97,6 +109,20 @@ func NewConfig(ctx *cli.Context) *Config {
 	cfg.MetricsEnabled = ctx.GlobalBool(flags.MetricsEnabledFlag.Name)
 	cfg.MetricsHTTP = ctx.GlobalString(flags.MetricsHTTPFlag.Name)
 	cfg.MetricsPort = ctx.GlobalInt(flags.MetricsPortFlag.Name)
+
+	if ctx.GlobalIsSet(flags.OperatorFeeUpdateEnabledFlag.Name) {
+		cfg.OperatorFeeUpdateEnabled = ctx.GlobalBool(flags.OperatorFeeUpdateEnabledFlag.Name)
+		cfg.OperatorFeeUpdateInterval = ctx.GlobalUint64(flags.OperatorFeeUpdateIntervalFlag.Name)
+		cfg.OperatorFeeSignificanceFactor = ctx.GlobalFloat64(flags.OperatorFeeSignificanceFactorFlag.Name)
+		cfg.IntrinsicSp1GasPerTx = ctx.GlobalUint64(flags.IntrinsicSp1GasPerTxFlag.Name)
+		cfg.IntrinsicSp1GasPerBlock = ctx.GlobalUint64(flags.IntrinsicSp1GasPerBlockFlag.Name)
+		cfg.Sp1PricePerBGasInDollars = ctx.GlobalFloat64(flags.Sp1PricePerBGasInDollarsFlag.Name)
+		cfg.Sp1GasScalar = ctx.GlobalUint64(flags.Sp1GasScalarFlag.Name)
+	}
+
+	cfg.BlockscoutExplorerURL = ctx.GlobalString(flags.BlockscoutExplorerURLFlag.Name)
+	cfg.EtherscanExplorerURL = ctx.GlobalString(flags.EtherscanExplorerURLFlag.Name)
+	cfg.EtherscanAPIKey = ctx.GlobalString(flags.EtherscanAPIKeyFlag.Name)
 
 	return &cfg
 }
