@@ -40,14 +40,13 @@ type Config struct {
 	MetricsHTTP    string
 	MetricsPort    int
 	// operator fee config
-	OperatorFeeUpdateEnabled          bool
-	OperatorFeeConstantUpdateInterval uint64
-	OperatorFeeScalarUpdateInterval   uint64
-	OperatorFeeSignificanceFactor     float64
-	IntrinsicSp1GasPerTx              uint64
-	IntrinsicSp1GasPerBlock           uint64
-	Sp1PricePerBGasInDollars          float64
-	Sp1GasScalar                      uint64
+	OperatorFeeUpdateEnabled      bool
+	OperatorFeeUpdateInterval     uint64
+	OperatorFeeSignificanceFactor float64
+	IntrinsicSp1GasPerTx          uint64
+	IntrinsicSp1GasPerBlock       uint64
+	Sp1PricePerBGasInDollars      float64
+	Sp1GasScalar                  uint64
 	// mantle explorer config
 	BlockscoutExplorerURL string
 	EtherscanExplorerURL  string
@@ -113,8 +112,7 @@ func NewConfig(ctx *cli.Context) *Config {
 
 	if ctx.IsSet(flags.OperatorFeeUpdateEnabledFlag.Name) {
 		cfg.OperatorFeeUpdateEnabled = ctx.Bool(flags.OperatorFeeUpdateEnabledFlag.Name)
-		cfg.OperatorFeeConstantUpdateInterval = ctx.Uint64(flags.OperatorFeeConstantUpdateIntervalFlag.Name)
-		cfg.OperatorFeeScalarUpdateInterval = ctx.Uint64(flags.OperatorFeeScalarUpdateIntervalFlag.Name)
+		cfg.OperatorFeeUpdateInterval = ctx.Uint64(flags.OperatorFeeUpdateIntervalFlag.Name)
 		cfg.OperatorFeeSignificanceFactor = ctx.Float64(flags.OperatorFeeSignificanceFactorFlag.Name)
 		cfg.IntrinsicSp1GasPerTx = ctx.Uint64(flags.IntrinsicSp1GasPerTxFlag.Name)
 		cfg.IntrinsicSp1GasPerBlock = ctx.Uint64(flags.IntrinsicSp1GasPerBlockFlag.Name)

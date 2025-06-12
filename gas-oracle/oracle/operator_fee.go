@@ -13,8 +13,6 @@ const (
 	DefaultIntrinsicSp1GasPerBlock  = uint64(15e6)
 	DefaultSp1PricePerBGasInDollars = 0.58
 	DefaultSp1GasScalar             = uint64(0.0025 * 1e6)
-
-	DefaultSignificanceFactor = 0.05 // 5% threshold
 )
 
 // OperatorFeeCalculator is designed to calculate the operator fee constant and scalar
