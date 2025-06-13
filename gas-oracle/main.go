@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	"github.com/mattn/go-isatty"
 	"os"
 
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/gas-oracle/flags"
 	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
 	"github.com/ethereum-optimism/optimism/gas-oracle/oracle"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 var (
