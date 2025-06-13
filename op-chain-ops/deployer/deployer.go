@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
@@ -15,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/ethereum-optimism/optimism/op-service/backends"
 )
 
 // TestKey is the same test key that geth uses
@@ -65,9 +66,8 @@ func NewBackendWithGenesisTimestamp(ts uint64) *backends.SimulatedBackend {
 		// Activated proof of stake. We manually build/commit blocks in the simulator anyway,
 		// and the timestamp verification of PoS is not against the wallclock,
 		// preventing blocks from getting stuck temporarily in the future-blocks queue, decreasing setup time a lot.
-		MergeNetsplitBlock:            big.NewInt(0),
-		TerminalTotalDifficulty:       big.NewInt(0),
-		TerminalTotalDifficultyPassed: true,
+		MergeNetsplitBlock:      big.NewInt(0),
+		TerminalTotalDifficulty: big.NewInt(0),
 	}
 
 	return backends.NewSimulatedBackendWithOpts(
@@ -78,7 +78,7 @@ func NewBackendWithGenesisTimestamp(ts uint64) *backends.SimulatedBackend {
 			Config:     &chainConfig,
 			Timestamp:  ts,
 			Difficulty: big.NewInt(0),
-			Alloc: core.GenesisAlloc{
+			Alloc: types.GenesisAlloc{
 				crypto.PubkeyToAddress(TestKey.PublicKey): {Balance: thousandETH},
 			},
 			GasLimit: 15000000,

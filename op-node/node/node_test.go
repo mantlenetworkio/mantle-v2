@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
@@ -37,7 +36,6 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 		l1Source       *sources.L1Client
 		l2Driver       *driver.Driver
 		l2Source       *sources.EngineClient
-		daSyncer       *da.MantleDataStore
 		rpcSync        *sources.SyncClient
 		server         *rpcServer
 		p2pNode        *p2p.NodeP2P
@@ -92,7 +90,6 @@ func TestOpNode_initL1BeaconAPI(t *testing.T) {
 				l1Source:       tt.fields.l1Source,
 				l2Driver:       tt.fields.l2Driver,
 				l2Source:       tt.fields.l2Source,
-				daSyncer:       tt.fields.daSyncer,
 				rpcSync:        tt.fields.rpcSync,
 				server:         tt.fields.server,
 				p2pNode:        tt.fields.p2pNode,

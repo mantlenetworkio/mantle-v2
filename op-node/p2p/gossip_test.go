@@ -5,22 +5,21 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/ethereum/go-ethereum/log"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 func TestGuardGossipValidator(t *testing.T) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	val := guardGossipValidator(logger, func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 		if id == "mallory" {
 			panic("mallory was here")
@@ -41,7 +40,7 @@ func TestGuardGossipValidator(t *testing.T) {
 }
 
 func TestVerifyBlockSignature(t *testing.T) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	cfg := &rollup.Config{
 		L2ChainID: big.NewInt(100),
 	}

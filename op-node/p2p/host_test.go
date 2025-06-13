@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/rpc"
 	ds "github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -19,15 +22,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rpc"
-
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 func TestingConfig(t *testing.T) *Config {
@@ -59,10 +58,10 @@ func TestingConfig(t *testing.T) *Config {
 func TestP2PSimple(t *testing.T) {
 	confA := TestingConfig(t)
 	confB := TestingConfig(t)
-	hostA, err := confA.Host(testlog.Logger(t, log.LvlError).New("host", "A"), nil)
+	hostA, err := confA.Host(testlog.Logger(t, log.LevelError).New("host", "A"), nil)
 	require.NoError(t, err, "failed to launch host A")
 	defer hostA.Close()
-	hostB, err := confB.Host(testlog.Logger(t, log.LvlError).New("host", "B"), nil)
+	hostB, err := confB.Host(testlog.Logger(t, log.LevelError).New("host", "B"), nil)
 	require.NoError(t, err, "failed to launch host B")
 	defer hostB.Close()
 	err = hostA.Connect(context.Background(), peer.AddrInfo{ID: hostB.ID(), Addrs: hostB.Addrs()})
@@ -71,10 +70,10 @@ func TestP2PSimple(t *testing.T) {
 }
 
 type mockGossipIn struct {
-	OnUnsafeL2PayloadFn func(ctx context.Context, from peer.ID, msg *eth.ExecutionPayload) error
+	OnUnsafeL2PayloadFn func(ctx context.Context, from peer.ID, msg *eth.ExecutionPayloadEnvelope) error
 }
 
-func (m *mockGossipIn) OnUnsafeL2Payload(ctx context.Context, from peer.ID, msg *eth.ExecutionPayload) error {
+func (m *mockGossipIn) OnUnsafeL2Payload(ctx context.Context, from peer.ID, msg *eth.ExecutionPayloadEnvelope) error {
 	if m.OnUnsafeL2PayloadFn != nil {
 		return m.OnUnsafeL2PayloadFn(ctx, from, msg)
 	}
@@ -117,7 +116,7 @@ func TestP2PFull(t *testing.T) {
 	runCfgA := &testutils.MockRuntimeConfig{P2PSeqAddress: common.Address{0x42}}
 	runCfgB := &testutils.MockRuntimeConfig{P2PSeqAddress: common.Address{0x42}}
 
-	logA := testlog.Logger(t, log.LvlError).New("host", "A")
+	logA := testlog.Logger(t, log.LevelError).New("host", "A")
 	nodeA, err := NewNodeP2P(context.Background(), &rollup.Config{}, logA, &confA, &mockGossipIn{}, nil, runCfgA, metrics.NoopMetrics)
 	require.NoError(t, err)
 	defer nodeA.Close()
@@ -139,7 +138,7 @@ func TestP2PFull(t *testing.T) {
 	confB.StaticPeers, err = peer.AddrInfoToP2pAddrs(&peer.AddrInfo{ID: hostA.ID(), Addrs: hostA.Addrs()})
 	require.NoError(t, err)
 
-	logB := testlog.Logger(t, log.LvlError).New("host", "B")
+	logB := testlog.Logger(t, log.LevelError).New("host", "B")
 
 	nodeB, err := NewNodeP2P(context.Background(), &rollup.Config{}, logB, &confB, &mockGossipIn{}, nil, runCfgB, metrics.NoopMetrics)
 	require.NoError(t, err)
@@ -219,9 +218,9 @@ func TestDiscovery(t *testing.T) {
 	pC, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	require.NoError(t, err, "failed to generate new p2p priv key")
 
-	logA := testlog.Logger(t, log.LvlError).New("host", "A")
-	logB := testlog.Logger(t, log.LvlError).New("host", "B")
-	logC := testlog.Logger(t, log.LvlError).New("host", "C")
+	logA := testlog.Logger(t, log.LevelError).New("host", "A")
+	logB := testlog.Logger(t, log.LevelError).New("host", "B")
+	logC := testlog.Logger(t, log.LevelError).New("host", "C")
 
 	discDBA, err := enode.OpenDB("") // "" = memory db
 	require.NoError(t, err)

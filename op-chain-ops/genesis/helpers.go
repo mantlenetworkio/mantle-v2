@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/holiman/uint256"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
@@ -62,7 +63,7 @@ var DevAccounts = []common.Address{
 }
 
 // The devBalance is the amount of wei that a dev account is funded with.
-var devBalance = hexutil.MustDecodeBig("0x200000000000000000000000000000000000000000000000000000000000000")
+var devBalance = uint256.MustFromHex("0x200000000000000000000000000000000000000000000000000000000000000")
 
 // AddressToCodeNamespace takes a predeploy address and computes
 // the implementation address that the implementation should be deployed at

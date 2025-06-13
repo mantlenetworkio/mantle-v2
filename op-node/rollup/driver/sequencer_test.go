@@ -16,12 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 var mockResetErr = fmt.Errorf("mock reset err: %w", derive.ErrReset)
@@ -32,7 +32,7 @@ type FakeEngineControl struct {
 	unsafe    eth.L2BlockRef
 
 	buildingOnto eth.L2BlockRef
-	buildingID   eth.PayloadID
+	buildingID   eth.PayloadInfo
 	buildingSafe bool
 
 	buildingAttrs *eth.PayloadAttributes
@@ -42,7 +42,7 @@ type FakeEngineControl struct {
 
 	timeNow func() time.Time
 
-	makePayload func(onto eth.L2BlockRef, attrs *eth.PayloadAttributes) *eth.ExecutionPayload
+	makePayload func(onto eth.L2BlockRef, attrs *eth.PayloadAttributes) *eth.ExecutionPayloadEnvelope
 
 	errTyp derive.BlockInsertionErrType
 	err    error
@@ -64,8 +64,8 @@ func (m *FakeEngineControl) StartPayload(ctx context.Context, parent eth.L2Block
 	if m.err != nil {
 		return m.errTyp, m.err
 	}
-	m.buildingID = eth.PayloadID{}
-	_, _ = crand.Read(m.buildingID[:])
+	m.buildingID = eth.PayloadInfo{}
+	_, _ = crand.Read(m.buildingID.ID[:])
 	m.buildingOnto = parent
 	m.buildingSafe = updateSafe
 	m.buildingAttrs = attrs
@@ -73,7 +73,7 @@ func (m *FakeEngineControl) StartPayload(ctx context.Context, parent eth.L2Block
 	return derive.BlockInsertOK, nil
 }
 
-func (m *FakeEngineControl) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayload, errTyp derive.BlockInsertionErrType, err error) {
+func (m *FakeEngineControl) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp derive.BlockInsertionErrType, err error) {
 	if m.err != nil {
 		return nil, m.errTyp, m.err
 	}
@@ -81,7 +81,7 @@ func (m *FakeEngineControl) ConfirmPayload(ctx context.Context) (out *eth.Execut
 	m.totalBuildingTime += buildTime
 	m.totalBuiltBlocks += 1
 	payload := m.makePayload(m.buildingOnto, m.buildingAttrs)
-	ref, err := derive.PayloadToBlockRef(payload, &m.cfg.Genesis)
+	ref, err := derive.PayloadToBlockRef(payload.ExecutionPayload, &m.cfg.Genesis)
 	if err != nil {
 		panic(err)
 	}
@@ -91,7 +91,7 @@ func (m *FakeEngineControl) ConfirmPayload(ctx context.Context) (out *eth.Execut
 	}
 
 	m.resetBuildingState()
-	m.totalTxs += len(payload.Transactions)
+	m.totalTxs += len(payload.ExecutionPayload.Transactions)
 	return payload, derive.BlockInsertOK, nil
 }
 
@@ -102,7 +102,7 @@ func (m *FakeEngineControl) CancelPayload(ctx context.Context, force bool) error
 	return m.err
 }
 
-func (m *FakeEngineControl) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadID, safe bool) {
+func (m *FakeEngineControl) BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadInfo, safe bool) {
 	return m.buildingOnto, m.buildingID, m.buildingSafe
 }
 
@@ -119,7 +119,7 @@ func (m *FakeEngineControl) SafeL2Head() eth.L2BlockRef {
 }
 
 func (m *FakeEngineControl) resetBuildingState() {
-	m.buildingID = eth.PayloadID{}
+	m.buildingID = eth.PayloadInfo{}
 	m.buildingOnto = eth.L2BlockRef{}
 	m.buildingSafe = false
 	m.buildingAttrs = nil
@@ -173,7 +173,7 @@ func TestSequencerChaosMonkey(t *testing.T) {
 	l1Time := uint64(100000)
 
 	// mute errors. We expect a lot of the mocked errors to cause error-logs. We check chain health at the end of the test.
-	log := testlog.Logger(t, log.LvlCrit)
+	log := testlog.Logger(t, log.LevelCrit)
 
 	cfg := &rollup.Config{
 		Genesis: rollup.Genesis{
@@ -212,7 +212,7 @@ func TestSequencerChaosMonkey(t *testing.T) {
 	engControl.timeNow = clockFn
 
 	// mock payload building, we don't need to process any real txs.
-	engControl.makePayload = func(onto eth.L2BlockRef, attrs *eth.PayloadAttributes) *eth.ExecutionPayload {
+	engControl.makePayload = func(onto eth.L2BlockRef, attrs *eth.PayloadAttributes) *eth.ExecutionPayloadEnvelope {
 		txs := make([]eth.Data, 0)
 		txs = append(txs, attrs.Transactions...) // include deposits
 		if !attrs.NoTxPool {                     // if we are allowed to sequence from tx pool, mock some txs
@@ -221,12 +221,14 @@ func TestSequencerChaosMonkey(t *testing.T) {
 				txs = append(txs, []byte(fmt.Sprintf("mock sequenced tx %d", i)))
 			}
 		}
-		return &eth.ExecutionPayload{
-			ParentHash:   onto.Hash,
-			BlockNumber:  eth.Uint64Quantity(onto.Number) + 1,
-			Timestamp:    attrs.Timestamp,
-			BlockHash:    mockL2Hash(onto.Number),
-			Transactions: txs,
+		return &eth.ExecutionPayloadEnvelope{
+			ExecutionPayload: &eth.ExecutionPayload{
+				ParentHash:   onto.Hash,
+				BlockNumber:  eth.Uint64Quantity(onto.Number) + 1,
+				Timestamp:    attrs.Timestamp,
+				BlockHash:    mockL2Hash(onto.Number),
+				Transactions: txs,
+			},
 		}
 	}
 
@@ -353,10 +355,10 @@ func TestSequencerChaosMonkey(t *testing.T) {
 		if payload != nil {
 			require.Equal(t, engControl.UnsafeL2Head().ID(), payload.ID(), "head must stay in sync with emitted payloads")
 			var tx types.Transaction
-			require.NoError(t, tx.UnmarshalBinary(payload.Transactions[0]))
+			require.NoError(t, tx.UnmarshalBinary(payload.ExecutionPayload.Transactions[0]))
 			info, err := derive.L1InfoDepositTxData(tx.Data())
 			require.NoError(t, err)
-			require.GreaterOrEqual(t, uint64(payload.Timestamp), info.Time, "ensure L2 time >= L1 time")
+			require.GreaterOrEqual(t, uint64(payload.ExecutionPayload.Timestamp), info.Time, "ensure L2 time >= L1 time")
 		}
 	}
 

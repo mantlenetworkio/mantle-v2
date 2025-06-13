@@ -3,13 +3,14 @@ package util
 import (
 	crand "crypto/rand"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/triedb"
 	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
 )
 
@@ -163,10 +164,8 @@ func TestPartitionKeyspace(t *testing.T) {
 
 func setupRandTest(t *testing.T) ([]common.Hash, DBFactory, int) {
 	memDB := rawdb.NewMemoryDatabase()
-	db, err := state.New(common.Hash{}, state.NewDatabaseWithConfig(memDB, &trie.Config{
-		Preimages: true,
-		Cache:     1024,
-	}), nil)
+	sdb := state.NewDatabase(triedb.NewDatabase(memDB, &triedb.Config{Preimages: true}), nil)
+	db, err := state.New(types.EmptyRootHash, sdb)
 	require.NoError(t, err)
 
 	hashCount := rand.Intn(100)
@@ -183,17 +182,14 @@ func setupRandTest(t *testing.T) ([]common.Hash, DBFactory, int) {
 		db.SetState(testAddr, hashes[j], hashes[j])
 	}
 
-	root, err := db.Commit(false)
+	root, err := db.Commit(0, false, false)
 	require.NoError(t, err)
 
 	err = db.Database().TrieDB().Commit(root, true)
 	require.NoError(t, err)
 
 	factory := func() (*state.StateDB, error) {
-		return state.New(root, state.NewDatabaseWithConfig(memDB, &trie.Config{
-			Preimages: true,
-			Cache:     1024,
-		}), nil)
+		return state.New(root, state.NewDatabase(triedb.NewDatabase(memDB, &triedb.Config{Preimages: true}), nil))
 	}
 
 	workerCount := rand.Intn(64)

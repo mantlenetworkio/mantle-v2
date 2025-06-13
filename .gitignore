@@ -19,7 +19,6 @@ cache
 
 vendor
 
-l2geth/build/bin
 packages/contracts/deployments/custom
 packages/contracts/coverage*
 packages/contracts/@ens*
@@ -66,3 +65,11 @@ __pycache__
 
 # Ignore echidna artifacts
 crytic-export
+
+# historical module
+datalayr
+eignlayr-contracts
+l2geth
+
+# for debug
+op-node/cmd/op_node*

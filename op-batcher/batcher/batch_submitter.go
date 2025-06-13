@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
 
@@ -34,7 +34,9 @@ func Main(version string, cliCtx *cli.Context) error {
 		return fmt.Errorf("invalid CLI flags: %w", err)
 	}
 
-	l := oplog.NewLogger(cfg.LogConfig)
+	l := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.LogConfig)
+	oplog.SetGlobalLogHandler(l.Handler())
+
 	opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, l)
 	m := metrics.NewMetrics("default")
 	l.Info("Initializing Batch Submitter")

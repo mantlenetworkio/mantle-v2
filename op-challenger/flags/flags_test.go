@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // TestUniqueFlags asserts that all flag names are unique, to avoid accidental conflicts between the many flags.
@@ -38,7 +38,7 @@ func TestCorrectEnvVarPrefix(t *testing.T) {
 	for _, flag := range Flags {
 		envVar := envVarForFlag(flag)
 		if envVar == "" {
-			t.Errorf("Failed to find EnvVar for flag %v", flag.GetName())
+			t.Errorf("Failed to find EnvVars for flag %v", flag.GetName())
 		}
 		if !strings.HasPrefix(envVar, "OP_CHALLENGER_") {
 			t.Errorf("Flag %v env var (%v) does not start with OP_CHALLENGER_", flag.GetName(), envVar)
@@ -51,7 +51,7 @@ func TestCorrectEnvVarPrefix(t *testing.T) {
 
 func envVarForFlag(flag cli.Flag) string {
 	values := reflect.ValueOf(flag)
-	envVarValue := values.FieldByName("EnvVar")
+	envVarValue := values.FieldByName("EnvVars")
 	if envVarValue == (reflect.Value{}) {
 		return ""
 	}

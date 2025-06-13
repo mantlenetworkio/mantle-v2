@@ -6,20 +6,22 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/holiman/uint256"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/deployer"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/immutables"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/state"
-	"github.com/stretchr/testify/require"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var (
@@ -191,7 +193,7 @@ func TestGetPendingWithdrawals(t *testing.T) {
 	L2db := state.NewMemoryStateDB(nil)
 	// Set the test account and give it a large balance
 	L2db.CreateAccount(testAccount)
-	L2db.AddBalance(testAccount, big.NewInt(10000000000000000))
+	L2db.AddBalance(testAccount, uint256.NewInt(10000000000000000), tracing.BalanceMint)
 	// Set the L2ToL1MessagePasser in the L2 state
 	err := setL2ToL1MessagePasser(L2db, common.HexToAddress("0x3c3a81e81dc49A522A592e7622A7E711c06bf354"))
 	require.Nil(t, err)
@@ -265,7 +267,7 @@ func TestGetPendingWithdrawals(t *testing.T) {
 	// Create a L1 backend with a dev account
 	L1db := state.NewMemoryStateDB(nil)
 	L1db.CreateAccount(testAccount)
-	L1db.AddBalance(testAccount, big.NewInt(10000000000000000))
+	L1db.AddBalance(testAccount, uint256.NewInt(10000000000000000), tracing.BalanceMint)
 
 	// Set the L1CrossDomainMessenger into the L1 state. Only set a subset
 	// of the messages as finalized, the first 3.

@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -603,7 +602,7 @@ func (m *SimpleTxManager) suggestGasPriceCaps(ctx context.Context) (*big.Int, *b
 
 	var blobFee *big.Int
 	if head.ExcessBlobGas != nil {
-		blobFee = eip4844.CalcBlobFee(*head.ExcessBlobGas)
+		blobFee = eth.CalcBlobFeeDefault(head)
 	}
 
 	return tip, head.BaseFee, blobFee, nil
@@ -685,8 +684,8 @@ func MakeSidecar(blobs []*eth.Blob) (*types.BlobTxSidecar, []common.Hash, error)
 	sidecar := &types.BlobTxSidecar{}
 	blobHashes := []common.Hash{}
 	for i, blob := range blobs {
-		rawBlob := *blob.KZGBlob()
-		sidecar.Blobs = append(sidecar.Blobs, rawBlob)
+		rawBlob := blob.KZGBlob()
+		sidecar.Blobs = append(sidecar.Blobs, *rawBlob)
 		commitment, err := kzg4844.BlobToCommitment(rawBlob)
 		if err != nil {
 			return nil, nil, fmt.Errorf("cannot compute KZG commitment of blob %d in tx candidate: %w", i, err)

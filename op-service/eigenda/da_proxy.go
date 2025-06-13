@@ -46,7 +46,7 @@ const (
 	GenericCommitmentType byte = 1
 )
 
-// EigenDAClient returns a new EigenDA Proxy client.
+// NewEigenDAClient returns a new EigenDA Proxy client.
 func NewEigenDAClient(cfg Config, log log.Logger, m Metrics) *EigenDAClient {
 	return &EigenDAClient{
 		proxyUrl:            cfg.ProxyUrl,

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
@@ -80,6 +80,8 @@ type Config struct {
 	// Active if BaseFeeTime != nil && L2 block timestamp >= *BaseFeeTime, inactive otherwise.
 	BaseFeeTime *uint64 `json:"base_fee_time,omitempty"`
 
+	MantleSkadiTime *uint64 `json:"mantle_skadi_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -124,6 +126,10 @@ func (cfg *Config) ValidateL2Config(ctx context.Context, client L2Client) error 
 	}
 
 	return nil
+}
+
+func (cfg *Config) TimestampForBlock(blockNumber uint64) uint64 {
+	return cfg.Genesis.L2Time + ((blockNumber - cfg.Genesis.L2.Number) * cfg.BlockTime)
 }
 
 func (cfg *Config) TargetBlockNumber(timestamp uint64) (num uint64, err error) {
@@ -274,6 +280,18 @@ func (c *Config) IsBaseFee(timestamp uint64) bool {
 	return c.BaseFeeTime != nil && timestamp >= *c.BaseFeeTime
 }
 
+func (c *Config) IsMantleSkadi(timestamp uint64) bool {
+	return c.MantleSkadiTime != nil && timestamp >= *c.MantleSkadiTime
+}
+
+// IsMantleSkadiActivationBlock returns whether the specified block is the first block subject to the
+// Mantle Skadi upgrade.
+func (c *Config) IsMantleSkadiActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleSkadi(l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleSkadi(l2BlockTime-c.BlockTime)
+}
+
 // Description outputs a banner describing the important parts of rollup configuration in a human-readable form.
 // Optionally provide a mapping of L2 chain IDs to network names to label the L2 chain with if not unknown.
 // The config should be config.Check()-ed before creating a description.
@@ -324,6 +342,38 @@ func (c *Config) LogDescription(log log.Logger, l2Chains map[string]string) {
 		"l1_network", networkL1, "l2_start_time", c.Genesis.L2Time, "l2_block_hash", c.Genesis.L2.Hash.String(),
 		"l2_block_number", c.Genesis.L2.Number, "l1_block_hash", c.Genesis.L1.Hash.String(),
 		"l1_block_number", c.Genesis.L1.Number, "regolith_time", fmtForkTimeOrUnset(c.RegolithTime))
+}
+
+// ForkchoiceUpdatedVersion returns the EngineAPIMethod suitable for the chain hard fork version.
+func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod {
+	if attr == nil {
+		// Don't begin payload build process.
+		return eth.ForkchoiceUpdatedV3
+	}
+	ts := uint64(attr.Timestamp)
+	if c.IsMantleSkadi(ts) {
+		return eth.ForkchoiceUpdatedV3
+	} else {
+		return eth.ForkchoiceUpdatedV1
+	}
+}
+
+// NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
+func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
+	if c.IsMantleSkadi(timestamp) {
+		return eth.NewPayloadV4
+	} else {
+		return eth.NewPayloadV2
+	}
+}
+
+// GetPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
+func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
+	if c.IsMantleSkadi(timestamp) {
+		return eth.GetPayloadV4
+	} else {
+		return eth.GetPayloadV2
+	}
 }
 
 func fmtForkTimeOrUnset(v *uint64) string {

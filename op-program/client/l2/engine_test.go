@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -176,7 +176,8 @@ func createL2Block(t *testing.T, number int) *types.Block {
 		Number:  big.NewInt(int64(number)),
 		BaseFee: big.NewInt(7),
 	}
-	return types.NewBlock(header, []*types.Transaction{types.NewTx(tx)}, nil, nil, trie.NewStackTrie(nil))
+	txs := []*types.Transaction{types.NewTx(tx)}
+	return types.NewBlock(header, &types.Body{Transactions: txs}, nil, trie.NewStackTrie(nil), types.DefaultBlockConfig)
 }
 
 type stubEngineBackend struct {

@@ -17,15 +17,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-proposer/flags"
 	"github.com/ethereum-optimism/optimism/op-proposer/metrics"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	oprpc "github.com/ethereum-optimism/optimism/op-service/rpc"
@@ -45,7 +45,9 @@ func Main(version string, cliCtx *cli.Context) error {
 		return fmt.Errorf("invalid CLI flags: %w", err)
 	}
 
-	l := oplog.NewLogger(cfg.LogConfig)
+	l := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.LogConfig)
+	oplog.SetGlobalLogHandler(l.Handler())
+
 	opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, l)
 	m := metrics.NewMetrics("default")
 	l.Info("Initializing L2 Output Submitter")
@@ -289,16 +291,16 @@ func (l *L2OutputSubmitter) fetchOuput(ctx context.Context, block *big.Int) (*et
 	defer cancel()
 	output, err := l.rollupClient.OutputAtBlock(ctx, block.Uint64())
 	if err != nil {
-		l.log.Error("failed to fetch output at block %d: %w", block, err)
+		l.log.Error("failed to fetch output at block", "block_number", block.Uint64(), "err", err)
 		return nil, false, err
 	}
 	if output.Version != supportedL2OutputVersion {
-		l.log.Error("unsupported l2 output version: %s", output.Version)
+		l.log.Error("unsupported l2 output version", "output_version", output.Version)
 		return nil, false, errors.New("unsupported l2 output version")
 	}
 	if output.BlockRef.Number != block.Uint64() { // sanity check, e.g. in case of bad RPC caching
-		l.log.Error("invalid blockNumber: next blockNumber is %v, blockNumber of block is %v", block, output.BlockRef.Number)
-		return nil, false, errors.New("invalid blockNumber")
+		l.log.Error("invalid block number", "block_number", block.Uint64(), "output.BlockRef.number", output.BlockRef.Number)
+		return nil, false, errors.New("invalid block number")
 	}
 
 	// Always propose if it's part of the Finalized L2 chain. Or if allowed, if it's part of the safe L2 chain.

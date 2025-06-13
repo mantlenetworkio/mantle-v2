@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ type priceBumpTest struct {
 
 func (tc *priceBumpTest) run(t *testing.T) {
 	prevFC := calcGasFeeCap(big.NewInt(tc.prevBasefee), big.NewInt(tc.prevGasTip))
-	lgr := testlog.Logger(t, log.LvlCrit)
+	lgr := testlog.Logger(t, log.LevelCrit)
 
 	tip, fc := updateFees(big.NewInt(tc.prevGasTip), prevFC, big.NewInt(tc.newGasTip), big.NewInt(tc.newBasefee), false, lgr)
 

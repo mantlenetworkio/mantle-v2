@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 func DialClient(ctx context.Context, endpoint string, jwtSecret [32]byte) (client.RPC, error) {

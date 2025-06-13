@@ -38,6 +38,15 @@ type PeerDump struct {
 	BannedSubnets  []*net.IPNet         `json:"bannedSubnets"`
 }
 
+type PeerStats struct {
+	Connected     uint `json:"connected"`
+	Table         uint `json:"table"`
+	BlocksTopic   uint `json:"blocksTopic"`
+	BlocksTopicV4 uint `json:"blocksTopicV4"`
+	Banned        uint `json:"banned"`
+	Known         uint `json:"known"`
+}
+
 type API interface {
 	Self(ctx context.Context) (*PeerInfo, error)
 	Peers(ctx context.Context, connected bool) (*PeerDump, error)

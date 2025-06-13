@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // Config represents the configuration options for the gas oracle
@@ -44,27 +44,27 @@ type Config struct {
 // NewConfig creates a new Config
 func NewConfig(ctx *cli.Context) *Config {
 	cfg := Config{}
-	cfg.ethereumHttpUrl = ctx.GlobalString(flags.EthereumHttpUrlFlag.Name)
-	cfg.layerTwoHttpUrl = ctx.GlobalString(flags.LayerTwoHttpUrlFlag.Name)
-	addr := ctx.GlobalString(flags.GasPriceOracleAddressFlag.Name)
+	cfg.ethereumHttpUrl = ctx.String(flags.EthereumHttpUrlFlag.Name)
+	cfg.layerTwoHttpUrl = ctx.String(flags.LayerTwoHttpUrlFlag.Name)
+	addr := ctx.String(flags.GasPriceOracleAddressFlag.Name)
 	cfg.gasPriceOracleAddress = common.HexToAddress(addr)
-	cfg.tokenRatioCexURL = ctx.GlobalString(flags.TokenRatioCexURL.Name)
-	cfg.tokenRatioDexURL = ctx.GlobalString(flags.TokenRatioDexURL.Name)
-	cfg.tokenRatioUpdateFrequencySecond = ctx.GlobalUint64(flags.TokenRatioUpdateFrequencySecond.Name)
-	cfg.tokenRatioEpochLengthSeconds = ctx.GlobalUint64(flags.TokenRatioEpochLengthSecondsFlag.Name)
-	cfg.tokenRatioSignificanceFactor = ctx.GlobalFloat64(flags.TokenRatioSignificanceFactorFlag.Name)
-	cfg.tokenRatioScalar = ctx.GlobalFloat64(flags.TokenRatioScalarFlag.Name)
-	cfg.EnableHsm = ctx.GlobalBool(flags.EnableHsmFlag.Name)
-	cfg.HsmAddress = ctx.GlobalString(flags.HsmAddressFlag.Name)
-	cfg.HsmAPIName = ctx.GlobalString(flags.HsmAPINameFlag.Name)
-	cfg.HsmCreden = ctx.GlobalString(flags.HsmCredenFlag.Name)
+	cfg.tokenRatioCexURL = ctx.String(flags.TokenRatioCexURL.Name)
+	cfg.tokenRatioDexURL = ctx.String(flags.TokenRatioDexURL.Name)
+	cfg.tokenRatioUpdateFrequencySecond = ctx.Uint64(flags.TokenRatioUpdateFrequencySecond.Name)
+	cfg.tokenRatioEpochLengthSeconds = ctx.Uint64(flags.TokenRatioEpochLengthSecondsFlag.Name)
+	cfg.tokenRatioSignificanceFactor = ctx.Float64(flags.TokenRatioSignificanceFactorFlag.Name)
+	cfg.tokenRatioScalar = ctx.Float64(flags.TokenRatioScalarFlag.Name)
+	cfg.EnableHsm = ctx.Bool(flags.EnableHsmFlag.Name)
+	cfg.HsmAddress = ctx.String(flags.HsmAddressFlag.Name)
+	cfg.HsmAPIName = ctx.String(flags.HsmAPINameFlag.Name)
+	cfg.HsmCreden = ctx.String(flags.HsmCredenFlag.Name)
 
 	if cfg.EnableHsm {
 		log.Info("gasoracle", "enableHsm", cfg.EnableHsm,
 			"hsmAddress", cfg.HsmAddress)
 	} else {
-		if ctx.GlobalIsSet(flags.PrivateKeyFlag.Name) {
-			hex := ctx.GlobalString(flags.PrivateKeyFlag.Name)
+		if ctx.IsSet(flags.PrivateKeyFlag.Name) {
+			hex := ctx.String(flags.PrivateKeyFlag.Name)
 			hex = strings.TrimPrefix(hex, "0x")
 			key, err := crypto.HexToECDSA(hex)
 			if err != nil {
@@ -76,27 +76,27 @@ func NewConfig(ctx *cli.Context) *Config {
 		}
 	}
 
-	if ctx.GlobalIsSet(flags.L1ChainIDFlag.Name) {
-		chainID := ctx.GlobalUint64(flags.L1ChainIDFlag.Name)
+	if ctx.IsSet(flags.L1ChainIDFlag.Name) {
+		chainID := ctx.Uint64(flags.L1ChainIDFlag.Name)
 		cfg.l1ChainID = new(big.Int).SetUint64(chainID)
 	}
-	if ctx.GlobalIsSet(flags.L2ChainIDFlag.Name) {
-		chainID := ctx.GlobalUint64(flags.L2ChainIDFlag.Name)
+	if ctx.IsSet(flags.L2ChainIDFlag.Name) {
+		chainID := ctx.Uint64(flags.L2ChainIDFlag.Name)
 		cfg.l2ChainID = new(big.Int).SetUint64(chainID)
 	}
 
-	if ctx.GlobalIsSet(flags.TransactionGasPriceFlag.Name) {
-		gasPrice := ctx.GlobalUint64(flags.TransactionGasPriceFlag.Name)
+	if ctx.IsSet(flags.TransactionGasPriceFlag.Name) {
+		gasPrice := ctx.Uint64(flags.TransactionGasPriceFlag.Name)
 		cfg.gasPrice = new(big.Int).SetUint64(gasPrice)
 	}
 
-	if ctx.GlobalIsSet(flags.WaitForReceiptFlag.Name) {
+	if ctx.IsSet(flags.WaitForReceiptFlag.Name) {
 		cfg.waitForReceipt = true
 	}
 
-	cfg.MetricsEnabled = ctx.GlobalBool(flags.MetricsEnabledFlag.Name)
-	cfg.MetricsHTTP = ctx.GlobalString(flags.MetricsHTTPFlag.Name)
-	cfg.MetricsPort = ctx.GlobalInt(flags.MetricsPortFlag.Name)
+	cfg.MetricsEnabled = ctx.Bool(flags.MetricsEnabledFlag.Name)
+	cfg.MetricsHTTP = ctx.String(flags.MetricsHTTPFlag.Name)
+	cfg.MetricsPort = ctx.Int(flags.MetricsPortFlag.Name)
 
 	return &cfg
 }

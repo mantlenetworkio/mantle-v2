@@ -8,24 +8,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mattn/go-isatty"
-	"github.com/urfave/cli/v2"
-
-	"github.com/ethereum-optimism/optimism/op-chain-ops/util"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	legacy_bindings "github.com/ethereum-optimism/optimism/op-bindings/legacy-bindings"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/mattn/go-isatty"
+	"github.com/urfave/cli/v2"
+
+	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	legacy_bindings "github.com/ethereum-optimism/optimism/op-bindings/legacy-bindings"
+	"github.com/ethereum-optimism/optimism/op-chain-ops/util"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 func main() {
-	log.Root().SetHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(isatty.IsTerminal(os.Stderr.Fd()))))
+	oplog.SetGlobalLogHandler(log.NewTerminalHandler(os.Stdout, isatty.IsTerminal(os.Stderr.Fd())))
 
 	app := cli.NewApp()
 	app.Name = "rollover"

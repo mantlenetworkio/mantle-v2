@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -50,31 +50,31 @@ func (m CLIConfig) Check() error {
 }
 
 func CLIFlags(envPrefix string) []cli.Flag {
-	prefixEnvVars := func(name string) string {
-		return PrefixEnvVar(envPrefix, name)
+	prefixEnvVars := func(name string) []string {
+		return []string{PrefixEnvVar(envPrefix, name)}
 	}
 	return []cli.Flag{
-		cli.StringFlag{
-			Name:   EigenDADisperserUrlFlagName,
-			Usage:  "RPC endpoint of the EigenDA disperser",
-			EnvVar: prefixEnvVars("EIGENDA_DISPERSER_URL"),
+		&cli.StringFlag{
+			Name:    EigenDADisperserUrlFlagName,
+			Usage:   "RPC endpoint of the EigenDA disperser",
+			EnvVars: prefixEnvVars("EIGENDA_DISPERSER_URL"),
 		},
-		cli.StringFlag{
-			Name:   EigenDAProxyUrlFlagName,
-			Usage:  "HTTP endpoint of the EigenDA proxy",
-			EnvVar: prefixEnvVars("EIGENDA_PROXY_URL"),
+		&cli.StringFlag{
+			Name:    EigenDAProxyUrlFlagName,
+			Usage:   "HTTP endpoint of the EigenDA proxy",
+			EnvVars: prefixEnvVars("EIGENDA_PROXY_URL"),
 		},
-		cli.DurationFlag{
-			Name:   DisperseBlobTimeoutFlagName,
-			Usage:  "Timeout for EigenDA disperse blob",
-			EnvVar: prefixEnvVars("EIGENDA_DISPERSER_TIMEOUT"),
-			Value:  20 * time.Minute,
+		&cli.DurationFlag{
+			Name:    DisperseBlobTimeoutFlagName,
+			Usage:   "Timeout for EigenDA disperse blob",
+			EnvVars: prefixEnvVars("EIGENDA_DISPERSER_TIMEOUT"),
+			Value:   20 * time.Minute,
 		},
-		cli.DurationFlag{
-			Name:   RetrieveBlobTimeoutFlagName,
-			Usage:  "Timeout for EigenDA retrieve blob",
-			EnvVar: prefixEnvVars("EIGENDA_RETRIEVE_TIMEOUT"),
-			Value:  30 * time.Second,
+		&cli.DurationFlag{
+			Name:    RetrieveBlobTimeoutFlagName,
+			Usage:   "Timeout for EigenDA retrieve blob",
+			EnvVars: prefixEnvVars("EIGENDA_RETRIEVE_TIMEOUT"),
+			Value:   30 * time.Second,
 		},
 	}
 }

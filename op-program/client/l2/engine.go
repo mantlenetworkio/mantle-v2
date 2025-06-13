@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -40,34 +40,34 @@ func (o *OracleEngine) L2OutputRoot() (eth.Bytes32, error) {
 	if err != nil {
 		return eth.Bytes32{}, fmt.Errorf("failed to open L2 state db at block %s: %w", outBlock.Hash(), err)
 	}
-	withdrawalsTrie, err := stateDB.StorageTrie(predeploys.L2ToL1MessagePasserAddr)
+	withdrawalsTrie, err := stateDB.OpenStorageTrie(predeploys.L2ToL1MessagePasserAddr)
 	if err != nil {
 		return eth.Bytes32{}, fmt.Errorf("withdrawals trie unavailable at block %v: %w", outBlock.Hash(), err)
 	}
 	return rollup.ComputeL2OutputRootV0(eth.HeaderBlockInfo(outBlock), withdrawalsTrie.Hash())
 }
 
-func (o *OracleEngine) GetPayload(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
-	return o.api.GetPayloadV1(ctx, payloadId)
+func (o *OracleEngine) GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
+	return o.api.GetPayloadV1(ctx, payloadInfo)
 }
 
 func (o *OracleEngine) ForkchoiceUpdate(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error) {
 	return o.api.ForkchoiceUpdatedV1(ctx, state, attr)
 }
 
-func (o *OracleEngine) NewPayload(ctx context.Context, payload *eth.ExecutionPayload) (*eth.PayloadStatusV1, error) {
+func (o *OracleEngine) NewPayload(ctx context.Context, payload *eth.ExecutionPayload, parentBeaconBlockRoot *common.Hash) (*eth.PayloadStatusV1, error) {
 	return o.api.NewPayloadV1(ctx, payload)
 }
 
-func (o *OracleEngine) PayloadByHash(ctx context.Context, hash common.Hash) (*eth.ExecutionPayload, error) {
+func (o *OracleEngine) PayloadByHash(ctx context.Context, hash common.Hash) (*eth.ExecutionPayloadEnvelope, error) {
 	block := o.backend.GetBlockByHash(hash)
 	if block == nil {
 		return nil, ErrNotFound
 	}
-	return eth.BlockAsPayload(block)
+	return eth.BlockAsPayloadEnv(block, o.backend.Config())
 }
 
-func (o *OracleEngine) PayloadByNumber(ctx context.Context, n uint64) (*eth.ExecutionPayload, error) {
+func (o *OracleEngine) PayloadByNumber(ctx context.Context, n uint64) (*eth.ExecutionPayloadEnvelope, error) {
 	hash := o.backend.GetCanonicalHash(n)
 	if hash == (common.Hash{}) {
 		return nil, ErrNotFound
@@ -110,5 +110,5 @@ func (o *OracleEngine) SystemConfigByL2Hash(ctx context.Context, hash common.Has
 	if err != nil {
 		return eth.SystemConfig{}, err
 	}
-	return derive.PayloadToSystemConfig(payload, o.rollupCfg)
+	return derive.PayloadToSystemConfig(payload.ExecutionPayload, o.rollupCfg)
 }

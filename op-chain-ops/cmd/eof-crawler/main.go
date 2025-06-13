@@ -2,17 +2,19 @@ package main
 
 import (
 	"errors"
+
 	"os"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/eof"
-	"github.com/ethereum/go-ethereum/log"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 func main() {
-	log.Root().SetHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(isatty.IsTerminal(os.Stderr.Fd()))))
+	oplog.SetGlobalLogHandler(log.NewTerminalHandler(os.Stdout, isatty.IsTerminal(os.Stderr.Fd())))
 
 	app := &cli.App{
 		Name:  "eof-crawler",

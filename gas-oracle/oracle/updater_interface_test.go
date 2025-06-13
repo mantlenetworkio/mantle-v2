@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+
+	"github.com/ethereum-optimism/optimism/op-service/backends"
 )
 
 func TestIsDifferenceSignificant(t *testing.T) {
@@ -39,8 +40,8 @@ func TestIsDifferenceSignificant(t *testing.T) {
 func newSimulatedBackend(key *ecdsa.PrivateKey) (*backends.SimulatedBackend, ethdb.Database) {
 	var gasLimit uint64 = 9_000_000
 	auth, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(1337))
-	genAlloc := make(core.GenesisAlloc)
-	genAlloc[auth.From] = core.GenesisAccount{Balance: big.NewInt(9223372036854775807)}
+	genAlloc := make(types.GenesisAlloc)
+	genAlloc[auth.From] = types.Account{Balance: big.NewInt(9223372036854775807)}
 	db := rawdb.NewMemoryDatabase()
 	sim := backends.NewSimulatedBackendWithDatabase(db, genAlloc, gasLimit)
 	return sim, db

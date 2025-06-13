@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.19.9-alpine3.16 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.9-alpine3.21 AS builder
 
 ARG VERSION=v0.0.0
 
@@ -8,14 +8,12 @@ RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash
 COPY ./op-batcher /app/op-batcher
 COPY ./op-bindings /app/op-bindings
 COPY ./op-node /app/op-node
+COPY ./op-chain-ops /app/op-chain-ops
 COPY ./op-service /app/op-service
 COPY ./op-signer /app/op-signer
-COPY ./datalayr /app/datalayr
 COPY ./go.mod /app/go.mod
 COPY ./go.sum /app/go.sum
-COPY ./bss-core /app/bss-core
-
-COPY ./op-batcher/docker.go.work /go/go.work
+COPY ./.git /app/.git
 
 WORKDIR /app/op-batcher
 
@@ -27,7 +25,7 @@ ARG TARGETOS TARGETARCH
 
 RUN make op-batcher VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH
 
-FROM alpine:3.16
+FROM alpine:3.21
 
 COPY --from=builder /app/op-batcher/bin/op-batcher /usr/local/bin
 

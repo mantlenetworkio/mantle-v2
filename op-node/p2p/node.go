@@ -14,8 +14,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	ma "github.com/multiformats/go-multiaddr"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -111,7 +111,7 @@ func (n *NodeP2P) init(resourcesCtx context.Context, rollupCfg *rollup.Config, l
 		if err != nil {
 			return fmt.Errorf("failed to join blocks gossip topic: %w", err)
 		}
-		log.Info("started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().Pretty())
+		log.Info("started p2p host", "addrs", n.host.Addrs(), "peerID", n.host.ID().String())
 
 		tcpPort, err := FindActiveTCPPort(n.host)
 		if err != nil {

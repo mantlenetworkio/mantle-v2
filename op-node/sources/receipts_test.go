@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -149,7 +149,7 @@ func (tc *ReceiptsTestCase) Run(t *testing.T) {
 	if tc.staticMethod { // if static, instantly reset, for fast clock-independent testing
 		testCfg.MethodResetDuration = 0
 	}
-	logger := testlog.Logger(t, log.LvlError)
+	logger := testlog.Logger(t, log.LevelError)
 	ethCl, err := NewEthClient(client.NewBaseRPCClient(cl), logger, nil, testCfg)
 	require.NoError(t, err)
 	defer ethCl.Close()

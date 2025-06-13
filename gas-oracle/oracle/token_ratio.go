@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"math/big"
 
-	bsscore "github.com/ethereum-optimism/optimism/bss-core"
-	"github.com/ethereum-optimism/optimism/gas-oracle/bindings"
-	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
-	"github.com/ethereum-optimism/optimism/gas-oracle/tokenratio"
+	kms "cloud.google.com/go/kms/apiv1"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
-
-	kms "cloud.google.com/go/kms/apiv1"
 	"google.golang.org/api/option"
+
+	"github.com/ethereum-optimism/optimism/gas-oracle/bindings"
+	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
+	"github.com/ethereum-optimism/optimism/gas-oracle/tokenratio"
+	"github.com/ethereum-optimism/optimism/op-service/hsm"
 )
 
 func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployContractBackend, tokenRatio *tokenratio.Client, cfg *Config) (func() error, error) {
@@ -50,7 +50,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			log.Warn("gasoracle", "create signer error", err.Error())
 			return nil, err
 		}
-		mk := &bsscore.ManagedKey{
+		mk := &hsm.ManagedKey{
 			KeyName:      cfg.HsmAPIName,
 			EthereumAddr: common.HexToAddress(cfg.HsmAddress),
 			Gclient:      client,

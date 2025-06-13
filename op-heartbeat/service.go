@@ -14,8 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/urfave/cli"
-
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-node/heartbeat"

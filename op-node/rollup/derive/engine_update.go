@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // isDepositTx checks an opaqueTx to determine if it is a Deposit Transaction
@@ -117,17 +117,18 @@ func StartPayload(ctx context.Context, eng Engine, fc eth.ForkchoiceState, attrs
 // ConfirmPayload ends an execution payload building process in the provided Engine, and persists the payload as the canonical head.
 // If updateSafe is true, then the payload will also be recognized as safe-head at the same time.
 // The severity of the error is distinguished to determine whether the payload was valid and can become canonical.
-func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.ForkchoiceState, id eth.PayloadID, updateSafe bool) (out *eth.ExecutionPayload, errTyp BlockInsertionErrType, err error) {
-	payload, err := eng.GetPayload(ctx, id)
+func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.ForkchoiceState, info eth.PayloadInfo, updateSafe bool) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
+	envelope, err := eng.GetPayload(ctx, info)
 	if err != nil {
 		// even if it is an input-error (unknown payload ID), it is temporary, since we will re-attempt the full payload building, not just the retrieval of the payload.
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to get execution payload: %w", err)
 	}
+	payload := envelope.ExecutionPayload
 	if err := sanityCheckPayload(payload); err != nil {
 		return nil, BlockInsertPayloadErr, err
 	}
 
-	status, err := eng.NewPayload(ctx, payload)
+	status, err := eng.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
 	if err != nil {
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to insert execution payload: %w", err)
 	}
@@ -164,5 +165,5 @@ func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.Fork
 		"state_root", payload.StateRoot, "timestamp", uint64(payload.Timestamp), "parent", payload.ParentHash,
 		"prev_randao", payload.PrevRandao, "fee_recipient", payload.FeeRecipient,
 		"txs", len(payload.Transactions), "update_safe", updateSafe)
-	return payload, BlockInsertOK, nil
+	return envelope, BlockInsertOK, nil
 }

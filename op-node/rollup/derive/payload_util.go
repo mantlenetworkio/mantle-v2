@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // PayloadToBlockRef extracts the essential L2BlockRef information from an execution payload,
@@ -75,7 +76,7 @@ func PayloadToSystemConfig(payload *eth.ExecutionPayload, cfg *rollup.Config) (e
 			Overhead:    info.L1FeeOverhead,
 			Scalar:      info.L1FeeScalar,
 			GasLimit:    uint64(payload.GasLimit),
-			BaseFee:     payload.BaseFeePerGas.ToBig(),
+			BaseFee:     (*uint256.Int)(&payload.BaseFeePerGas).ToBig(),
 		}, err
 	}
 }

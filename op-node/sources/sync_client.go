@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
 	"github.com/ethereum-optimism/optimism/op-service/backoff"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -29,7 +29,7 @@ var RpcSyncPeer peer.ID = "ALT_RPC_SYNC"
 
 // receivePayload queues the received payload for processing.
 // This may return an error if there's no capacity for the payload.
-type receivePayload = func(ctx context.Context, from peer.ID, payload *eth.ExecutionPayload) error
+type receivePayload = func(ctx context.Context, from peer.ID, payload *eth.ExecutionPayloadEnvelope) error
 
 type RPCSync interface {
 	io.Closer
@@ -181,19 +181,19 @@ func (s *SyncClient) eventLoop() {
 func (s *SyncClient) fetchUnsafeBlockFromRpc(ctx context.Context, blockNumber uint64) error {
 	s.log.Info("Requesting unsafe payload from backup RPC", "block number", blockNumber)
 
-	payload, err := s.PayloadByNumber(ctx, blockNumber)
+	envelope, err := s.PayloadByNumber(ctx, blockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to fetch payload by number (%d): %w", blockNumber, err)
 	}
 	// Note: the underlying RPC client used for syncing verifies the execution payload blockhash, if set to untrusted.
 
-	s.log.Info("Received unsafe payload from backup RPC", "payload", payload.ID())
+	s.log.Info("Received unsafe payload from backup RPC", "payload", envelope.ID())
 
 	// Send the retrieved payload to the `unsafeL2Payloads` channel.
-	if err = s.receivePayload(ctx, RpcSyncPeer, payload); err != nil {
-		return fmt.Errorf("failed to send payload %s into the driver's unsafeL2Payloads channel: %w", payload.ID(), err)
+	if err = s.receivePayload(ctx, RpcSyncPeer, envelope); err != nil {
+		return fmt.Errorf("failed to send payload %s into the driver's unsafeL2Payloads channel: %w", envelope.ID(), err)
 	} else {
-		s.log.Debug("Sent received payload into the driver's unsafeL2Payloads channel", "payload", payload.ID())
+		s.log.Debug("Sent received payload into the driver's unsafeL2Payloads channel", "payload", envelope.ID())
 		return nil
 	}
 }

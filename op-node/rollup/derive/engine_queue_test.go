@@ -14,12 +14,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
+	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 type fakeAttributesQueue struct {
@@ -247,7 +248,7 @@ func TestEngineQueue_Finalize(t *testing.T) {
 
 	prev := &fakeAttributesQueue{}
 
-	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{})
+	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 	require.ErrorIs(t, eq.Reset(context.Background(), eth.L1BlockRef{}, eth.SystemConfig{}), io.EOF)
 
 	require.Equal(t, refB1, eq.SafeL2Head(), "L2 reset should go back to sequence window ago: blocks with origin E and D are not safe until we reconcile, C is extra, and B1 is the end we look for")
@@ -481,7 +482,7 @@ func TestEngineQueue_ResetWhenUnsafeOriginNotCanonical(t *testing.T) {
 
 	prev := &fakeAttributesQueue{origin: refE}
 
-	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{})
+	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 	require.ErrorIs(t, eq.Reset(context.Background(), eth.L1BlockRef{}, eth.SystemConfig{}), io.EOF)
 
 	require.Equal(t, refB1, eq.SafeL2Head(), "L2 reset should go back to sequence window ago: blocks with origin E and D are not safe until we reconcile, C is extra, and B1 is the end we look for")
@@ -812,7 +813,7 @@ func TestVerifyNewL1Origin(t *testing.T) {
 			}, nil)
 
 			prev := &fakeAttributesQueue{origin: refE}
-			eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{})
+			eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 			require.ErrorIs(t, eq.Reset(context.Background(), eth.L1BlockRef{}, eth.SystemConfig{}), io.EOF)
 
 			require.Equal(t, refB1, eq.SafeL2Head(), "L2 reset should go back to sequence window ago: blocks with origin E and D are not safe until we reconcile, C is extra, and B1 is the end we look for")
@@ -910,7 +911,7 @@ func TestBlockBuildingRace(t *testing.T) {
 	}
 
 	prev := &fakeAttributesQueue{origin: refA, attrs: attrs}
-	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{})
+	eq := NewEngineQueue(logger, cfg, eng, metrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 	require.ErrorIs(t, eq.Reset(context.Background(), eth.L1BlockRef{}, eth.SystemConfig{}), io.EOF)
 
 	id := eth.PayloadID{0xff}
@@ -959,26 +960,28 @@ func TestBlockBuildingRace(t *testing.T) {
 	}, cfg.Genesis.SystemConfig, false)
 
 	require.NoError(t, err)
-	payloadA1 := &eth.ExecutionPayload{
-		ParentHash:    refA1.ParentHash,
-		FeeRecipient:  attrs.SuggestedFeeRecipient,
-		StateRoot:     eth.Bytes32{},
-		ReceiptsRoot:  eth.Bytes32{},
-		LogsBloom:     eth.Bytes256{},
-		PrevRandao:    eth.Bytes32{},
-		BlockNumber:   eth.Uint64Quantity(refA1.Number),
-		GasLimit:      gasLimit,
-		GasUsed:       0,
-		Timestamp:     eth.Uint64Quantity(refA1.Time),
-		ExtraData:     nil,
-		BaseFeePerGas: *uint256.NewInt(7),
-		BlockHash:     refA1.Hash,
-		Transactions: []eth.Data{
-			a1InfoTx,
+	envelopeA1 := &eth.ExecutionPayloadEnvelope{
+		ExecutionPayload: &eth.ExecutionPayload{
+			ParentHash:    refA1.ParentHash,
+			FeeRecipient:  attrs.SuggestedFeeRecipient,
+			StateRoot:     eth.Bytes32{},
+			ReceiptsRoot:  eth.Bytes32{},
+			LogsBloom:     eth.Bytes256{},
+			PrevRandao:    eth.Bytes32{},
+			BlockNumber:   eth.Uint64Quantity(refA1.Number),
+			GasLimit:      gasLimit,
+			GasUsed:       0,
+			Timestamp:     eth.Uint64Quantity(refA1.Time),
+			ExtraData:     nil,
+			BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
+			BlockHash:     refA1.Hash,
+			Transactions: []eth.Data{
+				a1InfoTx,
+			},
 		},
 	}
-	eng.ExpectGetPayload(id, payloadA1, nil)
-	eng.ExpectNewPayload(payloadA1, &eth.PayloadStatusV1{
+	eng.ExpectGetPayload(id, envelopeA1, nil)
+	eng.ExpectNewPayload(envelopeA1.ExecutionPayload, nil, &eth.PayloadStatusV1{
 		Status:          eth.ExecutionValid,
 		LatestValidHash: &refA1.Hash,
 		ValidationError: nil,
@@ -1080,7 +1083,7 @@ func TestResetLoop(t *testing.T) {
 
 	prev := &fakeAttributesQueue{origin: refA, attrs: attrs}
 
-	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F, &sync.Config{})
+	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 	eq.unsafeHead = refA2
 	eq.engineSyncTarget = refA2
 	eq.safeHead = refA1
@@ -1159,31 +1162,33 @@ func TestEngineQueue_StepPopOlderUnsafe(t *testing.T) {
 		L1Origin:       refA.ID(),
 		SequenceNumber: 2,
 	}
-	payloadA1 := &eth.ExecutionPayload{
-		ParentHash:    refA1.ParentHash,
-		FeeRecipient:  common.Address{},
-		StateRoot:     eth.Bytes32{},
-		ReceiptsRoot:  eth.Bytes32{},
-		LogsBloom:     eth.Bytes256{},
-		PrevRandao:    eth.Bytes32{},
-		BlockNumber:   eth.Uint64Quantity(refA1.Number),
-		GasLimit:      gasLimit,
-		GasUsed:       0,
-		Timestamp:     eth.Uint64Quantity(refA1.Time),
-		ExtraData:     nil,
-		BaseFeePerGas: *uint256.NewInt(7),
-		BlockHash:     refA1.Hash,
-		Transactions:  []eth.Data{},
+	envelopeA1 := &eth.ExecutionPayloadEnvelope{
+		ExecutionPayload: &eth.ExecutionPayload{
+			ParentHash:    refA1.ParentHash,
+			FeeRecipient:  common.Address{},
+			StateRoot:     eth.Bytes32{},
+			ReceiptsRoot:  eth.Bytes32{},
+			LogsBloom:     eth.Bytes256{},
+			PrevRandao:    eth.Bytes32{},
+			BlockNumber:   eth.Uint64Quantity(refA1.Number),
+			GasLimit:      gasLimit,
+			GasUsed:       0,
+			Timestamp:     eth.Uint64Quantity(refA1.Time),
+			ExtraData:     nil,
+			BaseFeePerGas: eth.Uint256Quantity(*uint256.NewInt(7)),
+			BlockHash:     refA1.Hash,
+			Transactions:  []eth.Data{},
+		},
 	}
 
 	prev := &fakeAttributesQueue{origin: refA}
 
-	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F, &sync.Config{})
+	eq := NewEngineQueue(logger, cfg, eng, metrics.NoopMetrics, prev, l1F, &sync.Config{}, safedb.Disabled)
 	eq.unsafeHead = refA2
 	eq.safeHead = refA0
 	eq.finalized = refA0
 
-	eq.AddUnsafePayload(payloadA1)
+	eq.AddUnsafePayload(envelopeA1)
 
 	err := eq.Step(context.Background())
 	require.Equal(t, EngineP2PSyncing, err)
