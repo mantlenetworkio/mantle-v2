@@ -12,12 +12,13 @@ import (
 func TestUniqueFlags(t *testing.T) {
 	seenCLI := make(map[string]struct{})
 	for _, flag := range Flags {
-		name := flag.GetName()
-		if _, ok := seenCLI[name]; ok {
-			t.Errorf("duplicate flag %s", name)
-			continue
+		for _, name := range flag.Names() {
+			if _, ok := seenCLI[name]; ok {
+				t.Errorf("duplicate flag %s", name)
+				continue
+			}
+			seenCLI[name] = struct{}{}
 		}
-		seenCLI[name] = struct{}{}
 	}
 }
 
@@ -38,13 +39,13 @@ func TestCorrectEnvVarPrefix(t *testing.T) {
 	for _, flag := range Flags {
 		envVar := envVarForFlag(flag)
 		if envVar == "" {
-			t.Errorf("Failed to find EnvVars for flag %v", flag.GetName())
+			t.Errorf("Failed to find EnvVars for flag %v", flag.Names())
 		}
 		if !strings.HasPrefix(envVar, "OP_CHALLENGER_") {
-			t.Errorf("Flag %v env var (%v) does not start with OP_CHALLENGER_", flag.GetName(), envVar)
+			t.Errorf("Flag %v env var (%v) does not start with OP_CHALLENGER_", flag.Names(), envVar)
 		}
 		if strings.Contains(envVar, "__") {
-			t.Errorf("Flag %v env var (%v) has duplicate underscores", flag.GetName(), envVar)
+			t.Errorf("Flag %v env var (%v) has duplicate underscores", flag.Names(), envVar)
 		}
 	}
 }

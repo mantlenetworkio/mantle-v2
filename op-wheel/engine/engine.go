@@ -39,7 +39,7 @@ func getBlock(ctx context.Context, client client.RPC, method string, tag string)
 	if err != nil {
 		return nil, err
 	}
-	return types.NewBlockWithHeader(&bl.Header).WithBody(bl.Transactions, nil), nil
+	return types.NewBlockWithHeader(&bl.Header).WithBody(types.Body{Transactions: bl.Transactions}), nil
 }
 
 func getHeader(ctx context.Context, client client.RPC, method string, tag string) (*types.Header, error) {
@@ -274,7 +274,7 @@ func Copy(ctx context.Context, copyFrom client.RPC, copyTo client.RPC) error {
 	if err != nil {
 		return err
 	}
-	payloadEnv := engine.BlockToExecutableData(copyHead, nil)
+	payloadEnv := engine.BlockToExecutableData(copyHead, nil, nil, nil)
 	if err := updateForkchoice(ctx, copyTo, copyHead.ParentHash(), copySafe.Hash(), copyFinalized.Hash()); err != nil {
 		return err
 	}

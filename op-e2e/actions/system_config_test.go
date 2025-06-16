@@ -95,11 +95,11 @@ func TestBatcherKeyRotation(gt *testing.T) {
 	engCl := seqEngine.EngineClient(t, sd.RollupCfg)
 	payload, err := engCl.PayloadByNumber(t.Ctx(), sequencer.L2Safe().Number+12) // 12 new L2 blocks: 5 with origin before L1 block with batch, 6 with origin of L1 block with batch, 1 with new origin that changed the batcher
 	require.NoError(t, err)
-	ref, err := derive.PayloadToBlockRef(payload, &sd.RollupCfg.Genesis)
+	ref, err := derive.PayloadToBlockRef(payload.ExecutionPayload, &sd.RollupCfg.Genesis)
 	require.NoError(t, err)
 	require.Equal(t, ref.L1Origin.Number, cfgChangeL1BlockNum, "L2 block with L1 origin that included config change")
 	require.Equal(t, ref.SequenceNumber, uint64(0), "first L2 block with this origin")
-	sysCfg, err := derive.PayloadToSystemConfig(payload, sd.RollupCfg)
+	sysCfg, err := derive.PayloadToSystemConfig(payload.ExecutionPayload, sd.RollupCfg)
 	require.NoError(t, err)
 	require.Equal(t, dp.Addresses.Bob, sysCfg.BatcherAddr, "bob should be batcher now")
 
@@ -250,7 +250,7 @@ func TestGPOParamsChange(gt *testing.T) {
 	engCl := seqEngine.EngineClient(t, sd.RollupCfg)
 	payload, err := engCl.PayloadByLabel(t.Ctx(), eth.Unsafe)
 	require.NoError(t, err)
-	sysCfg, err := derive.PayloadToSystemConfig(payload, sd.RollupCfg)
+	sysCfg, err := derive.PayloadToSystemConfig(payload.ExecutionPayload, sd.RollupCfg)
 	require.NoError(t, err)
 	require.Equal(t, sd.RollupCfg.Genesis.SystemConfig, sysCfg, "still have genesis system config before we adopt the L1 block with GPO change")
 
@@ -263,7 +263,7 @@ func TestGPOParamsChange(gt *testing.T) {
 
 	payload, err = engCl.PayloadByLabel(t.Ctx(), eth.Unsafe)
 	require.NoError(t, err)
-	sysCfg, err = derive.PayloadToSystemConfig(payload, sd.RollupCfg)
+	sysCfg, err = derive.PayloadToSystemConfig(payload.ExecutionPayload, sd.RollupCfg)
 	require.NoError(t, err)
 	require.Equal(t, eth.Bytes32(common.BigToHash(big.NewInt(1000))), sysCfg.Overhead, "overhead changed")
 	require.Equal(t, eth.Bytes32(common.BigToHash(big.NewInt(2_300_000))), sysCfg.Scalar, "scalar changed")

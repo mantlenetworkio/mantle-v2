@@ -18,7 +18,7 @@ func TestBootstrapClient(t *testing.T) {
 		L2Head:             common.HexToHash("0x2222"),
 		L2Claim:            common.HexToHash("0x3333"),
 		L2ClaimBlockNumber: 1,
-		L2ChainConfig:      params.GoerliChainConfig,
+		L2ChainConfig:      params.OptimismTestConfig,
 		RollupConfig:       &chaincfg.Goerli,
 	}
 	mockOracle := &mockBoostrapOracle{bootInfo}

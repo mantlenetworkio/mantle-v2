@@ -93,9 +93,6 @@ func (c Config) Check() error {
 	if err := c.RPCConfig.Check(); err != nil {
 		return err
 	}
-	if err := c.LogConfig.Check(); err != nil {
-		return err
-	}
 	if err := c.MetricsConfig.Check(); err != nil {
 		return err
 	}

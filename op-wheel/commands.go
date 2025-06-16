@@ -5,6 +5,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"github.com/holiman/uint256"
 	"io"
 	"math/big"
 	"os"
@@ -200,6 +201,10 @@ func bigFlagValue(name string, ctx *cli.Context) *big.Int {
 	return ctx.Generic(name).(*TextFlag[*big.Int]).Value
 }
 
+func u256FlagValue(name string, ctx *cli.Context) *uint256.Int {
+	return ctx.Generic(name).(*TextFlag[*uint256.Int]).Value
+}
+
 var (
 	CheatStorageGetCmd = &cli.Command{
 		Name:    "get",
@@ -269,7 +274,7 @@ var (
 			bigFlag("balance", "New balance of the account"),
 		},
 		Action: CheatAction(false, func(ctx *cli.Context, ch *cheat.Cheater) error {
-			return ch.RunAndClose(cheat.SetBalance(addrFlagValue("address", ctx), bigFlagValue("balance", ctx)))
+			return ch.RunAndClose(cheat.SetBalance(addrFlagValue("address", ctx), u256FlagValue("balance", ctx)))
 		}),
 	}
 	CheatSetNonceCmd = &cli.Command{

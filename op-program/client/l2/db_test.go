@@ -5,17 +5,21 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-program/client/l2/test"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-program/client/l2/test"
 )
 
 var (
@@ -109,7 +113,7 @@ func TestPut(t *testing.T) {
 func TestSupportsStateDBOperations(t *testing.T) {
 	l2Genesis := createGenesis()
 	realDb := rawdb.NewDatabase(memorydb.New())
-	genesisBlock := l2Genesis.MustCommit(realDb)
+	genesisBlock := l2Genesis.MustCommit(realDb, triedb.NewDatabase(realDb, triedb.HashDefaults))
 
 	loader := test.NewKvStateOracle(t, realDb)
 	assertStateDataAvailable(t, NewOracleBackedDB(loader), l2Genesis, genesisBlock)
@@ -120,28 +124,29 @@ func TestUpdateState(t *testing.T) {
 	oracle := test.NewStubStateOracle(t)
 	db := rawdb.NewDatabase(NewOracleBackedDB(oracle))
 
-	genesisBlock := l2Genesis.MustCommit(db)
+	genesisBlock := l2Genesis.MustCommit(db, triedb.NewDatabase(db, triedb.HashDefaults))
 	assertStateDataAvailable(t, db, l2Genesis, genesisBlock)
 
-	statedb, err := state.New(genesisBlock.Root(), state.NewDatabase(rawdb.NewDatabase(db)), nil)
+	statedb, err := state.New(genesisBlock.Root(), state.NewDatabase(triedb.NewDatabase(db, nil), nil))
+
 	require.NoError(t, err)
-	statedb.SetBalance(userAccount, big.NewInt(50))
+	statedb.SetBalance(userAccount, uint256.NewInt(50), tracing.BalanceMint)
 	require.Equal(t, big.NewInt(50), statedb.GetBalance(userAccount))
-	statedb.SetNonce(userAccount, uint64(5))
+	statedb.SetNonce(userAccount, uint64(5), tracing.NonceChangeUnspecified)
 	require.Equal(t, uint64(5), statedb.GetNonce(userAccount))
 
-	statedb.SetBalance(unknownAccount, big.NewInt(60))
+	statedb.SetBalance(unknownAccount, uint256.NewInt(60), tracing.BalanceMint)
 	require.Equal(t, big.NewInt(60), statedb.GetBalance(unknownAccount))
 	statedb.SetCode(codeAccount, []byte{1})
 	require.Equal(t, []byte{1}, statedb.GetCode(codeAccount))
 
 	// Changes should be available under the new state root after committing
-	newRoot, err := statedb.Commit(false)
+	newRoot, err := statedb.Commit(0, false, false)
 	require.NoError(t, err)
 	err = statedb.Database().TrieDB().Commit(newRoot, true)
 	require.NoError(t, err)
 
-	statedb, err = state.New(newRoot, state.NewDatabase(rawdb.NewDatabase(db)), nil)
+	statedb, err = state.New(newRoot, state.NewDatabase(triedb.NewDatabase(db, nil), nil))
 	require.NoError(t, err)
 	require.Equal(t, big.NewInt(50), statedb.GetBalance(userAccount))
 	require.Equal(t, uint64(5), statedb.GetNonce(userAccount))
@@ -175,7 +180,7 @@ func createGenesis() *core.Genesis {
 }
 
 func assertStateDataAvailable(t *testing.T, db ethdb.KeyValueStore, l2Genesis *core.Genesis, genesisBlock *types.Block) {
-	statedb, err := state.New(genesisBlock.Root(), state.NewDatabase(rawdb.NewDatabase(db)), nil)
+	statedb, err := state.New(genesisBlock.Root(), state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(db), nil), nil))
 	require.NoError(t, err)
 
 	for address, account := range l2Genesis.Alloc {

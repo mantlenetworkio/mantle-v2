@@ -129,8 +129,6 @@ func initL1Geth(cfg *SystemConfig, genesis *core.Genesis, opts ...GethOption) (*
 	if err != nil {
 		return nil, nil, err
 	}
-	// Activate merge
-	l1Eth.Merger().FinalizePoS()
 
 	// Instead of running a whole beacon node, we run this fake-proof-of-stake sidecar that sequences L1 blocks using the Engine API.
 	l1Node.RegisterLifecycle(&fakePoS{
@@ -267,16 +265,11 @@ func initL2Geth(name string, l2ChainID *big.Int, genesis *core.Genesis, jwtPath 
 		NetworkId: l2ChainID.Uint64(),
 		Genesis:   genesis,
 		Miner: miner.Config{
-			Etherbase:         common.Address{},
-			Notify:            nil,
-			NotifyFull:        false,
-			ExtraData:         nil,
-			GasFloor:          0,
-			GasCeil:           0,
-			GasPrice:          nil,
-			Recommit:          0,
-			Noverify:          false,
-			NewPayloadTimeout: 0,
+			Etherbase: common.Address{},
+			ExtraData: nil,
+			GasCeil:   0,
+			GasPrice:  nil,
+			Recommit:  0,
 		},
 	}
 	nodeConfig := &node.Config{

@@ -46,7 +46,7 @@ func main() {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			ldb, err := db.Open(ctx.String("db-path"), ctx.Int("db-cache"), ctx.Int("db-handles"))
+			ldb, err := db.Open(ctx.String("db-path"), ctx.Int("db-cache"), ctx.Int("db-handles"), false)
 			if err != nil {
 				return fmt.Errorf("error opening db: %w", err)
 			}

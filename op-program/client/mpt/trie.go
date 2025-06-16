@@ -3,6 +3,8 @@ package mpt
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/triedb"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -46,12 +48,15 @@ func ReadTrie(root common.Hash, getPreimage func(key common.Hash) []byte) []hexu
 	//
 	// For now we just use the state DB trie approach.
 
-	tdb := trie.NewDatabase(odb)
-	tr, err := trie.New(trie.TrieID(root), tdb)
+	tdb := rawdb.NewDatabase(odb)
+	tr, err := trie.New(trie.TrieID(root), triedb.NewDatabase(tdb, nil))
 	if err != nil {
 		panic(err)
 	}
-	iter := tr.NodeIterator(nil)
+	iter, err := tr.NodeIterator(nil)
+	if err != nil {
+		panic(err)
+	}
 
 	// With small lists the iterator seems to use 0x80 (RLP empty string, unlike the others)
 	// as key for item 0, causing it to come last.
@@ -112,7 +117,7 @@ func (n noResetHasher) Reset() {}
 func WriteTrie(values []hexutil.Bytes) (common.Hash, []hexutil.Bytes) {
 	var out []hexutil.Bytes
 	st := noResetHasher{trie.NewStackTrie(
-		func(owner common.Hash, path []byte, hash common.Hash, blob []byte) {
+		func(path []byte, hash common.Hash, blob []byte) {
 			out = append(out, common.CopyBytes(blob)) // the stack hasher may mutate the blob bytes, so copy them.
 		})}
 	root := types.DeriveSha(rawList(values), st)

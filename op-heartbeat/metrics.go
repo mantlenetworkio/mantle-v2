@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -31,7 +31,7 @@ type metrics struct {
 
 	// Groups heartbeats per unique IP, version and chain ID combination.
 	// string(IP ++ version ++ chainID) -> *heartbeatEntry
-	heartbeatUsers *lru.Cache
+	heartbeatUsers *lru.Cache[string, *heartbeatEntry]
 }
 
 type heartbeatEntry struct {
@@ -42,7 +42,7 @@ type heartbeatEntry struct {
 }
 
 func NewMetrics(r *prometheus.Registry) Metrics {
-	lruCache, _ := lru.New(UsersCacheSize)
+	lruCache, _ := lru.New[string, *heartbeatEntry](UsersCacheSize)
 	m := &metrics{
 		heartbeats: promauto.With(r).NewCounterVec(prometheus.CounterOpts{
 			Namespace: MetricsNamespace,
@@ -97,7 +97,7 @@ func (m *metrics) RecordHeartbeat(payload heartbeat.Payload, ip string) {
 		return
 	}
 
-	entry := previous.(*heartbeatEntry)
+	entry := previous
 	if now.Sub(entry.Time) < MinHeartbeatInterval {
 		// if the span is still going, then add it up
 		atomic.AddUint64(&entry.Count, 1)

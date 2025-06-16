@@ -3,6 +3,8 @@ package op_heartbeat
 import (
 	"errors"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/ethereum-optimism/optimism/op-heartbeat/flags"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
@@ -26,9 +28,6 @@ func (c Config) Check() error {
 	}
 	if c.HTTPPort <= 0 {
 		return errors.New("must specify a valid HTTP port")
-	}
-	if err := c.Log.Check(); err != nil {
-		return err
 	}
 	if err := c.Metrics.Check(); err != nil {
 		return err

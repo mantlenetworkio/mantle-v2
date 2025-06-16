@@ -4,12 +4,14 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +54,7 @@ func (s *L1Miner) ActL1StartBlock(timeDelta uint64) Action {
 
 		parent := s.l1Chain.CurrentHeader()
 		parentHash := parent.Hash()
-		statedb, err := state.New(parent.Root, state.NewDatabase(s.l1Database), nil)
+		statedb, err := state.New(parent.Root, state.NewDatabase(triedb.NewDatabase(s.l1Database, nil), nil))
 		if err != nil {
 			t.Fatalf("failed to init state db around block %s (state %s): %w", parentHash, parent.Root, err)
 		}
@@ -67,13 +69,13 @@ func (s *L1Miner) ActL1StartBlock(timeDelta uint64) Action {
 			MixDigest:  common.Hash{}, // TODO: maybe randomize this (prev-randao value)
 		}
 		if s.l1Cfg.Config.IsLondon(header.Number) {
-			header.BaseFee = misc.CalcBaseFee(s.l1Cfg.Config, parent)
+			header.BaseFee = eip1559.CalcBaseFee(s.l1Cfg.Config, parent)
 			// At the transition, double the gas limit so the gas target is equal to the old gas limit.
 			if !s.l1Cfg.Config.IsLondon(parent.Number) {
 				header.GasLimit = parent.GasLimit * s.l1Cfg.Config.ElasticityMultiplier()
 			}
 		}
-		if s.l1Cfg.Config.IsShanghai(header.Time) {
+		if s.l1Cfg.Config.IsShanghai(header.Number, header.Time) {
 			header.WithdrawalsHash = &types.EmptyWithdrawalsHash
 		}
 
@@ -118,8 +120,11 @@ func (s *L1Miner) IncludeTx(t Testing, tx *types.Transaction) {
 		return
 	}
 	s.l1BuildingState.SetTxContext(tx.Hash(), len(s.l1Transactions))
-	receipt, err := core.ApplyTransaction(s.l1Cfg.Config, s.l1Chain, &s.l1BuildingHeader.Coinbase,
-		s.l1GasPool, s.l1BuildingState, s.l1BuildingHeader, tx, &s.l1BuildingHeader.GasUsed, *s.l1Chain.GetVMConfig())
+	blockCtx := core.NewEVMBlockContext(s.l1BuildingHeader, s.l1Chain, nil, s.l1Cfg.Config, s.l1BuildingState)
+	evm := vm.NewEVM(blockCtx, s.l1BuildingState, s.l1Cfg.Config, *s.l1Chain.GetVMConfig())
+
+	receipt, err := core.ApplyTransaction(
+		evm, s.l1GasPool, s.l1BuildingState, s.l1BuildingHeader, tx.WithoutBlobTxSidecar(), &s.l1BuildingHeader.GasUsed)
 	if err != nil {
 		s.l1TxFailed = append(s.l1TxFailed, tx)
 		t.Fatalf("failed to apply transaction to L1 block (tx %d): %v", len(s.l1Transactions), err)
@@ -145,16 +150,26 @@ func (s *L1Miner) ActL1EndBlock(t Testing) {
 	s.l1Building = false
 	s.l1BuildingHeader.GasUsed = s.l1BuildingHeader.GasLimit - uint64(*s.l1GasPool)
 	s.l1BuildingHeader.Root = s.l1BuildingState.IntermediateRoot(s.l1Cfg.Config.IsEIP158(s.l1BuildingHeader.Number))
-	block := types.NewBlock(s.l1BuildingHeader, s.l1Transactions, nil, s.l1Receipts, trie.NewStackTrie(nil))
-	if s.l1Cfg.Config.IsShanghai(s.l1BuildingHeader.Time) {
-		block = block.WithWithdrawals(make([]*types.Withdrawal, 0))
+
+	var withdrawals []*types.Withdrawal
+	if s.l1Cfg.Config.IsShanghai(s.l1BuildingHeader.Number, s.l1BuildingHeader.Time) {
+		withdrawals = make([]*types.Withdrawal, 0)
 	}
 
+	if s.l1Cfg.Config.IsPrague(s.l1BuildingHeader.Number, s.l1BuildingHeader.Time) {
+		// Don't process requests for now.
+		s.l1BuildingHeader.RequestsHash = &types.EmptyRequestsHash
+	}
+
+	isCancun := s.l1Cfg.Config.IsCancun(s.l1BuildingHeader.Number, s.l1BuildingHeader.Time)
 	// Write state changes to db
-	root, err := s.l1BuildingState.Commit(s.l1Cfg.Config.IsEIP158(s.l1BuildingHeader.Number))
+	root, err := s.l1BuildingState.Commit(s.l1BuildingHeader.Number.Uint64(), s.l1Cfg.Config.IsEIP158(s.l1BuildingHeader.Number), isCancun)
 	if err != nil {
 		t.Fatalf("l1 state write error: %v", err)
 	}
+
+	block := types.NewBlock(s.l1BuildingHeader, &types.Body{Transactions: s.l1Transactions, Withdrawals: withdrawals}, s.l1Receipts, trie.NewStackTrie(nil), types.DefaultBlockConfig)
+
 	if err := s.l1BuildingState.Database().TrieDB().Commit(root, false); err != nil {
 		t.Fatalf("l1 trie write error: %v", err)
 	}

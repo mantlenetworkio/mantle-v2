@@ -72,7 +72,6 @@ func NewL1Replica(t Testing, log log.Logger, genesis *core.Genesis) *L1Replica {
 
 	backend, err := eth.New(n, ethCfg)
 	require.NoError(t, err)
-	backend.Merger().FinalizePoS()
 
 	n.RegisterAPIs(tracers.APIs(backend.APIBackend))
 
@@ -161,12 +160,12 @@ func (s *L1Replica) MockL1RPCErrors(fn func() error) {
 }
 
 func (s *L1Replica) EthClient() *ethclient.Client {
-	cl, _ := s.node.Attach() // never errors
+	cl := s.node.Attach() // never errors
 	return ethclient.NewClient(cl)
 }
 
 func (s *L1Replica) RPCClient() client.RPC {
-	cl, _ := s.node.Attach() // never errors
+	cl := s.node.Attach() // never errors
 	return testutils.RPCErrFaker{
 		RPC: client.NewBaseRPCClient(cl),
 		ErrFn: func() error {

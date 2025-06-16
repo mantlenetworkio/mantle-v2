@@ -5,17 +5,19 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // Should implement derive.Engine
@@ -29,7 +31,7 @@ func TestPayloadByHash(t *testing.T) {
 		block := stub.head
 		payload, err := engine.PayloadByHash(ctx, block.Hash())
 		require.NoError(t, err)
-		expected, err := eth.BlockAsPayload(block)
+		expected, err := eth.BlockAsPayload(block, params.OptimismTestConfig)
 		require.NoError(t, err)
 		require.Equal(t, expected, payload)
 	})
@@ -51,7 +53,7 @@ func TestPayloadByNumber(t *testing.T) {
 		block := stub.head
 		payload, err := engine.PayloadByNumber(ctx, block.NumberU64())
 		require.NoError(t, err)
-		expected, err := eth.BlockAsPayload(block)
+		expected, err := eth.BlockAsPayload(block, params.OptimismTestConfig)
 		require.NoError(t, err)
 		require.Equal(t, expected, payload)
 	})
@@ -124,7 +126,7 @@ func TestSystemConfigByL2Hash(t *testing.T) {
 	engine, stub := createOracleEngine(t)
 
 	t.Run("KnownBlock", func(t *testing.T) {
-		payload, err := eth.BlockAsPayload(stub.safe)
+		payload, err := eth.BlockAsPayload(stub.safe, params.OptimismTestConfig)
 		require.NoError(t, err)
 		expected, err := derive.PayloadToSystemConfig(payload, engine.rollupCfg)
 		require.NoError(t, err)
@@ -232,7 +234,7 @@ func (s stubEngineBackend) StateAt(root common.Hash) (*state.StateDB, error) {
 	panic("unsupported")
 }
 
-func (s stubEngineBackend) InsertBlockWithoutSetHead(block *types.Block) error {
+func (s stubEngineBackend) InsertBlockWithoutSetHead(block *types.Block, makeWitness bool) (*stateless.Witness, error) {
 	panic("unsupported")
 }
 

@@ -92,12 +92,12 @@ func RunEngineAPITests(t *testing.T, createBackend func(t *testing.T) engineapi.
 		payloadID := api.startBlockBuilding(genesis, eth.Uint64Quantity(genesis.Time+3))
 		api.assert.Equal(block.BlockHash, api.headHash(), "should not reset chain head when building starts")
 
-		payload := api.getPayload(payloadID)
-		api.assert.Equal(genesis.Hash(), payload.ParentHash, "should have old block as parent")
+		envelope := api.getPayload(payloadID)
+		api.assert.Equal(genesis.Hash(), envelope.ExecutionPayload.ParentHash, "should have old block as parent")
 
-		api.newPayload(payload)
-		api.forkChoiceUpdated(payload.BlockHash, genesis.Hash(), genesis.Hash())
-		api.assert.Equal(payload.BlockHash, api.headHash(), "should reorg to block built on old parent")
+		api.newPayload(envelope.ExecutionPayload)
+		api.forkChoiceUpdated(envelope.ExecutionPayload.BlockHash, genesis.Hash(), genesis.Hash())
+		api.assert.Equal(envelope.ExecutionPayload.BlockHash, api.headHash(), "should reorg to block built on old parent")
 	})
 
 	t.Run("RejectInvalidBlockHash", func(t *testing.T) {
@@ -119,10 +119,10 @@ func RunEngineAPITests(t *testing.T, createBackend func(t *testing.T) engineapi.
 		newBlock := api.getPayload(payloadID)
 
 		// But then make it invalid by changing the state root
-		newBlock.StateRoot = eth.Bytes32(genesis.TxHash)
+		newBlock.ExecutionPayload.StateRoot = eth.Bytes32(genesis.TxHash)
 		updateBlockHash(newBlock)
 
-		r, err := api.engine.NewPayloadV1(api.ctx, newBlock)
+		r, err := api.engine.NewPayloadV1(api.ctx, newBlock.ExecutionPayload)
 		api.assert.NoError(err)
 		api.assert.Equal(eth.ExecutionInvalid, r.Status)
 	})
@@ -136,10 +136,10 @@ func RunEngineAPITests(t *testing.T, createBackend func(t *testing.T) engineapi.
 		newBlock := api.getPayload(payloadID)
 
 		// Then make it invalid to check NewPayload rejects it
-		newBlock.Timestamp = eth.Uint64Quantity(genesis.Time)
+		newBlock.ExecutionPayload.Timestamp = eth.Uint64Quantity(genesis.Time)
 		updateBlockHash(newBlock)
 
-		r, err := api.engine.NewPayloadV1(api.ctx, newBlock)
+		r, err := api.engine.NewPayloadV1(api.ctx, newBlock.ExecutionPayload)
 		api.assert.NoError(err)
 		api.assert.Equal(eth.ExecutionInvalid, r.Status)
 	})
@@ -153,10 +153,10 @@ func RunEngineAPITests(t *testing.T, createBackend func(t *testing.T) engineapi.
 		newBlock := api.getPayload(payloadID)
 
 		// Then make it invalid to check NewPayload rejects it
-		newBlock.Timestamp = eth.Uint64Quantity(genesis.Time - 1)
+		newBlock.ExecutionPayload.Timestamp = eth.Uint64Quantity(genesis.Time - 1)
 		updateBlockHash(newBlock)
 
-		r, err := api.engine.NewPayloadV1(api.ctx, newBlock)
+		r, err := api.engine.NewPayloadV1(api.ctx, newBlock.ExecutionPayload)
 		api.assert.NoError(err)
 		api.assert.Equal(eth.ExecutionInvalid, r.Status)
 	})
@@ -278,10 +278,10 @@ func RunEngineAPITests(t *testing.T, createBackend func(t *testing.T) engineapi.
 }
 
 // Updates the block hash to the expected value based on the other fields in the payload
-func updateBlockHash(newBlock *eth.ExecutionPayload) {
+func updateBlockHash(newBlock *eth.ExecutionPayloadEnvelope) {
 	// And fix up the block hash
 	newHash, _ := newBlock.CheckBlockHash()
-	newBlock.BlockHash = newHash
+	newBlock.ExecutionPayload.BlockHash = newHash
 }
 
 type testHelper struct {
@@ -332,19 +332,19 @@ func (h *testHelper) addBlockWithParent(head *types.Header, timestamp eth.Uint64
 	prevHead := h.backend.CurrentHeader()
 	id := h.startBlockBuilding(head, timestamp, txs...)
 
-	block := h.getPayload(id)
-	h.assert.Equal(timestamp, block.Timestamp, "should create block with correct timestamp")
-	h.assert.Equal(head.Hash(), block.ParentHash, "should have correct parent")
-	h.assert.Len(block.Transactions, len(txs))
+	envelope := h.getPayload(id)
+	h.assert.Equal(timestamp, envelope.ExecutionPayload.Timestamp, "should create block with correct timestamp")
+	h.assert.Equal(head.Hash(), envelope.ExecutionPayload.ParentHash, "should have correct parent")
+	h.assert.Len(envelope.ExecutionPayload.Transactions, len(txs))
 
-	h.newPayload(block)
+	h.newPayload(envelope.ExecutionPayload)
 
 	// Should not have changed the chain head yet
 	h.assert.Equal(prevHead, h.backend.CurrentHeader())
 
-	h.forkChoiceUpdated(block.BlockHash, head.Hash(), head.Hash())
-	h.assert.Equal(block.BlockHash, h.backend.CurrentHeader().Hash())
-	return block
+	h.forkChoiceUpdated(envelope.ExecutionPayload.BlockHash, head.Hash(), head.Hash())
+	h.assert.Equal(envelope.ExecutionPayload.BlockHash, h.backend.CurrentHeader().Hash())
+	return envelope.ExecutionPayload
 }
 
 func (h *testHelper) forkChoiceUpdated(head common.Hash, safe common.Hash, finalized common.Hash) {
@@ -360,7 +360,7 @@ func (h *testHelper) forkChoiceUpdated(head common.Hash, safe common.Hash, final
 	h.assert.Nil(result.PayloadID, "should not provide payload ID when block building not requested")
 }
 
-func (h *testHelper) startBlockBuilding(head *types.Header, newBlockTimestamp eth.Uint64Quantity, txs ...*types.Transaction) *eth.PayloadID {
+func (h *testHelper) startBlockBuilding(head *types.Header, newBlockTimestamp eth.Uint64Quantity, txs ...*types.Transaction) *eth.PayloadInfo {
 	h.Log("Start block building", "head", head.Hash(), "timestamp", newBlockTimestamp)
 	var txData []eth.Data
 	for _, tx := range txs {
@@ -384,10 +384,12 @@ func (h *testHelper) startBlockBuilding(head *types.Header, newBlockTimestamp et
 	h.assert.Equal(eth.ExecutionValid, result.PayloadStatus.Status)
 	id := result.PayloadID
 	h.assert.NotNil(id)
-	return id
+	return &eth.PayloadInfo{
+		ID: *id,
+	}
 }
 
-func (h *testHelper) getPayload(id *eth.PayloadID) *eth.ExecutionPayload {
+func (h *testHelper) getPayload(id *eth.PayloadInfo) *eth.ExecutionPayloadEnvelope {
 	h.Log("getPayload", "id", id)
 	block, err := h.engine.GetPayloadV1(h.ctx, *id)
 	h.assert.NoError(err)

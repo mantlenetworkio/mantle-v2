@@ -12,7 +12,7 @@ import (
 
 var (
 	validRollupConfig    = &chaincfg.Goerli
-	validL2Genesis       = params.GoerliChainConfig
+	validL2Genesis       = params.OptimismTestConfig
 	validL1Head          = common.Hash{0xaa}
 	validL2Head          = common.Hash{0xbb}
 	validL2Claim         = common.Hash{0xcc}

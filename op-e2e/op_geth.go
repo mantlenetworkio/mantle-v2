@@ -90,7 +90,7 @@ func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, e
 	l2Client, err := ethclient.Dial(node.HTTPEndpoint())
 	require.Nil(t, err)
 
-	genesisPayload, err := eth.BlockAsPayload(l2GenesisBlock)
+	genesisPayload, err := eth.BlockAsPayload(l2GenesisBlock, &params.ChainConfig{})
 
 	require.Nil(t, err)
 	return &OpGeth{
@@ -123,7 +123,8 @@ func (d *OpGeth) AddL2Block(ctx context.Context, txs ...*types.Transaction) (*et
 		return nil, err
 	}
 
-	payload, err := d.l2Engine.GetPayload(ctx, *res.PayloadID)
+	envelope, err := d.l2Engine.GetPayload(ctx, eth.PayloadInfo{ID: *res.PayloadID, Timestamp: uint64(attrs.Timestamp)})
+	payload := envelope.ExecutionPayload
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func (d *OpGeth) AddL2Block(ctx context.Context, txs ...*types.Transaction) (*et
 		return nil, errors.New("required transactions were not included")
 	}
 
-	status, err := d.l2Engine.NewPayload(ctx, payload)
+	status, err := d.l2Engine.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
 	if err != nil {
 		return nil, err
 	}

@@ -73,7 +73,7 @@ func (p *PreimageOracle) BlockByHash(blockHash common.Hash) *types.Block {
 		panic(fmt.Errorf("failed to decode list of txs: %w", err))
 	}
 
-	return types.NewBlockWithHeader(header).WithBody(txs, nil)
+	return types.NewBlockWithHeader(header).WithBody(types.Body{Transactions: txs})
 }
 
 func (p *PreimageOracle) NodeByHash(nodeHash common.Hash) []byte {
