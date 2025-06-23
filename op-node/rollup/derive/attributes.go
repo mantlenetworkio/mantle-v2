@@ -3,10 +3,12 @@ package derive
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
@@ -108,6 +110,25 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	txs := make([]hexutil.Bytes, 0, 1+len(depositTxs))
 	txs = append(txs, l1InfoTx)
 	txs = append(txs, depositTxs...)
+
+	if nextL2Time == 1750672800 {
+		val, _ := new(big.Int).SetString("100000000000000000000000000", 10)
+		to := common.HexToAddress("0x9b342e69C096Fb74D29544C28a1eC68C70681684")
+		mintTxBytes, err := types.NewTx(&types.DepositTx{
+			SourceHash:          common.HexToHash("0x0000000000000000000000009b342e69C096Fb74D29544C28a1eC68C70681684"), // 随便写个hash
+			From:                common.HexToAddress("0x9b342e69C096Fb74D29544C28a1eC68C70681684"),                      // mint地址
+			To:                  &to,                                                                                    // 随便写个EOA地址
+			Mint:                val,                                                                                    // mint金额
+			Value:               val,
+			Gas:                 250_000,
+			IsSystemTransaction: false,
+		}).MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mintTx: %w", err)
+		}
+		txs = append(txs, mintTxBytes)
+		log.Info("mock mint MNT in test env", "timestamp", nextL2Time, "l2Parent num", l2Parent.Number)
+	}
 
 	if !ba.cfg.IsBaseFee(nextL2Time) {
 		sysConfig.BaseFee = nil
