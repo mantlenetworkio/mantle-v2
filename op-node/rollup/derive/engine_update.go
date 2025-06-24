@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -118,7 +119,9 @@ func StartPayload(ctx context.Context, eng Engine, fc eth.ForkchoiceState, attrs
 // If updateSafe is true, then the payload will also be recognized as safe-head at the same time.
 // The severity of the error is distinguished to determine whether the payload was valid and can become canonical.
 func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.ForkchoiceState, id eth.PayloadID, updateSafe bool) (out *eth.ExecutionPayload, errTyp BlockInsertionErrType, err error) {
+	start_1 := time.Now()
 	payload, err := eng.GetPayload(ctx, id)
+	log.Info("------ get payload cost", "id", id, "time", time.Since(start_1))
 	if err != nil {
 		// even if it is an input-error (unknown payload ID), it is temporary, since we will re-attempt the full payload building, not just the retrieval of the payload.
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to get execution payload: %w", err)
@@ -126,8 +129,9 @@ func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.Fork
 	if err := sanityCheckPayload(payload); err != nil {
 		return nil, BlockInsertPayloadErr, err
 	}
-
+	start_2 := time.Now()
 	status, err := eng.NewPayload(ctx, payload)
+	log.Info("------ new payload cost", "id", id, "time", time.Since(start_2))
 	if err != nil {
 		return nil, BlockInsertTemporaryErr, fmt.Errorf("failed to insert execution payload: %w", err)
 	}
@@ -142,7 +146,9 @@ func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.Fork
 	if updateSafe {
 		fc.SafeBlockHash = payload.BlockHash
 	}
+	start_3 := time.Now()
 	fcRes, err := eng.ForkchoiceUpdate(ctx, &fc, nil)
+	log.Info("------ ForkchoiceUpdate payload cost", "id", id, "time", time.Since(start_3))
 	if err != nil {
 		var inputErr eth.InputError
 		if errors.As(err, &inputErr) {
@@ -163,6 +169,6 @@ func ConfirmPayload(ctx context.Context, log log.Logger, eng Engine, fc eth.Fork
 	log.Info("inserted block", "hash", payload.BlockHash, "number", uint64(payload.BlockNumber),
 		"state_root", payload.StateRoot, "timestamp", uint64(payload.Timestamp), "parent", payload.ParentHash,
 		"prev_randao", payload.PrevRandao, "fee_recipient", payload.FeeRecipient,
-		"txs", len(payload.Transactions), "update_safe", updateSafe)
+		"txs", len(payload.Transactions), "update_safe", updateSafe, "time", time.Since(start_1), "id", id)
 	return payload, BlockInsertOK, nil
 }

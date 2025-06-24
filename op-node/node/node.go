@@ -223,7 +223,7 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config, snapshotLog log.Logger
 	n.daSyncer = da.NewMantleDataStore(ctx, &cfg.DatastoreConfig)
 	n.eigenDaSyncer = da.NewEigenDADataStore(ctx, n.log, &cfg.DA, &cfg.DatastoreConfig, n.metrics)
 
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer, n.l1PreFetcher)
+	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n.daSyncer, n, n, n.log, snapshotLog, n.metrics, &cfg.Sync, n.eigenDaSyncer, n.l1PreFetcher.GetResetL1Sub())
 
 	return nil
 }

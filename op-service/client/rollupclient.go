@@ -1,20 +1,19 @@
-package sources
+package client
 
 import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
 type RollupClient struct {
-	rpc client.RPC
+	rpc RPC
 }
 
-func NewRollupClient(rpc client.RPC) *RollupClient {
+func NewRollupClient(rpc RPC) *RollupClient {
 	return &RollupClient{rpc}
 }
 

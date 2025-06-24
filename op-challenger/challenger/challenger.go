@@ -16,7 +16,6 @@ import (
 	metrics "github.com/ethereum-optimism/optimism/op-challenger/metrics"
 
 	bindings "github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	sources "github.com/ethereum-optimism/optimism/op-node/sources"
 	opclient "github.com/ethereum-optimism/optimism/op-service/client"
 	txmgr "github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
@@ -35,7 +34,7 @@ type Challenger struct {
 
 	l1Client *ethclient.Client
 
-	rollupClient *sources.RollupClient
+	rollupClient *opclient.RollupClient
 
 	// l2 Output Oracle contract
 	l2ooContract     *bindings.L2OutputOracleCaller

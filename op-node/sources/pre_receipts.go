@@ -316,3 +316,7 @@ func (p *PreFetcher) checkL1Reorg(lastUnsafeL1 *uint64) (uint64, bool) {
 	return minCacheBlock.Number, false
 
 }
+
+func (p *PreFetcher) GetResetL1Sub() chan uint64 {
+	return p.resetL1
+}

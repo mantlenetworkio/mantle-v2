@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-node/testutils"
 	"github.com/ethereum-optimism/optimism/op-service/client"
 )
@@ -153,8 +152,8 @@ func (s *L2Verifier) SyncStatus() *eth.SyncStatus {
 	}
 }
 
-func (s *L2Verifier) RollupClient() *sources.RollupClient {
-	return sources.NewRollupClient(s.RPCClient())
+func (s *L2Verifier) RollupClient() *client.RollupClient {
+	return client.NewRollupClient(s.RPCClient())
 }
 
 func (s *L2Verifier) RPCClient() client.RPC {

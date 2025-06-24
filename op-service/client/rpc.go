@@ -42,30 +42,11 @@ type rpcConfig struct {
 
 type RPCOption func(cfg *rpcConfig)
 
-func WithCallTimeout(d time.Duration) RPCOption {
-	return func(cfg *rpcConfig) {
-		cfg.callTimeout = d
-	}
-}
-
-func WithBatchCallTimeout(d time.Duration) RPCOption {
-	return func(cfg *rpcConfig) {
-		cfg.batchCallTimeout = d
-	}
-}
-
-// WithDialAttempts configures the number of attempts for the initial dial to the RPC,
-// attempts are executed with an exponential backoff strategy by default.
-func WithDialAttempts(attempts int) RPCOption {
+// WithDialBackoff configures the number of attempts for the initial dial to the RPC,
+// attempts are executed with an exponential backoff strategy.
+func WithDialBackoff(attempts int) RPCOption {
 	return func(cfg *rpcConfig) {
 		cfg.backoffAttempts = attempts
-	}
-}
-
-// WithFixedDialBackoff makes the RPC client use a fixed delay between dial attempts of 2 seconds instead of exponential
-func WithFixedDialBackoff(d time.Duration) RPCOption {
-	return func(cfg *rpcConfig) {
-		cfg.fixedDialBackoff = d
 	}
 }
 

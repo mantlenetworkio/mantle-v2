@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"io"
 	"time"
 
@@ -141,7 +140,7 @@ type EngineQueue struct {
 	metrics   Metrics
 	l1Fetcher L1Fetcher
 
-	l1PreFetcher *sources.PreFetcher
+	subL1Reset chan<- uint64
 
 	syncCfg *sync.Config
 }
@@ -149,7 +148,7 @@ type EngineQueue struct {
 var _ EngineControl = (*EngineQueue)(nil)
 
 // NewEngineQueue creates a new EngineQueue, which should be Reset(origin) before use.
-func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config, l1PreFetcher *sources.PreFetcher) *EngineQueue {
+func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config, subL1Reset chan<- uint64) *EngineQueue {
 	return &EngineQueue{
 		log:            log,
 		cfg:            cfg,
@@ -160,7 +159,7 @@ func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics M
 		prev:           prev,
 		l1Fetcher:      l1Fetcher,
 		syncCfg:        syncCfg,
-		l1PreFetcher:   l1PreFetcher,
+		subL1Reset:     subL1Reset,
 	}
 }
 
@@ -808,7 +807,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch L1 config of L2 block %s: %w", pipelineL2.ID(), err))
 	}
-	err = eq.l1PreFetcher.Reset(ctx, pipelineOrigin.Number)
+	eq.subL1Reset <- pipelineOrigin.Number
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to reset L1 start block for L1 pre fetcher  %s: %w", pipelineOrigin.ID(), err))
 	}
