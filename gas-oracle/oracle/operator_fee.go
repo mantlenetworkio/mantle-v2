@@ -18,13 +18,14 @@ const (
 // OperatorFeeCalculator is designed to calculate the operator fee constant and scalar
 // based on txCount and ETH price
 type OperatorFeeCalculator struct {
-	intrinsicSp1GasPerTx     uint64
-	intrinsicSp1GasPerBlock  uint64
-	sp1PricePerBGasInDollars float64
-	sp1GasScalar             uint64
+	intrinsicSp1GasPerTx        uint64
+	intrinsicSp1GasPerBlock     uint64
+	sp1PricePerBGasInDollars    float64
+	sp1GasScalar                uint64
+	operatorFeeMarkupPercentage int64
 }
 
-func NewOperatorFeeCalculator(intrinsicSp1GasPerTx, intrinsicSp1GasPerBlock uint64, sp1PricePerBGasInDollars float64, sp1GasScalar uint64) *OperatorFeeCalculator {
+func NewOperatorFeeCalculator(intrinsicSp1GasPerTx, intrinsicSp1GasPerBlock uint64, sp1PricePerBGasInDollars float64, sp1GasScalar uint64, operatorFeeMarkupPercentage int64) *OperatorFeeCalculator {
 	if intrinsicSp1GasPerTx == 0 {
 		intrinsicSp1GasPerTx = DefaultIntrinsicSp1GasPerTx
 		log.Info("Using default intrinsic sp1 gas per tx", "value", intrinsicSp1GasPerTx)
@@ -45,12 +46,18 @@ func NewOperatorFeeCalculator(intrinsicSp1GasPerTx, intrinsicSp1GasPerBlock uint
 		log.Info("Using default sp1 gas scalar", "value", sp1GasScalar)
 	}
 	log.Debug("Given sp1 gas scalar", "value", sp1GasScalar)
+	if operatorFeeMarkupPercentage < -100 {
+		operatorFeeMarkupPercentage = -100
+		log.Info("Markup percentage is too small, truncated to -100", "value", -100)
+	}
+	log.Debug("Given operator fee markup percentage", "value", operatorFeeMarkupPercentage)
 
 	return &OperatorFeeCalculator{
-		intrinsicSp1GasPerTx:     intrinsicSp1GasPerTx,
-		intrinsicSp1GasPerBlock:  intrinsicSp1GasPerBlock,
-		sp1PricePerBGasInDollars: sp1PricePerBGasInDollars,
-		sp1GasScalar:             sp1GasScalar,
+		intrinsicSp1GasPerTx:        intrinsicSp1GasPerTx,
+		intrinsicSp1GasPerBlock:     intrinsicSp1GasPerBlock,
+		sp1PricePerBGasInDollars:    sp1PricePerBGasInDollars,
+		sp1GasScalar:                sp1GasScalar,
+		operatorFeeMarkupPercentage: operatorFeeMarkupPercentage,
 	}
 }
 
@@ -79,6 +86,8 @@ func (o *OperatorFeeCalculator) CalOperatorFeeConstant(txCount uint64, ethPrice 
 
 	// Step 4: Calculate final result
 	result := new(big.Int).Mul(totalSp1GasPerTx, sp1PricePerGasInWei)
+	result.Mul(result, new(big.Int).SetInt64(100+o.operatorFeeMarkupPercentage))
+	result.Div(result, new(big.Int).SetInt64(100))
 
 	log.Info("Calculated operator fee constant",
 		"transaction_count", txCount,
@@ -101,6 +110,8 @@ func (o *OperatorFeeCalculator) CalOperatorFeeScalar(ethPrice float64) (*big.Int
 
 	// Step 2: Calculate final result
 	result := new(big.Int).Mul(new(big.Int).SetUint64(o.sp1GasScalar), sp1PricePerGasInWei)
+	result.Mul(result, new(big.Int).SetInt64(100+o.operatorFeeMarkupPercentage))
+	result.Div(result, new(big.Int).SetInt64(100))
 
 	log.Info("Calculated operator fee scalar",
 		"eth_price", ethPrice,

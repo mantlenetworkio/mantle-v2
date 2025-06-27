@@ -41,6 +41,7 @@ type Config struct {
 	MetricsPort    int
 	// operator fee config
 	OperatorFeeUpdateEnabled      bool
+	OperatorFeeMarkupPercentage   int64
 	OperatorFeeUpdateInterval     uint64
 	OperatorFeeSignificanceFactor float64
 	IntrinsicSp1GasPerTx          uint64
@@ -112,6 +113,7 @@ func NewConfig(ctx *cli.Context) *Config {
 
 	if ctx.IsSet(flags.OperatorFeeUpdateEnabledFlag.Name) {
 		cfg.OperatorFeeUpdateEnabled = ctx.Bool(flags.OperatorFeeUpdateEnabledFlag.Name)
+		cfg.OperatorFeeMarkupPercentage = ctx.Int64(flags.OperatorFeeMarkupFlag.Name)
 		cfg.OperatorFeeUpdateInterval = ctx.Uint64(flags.OperatorFeeUpdateIntervalFlag.Name)
 		cfg.OperatorFeeSignificanceFactor = ctx.Float64(flags.OperatorFeeSignificanceFactorFlag.Name)
 		cfg.IntrinsicSp1GasPerTx = ctx.Uint64(flags.IntrinsicSp1GasPerTxFlag.Name)

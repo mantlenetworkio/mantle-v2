@@ -135,6 +135,11 @@ var (
 		Usage:   "enable the operator fee update",
 		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_ENABLED"},
 	}
+	OperatorFeeMarkupFlag = &cli.Int64Flag{
+		Name:    "operator-fee-markup-percentage",
+		Usage:   "the markup percentage of the operator fee",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_MARKUP_PERCENTAGE"},
+	}
 	OperatorFeeUpdateIntervalFlag = &cli.Uint64Flag{
 		Name:    "operator-fee-update-interval",
 		Usage:   "the interval of updating the operator fee",
@@ -206,6 +211,7 @@ var Flags = []cli.Flag{
 	MetricsHTTPFlag,
 	MetricsPortFlag,
 	OperatorFeeUpdateEnabledFlag,
+	OperatorFeeMarkupFlag,
 	OperatorFeeUpdateIntervalFlag,
 	OperatorFeeSignificanceFactorFlag,
 	IntrinsicSp1GasPerTxFlag,

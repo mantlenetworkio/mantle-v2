@@ -285,7 +285,7 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		log.Info("Initialized operator fee constant cache", "value", currentOperatorFeeConstant.String())
 		log.Info("Initialized operator fee scalar cache", "value", currentOperatorFeeScalar.String())
 
-		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars, cfg.Sp1GasScalar)
+		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars, cfg.Sp1GasScalar, cfg.OperatorFeeMarkupPercentage)
 
 		if cfg.BlockscoutExplorerURL != "" {
 			explorerClient = NewBlockscoutClient(cfg.BlockscoutExplorerURL)
