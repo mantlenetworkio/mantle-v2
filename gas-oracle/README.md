@@ -59,6 +59,7 @@ GLOBAL OPTIONS:
    --metrics.influxdb.username value                  Username to authorize access to the database (default: "test") [$GAS_PRICE_ORACLE_METRICS_INFLUX_DB_USERNAME]
    --metrics.influxdb.password value                  Password to authorize access to the database (default: "test") [$GAS_PRICE_ORACLE_METRICS_INFLUX_DB_PASSWORD]
    --operator-fee-update-enabled boolean              Enable operator fee update [$GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_ENABLED]
+   --operator-fee-markup-percentage int64             the markup percentage of the operator fee (default: 0) [$GAS_PRICE_ORACLE_OPERATOR_FEE_MARKUP_PERCENTAGE]
    --operator-fee-update-interval uint64              the interval of updating the operator fee (default: 300) [$GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_INTERVAL]
    --operator-fee-significance-factor float64         the significance factor of updating the operator fee (default: 0.05) [$GAS_PRICE_ORACLE_OPERATOR_FEE_SIGNIFICANCE_FACTOR]
    --intrinsic-sp1-gas-per-tx uint64                  the intrinsic sp1 gas per tx (default: 3e6) [$GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_TX]
