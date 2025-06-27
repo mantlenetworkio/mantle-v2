@@ -39,7 +39,6 @@ var (
 const (
 	DefaultOperatorFeeUpdateInterval     = 300  // 5 minutes
 	DefaultOperatorFeeSignificanceFactor = 0.05 // 5% threshold
-
 )
 
 // GasPriceOracle manages a hot key that can update the L2 Gas Price
@@ -404,13 +403,8 @@ func (g *GasPriceOracle) updateOperatorFeeScalar() error {
 		return fmt.Errorf("failed to calculate operator fee scalar: %w", err)
 	}
 
-	// Get current operator fee scalar from contract
-	currentScalar, err := g.contract.OperatorFeeScalar(&bind.CallOpts{
-		Context: g.ctx,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get current operator fee scalar: %w", err)
-	}
+	// Get cached operator fee scalar
+	currentScalar := g.lastOperatorFeeScalar
 
 	// Only update if the value has changed by more than the significance factor
 	significanceFactor := g.config.OperatorFeeSignificanceFactor
