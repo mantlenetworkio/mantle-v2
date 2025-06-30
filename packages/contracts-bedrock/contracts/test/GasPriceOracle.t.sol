@@ -25,7 +25,7 @@ contract GasPriceOracle_Test is CommonTest {
     uint256 constant l1FeeOverhead = 310;
     uint256 constant l1FeeScalar = 10;
 
-    uint256 constant operatorFeeConstant = 0;
+    uint256 constant operatorFeeConstant = 10;
     uint256 constant operatorFeeScalar = 5490_000000;
 
     struct TestData {
@@ -76,7 +76,7 @@ contract GasPriceOracle_Test is CommonTest {
         for (uint256 i = 0; i < caseBedrock.length; i++) {
             assertEq(gasOracle.getL1GasUsed(caseBedrock[i].data), caseBedrock[i].gasUsed);
         }
-        _setIsSkadi();
+        _setSkadi();
         for (uint256 i = 0; i < caseSkadi.length; i++) {
             assertEq(gasOracle.getL1GasUsed(caseSkadi[i].data), caseSkadi[i].gasUsed);
         }
@@ -86,7 +86,7 @@ contract GasPriceOracle_Test is CommonTest {
         for (uint256 i = 0; i < caseBedrock.length; i++) {
             assertEq(gasOracle.getL1Fee(caseBedrock[i].data), caseBedrock[i].l1Fee);
         }
-        _setIsSkadi();
+        _setSkadi();
         for (uint256 i = 0; i < caseSkadi.length; i++) {
             assertEq(gasOracle.getL1Fee(caseSkadi[i].data), caseSkadi[i].l1Fee);
         }
@@ -135,33 +135,53 @@ contract GasPriceOracle_Test is CommonTest {
         assertEq(returndata, hex"");
     }
 
-    function test_setIsSkadi_succeeds() external {
-        gasOracle.setIsSkadi();
+    function test_setSkadi_succeeds() external {
+        gasOracle.setSkadi();
         assertEq(gasOracle.isSkadi(), true);
     }
 
-    function test_setIsSkadi_reverts() external {
-        gasOracle.setIsSkadi();
-        vm.expectRevert("isSkadi already set");
-        gasOracle.setIsSkadi();
+    function test_setSkadi_reverts() external {
+        gasOracle.setSkadi();
+        vm.expectRevert("GasPriceOracle: IsSkadi already set");
+        gasOracle.setSkadi();
+    }
+
+    /// @dev Tests that `setSkadi` is only callable by the operator.
+    function test_setSkadi_wrongCaller_reverts() external {
+        vm.expectRevert("Caller is not the operator");
+        vm.prank(address(1));
+        gasOracle.setSkadi();
     }
 
     function test_getOverhead_reverts() external {
-        _setIsSkadi();
+        _setSkadi();
         vm.expectRevert("GasPriceOracle: overhead() is deprecated");
         gasOracle.overhead();
     }
 
     function test_getScalar_reverts() external {
-        _setIsSkadi();
+        _setSkadi();
         vm.expectRevert("GasPriceOracle: scalar() is deprecated");
         gasOracle.scalar();
+    }
+
+    /// @dev Tests that `operatorFee` is 0 if IsSkadi is false
+    function test_getOperatorFee_preSkadi_succeeds() external {
+        assertEq(gasOracle.isSkadi(), false);
+        assertEq(gasOracle.getOperatorFee(100), 0);
+    }
+
+    /// @dev Tests that `operatorFee` is set correctly
+    function test_getOperatorFee_postSkadi_succeeds() external {
+        _setSkadi();
+        assertEq(gasOracle.isSkadi(), true);
+        assertEq(gasOracle.getOperatorFee(100), 100 * operatorFeeScalar / 1e6 + operatorFeeConstant);
     }
 
     function test_setOperatorFeeConstant_succeeds() external {
         gasOracle.setOperatorFeeConstant(100);
         assertEq(gasOracle.operatorFeeConstant(), 100);
-        _setIsSkadi();
+        _setSkadi();
         gasOracle.setOperatorFeeConstant(200);
         assertEq(gasOracle.operatorFeeConstant(), 200);
     }
@@ -169,13 +189,13 @@ contract GasPriceOracle_Test is CommonTest {
     function test_setOperatorFeeScalar_succeeds() external {
         gasOracle.setOperatorFeeScalar(100);
         assertEq(gasOracle.operatorFeeScalar(), 100);
-        _setIsSkadi();
+        _setSkadi();
         gasOracle.setOperatorFeeScalar(200);
         assertEq(gasOracle.operatorFeeScalar(), 200);
     }
 
-    function _setIsSkadi() internal {
-        gasOracle.setIsSkadi();
+    function _setSkadi() internal {
+        gasOracle.setSkadi();
     }
 
     function _prepareTestData() internal {
