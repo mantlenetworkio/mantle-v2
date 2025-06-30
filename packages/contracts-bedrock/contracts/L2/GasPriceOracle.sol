@@ -99,8 +99,8 @@ contract GasPriceOracle is Semver {
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
     }
 
-    function setIsSkadi() external onlyOperator {
-        require(isSkadi == false, "isSkadi already set");
+    function setSkadi() external onlyOperator {
+        require(isSkadi == false, "GasPriceOracle: IsSkadi already set");
         isSkadi = true;
     }
 
