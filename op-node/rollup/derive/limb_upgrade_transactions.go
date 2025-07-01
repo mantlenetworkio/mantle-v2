@@ -32,7 +32,7 @@ var (
 	enableLimbInput  = crypto.Keccak256([]byte("setLimb()"))[:4]
 )
 
-func MantleLimbUpgradeTransactions() ([]hexutil.Bytes, error) {
+func MantleLimbNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 	upgradeTxns := make([]hexutil.Bytes, 0, 3)
 
 	// Deploy Gas Price Oracle transaction

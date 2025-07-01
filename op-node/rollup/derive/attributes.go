@@ -3,6 +3,7 @@ package derive
 import (
 	"context"
 	"fmt"
+
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -105,6 +106,13 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			return nil, NewCriticalError(fmt.Errorf("failed to build skadi network upgrade txs: %w", err))
 		}
 		upgradeTxs = append(upgradeTxs, skadiUpgradeTxs...)
+	}
+	if ba.cfg.IsMantleLimbActivationBlock(nextL2Time) {
+		limbUpgradeTxs, err := MantleLimbNetworkUpgradeTransactions()
+		if err != nil {
+			return nil, NewCriticalError(fmt.Errorf("failed to build limb network upgrade txs: %w", err))
+		}
+		upgradeTxs = append(upgradeTxs, limbUpgradeTxs...)
 	}
 
 	l1InfoTx, err := L1InfoDepositBytes(seqNumber, l1Info, sysConfig, ba.cfg.IsRegolith(nextL2Time))

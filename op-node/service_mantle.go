@@ -14,4 +14,5 @@ func initMantleUpgradeConfig(rollupConfig *rollup.Config) {
 	}
 	rollupConfig.BaseFeeTime = upgradeConfig.BaseFeeTime
 	rollupConfig.MantleSkadiTime = upgradeConfig.MantleSkadiTime
+	rollupConfig.MantleLimbTime = upgradeConfig.MantleLimbTime
 }
