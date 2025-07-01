@@ -35,7 +35,7 @@ contract GasPriceOracle is Semver {
 
     uint256[10] public _gap;
 
-    bool public isSkadi;
+    bool public isLimb;
 
     /**
      * @custom:semver 1.1.0
@@ -99,9 +99,9 @@ contract GasPriceOracle is Semver {
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
     }
 
-    function setSkadi() external onlyOperator {
-        require(isSkadi == false, "GasPriceOracle: IsSkadi already set");
-        isSkadi = true;
+    function setLimb() external onlyOperator {
+        require(isLimb == false, "GasPriceOracle: IsLimb already set");
+        isLimb = true;
     }
 
     function setOperatorFeeConstant(uint256 _operatorFeeConstant) external onlyOperator {
@@ -125,7 +125,7 @@ contract GasPriceOracle is Semver {
     }
 
     function getOperatorFee(uint256 _gasUsed) public view returns (uint256) {
-        if (!isSkadi) {
+        if (!isLimb) {
             return 0;
         }
         return
@@ -156,7 +156,7 @@ contract GasPriceOracle is Semver {
      * @return Current fee overhead.
      */
     function overhead() public view returns (uint256) {
-        require(!isSkadi, "GasPriceOracle: overhead() is deprecated");
+        require(!isLimb, "GasPriceOracle: overhead() is deprecated");
         return _overhead();
     }
 
@@ -166,7 +166,7 @@ contract GasPriceOracle is Semver {
      * @return Current fee scalar.
      */
     function scalar() public view returns (uint256) {
-        require(!isSkadi, "GasPriceOracle: scalar() is deprecated");
+        require(!isLimb, "GasPriceOracle: scalar() is deprecated");
         return _scalar();
     }
 
