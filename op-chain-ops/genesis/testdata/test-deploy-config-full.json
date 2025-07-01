@@ -49,6 +49,8 @@
   "gasPriceOracleOwner":"0x0000000000000000000000000000000000000000",
   "gasPriceOracleScalar": 1000000,
   "gasPriceOracleTokenRatio":0,
+  "gasPriceOracleOperatorFeeConstant": 0,
+  "gasPriceOracleOperatorFeeScalar": 0,
   "governanceTokenSymbol": "OP",
   "governanceTokenName": "Optimism",
   "governanceTokenOwner": "0x0000000000000000000000000000000000000333",

@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
@@ -106,6 +107,11 @@ type DeployConfig struct {
 	GasPriceOracleOverhead uint64 `json:"gasPriceOracleOverhead"`
 	// The initial value of the gas scalar
 	GasPriceOracleScalar uint64 `json:"gasPriceOracleScalar"`
+	// The initial value of the gas price oracle operator fee constant
+	GasPriceOracleOperatorFeeConstant uint64 `json:"gasPriceOracleOperatorFeeConstant"`
+	// The initial value of the gas price oracle operator fee scalar
+	GasPriceOracleOperatorFeeScalar uint64 `json:"gasPriceOracleOperatorFeeScalar"`
+
 	// The ERC20 symbol of the GovernanceToken
 	GovernanceTokenSymbol string `json:"governanceTokenSymbol"`
 	// The ERC20 name of the GovernanceToken
@@ -206,6 +212,12 @@ func (d *DeployConfig) Check() error {
 	}
 	if d.GasPriceOracleScalar == 0 {
 		return fmt.Errorf("%w: GasPriceOracleScalar cannot be 0", ErrInvalidDeployConfig)
+	}
+	if d.GasPriceOracleOperatorFeeConstant == 0 {
+		log.Warn("GasPriceOracleOperatorFeeConstant is 0")
+	}
+	if d.GasPriceOracleOperatorFeeScalar == 0 {
+		log.Warn("GasPriceOracleOperatorFeeScalar is 0")
 	}
 	if d.L1StandardBridgeProxy == (common.Address{}) {
 		return fmt.Errorf("%w: L1StandardBridgeProxy cannot be address(0)", ErrInvalidDeployConfig)
@@ -517,9 +529,14 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"xDomainMsgSender": "0x000000000000000000000000000000000000dEaD",
 		"msgNonce":         0,
 	}
+	tempL2ChainConfig := &params.ChainConfig{MantleSkadiTime: params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID)).MantleSkadiTime}
+	isSkadi := tempL2ChainConfig.IsMantleSkadi(block.Time())
 	storage["GasPriceOracle"] = state.StorageValues{
-		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
-		"owner":      config.GasPriceOracleOwner,
+		"tokenRatio":          new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
+		"owner":               config.GasPriceOracleOwner,
+		"isSkadi":             isSkadi,
+		"operatorFeeConstant": new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeConstant),
+		"operatorFeeScalar":   new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeScalar),
 	}
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),

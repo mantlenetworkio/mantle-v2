@@ -98,9 +98,11 @@ func MakeDeployParams(t require.TestingT, tp *TestParams) *DeployParams {
 		L2GenesisBlockParentHash:    common.Hash{},
 		L2GenesisBlockBaseFeePerGas: uint64ToBig(1000_000_000),
 
-		GasPriceOracleOverhead:      2100,
-		GasPriceOracleScalar:        1000_000,
-		DeploymentWaitConfirmations: 1,
+		GasPriceOracleOverhead:            2100,
+		GasPriceOracleScalar:              1000_000,
+		GasPriceOracleOperatorFeeConstant: 0,
+		GasPriceOracleOperatorFeeScalar:   0,
+		DeploymentWaitConfirmations:       1,
 
 		SequencerFeeVaultRecipient: common.Address{19: 1},
 		BaseFeeVaultRecipient:      common.Address{19: 2},
