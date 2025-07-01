@@ -410,8 +410,8 @@ github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm
 github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-github.com/mantlenetworkio/op-geth v0.0.0-20250611062612-f2040782a1d0 h1:y7T+6kuLNh+m5EsGTXJffJm/kFiN4FKZOkIY5aigvnc=
-github.com/mantlenetworkio/op-geth v0.0.0-20250611062612-f2040782a1d0/go.mod h1:Hfz6Ix1VzviSe+VzFQHzY/Gf0s5SeIf/hReDWUnQgWM=
+github.com/mantlenetworkio/op-geth v0.0.0-20250626133055-44b8c25a259d h1:+rBflHFFeDcSwS7SBFzhHRmq+l375IIPkHCsEiUkR+Q=
+github.com/mantlenetworkio/op-geth v0.0.0-20250626133055-44b8c25a259d/go.mod h1:Hfz6Ix1VzviSe+VzFQHzY/Gf0s5SeIf/hReDWUnQgWM=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd h1:br0buuQ854V8u83wA0rVZ8ttrq5CpaPZdvrK0LP2lOk=
 github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd/go.mod h1:QuCEs1Nt24+FYQEqAAncTDPJIuGs+LxK1MCiFL25pMU=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd/go.mod h1:9ELz6aaclSIGnZBoaSLZ3NAl1VTufbOrXBPvtcy6WiQ=

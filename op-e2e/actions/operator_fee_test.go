@@ -61,9 +61,8 @@ func Test_Operator_Fee_Constistency(gt *testing.T) {
 	receipt := alice.LastTxReceipt(t)
 
 	// Check that the operator fee was applied
-	// TODO: uncomment this once the op-geth is updated to include the operator fee
-	// require.Equal(t, testOperatorFeeScalar, uint64(*receipt.OperatorFeeScalar))
-	// require.Equal(t, testOperatorFeeConstant, *receipt.OperatorFeeConstant)
+	require.Equal(t, testOperatorFeeScalar, uint64(*receipt.OperatorFeeScalar))
+	require.Equal(t, testOperatorFeeConstant, *receipt.OperatorFeeConstant)
 
 	l1FeeVaultBalance := balanceAt(predeploys.L1FeeVaultAddr)
 	baseFeeVaultBalance := balanceAt(predeploys.BaseFeeVaultAddr)
