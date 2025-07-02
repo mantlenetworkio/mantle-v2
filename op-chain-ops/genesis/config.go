@@ -529,15 +529,18 @@ func NewL2StorageConfig(config *DeployConfig, block *types.Block) (state.Storage
 		"xDomainMsgSender": "0x000000000000000000000000000000000000dEaD",
 		"msgNonce":         0,
 	}
+	gpoStorage := state.StorageValues{
+		"tokenRatio": new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
+		"owner":      config.GasPriceOracleOwner,
+	}
 	tempL2ChainConfig := &params.ChainConfig{MantleLimbTime: params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID)).MantleLimbTime}
 	isLimb := tempL2ChainConfig.IsMantleLimb(block.Time())
-	storage["GasPriceOracle"] = state.StorageValues{
-		"tokenRatio":          new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
-		"owner":               config.GasPriceOracleOwner,
-		"isLimb":              isLimb,
-		"operatorFeeConstant": new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeConstant),
-		"operatorFeeScalar":   new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeScalar),
+	if isLimb {
+		gpoStorage["isLimb"] = true
+		gpoStorage["operatorFeeConstant"] = new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeConstant)
+		gpoStorage["operatorFeeScalar"] = new(big.Int).SetUint64(config.GasPriceOracleOperatorFeeScalar)
 	}
+	storage["GasPriceOracle"] = gpoStorage
 	storage["L1Block"] = state.StorageValues{
 		"number":         block.Number(),
 		"timestamp":      block.Time(),
