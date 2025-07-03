@@ -45,16 +45,17 @@ func main() {
 		}
 
 		config := oracle.NewConfig(ctx)
-		gpo, err := oracle.NewGasPriceOracle(config)
-		if err != nil {
-			return err
-		}
 
 		if config.MetricsEnabled {
 			address := fmt.Sprintf("%s:%d", config.MetricsHTTP, config.MetricsPort)
 			log.Info("Enabling stand-alone metrics HTTP endpoint", "address", address)
 			ometrics.Setup(address)
 			ometrics.InitAndRegisterStats(ometrics.DefaultRegistry)
+		}
+
+		gpo, err := oracle.NewGasPriceOracle(config)
+		if err != nil {
+			return err
 		}
 
 		if err := gpo.Start(); err != nil {

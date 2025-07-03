@@ -82,6 +82,8 @@ type Config struct {
 
 	MantleSkadiTime *uint64 `json:"mantle_skadi_time,omitempty"`
 
+	MantleLimbTime *uint64 `json:"mantle_limb_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -284,12 +286,24 @@ func (c *Config) IsMantleSkadi(timestamp uint64) bool {
 	return c.MantleSkadiTime != nil && timestamp >= *c.MantleSkadiTime
 }
 
+func (c *Config) IsMantleLimb(timestamp uint64) bool {
+	return c.MantleLimbTime != nil && timestamp >= *c.MantleLimbTime
+}
+
 // IsMantleSkadiActivationBlock returns whether the specified block is the first block subject to the
 // Mantle Skadi upgrade.
 func (c *Config) IsMantleSkadiActivationBlock(l2BlockTime uint64) bool {
 	return c.IsMantleSkadi(l2BlockTime) &&
 		l2BlockTime >= c.BlockTime &&
 		!c.IsMantleSkadi(l2BlockTime-c.BlockTime)
+}
+
+// IsMantleLimbActivationBlock returns whether the specified block is the first block subject to the
+// Mantle Limb upgrade.
+func (c *Config) IsMantleLimbActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleLimb(l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleLimb(l2BlockTime-c.BlockTime)
 }
 
 // Description outputs a banner describing the important parts of rollup configuration in a human-readable form.

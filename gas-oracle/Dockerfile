@@ -5,6 +5,7 @@ ARG VERSION=v0.0.0
 RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash
 
 COPY ./gas-oracle /app/gas-oracle
+COPY ./op-bindings /app/op-bindings
 COPY ./op-service /app/op-service
 COPY ./go.mod /app/go.mod
 COPY ./go.sum /app/go.sum

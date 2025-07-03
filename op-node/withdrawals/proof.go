@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient/gethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/holiman/uint256"
 )
 
 type proofDB struct {
@@ -81,7 +82,7 @@ func VerifyProof(stateRoot common.Hash, proof *gethclient.AccountResult) error {
 		proof.Address,
 		types.StateAccount{
 			Nonce:    proof.Nonce,
-			Balance:  proof.Balance,
+			Balance:  uint256.NewInt(proof.Balance.Uint64()),
 			Root:     proof.StorageHash,
 			CodeHash: proof.CodeHash[:],
 		},

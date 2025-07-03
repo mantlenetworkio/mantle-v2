@@ -130,6 +130,61 @@ var (
 		Usage:   "the creden of hsm key",
 		EnvVars: []string{"GAS_PRICE_ORACLE_HSM_CREDEN"},
 	}
+	OperatorFeeUpdateEnabledFlag = &cli.BoolFlag{
+		Name:    "operator-fee-update-enabled",
+		Usage:   "enable the operator fee update",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_ENABLED"},
+	}
+	OperatorFeeMarkupFlag = &cli.Int64Flag{
+		Name:    "operator-fee-markup-percentage",
+		Usage:   "the markup percentage of the operator fee",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_MARKUP_PERCENTAGE"},
+	}
+	OperatorFeeUpdateIntervalFlag = &cli.Uint64Flag{
+		Name:    "operator-fee-update-interval",
+		Usage:   "the interval of updating the operator fee",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_UPDATE_INTERVAL"},
+	}
+	OperatorFeeSignificanceFactorFlag = &cli.Float64Flag{
+		Name:    "operator-fee-significance-factor",
+		Usage:   "the significance factor of updating the operator fee",
+		EnvVars: []string{"GAS_PRICE_ORACLE_OPERATOR_FEE_SIGNIFICANCE_FACTOR"},
+	}
+	IntrinsicSp1GasPerTxFlag = &cli.Uint64Flag{
+		Name:    "intrinsic-sp1-gas-per-tx",
+		Usage:   "the intrinsic sp1 gas per tx",
+		EnvVars: []string{"GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_TX"},
+	}
+	IntrinsicSp1GasPerBlockFlag = &cli.Uint64Flag{
+		Name:    "intrinsic-sp1-gas-per-block",
+		Usage:   "the intrinsic sp1 gas per block",
+		EnvVars: []string{"GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_BLOCK"},
+	}
+	Sp1PricePerBGasInDollarsFlag = &cli.Float64Flag{
+		Name:    "sp1-price-per-bgas-in-dollars",
+		Usage:   "the price of sp1 per bgas in dollars",
+		EnvVars: []string{"GAS_PRICE_ORACLE_SP1_PRICE_PER_BGAS_IN_DOLLARS"},
+	}
+	Sp1GasScalarFlag = &cli.Uint64Flag{
+		Name:    "sp1-gas-scalar",
+		Usage:   "the scalar of sp1 gas",
+		EnvVars: []string{"GAS_PRICE_ORACLE_SP1_GAS_SCALAR"},
+	}
+	BlockscoutExplorerURLFlag = &cli.StringFlag{
+		Name:    "blockscout-explorer-url",
+		Usage:   "the url of the blockscout explorer",
+		EnvVars: []string{"GAS_PRICE_ORACLE_BLOCKSCOUT_EXPLORER_URL"},
+	}
+	EtherscanExplorerURLFlag = &cli.StringFlag{
+		Name:    "etherscan-explorer-url",
+		Usage:   "the url of the etherscan explorer",
+		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_EXPLORER_URL"},
+	}
+	EtherscanAPIKeyFlag = &cli.StringFlag{
+		Name:    "etherscan-api-key",
+		Usage:   "the api key of the etherscan",
+		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_API_KEY"},
+	}
 )
 
 var Flags = []cli.Flag{
@@ -155,4 +210,15 @@ var Flags = []cli.Flag{
 	MetricsEnabledFlag,
 	MetricsHTTPFlag,
 	MetricsPortFlag,
+	OperatorFeeUpdateEnabledFlag,
+	OperatorFeeMarkupFlag,
+	OperatorFeeUpdateIntervalFlag,
+	OperatorFeeSignificanceFactorFlag,
+	IntrinsicSp1GasPerTxFlag,
+	IntrinsicSp1GasPerBlockFlag,
+	Sp1PricePerBGasInDollarsFlag,
+	Sp1GasScalarFlag,
+	BlockscoutExplorerURLFlag,
+	EtherscanExplorerURLFlag,
+	EtherscanAPIKeyFlag,
 }

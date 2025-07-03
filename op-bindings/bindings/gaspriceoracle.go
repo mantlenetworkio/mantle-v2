@@ -31,8 +31,8 @@ var (
 
 // GasPriceOracleMetaData contains all meta data concerning the GasPriceOracle contract.
 var GasPriceOracleMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOperator\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"OperatorUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"previousTokenRatio\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"newTokenRatio\",\"type\":\"uint256\"}],\"name\":\"TokenRatioUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DECIMALS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"baseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1Fee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"getL1GasUsed\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"l1BaseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"operator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"overhead\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"scalar\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"setOperator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_tokenRatio\",\"type\":\"uint256\"}],\"name\":\"setTokenRatio\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenRatio\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x60e060405234801561001057600080fd5b5060016080819052600060a081905260c081905280610e8761004a823960006103ce015260006103a50152600061037c0152610e876000f3fe608060405234801561001057600080fd5b50600436106101005760003560e01c80636ef25c3a11610097578063e38e91f911610066578063e38e91f9146101fb578063f2fde38b1461020e578063f45e65d814610221578063fe173b97146101ad57600080fd5b80636ef25c3a146101ad5780638da5cb5b146101b3578063b3ab15fb146101d3578063de26c4a1146101e857600080fd5b806349948e0e116100d357806349948e0e14610138578063519b4bd31461014b57806354fd4d5014610153578063570ca7351461016857600080fd5b806306f837d3146101055780630c18c162146101215780632e0f262514610129578063313ce56714610131575b600080fd5b61010e60005481565b6040519081526020015b60405180910390f35b61010e610229565b61010e600681565b600661010e565b61010e6101463660046109be565b6102b3565b61010e610314565b61015b610375565b6040516101189190610abd565b6002546101889073ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff9091168152602001610118565b4861010e565b6001546101889073ffffffffffffffffffffffffffffffffffffffff1681565b6101e66101e1366004610b0e565b610418565b005b61010e6101f63660046109be565b610515565b6101e6610209366004610b4b565b6105c4565b6101e661021c366004610b0e565b61067c565b61010e6107f1565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16638b239f736040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102ae9190610b64565b905090565b6000806102bf83610515565b905060006102cb610314565b6102d59083610bac565b905060006102e56006600a610d0b565b905060006102f16107f1565b6102fb9084610bac565b905060006103098383610d46565b979650505050505050565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16635cf249696040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b60606103a07f0000000000000000000000000000000000000000000000000000000000000000610852565b6103c97f0000000000000000000000000000000000000000000000000000000000000000610852565b6103f27f0000000000000000000000000000000000000000000000000000000000000000610852565b60405160200161040493929190610d5a565b604051602081830303815290604052905090565b60015473ffffffffffffffffffffffffffffffffffffffff16331461049e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e657200000000000000000060448201526064015b60405180910390fd5b6002805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907ffbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad0390600090a35050565b80516000908190815b818110156105985784818151811061053857610538610dd0565b01602001517fff000000000000000000000000000000000000000000000000000000000000001660000361057857610571600484610dff565b9250610586565b610583601084610dff565b92505b8061059081610e17565b91505061051e565b5060006105a3610229565b6105ad9084610dff565b90506105bb81610440610dff565b95945050505050565b60025473ffffffffffffffffffffffffffffffffffffffff163314610645576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f43616c6c6572206973206e6f7420746865206f70657261746f720000000000006044820152606401610495565b600080548282556040519091839183917f5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd91a35050565b60015473ffffffffffffffffffffffffffffffffffffffff1633146106fd576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e65720000000000000000006044820152606401610495565b73ffffffffffffffffffffffffffffffffffffffff811661077a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601d60248201527f6e6577206f776e657220697320746865207a65726f20616464726573730000006044820152606401610495565b6001805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16639e8c49666040518163ffffffff1660e01b8152600401602060405180830381865afa15801561028a573d6000803e3d6000fd5b60608160000361089557505060408051808201909152600181527f3000000000000000000000000000000000000000000000000000000000000000602082015290565b8160005b81156108bf57806108a981610e17565b91506108b89050600a83610d46565b9150610899565b60008167ffffffffffffffff8111156108da576108da61098f565b6040519080825280601f01601f191660200182016040528015610904576020820181803683370190505b5090505b841561098757610919600183610e4f565b9150610926600a86610e66565b610931906030610dff565b60f81b81838151811061094657610946610dd0565b60200101907effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916908160001a905350610980600a86610d46565b9450610908565b949350505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6000602082840312156109d057600080fd5b813567ffffffffffffffff808211156109e857600080fd5b818401915084601f8301126109fc57600080fd5b813581811115610a0e57610a0e61098f565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f01168101908382118183101715610a5457610a5461098f565b81604052828152876020848701011115610a6d57600080fd5b826020860160208301376000928101602001929092525095945050505050565b60005b83811015610aa8578181015183820152602001610a90565b83811115610ab7576000848401525b50505050565b6020815260008251806020840152610adc816040850160208701610a8d565b601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0169190910160400192915050565b600060208284031215610b2057600080fd5b813573ffffffffffffffffffffffffffffffffffffffff81168114610b4457600080fd5b9392505050565b600060208284031215610b5d57600080fd5b5035919050565b600060208284031215610b7657600080fd5b5051919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615610be457610be4610b7d565b500290565b600181815b80851115610c4257817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610c2857610c28610b7d565b80851615610c3557918102915b93841c9390800290610bee565b509250929050565b600082610c5957506001610d05565b81610c6657506000610d05565b8160018114610c7c5760028114610c8657610ca2565b6001915050610d05565b60ff841115610c9757610c97610b7d565b50506001821b610d05565b5060208310610133831016604e8410600b8410161715610cc5575081810a610d05565b610ccf8383610be9565b807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04821115610d0157610d01610b7d565b0290505b92915050565b6000610b448383610c4a565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b600082610d5557610d55610d17565b500490565b60008451610d6c818460208901610a8d565b80830190507f2e000000000000000000000000000000000000000000000000000000000000008082528551610da8816001850160208a01610a8d565b60019201918201528351610dc3816002840160208801610a8d565b0160020195945050505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60008219821115610e1257610e12610b7d565b500190565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8203610e4857610e48610b7d565b5060010190565b600082821015610e6157610e61610b7d565b500390565b600082610e7557610e75610d17565b50069056fea164736f6c634300080f000a",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DECIMALS\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"_gap\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"baseFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"decimals\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"gasPrice\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getL1Fee\",\"inputs\":[{\"name\":\"_data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getL1GasUsed\",\"inputs\":[{\"name\":\"_data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getOperatorFee\",\"inputs\":[{\"name\":\"_gasUsed\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isLimb\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"l1BaseFee\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operator\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatorFeeConstant\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"operatorFeeScalar\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"overhead\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"scalar\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setLimb\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOperator\",\"inputs\":[{\"name\":\"_operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOperatorFeeConstant\",\"inputs\":[{\"name\":\"_operatorFeeConstant\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOperatorFeeScalar\",\"inputs\":[{\"name\":\"_operatorFeeScalar\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setTokenRatio\",\"inputs\":[{\"name\":\"_tokenRatio\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"tokenRatio\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"_owner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"version\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"OperatorFeeConstantUpdated\",\"inputs\":[{\"name\":\"previousOperatorFeeConstant\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"newOperatorFeeConstant\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorFeeScalarUpdated\",\"inputs\":[{\"name\":\"previousOperatorFeeScalar\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"newOperatorFeeScalar\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorUpdated\",\"inputs\":[{\"name\":\"previousOperator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOperator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenRatioUpdated\",\"inputs\":[{\"name\":\"previousTokenRatio\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"newTokenRatio\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false}]",
+	Bin: "0x60e060405234801561001057600080fd5b506001608081905260a052600060c05260805160a05160c05161131661004f6000396000610569015260006105400152600061051701526113166000f3fe608060405234801561001057600080fd5b50600436106101985760003560e01c80635d71ff8f116100e3578063de26c4a11161008c578063f2fde38b11610066578063f2fde38b14610329578063f45e65d81461033c578063fe173b971461029257600080fd5b8063de26c4a1146102e6578063e38e91f9146102f9578063e875f02a1461030c57600080fd5b8063b3ab15fb116100bd578063b3ab15fb146102b8578063d76a0548146102cb578063dab3b3da146102d357600080fd5b80635d71ff8f1461027f5780636ef25c3a146102925780638da5cb5b1461029857600080fd5b806332e70fea11610145578063519b4bd31161011f578063519b4bd31461021d57806354fd4d5014610225578063570ca7351461023a57600080fd5b806332e70fea146101ec57806349948e0e146102015780634d5d9a2a1461021457600080fd5b8063275aedd211610176578063275aedd2146101ca5780632e0f2625146101dd578063313ce567146101e557600080fd5b806306f837d31461019d5780630c18c162146101b957806316d3bc7f146101c1575b600080fd5b6101a660005481565b6040519081526020015b60405180910390f35b6101a6610344565b6101a660035481565b6101a66101d8366004610e20565b610353565b6101a6600681565b60066101a6565b6101ff6101fa366004610e20565b6103c1565b005b6101a661020f366004610e68565b610480565b6101a660045481565b6101a661048b565b61022d610510565b6040516101b09190610f67565b60025461025a9073ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020016101b0565b6101ff61028d366004610e20565b6105b3565b486101a6565b60015461025a9073ffffffffffffffffffffffffffffffffffffffff1681565b6101ff6102c6366004610fb8565b61066d565b6101ff610765565b6101a66102e1366004610e20565b6108c8565b6101a66102f4366004610e68565b6108df565b6101ff610307366004610e20565b6108fc565b600f546103199060ff1681565b60405190151581526020016101b0565b6101ff610337366004610fb8565b6109b4565b6101a6610b29565b600061034e610b33565b905090565b600f5460009060ff1661036857506000919050565b6004546103bb906103ac90620f4240907fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8615878302888104909314170117611053565b60035481019081106000031790565b92915050565b60025473ffffffffffffffffffffffffffffffffffffffff163314610447576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f43616c6c6572206973206e6f7420746865206f70657261746f7200000000000060448201526064015b60405180910390fd5b6003805490829055604051829082907f08a9bc8992a7c4fa053bafee70f234ebf754c491d16759a28adf47e3cd9375b990600090a35050565b60006103bb82610b94565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16635cf249696040518163ffffffff1660e01b8152600401602060405180830381865afa1580156104ec573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061034e9190611067565b606061053b7f0000000000000000000000000000000000000000000000000000000000000000610bfa565b6105647f0000000000000000000000000000000000000000000000000000000000000000610bfa565b61058d7f0000000000000000000000000000000000000000000000000000000000000000610bfa565b60405160200161059f93929190611080565b604051602081830303815290604052905090565b60025473ffffffffffffffffffffffffffffffffffffffff163314610634576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f43616c6c6572206973206e6f7420746865206f70657261746f72000000000000604482015260640161043e565b6004805490829055604051829082907f977ba0b597123a7c26f0d57b10b1ab88e14d4e8676e6629640df681ccf5ffcf290600090a35050565b60015473ffffffffffffffffffffffffffffffffffffffff1633146106ee576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e6572000000000000000000604482015260640161043e565b6002805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907ffbe5b6cbafb274f445d7fed869dc77a838d8243a22c460de156560e8857cad0390600090a35050565b3373deaddeaddeaddeaddeaddeaddeaddeaddead000114610808576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603e60248201527f47617350726963654f7261636c653a206f6e6c7920746865206465706f73697460448201527f6f72206163636f756e742063616e207365742069734c696d6220666c61670000606482015260840161043e565b600f5460ff161561089b576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602260248201527f47617350726963654f7261636c653a2049734c696d6220616c7265616479207360448201527f6574000000000000000000000000000000000000000000000000000000000000606482015260840161043e565b600f80547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00166001179055565b600581600a81106108d857600080fd5b0154905081565b60006108e9610b33565b6108f283610d2f565b6103bb91906110f6565b60025473ffffffffffffffffffffffffffffffffffffffff16331461097d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f43616c6c6572206973206e6f7420746865206f70657261746f72000000000000604482015260640161043e565b600080548282556040519091839183917f5d6ae9db2d6725497bed0302a8212c0db5fdb3bd7d14f188a83b5589089caafd91a35050565b60015473ffffffffffffffffffffffffffffffffffffffff163314610a35576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f43616c6c6572206973206e6f7420746865206f776e6572000000000000000000604482015260640161043e565b73ffffffffffffffffffffffffffffffffffffffff8116610ab2576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601d60248201527f6e6577206f776e657220697320746865207a65726f2061646472657373000000604482015260640161043e565b6001805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600061034e610dbf565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16638b239f736040518163ffffffff1660e01b8152600401602060405180830381865afa1580156104ec573d6000803e3d6000fd5b600080610ba083610d2f565b90506000610bac610dbf565b610bb461048b565b610bbc610b33565b610bc690856110f6565b610bd0919061110e565b610bda919061110e565b9050610be86006600a61126b565b610bf29082611053565b949350505050565b606081600003610c3d57505060408051808201909152600181527f3000000000000000000000000000000000000000000000000000000000000000602082015290565b8160005b8115610c675780610c5181611277565b9150610c609050600a83611053565b9150610c41565b60008167ffffffffffffffff811115610c8257610c82610e39565b6040519080825280601f01601f191660200182016040528015610cac576020820181803683370190505b5090505b8415610bf257610cc16001836112af565b9150610cce600a866112c6565b610cd99060306110f6565b60f81b818381518110610cee57610cee6112da565b60200101907effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916908160001a905350610d28600a86611053565b9450610cb0565b80516000908190815b81811015610db257848181518110610d5257610d526112da565b01602001517fff0000000000000000000000000000000000000000000000000000000000000016600003610d9257610d8b6004846110f6565b9250610da0565b610d9d6010846110f6565b92505b80610daa81611277565b915050610d38565b50610bf2826104406110f6565b600073420000000000000000000000000000000000001573ffffffffffffffffffffffffffffffffffffffff16639e8c49666040518163ffffffff1660e01b8152600401602060405180830381865afa1580156104ec573d6000803e3d6000fd5b600060208284031215610e3257600080fd5b5035919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b600060208284031215610e7a57600080fd5b813567ffffffffffffffff80821115610e9257600080fd5b818401915084601f830112610ea657600080fd5b813581811115610eb857610eb8610e39565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f01168101908382118183101715610efe57610efe610e39565b81604052828152876020848701011115610f1757600080fd5b826020860160208301376000928101602001929092525095945050505050565b60005b83811015610f52578181015183820152602001610f3a565b83811115610f61576000848401525b50505050565b6020815260008251806020840152610f86816040850160208701610f37565b601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0169190910160400192915050565b600060208284031215610fca57600080fd5b813573ffffffffffffffffffffffffffffffffffffffff81168114610fee57600080fd5b9392505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60008261106257611062610ff5565b500490565b60006020828403121561107957600080fd5b5051919050565b60008451611092818460208901610f37565b80830190507f2e0000000000000000000000000000000000000000000000000000000000000080825285516110ce816001850160208a01610f37565b600192019182015283516110e9816002840160208801610f37565b0160020195945050505050565b6000821982111561110957611109611024565b500190565b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff048311821515161561114657611146611024565b500290565b600181815b808511156111a457817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0482111561118a5761118a611024565b8085161561119757918102915b93841c9390800290611150565b509250929050565b6000826111bb575060016103bb565b816111c8575060006103bb565b81600181146111de57600281146111e857611204565b60019150506103bb565b60ff8411156111f9576111f9611024565b50506001821b6103bb565b5060208310610133831016604e8410600b8410161715611227575081810a6103bb565b611231838361114b565b807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0482111561126357611263611024565b029392505050565b6000610fee83836111ac565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036112a8576112a8611024565b5060010190565b6000828210156112c1576112c1611024565b500390565b6000826112d5576112d5610ff5565b500690565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fdfea164736f6c634300080f000a",
 }
 
 // GasPriceOracleABI is the input ABI used to generate the binding from.
@@ -233,6 +233,37 @@ func (_GasPriceOracle *GasPriceOracleCallerSession) DECIMALS() (*big.Int, error)
 	return _GasPriceOracle.Contract.DECIMALS(&_GasPriceOracle.CallOpts)
 }
 
+// Gap is a free data retrieval call binding the contract method 0xdab3b3da.
+//
+// Solidity: function _gap(uint256 ) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) Gap(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "_gap", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Gap is a free data retrieval call binding the contract method 0xdab3b3da.
+//
+// Solidity: function _gap(uint256 ) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) Gap(arg0 *big.Int) (*big.Int, error) {
+	return _GasPriceOracle.Contract.Gap(&_GasPriceOracle.CallOpts, arg0)
+}
+
+// Gap is a free data retrieval call binding the contract method 0xdab3b3da.
+//
+// Solidity: function _gap(uint256 ) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) Gap(arg0 *big.Int) (*big.Int, error) {
+	return _GasPriceOracle.Contract.Gap(&_GasPriceOracle.CallOpts, arg0)
+}
+
 // BaseFee is a free data retrieval call binding the contract method 0x6ef25c3a.
 //
 // Solidity: function baseFee() view returns(uint256)
@@ -388,6 +419,68 @@ func (_GasPriceOracle *GasPriceOracleCallerSession) GetL1GasUsed(_data []byte) (
 	return _GasPriceOracle.Contract.GetL1GasUsed(&_GasPriceOracle.CallOpts, _data)
 }
 
+// GetOperatorFee is a free data retrieval call binding the contract method 0x275aedd2.
+//
+// Solidity: function getOperatorFee(uint256 _gasUsed) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) GetOperatorFee(opts *bind.CallOpts, _gasUsed *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "getOperatorFee", _gasUsed)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetOperatorFee is a free data retrieval call binding the contract method 0x275aedd2.
+//
+// Solidity: function getOperatorFee(uint256 _gasUsed) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) GetOperatorFee(_gasUsed *big.Int) (*big.Int, error) {
+	return _GasPriceOracle.Contract.GetOperatorFee(&_GasPriceOracle.CallOpts, _gasUsed)
+}
+
+// GetOperatorFee is a free data retrieval call binding the contract method 0x275aedd2.
+//
+// Solidity: function getOperatorFee(uint256 _gasUsed) view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) GetOperatorFee(_gasUsed *big.Int) (*big.Int, error) {
+	return _GasPriceOracle.Contract.GetOperatorFee(&_GasPriceOracle.CallOpts, _gasUsed)
+}
+
+// IsLimb is a free data retrieval call binding the contract method 0xe875f02a.
+//
+// Solidity: function isLimb() view returns(bool)
+func (_GasPriceOracle *GasPriceOracleCaller) IsLimb(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "isLimb")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsLimb is a free data retrieval call binding the contract method 0xe875f02a.
+//
+// Solidity: function isLimb() view returns(bool)
+func (_GasPriceOracle *GasPriceOracleSession) IsLimb() (bool, error) {
+	return _GasPriceOracle.Contract.IsLimb(&_GasPriceOracle.CallOpts)
+}
+
+// IsLimb is a free data retrieval call binding the contract method 0xe875f02a.
+//
+// Solidity: function isLimb() view returns(bool)
+func (_GasPriceOracle *GasPriceOracleCallerSession) IsLimb() (bool, error) {
+	return _GasPriceOracle.Contract.IsLimb(&_GasPriceOracle.CallOpts)
+}
+
 // L1BaseFee is a free data retrieval call binding the contract method 0x519b4bd3.
 //
 // Solidity: function l1BaseFee() view returns(uint256)
@@ -448,6 +541,68 @@ func (_GasPriceOracle *GasPriceOracleSession) Operator() (common.Address, error)
 // Solidity: function operator() view returns(address)
 func (_GasPriceOracle *GasPriceOracleCallerSession) Operator() (common.Address, error) {
 	return _GasPriceOracle.Contract.Operator(&_GasPriceOracle.CallOpts)
+}
+
+// OperatorFeeConstant is a free data retrieval call binding the contract method 0x16d3bc7f.
+//
+// Solidity: function operatorFeeConstant() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) OperatorFeeConstant(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "operatorFeeConstant")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// OperatorFeeConstant is a free data retrieval call binding the contract method 0x16d3bc7f.
+//
+// Solidity: function operatorFeeConstant() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) OperatorFeeConstant() (*big.Int, error) {
+	return _GasPriceOracle.Contract.OperatorFeeConstant(&_GasPriceOracle.CallOpts)
+}
+
+// OperatorFeeConstant is a free data retrieval call binding the contract method 0x16d3bc7f.
+//
+// Solidity: function operatorFeeConstant() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) OperatorFeeConstant() (*big.Int, error) {
+	return _GasPriceOracle.Contract.OperatorFeeConstant(&_GasPriceOracle.CallOpts)
+}
+
+// OperatorFeeScalar is a free data retrieval call binding the contract method 0x4d5d9a2a.
+//
+// Solidity: function operatorFeeScalar() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCaller) OperatorFeeScalar(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _GasPriceOracle.contract.Call(opts, &out, "operatorFeeScalar")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// OperatorFeeScalar is a free data retrieval call binding the contract method 0x4d5d9a2a.
+//
+// Solidity: function operatorFeeScalar() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleSession) OperatorFeeScalar() (*big.Int, error) {
+	return _GasPriceOracle.Contract.OperatorFeeScalar(&_GasPriceOracle.CallOpts)
+}
+
+// OperatorFeeScalar is a free data retrieval call binding the contract method 0x4d5d9a2a.
+//
+// Solidity: function operatorFeeScalar() view returns(uint256)
+func (_GasPriceOracle *GasPriceOracleCallerSession) OperatorFeeScalar() (*big.Int, error) {
+	return _GasPriceOracle.Contract.OperatorFeeScalar(&_GasPriceOracle.CallOpts)
 }
 
 // Overhead is a free data retrieval call binding the contract method 0x0c18c162.
@@ -605,6 +760,27 @@ func (_GasPriceOracle *GasPriceOracleCallerSession) Version() (string, error) {
 	return _GasPriceOracle.Contract.Version(&_GasPriceOracle.CallOpts)
 }
 
+// SetLimb is a paid mutator transaction binding the contract method 0xd76a0548.
+//
+// Solidity: function setLimb() returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) SetLimb(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "setLimb")
+}
+
+// SetLimb is a paid mutator transaction binding the contract method 0xd76a0548.
+//
+// Solidity: function setLimb() returns()
+func (_GasPriceOracle *GasPriceOracleSession) SetLimb() (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetLimb(&_GasPriceOracle.TransactOpts)
+}
+
+// SetLimb is a paid mutator transaction binding the contract method 0xd76a0548.
+//
+// Solidity: function setLimb() returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) SetLimb() (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetLimb(&_GasPriceOracle.TransactOpts)
+}
+
 // SetOperator is a paid mutator transaction binding the contract method 0xb3ab15fb.
 //
 // Solidity: function setOperator(address _operator) returns()
@@ -624,6 +800,48 @@ func (_GasPriceOracle *GasPriceOracleSession) SetOperator(_operator common.Addre
 // Solidity: function setOperator(address _operator) returns()
 func (_GasPriceOracle *GasPriceOracleTransactorSession) SetOperator(_operator common.Address) (*types.Transaction, error) {
 	return _GasPriceOracle.Contract.SetOperator(&_GasPriceOracle.TransactOpts, _operator)
+}
+
+// SetOperatorFeeConstant is a paid mutator transaction binding the contract method 0x32e70fea.
+//
+// Solidity: function setOperatorFeeConstant(uint256 _operatorFeeConstant) returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) SetOperatorFeeConstant(opts *bind.TransactOpts, _operatorFeeConstant *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "setOperatorFeeConstant", _operatorFeeConstant)
+}
+
+// SetOperatorFeeConstant is a paid mutator transaction binding the contract method 0x32e70fea.
+//
+// Solidity: function setOperatorFeeConstant(uint256 _operatorFeeConstant) returns()
+func (_GasPriceOracle *GasPriceOracleSession) SetOperatorFeeConstant(_operatorFeeConstant *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperatorFeeConstant(&_GasPriceOracle.TransactOpts, _operatorFeeConstant)
+}
+
+// SetOperatorFeeConstant is a paid mutator transaction binding the contract method 0x32e70fea.
+//
+// Solidity: function setOperatorFeeConstant(uint256 _operatorFeeConstant) returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) SetOperatorFeeConstant(_operatorFeeConstant *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperatorFeeConstant(&_GasPriceOracle.TransactOpts, _operatorFeeConstant)
+}
+
+// SetOperatorFeeScalar is a paid mutator transaction binding the contract method 0x5d71ff8f.
+//
+// Solidity: function setOperatorFeeScalar(uint256 _operatorFeeScalar) returns()
+func (_GasPriceOracle *GasPriceOracleTransactor) SetOperatorFeeScalar(opts *bind.TransactOpts, _operatorFeeScalar *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.contract.Transact(opts, "setOperatorFeeScalar", _operatorFeeScalar)
+}
+
+// SetOperatorFeeScalar is a paid mutator transaction binding the contract method 0x5d71ff8f.
+//
+// Solidity: function setOperatorFeeScalar(uint256 _operatorFeeScalar) returns()
+func (_GasPriceOracle *GasPriceOracleSession) SetOperatorFeeScalar(_operatorFeeScalar *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperatorFeeScalar(&_GasPriceOracle.TransactOpts, _operatorFeeScalar)
+}
+
+// SetOperatorFeeScalar is a paid mutator transaction binding the contract method 0x5d71ff8f.
+//
+// Solidity: function setOperatorFeeScalar(uint256 _operatorFeeScalar) returns()
+func (_GasPriceOracle *GasPriceOracleTransactorSession) SetOperatorFeeScalar(_operatorFeeScalar *big.Int) (*types.Transaction, error) {
+	return _GasPriceOracle.Contract.SetOperatorFeeScalar(&_GasPriceOracle.TransactOpts, _operatorFeeScalar)
 }
 
 // SetTokenRatio is a paid mutator transaction binding the contract method 0xe38e91f9.
@@ -666,6 +884,312 @@ func (_GasPriceOracle *GasPriceOracleSession) TransferOwnership(_owner common.Ad
 // Solidity: function transferOwnership(address _owner) returns()
 func (_GasPriceOracle *GasPriceOracleTransactorSession) TransferOwnership(_owner common.Address) (*types.Transaction, error) {
 	return _GasPriceOracle.Contract.TransferOwnership(&_GasPriceOracle.TransactOpts, _owner)
+}
+
+// GasPriceOracleOperatorFeeConstantUpdatedIterator is returned from FilterOperatorFeeConstantUpdated and is used to iterate over the raw logs and unpacked data for OperatorFeeConstantUpdated events raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorFeeConstantUpdatedIterator struct {
+	Event *GasPriceOracleOperatorFeeConstantUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GasPriceOracleOperatorFeeConstantUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GasPriceOracleOperatorFeeConstantUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GasPriceOracleOperatorFeeConstantUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GasPriceOracleOperatorFeeConstantUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GasPriceOracleOperatorFeeConstantUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GasPriceOracleOperatorFeeConstantUpdated represents a OperatorFeeConstantUpdated event raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorFeeConstantUpdated struct {
+	PreviousOperatorFeeConstant *big.Int
+	NewOperatorFeeConstant      *big.Int
+	Raw                         types.Log // Blockchain specific contextual infos
+}
+
+// FilterOperatorFeeConstantUpdated is a free log retrieval operation binding the contract event 0x08a9bc8992a7c4fa053bafee70f234ebf754c491d16759a28adf47e3cd9375b9.
+//
+// Solidity: event OperatorFeeConstantUpdated(uint256 indexed previousOperatorFeeConstant, uint256 indexed newOperatorFeeConstant)
+func (_GasPriceOracle *GasPriceOracleFilterer) FilterOperatorFeeConstantUpdated(opts *bind.FilterOpts, previousOperatorFeeConstant []*big.Int, newOperatorFeeConstant []*big.Int) (*GasPriceOracleOperatorFeeConstantUpdatedIterator, error) {
+
+	var previousOperatorFeeConstantRule []interface{}
+	for _, previousOperatorFeeConstantItem := range previousOperatorFeeConstant {
+		previousOperatorFeeConstantRule = append(previousOperatorFeeConstantRule, previousOperatorFeeConstantItem)
+	}
+	var newOperatorFeeConstantRule []interface{}
+	for _, newOperatorFeeConstantItem := range newOperatorFeeConstant {
+		newOperatorFeeConstantRule = append(newOperatorFeeConstantRule, newOperatorFeeConstantItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "OperatorFeeConstantUpdated", previousOperatorFeeConstantRule, newOperatorFeeConstantRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GasPriceOracleOperatorFeeConstantUpdatedIterator{contract: _GasPriceOracle.contract, event: "OperatorFeeConstantUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchOperatorFeeConstantUpdated is a free log subscription operation binding the contract event 0x08a9bc8992a7c4fa053bafee70f234ebf754c491d16759a28adf47e3cd9375b9.
+//
+// Solidity: event OperatorFeeConstantUpdated(uint256 indexed previousOperatorFeeConstant, uint256 indexed newOperatorFeeConstant)
+func (_GasPriceOracle *GasPriceOracleFilterer) WatchOperatorFeeConstantUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleOperatorFeeConstantUpdated, previousOperatorFeeConstant []*big.Int, newOperatorFeeConstant []*big.Int) (event.Subscription, error) {
+
+	var previousOperatorFeeConstantRule []interface{}
+	for _, previousOperatorFeeConstantItem := range previousOperatorFeeConstant {
+		previousOperatorFeeConstantRule = append(previousOperatorFeeConstantRule, previousOperatorFeeConstantItem)
+	}
+	var newOperatorFeeConstantRule []interface{}
+	for _, newOperatorFeeConstantItem := range newOperatorFeeConstant {
+		newOperatorFeeConstantRule = append(newOperatorFeeConstantRule, newOperatorFeeConstantItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "OperatorFeeConstantUpdated", previousOperatorFeeConstantRule, newOperatorFeeConstantRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GasPriceOracleOperatorFeeConstantUpdated)
+				if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorFeeConstantUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOperatorFeeConstantUpdated is a log parse operation binding the contract event 0x08a9bc8992a7c4fa053bafee70f234ebf754c491d16759a28adf47e3cd9375b9.
+//
+// Solidity: event OperatorFeeConstantUpdated(uint256 indexed previousOperatorFeeConstant, uint256 indexed newOperatorFeeConstant)
+func (_GasPriceOracle *GasPriceOracleFilterer) ParseOperatorFeeConstantUpdated(log types.Log) (*GasPriceOracleOperatorFeeConstantUpdated, error) {
+	event := new(GasPriceOracleOperatorFeeConstantUpdated)
+	if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorFeeConstantUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// GasPriceOracleOperatorFeeScalarUpdatedIterator is returned from FilterOperatorFeeScalarUpdated and is used to iterate over the raw logs and unpacked data for OperatorFeeScalarUpdated events raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorFeeScalarUpdatedIterator struct {
+	Event *GasPriceOracleOperatorFeeScalarUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GasPriceOracleOperatorFeeScalarUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GasPriceOracleOperatorFeeScalarUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GasPriceOracleOperatorFeeScalarUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GasPriceOracleOperatorFeeScalarUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GasPriceOracleOperatorFeeScalarUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GasPriceOracleOperatorFeeScalarUpdated represents a OperatorFeeScalarUpdated event raised by the GasPriceOracle contract.
+type GasPriceOracleOperatorFeeScalarUpdated struct {
+	PreviousOperatorFeeScalar *big.Int
+	NewOperatorFeeScalar      *big.Int
+	Raw                       types.Log // Blockchain specific contextual infos
+}
+
+// FilterOperatorFeeScalarUpdated is a free log retrieval operation binding the contract event 0x977ba0b597123a7c26f0d57b10b1ab88e14d4e8676e6629640df681ccf5ffcf2.
+//
+// Solidity: event OperatorFeeScalarUpdated(uint256 indexed previousOperatorFeeScalar, uint256 indexed newOperatorFeeScalar)
+func (_GasPriceOracle *GasPriceOracleFilterer) FilterOperatorFeeScalarUpdated(opts *bind.FilterOpts, previousOperatorFeeScalar []*big.Int, newOperatorFeeScalar []*big.Int) (*GasPriceOracleOperatorFeeScalarUpdatedIterator, error) {
+
+	var previousOperatorFeeScalarRule []interface{}
+	for _, previousOperatorFeeScalarItem := range previousOperatorFeeScalar {
+		previousOperatorFeeScalarRule = append(previousOperatorFeeScalarRule, previousOperatorFeeScalarItem)
+	}
+	var newOperatorFeeScalarRule []interface{}
+	for _, newOperatorFeeScalarItem := range newOperatorFeeScalar {
+		newOperatorFeeScalarRule = append(newOperatorFeeScalarRule, newOperatorFeeScalarItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.FilterLogs(opts, "OperatorFeeScalarUpdated", previousOperatorFeeScalarRule, newOperatorFeeScalarRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GasPriceOracleOperatorFeeScalarUpdatedIterator{contract: _GasPriceOracle.contract, event: "OperatorFeeScalarUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchOperatorFeeScalarUpdated is a free log subscription operation binding the contract event 0x977ba0b597123a7c26f0d57b10b1ab88e14d4e8676e6629640df681ccf5ffcf2.
+//
+// Solidity: event OperatorFeeScalarUpdated(uint256 indexed previousOperatorFeeScalar, uint256 indexed newOperatorFeeScalar)
+func (_GasPriceOracle *GasPriceOracleFilterer) WatchOperatorFeeScalarUpdated(opts *bind.WatchOpts, sink chan<- *GasPriceOracleOperatorFeeScalarUpdated, previousOperatorFeeScalar []*big.Int, newOperatorFeeScalar []*big.Int) (event.Subscription, error) {
+
+	var previousOperatorFeeScalarRule []interface{}
+	for _, previousOperatorFeeScalarItem := range previousOperatorFeeScalar {
+		previousOperatorFeeScalarRule = append(previousOperatorFeeScalarRule, previousOperatorFeeScalarItem)
+	}
+	var newOperatorFeeScalarRule []interface{}
+	for _, newOperatorFeeScalarItem := range newOperatorFeeScalar {
+		newOperatorFeeScalarRule = append(newOperatorFeeScalarRule, newOperatorFeeScalarItem)
+	}
+
+	logs, sub, err := _GasPriceOracle.contract.WatchLogs(opts, "OperatorFeeScalarUpdated", previousOperatorFeeScalarRule, newOperatorFeeScalarRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GasPriceOracleOperatorFeeScalarUpdated)
+				if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorFeeScalarUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOperatorFeeScalarUpdated is a log parse operation binding the contract event 0x977ba0b597123a7c26f0d57b10b1ab88e14d4e8676e6629640df681ccf5ffcf2.
+//
+// Solidity: event OperatorFeeScalarUpdated(uint256 indexed previousOperatorFeeScalar, uint256 indexed newOperatorFeeScalar)
+func (_GasPriceOracle *GasPriceOracleFilterer) ParseOperatorFeeScalarUpdated(log types.Log) (*GasPriceOracleOperatorFeeScalarUpdated, error) {
+	event := new(GasPriceOracleOperatorFeeScalarUpdated)
+	if err := _GasPriceOracle.contract.UnpackLog(event, "OperatorFeeScalarUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // GasPriceOracleOperatorUpdatedIterator is returned from FilterOperatorUpdated and is used to iterate over the raw logs and unpacked data for OperatorUpdated events raised by the GasPriceOracle contract.
