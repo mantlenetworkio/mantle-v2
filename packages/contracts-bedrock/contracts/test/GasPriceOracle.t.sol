@@ -136,19 +136,19 @@ contract GasPriceOracle_Test is CommonTest {
     }
 
     function test_setLimb_succeeds() external {
-        gasOracle.setLimb();
+        _setLimb();
         assertEq(gasOracle.isLimb(), true);
     }
 
     function test_setLimb_reverts() external {
-        gasOracle.setLimb();
+        _setLimb();
         vm.expectRevert("GasPriceOracle: IsLimb already set");
-        gasOracle.setLimb();
+        _setLimb();
     }
 
     /// @dev Tests that `setLimb` is only callable by the operator.
     function test_setLimb_wrongCaller_reverts() external {
-        vm.expectRevert("Caller is not the operator");
+        vm.expectRevert("GasPriceOracle: only the depositor account can set isLimb flag");
         vm.prank(address(1));
         gasOracle.setLimb();
     }
@@ -195,6 +195,7 @@ contract GasPriceOracle_Test is CommonTest {
     }
 
     function _setLimb() internal {
+        vm.prank(depositor);
         gasOracle.setLimb();
     }
 

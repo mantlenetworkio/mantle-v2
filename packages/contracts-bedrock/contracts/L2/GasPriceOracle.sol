@@ -5,6 +5,7 @@ import { Semver } from "../universal/Semver.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { L1Block } from "../L2/L1Block.sol";
 import { Arithmetic } from "../libraries/Arithmetic.sol";
+import { Constants } from "../libraries/Constants.sol";
 
 /**
  * @custom:proxied
@@ -99,7 +100,11 @@ contract GasPriceOracle is Semver {
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
     }
 
-    function setLimb() external onlyOperator {
+    function setLimb() external {
+        require(
+            msg.sender == Constants.DEPOSITOR_ACCOUNT,
+            "GasPriceOracle: only the depositor account can set isLimb flag"
+        );
         require(isLimb == false, "GasPriceOracle: IsLimb already set");
         isLimb = true;
     }

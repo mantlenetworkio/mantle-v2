@@ -27,6 +27,10 @@ library Constants {
      */
     address internal constant DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
 
+    /// @notice The address that represents the system caller responsible for L1 attributes
+    ///         transactions.
+    address internal constant DEPOSITOR_ACCOUNT = 0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001;
+
     /**
      * @notice Returns the default values for the ResourceConfig. These are the recommended values
      *         for a production network.
