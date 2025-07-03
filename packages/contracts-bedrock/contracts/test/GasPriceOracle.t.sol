@@ -153,18 +153,6 @@ contract GasPriceOracle_Test is CommonTest {
         gasOracle.setLimb();
     }
 
-    function test_getOverhead_reverts() external {
-        _setLimb();
-        vm.expectRevert("GasPriceOracle: overhead() is deprecated");
-        gasOracle.overhead();
-    }
-
-    function test_getScalar_reverts() external {
-        _setLimb();
-        vm.expectRevert("GasPriceOracle: scalar() is deprecated");
-        gasOracle.scalar();
-    }
-
     /// @dev Tests that `operatorFee` is 0 if IsLimb is false
     function test_getOperatorFee_preLimb_succeeds() external {
         assertEq(gasOracle.isLimb(), false);

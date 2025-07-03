@@ -161,7 +161,6 @@ contract GasPriceOracle is Semver {
      * @return Current fee overhead.
      */
     function overhead() public view returns (uint256) {
-        require(!isLimb, "GasPriceOracle: overhead() is deprecated");
         return _overhead();
     }
 
@@ -171,7 +170,6 @@ contract GasPriceOracle is Semver {
      * @return Current fee scalar.
      */
     function scalar() public view returns (uint256) {
-        require(!isLimb, "GasPriceOracle: scalar() is deprecated");
         return _scalar();
     }
 
