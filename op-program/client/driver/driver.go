@@ -8,11 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
+	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
@@ -42,8 +43,8 @@ type Driver struct {
 	targetBlockNum uint64
 }
 
-func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, daSyncer DaSource, targetBlockNum uint64) *Driver {
-	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, nil, l2Source, daSyncer, metrics.NoopMetrics, &sync.Config{}, nil)
+func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, targetBlockNum uint64) *Driver {
+	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, nil, l2Source, metrics.NoopMetrics, &sync.Config{}, safedb.Disabled, nil)
 
 	pipeline.Reset()
 	return &Driver{

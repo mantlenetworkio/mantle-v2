@@ -1,17 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	challenger "github.com/ethereum-optimism/optimism/op-challenger/challenger"
-	config "github.com/ethereum-optimism/optimism/op-challenger/config"
-	flags "github.com/ethereum-optimism/optimism/op-challenger/flags"
-	version "github.com/ethereum-optimism/optimism/op-challenger/version"
+	"github.com/ethereum/go-ethereum/log"
+	cli "github.com/urfave/cli/v2"
 
-	log "github.com/ethereum/go-ethereum/log"
-	cli "github.com/urfave/cli"
-
+	"github.com/ethereum-optimism/optimism/op-challenger/challenger"
+	"github.com/ethereum-optimism/optimism/op-challenger/config"
+	"github.com/ethereum-optimism/optimism/op-challenger/flags"
+	"github.com/ethereum-optimism/optimism/op-challenger/version"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
@@ -77,9 +75,7 @@ func run(args []string, action ConfigAction) error {
 
 func setupLogging(ctx *cli.Context) (log.Logger, error) {
 	logCfg := oplog.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		return nil, fmt.Errorf("log config error: %w", err)
-	}
-	logger := oplog.NewLogger(logCfg)
+	logger := oplog.NewLogger(oplog.AppOut(ctx), logCfg)
+	oplog.SetGlobalLogHandler(logger.Handler())
 	return logger, nil
 }

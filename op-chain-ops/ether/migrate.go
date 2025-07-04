@@ -2,6 +2,8 @@ package ether
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/crossdomain"
@@ -125,8 +127,8 @@ func doMigration(mutableDB *state.StateDB, dbFactory util.DBFactory, addresses [
 
 			// Accumulate addresses and total supply.
 			totalFound = new(big.Int).Add(totalFound, account.balance)
-
-			mutableDB.SetBalance(account.address, account.balance)
+			u256Balance, _ := uint256.FromBig(account.balance)
+			mutableDB.SetBalance(account.address, u256Balance, tracing.BalanceMint)
 			mutableDB.SetState(predeploys.LegacyERC20MNTAddr, account.legacySlot, common.Hash{})
 			count++
 			seenAccounts[account.address] = true

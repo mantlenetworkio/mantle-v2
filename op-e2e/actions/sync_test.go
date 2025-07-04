@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func TestDerivationWithFlakyL1RPC(gt *testing.T) {
 	t := NewDefaultTesting(gt)
 	dp := e2eutils.MakeDeployParams(t, defaultRollupTestParams)
 	sd := e2eutils.Setup(t, dp, defaultAlloc)
-	log := testlog.Logger(t, log.LvlError) // mute all the temporary derivation errors that we forcefully create
+	log := testlog.Logger(t, log.LevelError) // mute all the temporary derivation errors that we forcefully create
 	_, _, miner, sequencer, _, verifier, _, batcher := setupReorgTestActors(t, dp, sd, log)
 
 	rng := rand.New(rand.NewSource(1234))
@@ -57,7 +57,7 @@ func TestFinalizeWhileSyncing(gt *testing.T) {
 	t := NewDefaultTesting(gt)
 	dp := e2eutils.MakeDeployParams(t, defaultRollupTestParams)
 	sd := e2eutils.Setup(t, dp, defaultAlloc)
-	log := testlog.Logger(t, log.LvlError) // mute all the temporary derivation errors that we forcefully create
+	log := testlog.Logger(t, log.LevelError) // mute all the temporary derivation errors that we forcefully create
 	_, _, miner, sequencer, _, verifier, _, batcher := setupReorgTestActors(t, dp, sd, log)
 
 	sequencer.ActL2PipelineFull(t)

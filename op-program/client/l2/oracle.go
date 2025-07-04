@@ -7,9 +7,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-program/client/mpt"
 	"github.com/ethereum-optimism/optimism/op-program/preimage"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 // StateOracle defines the high-level API used to retrieve L2 state data pre-images
@@ -73,7 +73,7 @@ func (p *PreimageOracle) BlockByHash(blockHash common.Hash) *types.Block {
 		panic(fmt.Errorf("failed to decode list of txs: %w", err))
 	}
 
-	return types.NewBlockWithHeader(header).WithBody(txs, nil)
+	return types.NewBlockWithHeader(header).WithBody(types.Body{Transactions: txs})
 }
 
 func (p *PreimageOracle) NodeByHash(nodeHash common.Hash) []byte {

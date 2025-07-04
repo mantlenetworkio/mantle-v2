@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 
 	"github.com/ethereum/go-ethereum"
@@ -46,7 +46,7 @@ func newTestHarnessWithConfig(t *testing.T, cfg Config) *testHarness {
 		name:    "TEST",
 		cfg:     cfg,
 		backend: cfg.Backend,
-		l:       testlog.Logger(t, log.LvlCrit),
+		l:       testlog.Logger(t, log.LevelCrit),
 		metr:    &metrics.NoopTxMetrics{},
 	}
 
@@ -603,7 +603,7 @@ func TestWaitMinedMultipleConfs(t *testing.T) {
 func TestManagerErrsOnZeroConfs(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewSimpleTxManager("TEST", testlog.Logger(t, log.LvlCrit), &metrics.NoopTxMetrics{}, CLIConfig{})
+	_, err := NewSimpleTxManager("TEST", testlog.Logger(t, log.LevelCrit), &metrics.NoopTxMetrics{}, CLIConfig{})
 	require.Error(t, err)
 }
 
@@ -690,7 +690,7 @@ func TestWaitMinedReturnsReceiptAfterFailure(t *testing.T) {
 		},
 		name:    "TEST",
 		backend: &borkedBackend,
-		l:       testlog.Logger(t, log.LvlCrit),
+		l:       testlog.Logger(t, log.LevelCrit),
 		metr:    &metrics.NoopTxMetrics{},
 	}
 
@@ -726,7 +726,7 @@ func doGasPriceIncrease(t *testing.T, txTipCap, txFeeCap, newTip, newBaseFee int
 		},
 		name:    "TEST",
 		backend: &borkedBackend,
-		l:       testlog.Logger(t, log.LvlCrit),
+		l:       testlog.Logger(t, log.LevelCrit),
 		metr:    &metrics.NoopTxMetrics{},
 	}
 
@@ -830,7 +830,7 @@ func TestIncreaseGasPriceNotExponential(t *testing.T) {
 		},
 		name:    "TEST",
 		backend: &borkedBackend,
-		l:       testlog.Logger(t, log.LvlCrit),
+		l:       testlog.Logger(t, log.LevelCrit),
 		metr:    &metrics.NoopTxMetrics{},
 	}
 	tx := types.NewTx(&types.DynamicFeeTx{

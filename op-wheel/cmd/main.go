@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/urfave/cli"
-
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/urfave/cli/v2"
 
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	wheel "github.com/ethereum-optimism/optimism/op-wheel"
@@ -27,12 +26,8 @@ func main() {
 	app.Description = "Optimism Wheel is a CLI tool to direct the engine one way or the other with DB cheats and Engine API routines."
 	app.Flags = []cli.Flag{wheel.GlobalGethLogLvlFlag}
 	app.Before = func(c *cli.Context) error {
-		log.Root().SetHandler(
-			log.LvlFilterHandler(
-				oplog.Level(c.GlobalString(wheel.GlobalGethLogLvlFlag.Name)),
-				log.StreamHandler(os.Stdout, log.TerminalFormat(true)),
-			),
-		)
+		lvl := c.Generic(wheel.GlobalGethLogLvlFlag.Name).(*oplog.LevelFlagValue).Level()
+		oplog.SetGlobalLogHandler(log.NewTerminalHandlerWithLevel(os.Stdout, lvl, true))
 		return nil
 	}
 	app.Action = cli.ActionFunc(func(c *cli.Context) error {
@@ -40,7 +35,7 @@ func main() {
 	})
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		wheel.CheatCmd,
 		wheel.EngineCmd,
 	}

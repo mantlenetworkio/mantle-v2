@@ -21,10 +21,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 // L2Engine is an in-memory implementation of the Engine API,
@@ -132,17 +132,17 @@ func (e *engineApiBackend) Genesis() *core.Genesis {
 }
 
 func (s *L2Engine) EthClient() *ethclient.Client {
-	cl, _ := s.node.Attach() // never errors
+	cl := s.node.Attach() // never errors
 	return ethclient.NewClient(cl)
 }
 
 func (s *L2Engine) GethClient() *gethclient.Client {
-	cl, _ := s.node.Attach() // never errors
+	cl := s.node.Attach() // never errors
 	return gethclient.New(cl)
 }
 
 func (e *L2Engine) RPCClient() client.RPC {
-	cl, _ := e.node.Attach() // never errors
+	cl := e.node.Attach() // never errors
 	return testutils.RPCErrFaker{
 		RPC: client.NewBaseRPCClient(cl),
 		ErrFn: func() error {

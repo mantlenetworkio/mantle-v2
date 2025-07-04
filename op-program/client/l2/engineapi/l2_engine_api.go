@@ -8,15 +8,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 type EngineBackend interface {
@@ -34,7 +36,7 @@ type EngineBackend interface {
 
 	StateAt(root common.Hash) (*state.StateDB, error)
 
-	InsertBlockWithoutSetHead(block *types.Block) error
+	InsertBlockWithoutSetHead(block *types.Block, makeWitness bool) (*stateless.Witness, error)
 	SetCanonical(head *types.Block) (common.Hash, error)
 	SetFinalized(header *types.Header)
 	SetSafe(header *types.Header)
@@ -125,7 +127,7 @@ func (ea *L2EngineAPI) IncludeTx(tx *types.Transaction, from common.Address) err
 	}
 
 	ea.pendingIndices[from] = ea.pendingIndices[from] + 1 // won't retry the tx
-	err = ea.blockProcessor.AddTx(tx)
+	_, err = ea.blockProcessor.AddTx(tx)
 	if err != nil {
 		ea.l2TxFailed = append(ea.l2TxFailed, tx)
 		return fmt.Errorf("invalid L2 block (tx %d): %w", len(ea.blockProcessor.transactions), err)
@@ -153,7 +155,7 @@ func (ea *L2EngineAPI) startBlock(parent common.Hash, params *eth.PayloadAttribu
 		if err := tx.UnmarshalBinary(otx); err != nil {
 			return fmt.Errorf("transaction %d is not valid: %w", i, err)
 		}
-		err := ea.blockProcessor.AddTx(&tx)
+		_, err := ea.blockProcessor.AddTx(&tx)
 		if err != nil {
 			ea.l2TxFailed = append(ea.l2TxFailed, &tx)
 			return fmt.Errorf("failed to apply deposit transaction to L2 block (tx %d): %w", i, err)
@@ -169,17 +171,17 @@ func (ea *L2EngineAPI) endBlock() (*types.Block, error) {
 	processor := ea.blockProcessor
 	ea.blockProcessor = nil
 
-	block, err := processor.Assemble()
+	block, _, err := processor.Assemble()
 	if err != nil {
 		return nil, fmt.Errorf("assemble block: %w", err)
 	}
 	return block, nil
 }
 
-func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
-	ea.log.Trace("L2Engine API request received", "method", "GetPayload", "id", payloadId)
-	if ea.payloadID != payloadId {
-		ea.log.Warn("unexpected payload ID requested for block building", "expected", ea.payloadID, "got", payloadId)
+func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
+	ea.log.Trace("L2Engine API request received", "method", "GetPayload", "id", payloadInfo.ID)
+	if ea.payloadID != payloadInfo.ID {
+		ea.log.Warn("unexpected payload ID requested for block building", "expected", ea.payloadID, "got", payloadInfo.ID)
 		return nil, engine.UnknownPayload
 	}
 	bl, err := ea.endBlock()
@@ -187,7 +189,7 @@ func (ea *L2EngineAPI) GetPayloadV1(ctx context.Context, payloadId eth.PayloadID
 		ea.log.Error("failed to finish block building", "err", err)
 		return nil, engine.UnknownPayload
 	}
-	return eth.BlockAsPayload(bl)
+	return eth.BlockAsPayloadEnv(bl, ea.config())
 }
 
 func (ea *L2EngineAPI) ForkchoiceUpdatedV1(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error) {
@@ -291,10 +293,10 @@ func (ea *L2EngineAPI) NewPayloadV1(ctx context.Context, payload *eth.ExecutionP
 		GasUsed:       uint64(payload.GasUsed),
 		Timestamp:     uint64(payload.Timestamp),
 		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: payload.BaseFeePerGas.ToBig(),
+		BaseFeePerGas: (*uint256.Int)(&payload.BaseFeePerGas).ToBig(),
 		BlockHash:     payload.BlockHash,
 		Transactions:  txs,
-	})
+	}, nil, nil, nil, ea.backend.Config())
 	if err != nil {
 		log.Debug("Invalid NewPayload params", "params", payload, "error", err)
 		return &eth.PayloadStatusV1{Status: eth.ExecutionInvalidBlockHash}, nil
@@ -325,7 +327,7 @@ func (ea *L2EngineAPI) NewPayloadV1(ctx context.Context, payload *eth.ExecutionP
 		return &eth.PayloadStatusV1{Status: eth.ExecutionAccepted}, nil
 	}
 	log.Trace("Inserting block without sethead", "hash", block.Hash(), "number", block.Number)
-	if err := ea.backend.InsertBlockWithoutSetHead(block); err != nil {
+	if _, err := ea.backend.InsertBlockWithoutSetHead(block, false); err != nil {
 		ea.log.Warn("NewPayloadV1: inserting block failed", "error", err)
 		// TODO not remembering the payload as invalid
 		return ea.invalid(err, parent.Header()), nil
@@ -346,4 +348,8 @@ func (ea *L2EngineAPI) invalid(err error, latestValid *types.Header) *eth.Payloa
 	}
 	errorMsg := err.Error()
 	return &eth.PayloadStatusV1{Status: eth.ExecutionInvalid, LatestValidHash: &currentHash, ValidationError: &errorMsg}
+}
+
+func (ea *L2EngineAPI) config() *params.ChainConfig {
+	return ea.backend.Config()
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -17,9 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
@@ -181,7 +182,7 @@ func TestEthClient_WrongInfoByHash(t *testing.T) {
 	m.Mock.AssertExpectations(t)
 }
 
-func TestPectraEthClientFetchReceipts(t *testing.T) {
+func TestEthClientFetchPectraReceipts(t *testing.T) {
 	DevnetRPC := "https://rpc.pectra-devnet-5.ethpandaops.io"
 
 	opts := []client.RPCOption{
@@ -190,7 +191,7 @@ func TestPectraEthClientFetchReceipts(t *testing.T) {
 	}
 
 	m := metrics.NewMetrics("default")
-	log := oplog.NewLogger(oplog.DefaultCLIConfig())
+	log := oplog.NewLogger(os.Stdout, oplog.DefaultCLIConfig())
 	l1Node, err := client.NewRPC(context.Background(), log, DevnetRPC, opts...)
 	require.NoError(t, err)
 	eClient, err := NewEthClient(client.NewInstrumentedRPC(l1Node, m), log, nil, testEthClientConfig)

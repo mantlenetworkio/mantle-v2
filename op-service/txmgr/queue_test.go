@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -178,7 +178,7 @@ func TestSend(t *testing.T) {
 				name:    "TEST",
 				cfg:     conf,
 				backend: backend,
-				l:       testlog.Logger(t, log.LvlCrit),
+				l:       testlog.Logger(t, log.LevelCrit),
 				metr:    &metrics.NoopTxMetrics{},
 			}
 

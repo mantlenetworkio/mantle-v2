@@ -32,6 +32,6 @@ func InitParallel(t *testing.T) {
 		t.Parallel()
 	}
 	if !verboseGethNodes {
-		log.Root().SetHandler(log.DiscardHandler())
+		log.NewLogger(log.DiscardHandler())
 	}
 }

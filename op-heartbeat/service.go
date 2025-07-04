@@ -14,9 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/urfave/cli"
-
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-node/heartbeat"
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
@@ -37,7 +36,9 @@ func Main(version string) func(ctx *cli.Context) error {
 			return fmt.Errorf("invalid CLI flags: %w", err)
 		}
 
-		l := oplog.NewLogger(cfg.Log)
+		l := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.Log)
+		oplog.SetGlobalLogHandler(l.Handler())
+
 		l.Info("starting heartbeat monitor", "version", version)
 
 		ctx, cancel := context.WithCancel(context.Background())

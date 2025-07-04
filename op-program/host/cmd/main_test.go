@@ -22,7 +22,7 @@ var (
 	l2ClaimValue       = common.HexToHash("0x333333").Hex()
 	l2ClaimBlockNumber = uint64(1203)
 	// Note: This is actually the L1 goerli genesis config. Just using it as an arbitrary, valid genesis config
-	l2Genesis       = core.DefaultGoerliGenesisBlock()
+	l2Genesis       = core.DefaultGenesisBlock()
 	l2GenesisConfig = l2Genesis.Config
 )
 

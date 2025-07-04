@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
+	"github.com/ethereum/go-ethereum/triedb"
 	"log"
 	"os"
 	"time"
@@ -37,11 +40,12 @@ var emptyCodeHash = crypto.Keccak256(nil)
 // for the given db and writes them to a JSON file.
 func IndexEOFContracts(dbPath string, out string) error {
 	// Open an existing Ethereum database
-	db, err := rawdb.NewLevelDBDatabase(dbPath, 16, 16, "", true)
+	db, err := NewLevelDBDatabase(dbPath, 16, 16, "", true)
 	if err != nil {
-		return fmt.Errorf("Failed to open database: %w", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
-	stateDB := state.NewDatabase(db)
+
+	stateDB := state.NewDatabase(triedb.NewDatabase(db, &triedb.Config{Preimages: true}), nil)
 
 	// Retrieve the head block
 	hash := rawdb.ReadHeadBlockHash(db)
@@ -55,7 +59,7 @@ func IndexEOFContracts(dbPath string, out string) error {
 	}
 
 	// Retrieve the state belonging to the head block
-	st, err := trie.New(trie.StateTrieID(head.Root()), trie.NewDatabase(db))
+	st, err := trie.New(trie.StateTrieID(head.Root()), triedb.NewDatabase(db, &triedb.Config{Preimages: true}))
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve state trie: %w", err)
 	}
@@ -68,7 +72,12 @@ func IndexEOFContracts(dbPath string, out string) error {
 	nonEofContracts := uint64(0)
 	eofContracts := make([]Account, 0)
 
-	it := trie.NewIterator(st.NodeIterator(nil))
+	nodeIter, err := st.NodeIterator(nil)
+	if err != nil {
+		return fmt.Errorf("failed to create node iterator for storage, err: %s", err)
+	}
+
+	it := trie.NewIterator(nodeIter)
 	for it.Next() {
 		// Decode the state account
 		var data types.StateAccount
@@ -94,7 +103,7 @@ func IndexEOFContracts(dbPath string, out string) error {
 		}
 
 		// Attempt to get the address of the account from the trie
-		addrBytes := st.Get(it.Key)
+		addrBytes, _ := st.Get(it.Key)
 
 		if addrBytes == nil {
 			// Preimage missing! Cannot continue.
@@ -104,10 +113,7 @@ func IndexEOFContracts(dbPath string, out string) error {
 		addr := common.BytesToAddress(addrBytes)
 
 		// Attempt to get the code of the account from the trie
-		code, err := stateDB.ContractCode(crypto.Keccak256Hash(addrBytes), common.BytesToHash(data.CodeHash))
-		if err != nil {
-			return fmt.Errorf("Could not load code for account %x: %w", addr, err)
-		}
+		code := stateDB.ContractCodeWithPrefix(addr, common.BytesToHash(data.CodeHash))
 
 		// Check if the contract's runtime bytecode starts with the EOF prefix.
 		if len(code) >= 1 && code[0] == 0xEF {
@@ -138,4 +144,15 @@ func IndexEOFContracts(dbPath string, out string) error {
 
 	log.Printf("Wrote list of EOF contracts to `%v`", out)
 	return nil
+}
+
+// NewLevelDBDatabase creates a persistent key-value database without a freezer
+// moving immutable chain segments into cold storage.
+func NewLevelDBDatabase(file string, cache int, handles int, namespace string, readonly bool) (ethdb.Database, error) {
+	db, err := leveldb.New(file, cache, handles, namespace, readonly)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Using LevelDB as the backing database")
+	return rawdb.NewDatabase(db), nil
 }

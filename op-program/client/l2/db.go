@@ -74,10 +74,6 @@ func (o *OracleKeyValueStore) Delete(key []byte) error {
 	panic("not supported")
 }
 
-func (o *OracleKeyValueStore) Stat(property string) (string, error) {
-	panic("not supported")
-}
-
 func (o *OracleKeyValueStore) NewIterator(prefix []byte, start []byte) ethdb.Iterator {
 	panic("not supported")
 }
@@ -86,6 +82,10 @@ func (o *OracleKeyValueStore) Compact(start []byte, limit []byte) error {
 	panic("not supported")
 }
 
-func (o *OracleKeyValueStore) NewSnapshot() (ethdb.Snapshot, error) {
+func (o *OracleKeyValueStore) Stat() (string, error) {
+	panic("not supported")
+}
+
+func (o *OracleKeyValueStore) DeleteRange(start, end []byte) error {
 	panic("not supported")
 }

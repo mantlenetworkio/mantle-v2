@@ -4,11 +4,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
-	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi"
-	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi/test"
-	l2test "github.com/ethereum-optimism/optimism/op-program/client/l2/test"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
@@ -18,7 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
+	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi"
+	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi/test"
+	l2test "github.com/ethereum-optimism/optimism/op-program/client/l2/test"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
 
 var fundedKey, _ = crypto.GenerateKey()
@@ -229,7 +231,7 @@ func setupOracle(t *testing.T, blockCount int, headBlockNumber int) (*params.Cha
 	db := rawdb.NewMemoryDatabase()
 
 	// Set minimal amount of stuff to avoid nil references later
-	genesisBlock := l2Genesis.MustCommit(db)
+	genesisBlock := l2Genesis.MustCommit(db, triedb.NewDatabase(db, triedb.HashDefaults))
 	blocks, _ := core.GenerateChain(chainCfg, genesisBlock, consensus, db, blockCount, func(i int, gen *core.BlockGen) {})
 	blocks = append([]*types.Block{genesisBlock}, blocks...)
 	oracle := l2test.NewStubOracleWithBlocks(t, blocks[:headBlockNumber+1], db)

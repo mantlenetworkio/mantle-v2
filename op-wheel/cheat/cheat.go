@@ -5,28 +5,30 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"io"
 	"math/big"
-	"path/filepath"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+
+	"github.com/ethereum-optimism/optimism/op-chain-ops/db"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-var HundredETH = big.NewInt(0).Mul(big.NewInt(100), big.NewInt(1000000000000000000))
+var HundredETH = uint256.NewInt(0).Mul(uint256.NewInt(100), uint256.NewInt(1000000000000000000))
 
 type Cheater struct {
 	// The database of the chain with the head block that we patch the state-root of, once the state is updated.
@@ -39,15 +41,7 @@ type Cheater struct {
 
 func OpenGethRawDB(dataDirPath string, readOnly bool) (ethdb.Database, error) {
 	// don't use readonly mode in actual DB, it doesn't work with Geth.
-	db, err := rawdb.Open(rawdb.OpenOptions{
-		Type:              "leveldb",
-		Directory:         dataDirPath,
-		AncientsDirectory: filepath.Join(dataDirPath, "ancient"),
-		Namespace:         "",
-		Cache:             2048,
-		Handles:           500,
-		ReadOnly:          readOnly,
-	})
+	db, err := db.Open(dataDirPath, 2048, 500, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open leveldb: %w", err)
 	}
@@ -61,7 +55,7 @@ func OpenGethDB(dataDirPath string, readOnly bool) (*Cheater, error) {
 		return nil, err
 	}
 	ch, err := core.NewBlockChain(db, nil, nil, nil,
-		beacon.New(ethash.NewFullFaker()), vm.Config{}, nil, nil)
+		beacon.New(ethash.NewFullFaker()), vm.Config{}, nil)
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("failed to open blockchain around chain db: %w", err)
@@ -101,7 +95,7 @@ func (ch *Cheater) RunAndClose(fn HeadFn) error {
 	}
 
 	// commit the changes, and then update the state-root
-	stateRoot, err := state.Commit(true)
+	stateRoot, err := state.Commit(preHeader.Number.Uint64()+1, false, false)
 	if err != nil {
 		_ = ch.Close()
 		return fmt.Errorf("failed to commit state change: %w", err)
@@ -132,13 +126,8 @@ func (ch *Cheater) RunAndClose(fn HeadFn) error {
 	// rawdb.WriteTxLookupEntriesByBlock(batch, block)
 	rawdb.WriteHeadBlockHash(batch, blockHash)
 
-	// Geth stores the TD for each block separately from the block itself. We must update this
-	// manually, otherwise Geth thinks we haven't reached TTD yet and tries to build a block
-	// using Clique consensus, which causes a panic.
-	rawdb.WriteTd(batch, blockHash, preID.Number, ch.Blockchain.GetTd(preID.Hash, preID.Number))
-
 	// Need to copy over receipts since they are keyed by block hash.
-	receipts := rawdb.ReadReceipts(ch.DB, preID.Hash, preID.Number, ch.Blockchain.Config())
+	receipts := rawdb.ReadReceipts(ch.DB, preID.Hash, preID.Number, preHeader.Time, ch.Blockchain.Config())
 	rawdb.WriteReceipts(batch, blockHash, preID.Number, receipts)
 
 	// Geth maintains an internal mapping between block bodies and their hashes. None of the database
@@ -191,14 +180,18 @@ func StorageGet(address common.Address, key common.Hash, w io.Writer) HeadFn {
 // to another account (maybe even in a different database!).
 func StorageReadAll(address common.Address, w io.Writer) HeadFn {
 	return func(headState *state.StateDB) error {
-		storage, err := headState.StorageTrie(address)
+		storage, err := headState.OpenStorageTrie(address)
 		if err != nil {
 			return fmt.Errorf("failed to open storage trie of addr %s: %w", address, err)
 		}
 		if storage == nil {
 			return fmt.Errorf("no storage trie in state for account %s", address)
 		}
-		iter := trie.NewIterator(storage.NodeIterator(nil))
+		nit, err := storage.NodeIterator(nil)
+		if err != nil {
+			return fmt.Errorf("failed to get node iterator, err: %s", err)
+		}
+		iter := trie.NewIterator(nit)
 		for iter.Next() {
 			if _, err := fmt.Fprintf(w, "+ %x = %x\n", iter.Key, dbValueToHash(iter.Value)); err != nil {
 				return err
@@ -224,22 +217,30 @@ func dbValueToHash(enc []byte) common.Hash {
 // Each difference is expressed with 1 character + or - to indicate the change from a to b, followed by key = value.
 func StorageDiff(out io.Writer, addressA, addressB common.Address) HeadFn {
 	return func(headState *state.StateDB) error {
-		aStorage, err := headState.StorageTrie(addressA)
+		aStorage, err := headState.OpenStorageTrie(addressA)
 		if err != nil {
 			return fmt.Errorf("failed to open storage trie of addr A %s: %w", addressA, err)
 		}
 		if aStorage == nil {
 			return fmt.Errorf("no storage trie in state for account A %s", addressA)
 		}
-		bStorage, err := headState.StorageTrie(addressB)
+		bStorage, err := headState.OpenStorageTrie(addressB)
 		if err != nil {
 			return fmt.Errorf("failed to open storage trie of addr B %s: %w", addressB, err)
 		}
 		if bStorage == nil {
 			return fmt.Errorf("no storage trie in state for account B %s", addressB)
 		}
-		aIter := trie.NewIterator(aStorage.NodeIterator(nil))
-		bIter := trie.NewIterator(bStorage.NodeIterator(nil))
+		anit, err := aStorage.NodeIterator(nil)
+		if err != nil {
+			return fmt.Errorf("failed to get node iterator, err: %s", err)
+		}
+		bnit, err := bStorage.NodeIterator(nil)
+		if err != nil {
+			return fmt.Errorf("failed to get node iterator, err: %s", err)
+		}
+		aIter := trie.NewIterator(anit)
+		bIter := trie.NewIterator(bnit)
 		hasA := aIter.Next()
 		hasB := bIter.Next()
 		for {
@@ -311,7 +312,7 @@ func StoragePatch(patch io.Reader, address common.Address) HeadFn {
 			}
 			i += 1
 			if i%1000 == 0 { // for every 1000 values, commit to disk
-				if _, err := headState.Commit(true); err != nil {
+				if _, err := headState.Commit(uint64(i), false, false); err != nil {
 					return fmt.Errorf("failed to commit state to disk after patching %d entries: %w", i, err)
 				}
 			}
@@ -366,22 +367,22 @@ func OvmOwners(conf *OvmOwnersConfig) HeadFn {
 		headState.SetState(addressManager, crypto.Keccak256Hash(crypto.Keccak256([]byte("OVM_Sequencer")), addressesSlot.Bytes()), conf.Sequencer.Hash())
 		headState.SetState(addressManager, crypto.Keccak256Hash(crypto.Keccak256([]byte("OVM_Proposer")), addressesSlot.Bytes()), conf.Proposer.Hash())
 		// Fund sequencer and proposer with 100 ETH
-		headState.SetBalance(conf.Sequencer, HundredETH)
-		headState.SetBalance(conf.Proposer, HundredETH)
+		headState.SetBalance(conf.Sequencer, HundredETH, tracing.BalanceMint)
+		headState.SetBalance(conf.Proposer, HundredETH, tracing.BalanceMint)
 		return nil
 	}
 }
 
-func SetBalance(addr common.Address, amount *big.Int) HeadFn {
+func SetBalance(addr common.Address, amount *uint256.Int) HeadFn {
 	return func(headState *state.StateDB) error {
-		headState.SetBalance(addr, amount)
+		headState.SetBalance(addr, amount, tracing.BalanceMint)
 		return nil
 	}
 }
 
 func SetNonce(addr common.Address, nonce uint64) HeadFn {
 	return func(headState *state.StateDB) error {
-		headState.SetNonce(addr, nonce)
+		headState.SetNonce(addr, nonce, tracing.NonceChangeUnspecified)
 		return nil
 	}
 }

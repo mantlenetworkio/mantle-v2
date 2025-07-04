@@ -5,7 +5,7 @@ import (
 
 	p2p "github.com/ethereum-optimism/optimism/op-node/p2p"
 	p2pMocks "github.com/ethereum-optimism/optimism/op-node/p2p/mocks"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	log "github.com/ethereum/go-ethereum/log"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	peer "github.com/libp2p/go-libp2p/core/peer"
@@ -32,7 +32,7 @@ func (testSuite *PeerScorerTestSuite) SetupTest() {
 	bandScorer, err := p2p.NewBandScorer("-40:graylist;0:friend;")
 	testSuite.NoError(err)
 	testSuite.bandScorer = bandScorer
-	testSuite.logger = testlog.Logger(testSuite.T(), log.LvlError)
+	testSuite.logger = testlog.Logger(testSuite.T(), log.LevelError)
 }
 
 // TestPeerScorer runs the PeerScorerTestSuite.

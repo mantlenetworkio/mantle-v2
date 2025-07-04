@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ethereum-optimism/optimism/op-program/host"
@@ -10,7 +9,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-program/host/version"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -75,9 +74,7 @@ func run(args []string, action ConfigAction) error {
 
 func setupLogging(ctx *cli.Context) (log.Logger, error) {
 	logCfg := oplog.ReadCLIConfig(ctx)
-	if err := logCfg.Check(); err != nil {
-		return nil, fmt.Errorf("log config error: %w", err)
-	}
-	logger := oplog.NewLogger(logCfg)
+	logger := oplog.NewLogger(oplog.AppOut(ctx), logCfg)
+	oplog.SetGlobalLogHandler(logger.Handler())
 	return logger, nil
 }

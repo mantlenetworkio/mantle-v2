@@ -18,9 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	ophttp "github.com/ethereum-optimism/optimism/op-node/http"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/mattn/go-isatty"
+
+	ophttp "github.com/ethereum-optimism/optimism/op-node/http"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 var (
@@ -94,9 +97,7 @@ var embeddedAssets embed.FS
 func main() {
 	flag.Parse()
 
-	log.Root().SetHandler(
-		log.LvlFilterHandler(log.LvlDebug, log.StreamHandler(os.Stdout, log.TerminalFormat(true))),
-	)
+	oplog.SetGlobalLogHandler(log.NewTerminalHandlerWithLevel(os.Stdout, log.LvlDebug, isatty.IsTerminal(os.Stderr.Fd())))
 
 	if *snapshot == "" {
 		log.Crit("missing required -snapshot flag")

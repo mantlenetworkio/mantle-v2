@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -48,7 +48,7 @@ type OpGeth struct {
 }
 
 func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, error) {
-	logger := testlog.Logger(t, log.LvlCrit)
+	logger := testlog.Logger(t, log.LevelCrit)
 	l1Genesis, err := genesis.BuildL1DeveloperGenesis(cfg.DeployConfig)
 	require.Nil(t, err)
 	l1Block := l1Genesis.ToBlock()
@@ -90,7 +90,7 @@ func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, e
 	l2Client, err := ethclient.Dial(node.HTTPEndpoint())
 	require.Nil(t, err)
 
-	genesisPayload, err := eth.BlockAsPayload(l2GenesisBlock)
+	genesisPayload, err := eth.BlockAsPayload(l2GenesisBlock, &params.ChainConfig{})
 
 	require.Nil(t, err)
 	return &OpGeth{
@@ -123,7 +123,8 @@ func (d *OpGeth) AddL2Block(ctx context.Context, txs ...*types.Transaction) (*et
 		return nil, err
 	}
 
-	payload, err := d.l2Engine.GetPayload(ctx, *res.PayloadID)
+	envelope, err := d.l2Engine.GetPayload(ctx, eth.PayloadInfo{ID: *res.PayloadID, Timestamp: uint64(attrs.Timestamp)})
+	payload := envelope.ExecutionPayload
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func (d *OpGeth) AddL2Block(ctx context.Context, txs ...*types.Transaction) (*et
 		return nil, errors.New("required transactions were not included")
 	}
 
-	status, err := d.l2Engine.NewPayload(ctx, payload)
+	status, err := d.l2Engine.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
 	if err != nil {
 		return nil, err
 	}

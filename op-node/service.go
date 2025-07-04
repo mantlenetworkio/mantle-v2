@@ -9,12 +9,11 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
-	datastore "github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -24,6 +23,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/node"
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/da"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 )
@@ -60,8 +60,6 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
 
-	datastoreConfig := NewMantleDataStoreConfig(ctx)
-
 	syncConfig := NewSyncConfig(ctx)
 
 	daCfg, err := NewEigenDAConfig(ctx)
@@ -76,31 +74,31 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Rollup: *rollupConfig,
 		Driver: *driverConfig,
 		RPC: node.RPCConfig{
-			ListenAddr:  ctx.GlobalString(flags.RPCListenAddr.Name),
-			ListenPort:  ctx.GlobalInt(flags.RPCListenPort.Name),
-			EnableAdmin: ctx.GlobalBool(flags.RPCEnableAdmin.Name),
+			ListenAddr:  ctx.String(flags.RPCListenAddr.Name),
+			ListenPort:  ctx.Int(flags.RPCListenPort.Name),
+			EnableAdmin: ctx.Bool(flags.RPCEnableAdmin.Name),
 		},
 		Metrics: node.MetricsConfig{
-			Enabled:    ctx.GlobalBool(flags.MetricsEnabledFlag.Name),
-			ListenAddr: ctx.GlobalString(flags.MetricsAddrFlag.Name),
-			ListenPort: ctx.GlobalInt(flags.MetricsPortFlag.Name),
+			Enabled:    ctx.Bool(flags.MetricsEnabledFlag.Name),
+			ListenAddr: ctx.String(flags.MetricsAddrFlag.Name),
+			ListenPort: ctx.Int(flags.MetricsPortFlag.Name),
 		},
 		Pprof: oppprof.CLIConfig{
-			Enabled:    ctx.GlobalBool(flags.PprofEnabledFlag.Name),
-			ListenAddr: ctx.GlobalString(flags.PprofAddrFlag.Name),
-			ListenPort: ctx.GlobalInt(flags.PprofPortFlag.Name),
+			Enabled:    ctx.Bool(flags.PprofEnabledFlag.Name),
+			ListenAddr: ctx.String(flags.PprofAddrFlag.Name),
+			ListenPort: ctx.Int(flags.PprofPortFlag.Name),
 		},
-		DatastoreConfig:     datastoreConfig,
 		P2P:                 p2pConfig,
 		P2PSigner:           p2pSignerSetup,
-		L1EpochPollInterval: ctx.GlobalDuration(flags.L1EpochPollIntervalFlag.Name),
+		L1EpochPollInterval: ctx.Duration(flags.L1EpochPollIntervalFlag.Name),
 		Heartbeat: node.HeartbeatConfig{
-			Enabled: ctx.GlobalBool(flags.HeartbeatEnabledFlag.Name),
-			Moniker: ctx.GlobalString(flags.HeartbeatMonikerFlag.Name),
-			URL:     ctx.GlobalString(flags.HeartbeatURLFlag.Name),
+			Enabled: ctx.Bool(flags.HeartbeatEnabledFlag.Name),
+			Moniker: ctx.String(flags.HeartbeatMonikerFlag.Name),
+			URL:     ctx.String(flags.HeartbeatURLFlag.Name),
 		},
-		Sync: *syncConfig,
-		DA:   daCfg,
+		SafeDBPath: ctx.String(flags.SafeDBPath.Name),
+		Sync:       *syncConfig,
+		DA:         daCfg,
 	}
 	beacon := NewBeaconEndpointConfig(ctx)
 	if beacon.Check() == nil {
@@ -115,11 +113,11 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 
 func NewL1EndpointConfig(ctx *cli.Context) *node.L1EndpointConfig {
 	return &node.L1EndpointConfig{
-		L1NodeAddr:       ctx.GlobalString(flags.L1NodeAddr.Name),
-		L1TrustRPC:       ctx.GlobalBool(flags.L1TrustRPC.Name),
-		L1RPCKind:        sources.RPCProviderKind(strings.ToLower(ctx.GlobalString(flags.L1RPCProviderKind.Name))),
-		RateLimit:        ctx.GlobalFloat64(flags.L1RPCRateLimit.Name),
-		BatchSize:        ctx.GlobalInt(flags.L1RPCMaxBatchSize.Name),
+		L1NodeAddr:       ctx.String(flags.L1NodeAddr.Name),
+		L1TrustRPC:       ctx.Bool(flags.L1TrustRPC.Name),
+		L1RPCKind:        sources.RPCProviderKind(strings.ToLower(ctx.String(flags.L1RPCProviderKind.Name))),
+		RateLimit:        ctx.Float64(flags.L1RPCRateLimit.Name),
+		BatchSize:        ctx.Int(flags.L1RPCMaxBatchSize.Name),
 		HttpPollInterval: ctx.Duration(flags.L1HTTPPollInterval.Name),
 	}
 }
@@ -135,8 +133,8 @@ func NewBeaconEndpointConfig(ctx *cli.Context) node.L1BeaconEndpointSetup {
 }
 
 func NewL2EndpointConfig(ctx *cli.Context, log log.Logger) (*node.L2EndpointConfig, error) {
-	l2Addr := ctx.GlobalString(flags.L2EngineAddr.Name)
-	fileName := ctx.GlobalString(flags.L2EngineJWTSecret.Name)
+	l2Addr := ctx.String(flags.L2EngineAddr.Name)
+	fileName := ctx.String(flags.L2EngineJWTSecret.Name)
 	var secret [32]byte
 	fileName = strings.TrimSpace(fileName)
 	if fileName == "" {
@@ -168,23 +166,23 @@ func NewL2EndpointConfig(ctx *cli.Context, log log.Logger) (*node.L2EndpointConf
 // flag is set, otherwise nil.
 func NewL2SyncEndpointConfig(ctx *cli.Context) *node.L2SyncEndpointConfig {
 	return &node.L2SyncEndpointConfig{
-		L2NodeAddr: ctx.GlobalString(flags.BackupL2UnsafeSyncRPC.Name),
-		TrustRPC:   ctx.GlobalBool(flags.BackupL2UnsafeSyncRPCTrustRPC.Name),
+		L2NodeAddr: ctx.String(flags.BackupL2UnsafeSyncRPC.Name),
+		TrustRPC:   ctx.Bool(flags.BackupL2UnsafeSyncRPCTrustRPC.Name),
 	}
 }
 
 func NewDriverConfig(ctx *cli.Context) *driver.Config {
 	return &driver.Config{
-		VerifierConfDepth:   ctx.GlobalUint64(flags.VerifierL1Confs.Name),
-		SequencerConfDepth:  ctx.GlobalUint64(flags.SequencerL1Confs.Name),
-		SequencerEnabled:    ctx.GlobalBool(flags.SequencerEnabledFlag.Name),
-		SequencerStopped:    ctx.GlobalBool(flags.SequencerStoppedFlag.Name),
-		SequencerMaxSafeLag: ctx.GlobalUint64(flags.SequencerMaxSafeLagFlag.Name),
+		VerifierConfDepth:   ctx.Uint64(flags.VerifierL1Confs.Name),
+		SequencerConfDepth:  ctx.Uint64(flags.SequencerL1Confs.Name),
+		SequencerEnabled:    ctx.Bool(flags.SequencerEnabledFlag.Name),
+		SequencerStopped:    ctx.Bool(flags.SequencerStoppedFlag.Name),
+		SequencerMaxSafeLag: ctx.Uint64(flags.SequencerMaxSafeLagFlag.Name),
 	}
 }
 
 func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
-	network := ctx.GlobalString(flags.Network.Name)
+	network := ctx.String(flags.Network.Name)
 	if network != "" {
 		config, err := chaincfg.GetRollupConfig(network)
 		if err != nil {
@@ -194,7 +192,7 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
 		return &config, nil
 	}
 
-	rollupConfigPath := ctx.GlobalString(flags.RollupConfig.Name)
+	rollupConfigPath := ctx.String(flags.RollupConfig.Name)
 	file, err := os.Open(rollupConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read rollup config: %w", err)
@@ -212,36 +210,17 @@ func NewRollupConfig(ctx *cli.Context) (*rollup.Config, error) {
 }
 
 func NewSnapshotLogger(ctx *cli.Context) (log.Logger, error) {
-	snapshotFile := ctx.GlobalString(flags.SnapshotLog.Name)
-	handler := log.DiscardHandler()
-	if snapshotFile != "" {
-		var err error
-		handler, err = log.FileHandler(snapshotFile, log.JSONFormat())
-		if err != nil {
-			return nil, err
-		}
-		handler = log.SyncHandler(handler)
+	snapshotFile := ctx.String(flags.SnapshotLog.Name)
+	if snapshotFile == "" {
+		return log.NewLogger(log.DiscardHandler()), nil
 	}
-	logger := log.New()
-	logger.SetHandler(handler)
-	return logger, nil
-}
 
-func NewMantleDataStoreConfig(ctx *cli.Context) datastore.MantleDataStoreConfig {
-	retrieverSocket := ctx.GlobalString(flags.RetrieverSocketFlag.Name)
-	retrieverTimeout := ctx.GlobalDuration(flags.RetrieverTimeoutFlag.Name)
-	graphProvider := ctx.GlobalString(flags.GraphProviderFlag.Name)
-	dataStorePollingDuration := ctx.GlobalDuration(flags.DataStorePollingDurationFlag.Name)
-	mantleDaIndexerSocket := ctx.GlobalString(flags.MantleDaIndexerSocketFlag.Name)
-	mantleDAIndexerEnable := ctx.GlobalBool(flags.MantleDAIndexerEnableFlag.Name)
-	return datastore.MantleDataStoreConfig{
-		RetrieverSocket:          retrieverSocket,
-		RetrieverTimeout:         retrieverTimeout,
-		GraphProvider:            graphProvider,
-		DataStorePollingDuration: dataStorePollingDuration,
-		MantleDaIndexerSocket:    mantleDaIndexerSocket,
-		MantleDAIndexerEnable:    mantleDAIndexerEnable,
+	sf, err := os.OpenFile(snapshotFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
 	}
+	handler := log.JSONHandler(sf)
+	return log.NewLogger(handler), nil
 }
 
 func NewSyncConfig(ctx *cli.Context) *sync.Config {
@@ -251,11 +230,15 @@ func NewSyncConfig(ctx *cli.Context) *sync.Config {
 	}
 }
 
-func NewEigenDAConfig(ctx *cli.Context) (eigenda.Config, error) {
-	return eigenda.Config{
-		ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
-		DisperserUrl:        ctx.String(eigenda.EigenDADisperserUrlFlagName),
-		DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
-		RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
+func NewEigenDAConfig(ctx *cli.Context) (da.Config, error) {
+	return da.Config{
+		Config: eigenda.Config{
+			ProxyUrl:            ctx.String(eigenda.EigenDAProxyUrlFlagName),
+			DisperserUrl:        ctx.String(eigenda.EigenDADisperserUrlFlagName),
+			DisperseBlobTimeout: ctx.Duration(eigenda.DisperseBlobTimeoutFlagName),
+			RetrieveBlobTimeout: ctx.Duration(eigenda.RetrieveBlobTimeoutFlagName),
+		},
+		MantleDaIndexerSocket: ctx.String(flags.MantleDaIndexerSocketFlag.Name),
+		MantleDAIndexerEnable: ctx.Bool(flags.MantleDAIndexerEnableFlag.Name),
 	}, nil
 }

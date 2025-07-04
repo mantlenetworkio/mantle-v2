@@ -8,16 +8,39 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
+	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-node/testlog"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
 
-func setupVerifier(t Testing, sd *e2eutils.SetupData, log log.Logger, l1F derive.L1Fetcher, syncCfg *sync.Config) (*L2Engine, *L2Verifier) {
+type verifierCfg struct {
+	safeHeadListener safeDB
+}
+
+type VerifierOpt func(opts *verifierCfg)
+
+func WithSafeHeadListener(l safeDB) VerifierOpt {
+	return func(opts *verifierCfg) {
+		opts.safeHeadListener = l
+	}
+}
+
+func defaultVerifierCfg() *verifierCfg {
+	return &verifierCfg{
+		safeHeadListener: safedb.Disabled,
+	}
+}
+
+func setupVerifier(t Testing, sd *e2eutils.SetupData, log log.Logger, l1F derive.L1Fetcher, syncCfg *sync.Config, opts ...VerifierOpt) (*L2Engine, *L2Verifier) {
+	cfg := defaultVerifierCfg()
+	for _, opt := range opts {
+		opt(cfg)
+	}
 	jwtPath := e2eutils.WriteDefaultJWT(t)
 	engine := NewL2Engine(t, log, sd.L2Cfg, sd.RollupCfg.Genesis.L1, jwtPath)
 	engCl := engine.EngineClient(t, sd.RollupCfg)
-	verifier := NewL2Verifier(t, log, l1F, engCl, sd.RollupCfg, syncCfg)
+	verifier := NewL2Verifier(t, log, l1F, engCl, sd.RollupCfg, syncCfg, cfg.safeHeadListener)
 	return engine, verifier
 }
 

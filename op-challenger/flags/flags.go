@@ -3,39 +3,39 @@ package flags
 import (
 	"fmt"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
 	oprpc "github.com/ethereum-optimism/optimism/op-service/rpc"
-	txmgr "github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 const envVarPrefix = "OP_CHALLENGER"
 
 var (
 	// Required Flags
-	L1EthRpcFlag = cli.StringFlag{
-		Name:   "l1-eth-rpc",
-		Usage:  "HTTP provider URL for L1.",
-		EnvVar: opservice.PrefixEnvVar(envVarPrefix, "L1_ETH_RPC"),
+	L1EthRpcFlag = &cli.StringFlag{
+		Name:    "l1-eth-rpc",
+		Usage:   "HTTP provider URL for L1.",
+		EnvVars: opservice.PrefixEnvVar(envVarPrefix, "L1_ETH_RPC"),
 	}
-	RollupRpcFlag = cli.StringFlag{
-		Name:   "rollup-rpc",
-		Usage:  "HTTP provider URL for the rollup node.",
-		EnvVar: opservice.PrefixEnvVar(envVarPrefix, "ROLLUP_RPC"),
+	RollupRpcFlag = &cli.StringFlag{
+		Name:    "rollup-rpc",
+		Usage:   "HTTP provider URL for the rollup node.",
+		EnvVars: opservice.PrefixEnvVar(envVarPrefix, "ROLLUP_RPC"),
 	}
-	L2OOAddressFlag = cli.StringFlag{
-		Name:   "l2oo-address",
-		Usage:  "Address of the L2OutputOracle contract.",
-		EnvVar: opservice.PrefixEnvVar(envVarPrefix, "L2OO_ADDRESS"),
+	L2OOAddressFlag = &cli.StringFlag{
+		Name:    "l2oo-address",
+		Usage:   "Address of the L2OutputOracle contract.",
+		EnvVars: opservice.PrefixEnvVar(envVarPrefix, "L2OO_ADDRESS"),
 	}
-	DGFAddressFlag = cli.StringFlag{
-		Name:   "dgf-address",
-		Usage:  "Address of the DisputeGameFactory contract.",
-		EnvVar: opservice.PrefixEnvVar(envVarPrefix, "DGF_ADDRESS"),
+	DGFAddressFlag = &cli.StringFlag{
+		Name:    "dgf-address",
+		Usage:   "Address of the DisputeGameFactory contract.",
+		EnvVars: opservice.PrefixEnvVar(envVarPrefix, "DGF_ADDRESS"),
 	}
 )
 
@@ -65,8 +65,8 @@ var Flags []cli.Flag
 
 func CheckRequired(ctx *cli.Context) error {
 	for _, f := range requiredFlags {
-		if !ctx.GlobalIsSet(f.GetName()) {
-			return fmt.Errorf("flag %s is required", f.GetName())
+		if !ctx.IsSet(f.Names()[0]) {
+			return fmt.Errorf("flag %s is required", f.Names()[0])
 		}
 	}
 	return nil

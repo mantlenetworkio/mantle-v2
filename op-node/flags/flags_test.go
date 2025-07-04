@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 // TestOptionalFlagsDontSetRequired asserts that all flags deemed optional set
@@ -21,11 +21,12 @@ func TestOptionalFlagsDontSetRequired(t *testing.T) {
 func TestUniqueFlags(t *testing.T) {
 	seenCLI := make(map[string]struct{})
 	for _, flag := range Flags {
-		name := flag.GetName()
-		if _, ok := seenCLI[name]; ok {
-			t.Errorf("duplicate flag %s", name)
-			continue
+		for _, name := range flag.Names() {
+			if _, ok := seenCLI[name]; ok {
+				t.Errorf("duplicate flag %s", name)
+				continue
+			}
+			seenCLI[name] = struct{}{}
 		}
-		seenCLI[name] = struct{}{}
 	}
 }

@@ -1,6 +1,8 @@
 package state_test
 
 import (
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -22,13 +24,13 @@ func TestAddBalance(t *testing.T) {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		value := new(big.Int).Rand(rng, big.NewInt(1000))
+		uValue, _ := uint256.FromBig(value)
 
 		db.CreateAccount(addr)
-		db.AddBalance(addr, value)
+		db.AddBalance(addr, uValue, tracing.BalanceMint)
 
-		account := db.GetAccount(addr)
-		require.NotNil(t, account)
-		require.True(t, BigEqual(account.Balance, value))
+		bal := db.GetBalance(addr)
+		require.True(t, BigEqual(bal.ToBig(), value))
 	}
 }
 

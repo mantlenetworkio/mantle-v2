@@ -5,13 +5,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/ethereum-optimism/optimism/op-node/eth"
-	"github.com/ethereum-optimism/optimism/op-node/testutils"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 var _ eth.BlockInfo = (*testutils.MockBlockInfo)(nil)

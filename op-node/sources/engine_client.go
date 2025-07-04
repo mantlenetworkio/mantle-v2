@@ -3,12 +3,14 @@ package sources
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -24,9 +26,16 @@ func EngineClientDefaultConfig(config *rollup.Config) *EngineClientConfig {
 	}
 }
 
+type EngineVersionProvider interface {
+	ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod
+	NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod
+	GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod
+}
+
 // EngineClient extends L2Client with engine API bindings.
 type EngineClient struct {
 	*L2Client
+	evp EngineVersionProvider
 }
 
 func NewEngineClient(client client.RPC, log log.Logger, metrics caching.Metrics, config *EngineClientConfig) (*EngineClient, error) {
@@ -37,6 +46,7 @@ func NewEngineClient(client client.RPC, log log.Logger, metrics caching.Metrics,
 
 	return &EngineClient{
 		L2Client: l2Client,
+		evp:      config.RollupCfg,
 	}, nil
 }
 
@@ -53,7 +63,8 @@ func (s *EngineClient) ForkchoiceUpdate(ctx context.Context, fc *eth.ForkchoiceS
 	fcCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 	var result eth.ForkchoiceUpdatedResult
-	err := s.client.CallContext(fcCtx, &result, "engine_forkchoiceUpdatedV1", fc, attributes)
+	method := s.evp.ForkchoiceUpdatedVersion(attributes)
+	err := s.client.CallContext(fcCtx, &result, string(method), fc, attributes)
 	if err == nil {
 		e.Trace("Shared forkchoice-updated signal")
 		if attributes != nil { // block building is optional, we only get a payload ID if we are building a block
@@ -81,14 +92,25 @@ func (s *EngineClient) ForkchoiceUpdate(ctx context.Context, fc *eth.ForkchoiceS
 // NewPayload executes a full block on the execution engine.
 // This returns a PayloadStatusV1 which encodes any validation/processing error,
 // and this type of error is kept separate from the returned `error` used for RPC errors, like timeouts.
-func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPayload) (*eth.PayloadStatusV1, error) {
+func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPayload, parentBeaconBlockRoot *common.Hash) (*eth.PayloadStatusV1, error) {
 	e := s.log.New("block_hash", payload.BlockHash)
 	e.Trace("sending payload for execution")
 
 	execCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
+
 	var result eth.PayloadStatusV1
-	err := s.client.CallContext(execCtx, &result, "engine_newPayloadV1", payload)
+
+	var err error
+	switch method := s.evp.NewPayloadVersion(uint64(payload.Timestamp)); method {
+	case eth.NewPayloadV4:
+		err = s.client.CallContext(execCtx, &result, string(method), payload, []common.Hash{}, parentBeaconBlockRoot, []hexutil.Bytes{})
+	case eth.NewPayloadV2:
+		err = s.client.CallContext(execCtx, &result, string(method), payload)
+	default:
+		return nil, fmt.Errorf("unsupported NewPayload version: %s", method)
+	}
+
 	e.Trace("Received payload execution result", "status", result.Status, "latestValidHash", result.LatestValidHash, "message", result.ValidationError)
 	if err != nil {
 		e.Error("Payload execution failed", "err", err)
@@ -101,13 +123,14 @@ func (s *EngineClient) NewPayload(ctx context.Context, payload *eth.ExecutionPay
 // There may be two types of error:
 // 1. `error` as eth.InputError: the payload ID may be unknown
 // 2. Other types of `error`: temporary RPC errors, like timeouts.
-func (s *EngineClient) GetPayload(ctx context.Context, payloadId eth.PayloadID) (*eth.ExecutionPayload, error) {
-	e := s.log.New("payload_id", payloadId)
+func (s *EngineClient) GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
+	e := s.log.New("payload_id", payloadInfo.ID)
 	e.Trace("getting payload")
-	var result eth.ExecutionPayload
-	err := s.client.CallContext(ctx, &result, "engine_getPayloadV1", payloadId)
+	var result eth.ExecutionPayloadEnvelope
+	method := s.evp.GetPayloadVersion(payloadInfo.Timestamp)
+	err := s.client.CallContext(ctx, &result, string(method), payloadInfo.ID)
 	if err != nil {
-		e.Warn("Failed to get payload", "payload_id", payloadId, "err", err)
+		e.Warn("Failed to get payload", "payload_id", payloadInfo.ID, "err", err)
 		if rpcErr, ok := err.(rpc.Error); ok {
 			code := eth.ErrorCode(rpcErr.ErrorCode())
 			switch code {

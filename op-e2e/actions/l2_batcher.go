@@ -17,9 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
-	"github.com/ethereum-optimism/optimism/op-node/eth"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type SyncStatusAPI interface {
@@ -207,8 +207,8 @@ func (s *L2Batcher) ActL2BatchSubmit(t Testing, txOpts ...func(tx *types.Dynamic
 	for _, opt := range txOpts {
 		opt(rawTx)
 	}
-	gas, err := core.IntrinsicGas(rawTx.Data, nil, false, true, true, false)
-	require.NoError(t, err, "need to compute intrinsic gas")
+	gas, err := core.FloorDataGas(rawTx.Data)
+	require.NoError(t, err, "need to compute floor data gas")
 	rawTx.Gas = gas
 
 	tx, err := types.SignNewTx(s.l2BatcherCfg.BatcherKey, s.l1Signer, rawTx)
@@ -290,8 +290,8 @@ func (s *L2Batcher) ActL2BatchSubmitGarbage(t Testing, kind GarbageKind) {
 		GasFeeCap: gasFeeCap,
 		Data:      outputFrame,
 	}
-	gas, err := core.IntrinsicGas(rawTx.Data, nil, false, true, true, false)
-	require.NoError(t, err, "need to compute intrinsic gas")
+	gas, err := core.FloorDataGas(rawTx.Data)
+	require.NoError(t, err, "need to compute floor data gas")
 	rawTx.Gas = gas
 
 	tx, err := types.SignNewTx(s.l2BatcherCfg.BatcherKey, s.l1Signer, rawTx)

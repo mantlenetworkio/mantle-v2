@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/mattn/go-isatty"
+	"github.com/urfave/cli/v2"
+
 	"github.com/ethereum-optimism/optimism/gas-oracle/flags"
 	ometrics "github.com/ethereum-optimism/optimism/gas-oracle/metrics"
 	"github.com/ethereum-optimism/optimism/gas-oracle/oracle"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-
-	"github.com/urfave/cli"
+	opservice "github.com/ethereum-optimism/optimism/op-service"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
 var (
@@ -23,7 +25,7 @@ func main() {
 	app := cli.NewApp()
 	app.Flags = flags.Flags
 
-	app.Version = GitVersion + "-" + params.VersionWithCommit(GitCommit, GitDate)
+	app.Version = opservice.FormatVersion(GitVersion, GitCommit, GitDate, "")
 	app.Name = "gas-oracle"
 	app.Usage = "Remotely Control the Optimism Gas Price"
 	app.Description = "Configure with a private key and an Optimism HTTP endpoint " +
@@ -31,15 +33,15 @@ func main() {
 
 	// Configure the logging
 	app.Before = func(ctx *cli.Context) error {
-		loglevel := ctx.GlobalUint64(flags.LogLevelFlag.Name)
-		log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(loglevel), log.StreamHandler(os.Stdout, log.TerminalFormat(true))))
+		loglevel := ctx.Generic(flags.LogLevelFlag.Name).(*oplog.LevelFlagValue).Level()
+		oplog.SetGlobalLogHandler(log.NewTerminalHandlerWithLevel(os.Stdout, loglevel, isatty.IsTerminal(os.Stderr.Fd())))
 		return nil
 	}
 
 	// Define the functionality of the application
 	app.Action = func(ctx *cli.Context) error {
-		if args := ctx.Args(); len(args) > 0 {
-			return fmt.Errorf("invalid command: %q", args[0])
+		if args := ctx.Args(); args.Len() > 0 {
+			return fmt.Errorf("invalid command: %q", args.Get(0))
 		}
 
 		config := oracle.NewConfig(ctx)
