@@ -81,7 +81,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 
 		if cfg.waitForReceipt {
 			// Wait for the receipt
-			receipt, err := waitForReceipt(l2Backend, tx)
+			receipt, err := waitForReceiptWithMaxRetries(l2Backend, tx, 30)
 			if err != nil {
 				return err
 			}

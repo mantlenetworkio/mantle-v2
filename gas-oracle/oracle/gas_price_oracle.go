@@ -376,7 +376,7 @@ func (g *GasPriceOracle) setOperatorFeeConstant(newConstant *big.Int) error {
 	// Wait for receipt if configured
 	if g.config.waitForReceipt {
 		// Wait for the receipt
-		receipt, err := waitForReceipt(g.l2Backend, tx)
+		receipt, err := waitForReceiptWithMaxRetries(g.l2Backend, tx, 30)
 		if err != nil {
 			return err
 		}
@@ -439,7 +439,7 @@ func (g *GasPriceOracle) setOperatorFeeScalar(newScalar *big.Int) error {
 	// Wait for receipt if configured
 	if g.config.waitForReceipt {
 		// Wait for the receipt
-		receipt, err := waitForReceipt(g.l2Backend, tx)
+		receipt, err := waitForReceiptWithMaxRetries(g.l2Backend, tx, 30)
 		if err != nil {
 			return err
 		}

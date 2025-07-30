@@ -3,6 +3,7 @@ package oracle
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -29,24 +30,27 @@ func isDifferenceSignificant(a, b uint64, c float64) bool {
 }
 
 // Wait for the receipt by polling the backend
-func waitForReceipt(backend DeployContractBackend, tx *types.Transaction) (*types.Receipt, error) {
+func waitForReceiptWithMaxRetries(backend DeployContractBackend, tx *types.Transaction, maxRetries int) (*types.Receipt, error) {
 	t := time.NewTicker(300 * time.Millisecond)
 	receipt := new(types.Receipt)
 	var err error
-	for range t.C {
-		receipt, err = backend.TransactionReceipt(context.Background(), tx.Hash())
-		if errors.Is(err, ethereum.NotFound) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		if receipt != nil {
-			t.Stop()
-			break
+	for i := 0; i < maxRetries; i++ {
+		select {
+		case <-t.C:
+			receipt, err = backend.TransactionReceipt(context.Background(), tx.Hash())
+			if errors.Is(err, ethereum.NotFound) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			if receipt != nil {
+				t.Stop()
+				return receipt, nil
+			}
 		}
 	}
-	return receipt, nil
+	return nil, fmt.Errorf("transaction receipt not found after %d retries", maxRetries)
 }
 
 func max(a, b uint64) uint64 {
