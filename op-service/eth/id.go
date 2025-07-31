@@ -104,6 +104,15 @@ func (id L2BlockRef) ParentID() BlockID {
 	}
 }
 
+func (id L2BlockRef) BlockRef() BlockRef {
+	return BlockRef{
+		Hash:       id.Hash,
+		Number:     id.Number,
+		ParentHash: id.ParentHash,
+		Time:       id.Time,
+	}
+}
+
 // IndexedBlobHash represents a blob hash that commits to a single blob confirmed in a block.  The
 // index helps us avoid unnecessary blob to blob hash conversions to find the right content in a
 // sidecar.
@@ -111,3 +120,7 @@ type IndexedBlobHash struct {
 	Index uint64      // absolute index in the block, a.k.a. position in sidecar blobs array
 	Hash  common.Hash // hash of the blob, used for consistency checks
 }
+
+// BlockRef is a Block Ref indepdendent of L1 or L2
+// Because L1BlockRefs are strict subsets of L2BlockRefs, BlockRef is a direct alias of L1BlockRef
+type BlockRef = L1BlockRef
