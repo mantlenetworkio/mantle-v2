@@ -167,7 +167,7 @@ func (l *BatchSubmitter) loopEigenDa() (bool, error) {
 				break
 			}
 
-			if err != nil && !errors.Is(err, eigenda.ErrNotFound) {
+			if err != nil && !errors.Is(err, eigenda.ErrNetwork) {
 				l.log.Warn("unrecoverable error in disperseEigenDaData", "retry time", retry, "err", err)
 				break
 			}
