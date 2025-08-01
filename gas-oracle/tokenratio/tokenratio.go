@@ -60,7 +60,7 @@ var (
 // NewClient create a new Client given a remote HTTP url, update frequency for token ratio
 func NewClient(url, uniswapURL string, frequency uint64) *Client {
 	client := resty.New()
-	client.SetHostURL(url)
+	client.SetBaseURL(url)
 	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
 		statusCode := r.StatusCode()
 		if statusCode >= 400 {
