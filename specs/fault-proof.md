@@ -62,7 +62,7 @@ The program uses the pre-image oracle to query any input data that is understood
 - External data not already part of the program code. See [Pre-image hinting routes](#pre-image-hinting-routes).
 
 The communication happens over a simple request-response wire protocol,
-see [Pre-image communcation](#pre-image-communication).
+see [Pre-image communication](#pre-image-communication).
 
 ### Pre-image key types
 
@@ -171,7 +171,7 @@ and the latest hint may be buffered for lazy execution, or dropped entirely when
 
 When the pre-image oracle serves a request, and the request cannot be served from an existing collection of pre-images
 (e.g. a local pre-image cache) then the VM can execute the hint to retrieve the missing pre-image(s).
-It is the responsiblity of the program to provide sufficient hinting for every pre-image request.
+It is the responsibility of the program to provide sufficient hinting for every pre-image request.
 Some hints may have to be repeated: the VM only has to execute the last hint when handling a missing pre-image.
 
 Note that hints may produce multiple pre-images:
@@ -183,7 +183,7 @@ Hinting is implemented with a request-acknowledgement wire-protocol over a block
 ```text
 <request> := <length prefix> <hint bytes>
 
-<repsonse> := <ack>
+<response> := <ack>
 
 <length prefix> := big-endian uint32  # length of <hint bytes>
 <hint bytes> := byte sequence
