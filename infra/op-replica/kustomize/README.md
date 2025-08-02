@@ -4,7 +4,7 @@
 
 This directory describes how to build and deploy Optimistic Ethereum software to a kubernetes cluster.
 
-## Prerequisits
+## Prerequisites
 
 - `kubectl` **Minimum version v1.20** [Install notes](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-on-linux)
 - a kubernetes cluster
@@ -21,7 +21,7 @@ Kustomize build resources based on `kustomization.yaml` files.
 
 To create a new overlay, create a new directory with a new `kustomization.yaml` file that refers to the base resources to target.
 
-Add any global modifers, the base resources to target and any modifications. **A valid base target is any directory with a `kustomization.yaml` file**.
+Add any global modifiers, the base resources to target and any modifications. **A valid base target is any directory with a `kustomization.yaml` file**.
 
 See a detailed description of a kovan replica [here](./README-kovan-replica.md)
 
