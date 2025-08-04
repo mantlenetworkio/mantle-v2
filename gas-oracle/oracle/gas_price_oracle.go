@@ -378,11 +378,11 @@ func (g *GasPriceOracle) setOperatorFeeConstant(newConstant *big.Int) error {
 		log.Info("Operator fee constant update transaction confirmed",
 			"tx_hash", tx.Hash().Hex(),
 			"block_number", receipt.BlockNumber)
-
-		// Update the cache with the new value
-		g.lastOperatorFeeConstant = newConstant
-		ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(newConstant.Int64())
 	}
+
+	// Update the cache with the new value
+	g.lastOperatorFeeConstant = newConstant
+	ometrics.GasOracleStats.OperatorFeeConstantGauge.Update(newConstant.Int64())
 
 	return nil
 }
@@ -441,11 +441,11 @@ func (g *GasPriceOracle) setOperatorFeeScalar(newScalar *big.Int) error {
 		log.Info("Operator fee scalar update transaction confirmed",
 			"tx_hash", tx.Hash().Hex(),
 			"block_number", receipt.BlockNumber)
-
-		// Update the cache with the new value
-		g.lastOperatorFeeScalar = newScalar
-		ometrics.GasOracleStats.OperatorFeeScalarGauge.Update(newScalar.Int64())
 	}
+
+	// Update the cache with the new value
+	g.lastOperatorFeeScalar = newScalar
+	ometrics.GasOracleStats.OperatorFeeScalarGauge.Update(newScalar.Int64())
 
 	return nil
 }
