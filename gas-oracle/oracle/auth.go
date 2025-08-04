@@ -3,8 +3,6 @@ package oracle
 import (
 	"context"
 	"encoding/hex"
-	"sync"
-	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	"github.com/ethereum-optimism/optimism/op-service/hsm"
@@ -15,16 +13,10 @@ import (
 	"google.golang.org/api/option"
 )
 
-const gasPriceUpdateInterval = 30 * 2 * time.Second
-
 type Auth struct {
-	mu sync.RWMutex
-
-	client *ethclient.Client
-	auth   *bind.TransactOpts
-
+	client        *ethclient.Client
+	auth          *bind.TransactOpts
 	fixedGasPrice bool
-	lastUpdated   time.Time
 }
 
 func NewAuth(cfg *Config, client *ethclient.Client) (*Auth, error) {
@@ -90,22 +82,17 @@ func NewAuth(cfg *Config, client *ethclient.Client) (*Auth, error) {
 		client:        client,
 		auth:          opts,
 		fixedGasPrice: fixedGasPrice,
-		lastUpdated:   time.Now(),
 	}, nil
 }
 
 func (a *Auth) Opts() *bind.TransactOpts {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	// Update gas price if needed
-	if !a.fixedGasPrice && time.Since(a.lastUpdated) >= gasPriceUpdateInterval {
+	if !a.fixedGasPrice {
 		gasPrice, err := a.client.SuggestGasPrice(a.auth.Context)
 		if err != nil {
 			log.Error("gasoracle/auth", "update gas price error", err.Error())
 		} else {
 			a.auth.GasPrice = gasPrice
-			a.lastUpdated = time.Now()
 		}
 	}
 
