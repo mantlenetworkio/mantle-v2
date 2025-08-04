@@ -48,10 +48,9 @@ type Config struct {
 	IntrinsicSp1GasPerBlock       uint64
 	Sp1PricePerBGasInDollars      float64
 	Sp1GasScalar                  uint64
-	// mantle explorer config
-	BlockscoutExplorerURL string
-	EtherscanExplorerURL  string
-	EtherscanAPIKey       string
+	// transaction counter config
+	TxCounterUpdateInterval uint64
+	TxCounterWorkerNumber   uint64
 }
 
 // NewConfig creates a new Config
@@ -120,11 +119,9 @@ func NewConfig(ctx *cli.Context) *Config {
 		cfg.IntrinsicSp1GasPerBlock = ctx.Uint64(flags.IntrinsicSp1GasPerBlockFlag.Name)
 		cfg.Sp1PricePerBGasInDollars = ctx.Float64(flags.Sp1PricePerBGasInDollarsFlag.Name)
 		cfg.Sp1GasScalar = ctx.Uint64(flags.Sp1GasScalarFlag.Name)
+		cfg.TxCounterUpdateInterval = ctx.Uint64(flags.TxCounterUpdateIntervalFlag.Name)
+		cfg.TxCounterWorkerNumber = ctx.Uint64(flags.TxCounterWorkerNumberFlag.Name)
 	}
-
-	cfg.BlockscoutExplorerURL = ctx.String(flags.BlockscoutExplorerURLFlag.Name)
-	cfg.EtherscanExplorerURL = ctx.String(flags.EtherscanExplorerURLFlag.Name)
-	cfg.EtherscanAPIKey = ctx.String(flags.EtherscanAPIKeyFlag.Name)
 
 	return &cfg
 }

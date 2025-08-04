@@ -170,20 +170,15 @@ var (
 		Usage:   "the scalar of sp1 gas",
 		EnvVars: []string{"GAS_PRICE_ORACLE_SP1_GAS_SCALAR"},
 	}
-	BlockscoutExplorerURLFlag = &cli.StringFlag{
-		Name:    "blockscout-explorer-url",
-		Usage:   "the url of the blockscout explorer",
-		EnvVars: []string{"GAS_PRICE_ORACLE_BLOCKSCOUT_EXPLORER_URL"},
+	TxCounterUpdateIntervalFlag = &cli.Uint64Flag{
+		Name:    "tx-counter-update-interval",
+		Usage:   "the interval of updating the tx counter",
+		EnvVars: []string{"GAS_PRICE_ORACLE_TX_COUNTER_UPDATE_INTERVAL"},
 	}
-	EtherscanExplorerURLFlag = &cli.StringFlag{
-		Name:    "etherscan-explorer-url",
-		Usage:   "the url of the etherscan explorer",
-		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_EXPLORER_URL"},
-	}
-	EtherscanAPIKeyFlag = &cli.StringFlag{
-		Name:    "etherscan-api-key",
-		Usage:   "the api key of the etherscan",
-		EnvVars: []string{"GAS_PRICE_ORACLE_ETHERSCAN_API_KEY"},
+	TxCounterWorkerNumberFlag = &cli.Uint64Flag{
+		Name:    "tx-counter-worker-number",
+		Usage:   "the number of concurrent workers for updating the tx counter",
+		EnvVars: []string{"GAS_PRICE_ORACLE_TX_COUNTER_WORKER_NUMBER"},
 	}
 )
 
@@ -218,7 +213,6 @@ var Flags = []cli.Flag{
 	IntrinsicSp1GasPerBlockFlag,
 	Sp1PricePerBGasInDollarsFlag,
 	Sp1GasScalarFlag,
-	BlockscoutExplorerURLFlag,
-	EtherscanExplorerURLFlag,
-	EtherscanAPIKeyFlag,
+	TxCounterUpdateIntervalFlag,
+	TxCounterWorkerNumberFlag,
 }

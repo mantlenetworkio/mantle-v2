@@ -45,7 +45,6 @@ const (
 type GasPriceOracle struct {
 	l1ChainID  *big.Int
 	l2ChainID  *big.Int
-	ctx        context.Context
 	stop       chan struct{}
 	contract   *bindings.GasPriceOracle
 	l2Backend  DeployContractBackend
@@ -55,10 +54,12 @@ type GasPriceOracle struct {
 	auth       *Auth
 
 	// Operator fee constant update
-	lastOperatorFeeConstant *big.Int                // Cache for the last operator fee constant to avoid contract calls
-	lastOperatorFeeScalar   *big.Int                // Cache for the last operator fee scalar to avoid contract calls
-	operatorFeeCalculator   *OperatorFeeCalculator  // Operator fee calculator
-	explorerClient          ExplorerClientInterface // Explorer client for fetching tx count
+	lastOperatorFeeConstant *big.Int               // Cache for the last operator fee constant to avoid contract calls
+	lastOperatorFeeScalar   *big.Int               // Cache for the last operator fee scalar to avoid contract calls
+	operatorFeeCalculator   *OperatorFeeCalculator // Operator fee calculator
+
+	// Transaction counter for tracking transaction volume
+	txCounter *TxCounter
 }
 
 // Start runs the GasPriceOracle
@@ -87,6 +88,8 @@ func (g *GasPriceOracle) Start() error {
 	// Start operator fee update loop if configured
 	if g.config.OperatorFeeUpdateEnabled {
 		go g.OperatorFeeLoop()
+		// Start transaction counter
+		g.txCounter.Start()
 	}
 
 	return nil
@@ -94,10 +97,10 @@ func (g *GasPriceOracle) Start() error {
 
 func (g *GasPriceOracle) Stop() {
 	close(g.stop)
-}
-
-func (g *GasPriceOracle) Wait() {
-	<-g.stop
+	// Stop transaction counter if available
+	if g.config.OperatorFeeUpdateEnabled {
+		g.txCounter.Stop()
+	}
 }
 
 // ensure makes sure that the configured private key is the operator
@@ -105,7 +108,7 @@ func (g *GasPriceOracle) Wait() {
 // not be able to make updates to the token ratio.
 func (g *GasPriceOracle) ensure() error {
 	operator, err := g.contract.Operator(&bind.CallOpts{
-		Context: g.ctx,
+		Context: context.Background(),
 	})
 	if err != nil {
 		return err
@@ -137,8 +140,9 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 			if err := updateTokenRatio(); err != nil {
 				log.Error("cannot update tokenRatio", "message", err)
 			}
-		case <-g.ctx.Done():
-			g.Stop()
+		case <-g.stop:
+			log.Info("Stopping token ratio update loop")
+			return
 		}
 	}
 }
@@ -184,7 +188,7 @@ func (g *GasPriceOracle) OperatorFeeLoop() {
 			}()
 
 			wg.Wait()
-		case <-g.ctx.Done():
+		case <-g.stop:
 			log.Info("Stopping operator fee update loop")
 			return
 		}
@@ -269,7 +273,7 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 	var currentOperatorFeeConstant *big.Int
 	var currentOperatorFeeScalar *big.Int
 	var operatorFeeCalculator *OperatorFeeCalculator
-	var explorerClient ExplorerClientInterface
+	var txCounter *TxCounter
 	if cfg.OperatorFeeUpdateEnabled {
 		log.Info("Operator fee update is enabled")
 
@@ -285,21 +289,12 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		log.Info("Initialized operator fee scalar cache", "value", currentOperatorFeeScalar.String())
 
 		operatorFeeCalculator = NewOperatorFeeCalculator(cfg.IntrinsicSp1GasPerTx, cfg.IntrinsicSp1GasPerBlock, cfg.Sp1PricePerBGasInDollars, cfg.Sp1GasScalar, cfg.OperatorFeeMarkupPercentage)
-
-		if cfg.BlockscoutExplorerURL != "" {
-			explorerClient = NewBlockscoutClient(cfg.BlockscoutExplorerURL)
-		} else {
-			if cfg.EtherscanAPIKey == "" {
-				return nil, fmt.Errorf("etherscan api key is not set")
-			}
-			explorerClient = NewEtherscanClient(cfg.EtherscanExplorerURL, cfg.EtherscanAPIKey)
-		}
+		txCounter = NewTxCounter(tokenRatioClient.l2Client, cfg.TxCounterUpdateInterval, cfg.TxCounterWorkerNumber)
 	}
 
 	gpo := GasPriceOracle{
 		l2ChainID:               l2ChainID,
 		l1ChainID:               l1ChainID,
-		ctx:                     context.Background(),
 		stop:                    make(chan struct{}),
 		contract:                contract,
 		config:                  cfg,
@@ -310,7 +305,7 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		lastOperatorFeeConstant: currentOperatorFeeConstant,
 		lastOperatorFeeScalar:   currentOperatorFeeScalar,
 		operatorFeeCalculator:   operatorFeeCalculator,
-		explorerClient:          explorerClient,
+		txCounter:               txCounter,
 	}
 
 	if err := gpo.ensure(); err != nil {
@@ -325,11 +320,11 @@ func (g *GasPriceOracle) updateOperatorFeeConstant() error {
 	// Step 1: Get current ETH price from token ratio client
 	ethPrice := g.tokenRatio.EthPrice()
 
-	// Step 2: Fetch transaction count from the explorer client
-	// DailyTxCountFromUser is the transaction count from the explorer client minus the daily block count
-	txCount, err := g.explorerClient.DailyTxCountFromUser(g.ctx)
-	if err != nil {
-		return fmt.Errorf("failed to fetch transaction count: %w", err)
+	// Step 2: Get daily transaction count from the transaction counter
+	txCount := g.txCounter.GetEstimatedDailyTxCount()
+	if txCount == 0 {
+		log.Warn("No transaction count available, skipping operator fee update")
+		return nil
 	}
 
 	// Step 3: Calculate new operator fee constant using the calculator function

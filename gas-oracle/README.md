@@ -66,9 +66,8 @@ GLOBAL OPTIONS:
    --intrinsic-sp1-gas-per-block uint64               the intrinsic sp1 gas per block (default: 15e6) [$GAS_PRICE_ORACLE_INTRINSIC_SP1_GAS_PER_BLOCK]
    --sp1-price-per-bgas-in-dollars float64            the price of sp1 per bgas in dollars (default: 0.58) [$GAS_PRICE_ORACLE_SP1_PRICE_PER_BGAS_IN_DOLLARS]
    --sp1-gas-scalar uint64                            the scalar of sp1 gas (default: 2500) [$GAS_PRICE_ORACLE_SP1_GAS_SCALAR]
-   --blockscout-explorer-url string                   the url of the blockscout explorer (default: "https://explorer.mantle.xyz") [$GAS_PRICE_ORACLE_BLOCKSCOUT_EXPLORER_URL]
-   --etherscan-explorer-url string                    the url of the etherscan explorer (default: "https://mantle.etherscan.io") [$GAS_PRICE_ORACLE_ETHERSCAN_EXPLORER_URL]
-   --etherscan-api-key string                         the api key of the etherscan [$GAS_PRICE_ORACLE_ETHERSCAN_API_KEY]
+   --tx-counter-update-interval uint64                the interval of updating the tx counter (minimum: 3600) [$GAS_PRICE_ORACLE_TX_COUNTER_UPDATE_INTERVAL]
+   --tx-counter-worker-number uint64                  the number of concurrent workers for updating the tx counter (default: 3) [$GAS_PRICE_ORACLE_TX_COUNTER_WORKER_NUMBER]
    --help, -h                                         show help
    --version, -v                                      print the version
 ```

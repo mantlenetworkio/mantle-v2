@@ -62,7 +62,8 @@ func main() {
 			return err
 		}
 
-		gpo.Wait()
+		<-ctx.Done()
+		gpo.Stop()
 
 		return nil
 	}

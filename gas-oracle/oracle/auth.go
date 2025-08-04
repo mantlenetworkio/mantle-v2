@@ -15,7 +15,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-const gasPriceUpdateInterval = 5 * time.Minute
+const gasPriceUpdateInterval = 30 * 2 * time.Second
 
 type Auth struct {
 	mu sync.RWMutex
