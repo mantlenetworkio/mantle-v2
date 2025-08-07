@@ -4,15 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // DialRollupClientWithTimeout attempts to dial the RPC provider using the provided
 // URL. If the dial doesn't complete within defaultDialTimeout seconds, this
 // method will return an error.
-func DialRollupClientWithTimeout(ctx context.Context, url string, timeout time.Duration) (*sources.RollupClient, error) {
+func DialRollupClientWithTimeout(ctx context.Context, url string, timeout time.Duration) (*RollupClient, error) {
 	ctxt, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -21,5 +19,5 @@ func DialRollupClientWithTimeout(ctx context.Context, url string, timeout time.D
 		return nil, err
 	}
 
-	return sources.NewRollupClient(client.NewBaseRPCClient(rpcCl)), nil
+	return NewRollupClient(NewBaseRPCClient(rpcCl)), nil
 }

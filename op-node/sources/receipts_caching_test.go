@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/eth"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
@@ -38,7 +38,7 @@ func TestCachingReceiptsProvider_Caching(t *testing.T) {
 
 	bInfo, _, _ := block.Info(true, true)
 	for i := 0; i < 4; i++ {
-		gotRecs, err := rp.FetchReceipts(ctx, bInfo, txHashes)
+		gotRecs, err, _ := rp.FetchReceipts(ctx, bInfo, txHashes, false)
 		require.NoError(t, err)
 		for i, gotRec := range gotRecs {
 			requireEqualReceipt(t, receipts[i], gotRec)

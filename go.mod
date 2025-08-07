@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.23.0
 
-replace github.com/ethereum/go-ethereum v1.15.11 => github.com/mantlenetworkio/op-geth v1.3.0
+replace github.com/ethereum/go-ethereum v1.15.11 => github.com/mantlenetworkio/op-geth v1.3.1-0.20250731114216-c0ab780a5a81
 
 require (
 	cloud.google.com/go/kms v1.12.1
@@ -10,13 +10,15 @@ require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cockroachdb/pebble v1.1.2
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
 	github.com/ethereum/go-ethereum v1.15.11
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/go-resty/resty/v2 v2.10.0
+	github.com/go-resty/resty/v2 v2.16.5
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
+	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/google/go-cmp v0.7.0
 	github.com/google/gofuzz v1.2.1-0.20220503160820-4a35382e8fc8
 	github.com/hashicorp/go-multierror v1.1.1

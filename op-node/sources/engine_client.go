@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources/caching"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -87,6 +87,43 @@ func (s *EngineClient) ForkchoiceUpdate(ctx context.Context, fc *eth.ForkchoiceS
 		}
 		return nil, err
 	}
+}
+
+func (s *EngineClient) ForkchoiceUpdateWithNextDepositTxsV3(ctx context.Context, fc *eth.ForkchoiceState, attributes *eth.PayloadAttributes, preconf *eth.ForkchoicePreconf) (*eth.ForkchoiceUpdatedResult, error) {
+	if len(preconf.Transactions) == 0 {
+		return s.ForkchoiceUpdate(ctx, fc, attributes)
+	} else {
+		e := s.log.New("state", fc, "attr", attributes, "preconf", preconf)
+		e.Trace("Sharing forkchoice-updated-preconf signal")
+		fcCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+		defer cancel()
+		var result eth.ForkchoiceUpdatedResult
+		method := eth.ForkchoiceUpdateWithNextDepositTxsV3
+		err := s.client.CallContext(fcCtx, &result, string(method), fc, attributes, preconf)
+		if err == nil {
+			e.Trace("Shared forkchoice-updated signal")
+			if attributes != nil { // block building is optional, we only get a payload ID if we are building a block
+				e.Trace("Received payload id", "payloadId", result.PayloadID)
+			}
+			return &result, nil
+		} else {
+			e.Warn("Failed to share forkchoice-updated signal", "err", err)
+			if rpcErr, ok := err.(rpc.Error); ok {
+				code := eth.ErrorCode(rpcErr.ErrorCode())
+				switch code {
+				case eth.InvalidForkchoiceState, eth.InvalidPayloadAttributes:
+					return nil, eth.InputError{
+						Inner: err,
+						Code:  code,
+					}
+				default:
+					return nil, fmt.Errorf("unrecognized rpc error: %w", err)
+				}
+			}
+			return nil, err
+		}
+	}
+
 }
 
 // NewPayload executes a full block on the execution engine.

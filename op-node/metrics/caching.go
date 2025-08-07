@@ -10,6 +10,7 @@ import (
 type CacheMetrics struct {
 	SizeVec *prometheus.GaugeVec
 	GetVec  *prometheus.CounterVec
+	PeekVec *prometheus.CounterVec
 	AddVec  *prometheus.CounterVec
 }
 
@@ -34,6 +35,16 @@ func (m *CacheMetrics) CacheGet(typeLabel string, hit bool) {
 	}
 }
 
+// CachePeek meters a lookup of an item with a given type to the cache
+// and indicating if the lookup was a hit.
+func (m *CacheMetrics) CachePeek(typeLabel string, hit bool) {
+	if hit {
+		m.PeekVec.WithLabelValues(typeLabel, "true").Inc()
+	} else {
+		m.PeekVec.WithLabelValues(typeLabel, "false").Inc()
+	}
+}
+
 func NewCacheMetrics(factory metrics.Factory, ns string, name string, displayName string) *CacheMetrics {
 	return &CacheMetrics{
 		SizeVec: factory.NewGaugeVec(prometheus.GaugeOpts{
@@ -46,6 +57,14 @@ func NewCacheMetrics(factory metrics.Factory, ns string, name string, displayNam
 		GetVec: factory.NewCounterVec(prometheus.CounterOpts{
 			Namespace: ns,
 			Name:      name + "_get",
+			Help:      displayName + " lookups, hitting or not",
+		}, []string{
+			"type",
+			"hit",
+		}),
+		PeekVec: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      name + "_peek",
 			Help:      displayName + " lookups, hitting or not",
 		}, []string{
 			"type",

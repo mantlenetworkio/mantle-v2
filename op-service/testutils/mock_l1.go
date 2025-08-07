@@ -11,6 +11,16 @@ type MockL1Source struct {
 	MockEthClient
 }
 
+func (m *MockL1Source) PreFetchReceipts(ctx context.Context, blockHash common.Hash) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MockL1Source) ClearReceiptsCache(blockNumber uint64) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *MockL1Source) L1BlockRefByLabel(ctx context.Context, label eth.BlockLabel) (eth.L1BlockRef, error) {
 	out := m.Mock.MethodCalled("L1BlockRefByLabel", label)
 	return out[0].(eth.L1BlockRef), *out[1].(*error)

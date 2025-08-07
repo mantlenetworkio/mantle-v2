@@ -17,9 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
@@ -38,6 +37,11 @@ func (m *mockRPC) CallContext(ctx context.Context, result any, method string, ar
 
 func (m *mockRPC) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
 	called := m.MethodCalled("EthSubscribe", channel, args)
+	return called.Get(0).(*rpc.ClientSubscription), called.Get(1).([]error)[0]
+}
+
+func (m *mockRPC) Subscribe(ctx context.Context, namespace string, channel any, args ...any) (ethereum.Subscription, error) {
+	called := m.MethodCalled("Subscribe", namespace, channel, args)
 	return called.Get(0).(*rpc.ClientSubscription), called.Get(1).([]error)[0]
 }
 
@@ -190,11 +194,10 @@ func TestEthClientFetchPectraReceipts(t *testing.T) {
 		client.WithDialBackoff(10),
 	}
 
-	m := metrics.NewMetrics("default")
 	log := oplog.NewLogger(os.Stdout, oplog.DefaultCLIConfig())
 	l1Node, err := client.NewRPC(context.Background(), log, DevnetRPC, opts...)
 	require.NoError(t, err)
-	eClient, err := NewEthClient(client.NewInstrumentedRPC(l1Node, m), log, nil, testEthClientConfig)
+	eClient, err := NewEthClient(l1Node, log, nil, testEthClientConfig)
 	require.NoError(t, err)
 	_, _, err = eClient.FetchReceipts(context.Background(), common.HexToHash("0x6605114c7d2541cb2adb4a9e56d8ac8e568259678e0372426e8d18e47f807007"))
 	require.NoError(t, err)

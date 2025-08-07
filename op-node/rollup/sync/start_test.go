@@ -13,9 +13,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	smetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/sources"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
@@ -382,7 +382,6 @@ func TestFindL2Heads(t *testing.T) {
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	registry.MustRegister(collectors.NewGoCollector())
 	factory := smetrics.With(registry)
-	m := metrics.NewMetrics("default")
 
 	L1SourceCache := metrics.NewCacheMetrics(factory, "t1", "l1_source_cache", "L1 Source cache")
 	L2SourceCache := metrics.NewCacheMetrics(factory, "t1", "l2_source_cache", "L2 Source cache")
@@ -397,7 +396,6 @@ func TestFindL2Heads(t *testing.T) {
 			TrustRPC:              true,
 			RPCProviderKind:       sources.RPCKindAny,
 		},
-		L1BlockRefsCacheSize: 1000,
 	}
 	l2ClientCfg := &sources.EngineClientConfig{
 		L2ClientConfig: sources.L2ClientConfig{
@@ -424,9 +422,9 @@ func TestFindL2Heads(t *testing.T) {
 	fmt.Println("new rpc", l2Rpc, err)
 
 	l1, err := sources.NewL1Client(
-		client.NewInstrumentedRPC(l1Rpc, m), log, L1SourceCache, l1ClientCfg)
+		l1Rpc, log, L1SourceCache, l1ClientCfg)
 	l2, err := sources.NewEngineClient(
-		client.NewInstrumentedRPC(l2Rpc, m), log, L2SourceCache, l2ClientCfg)
+		l2Rpc, log, L2SourceCache, l2ClientCfg)
 
 	tests := []struct {
 		name       string

@@ -13,6 +13,11 @@ type MockEngine struct {
 	MockL2Client
 }
 
+func (m *MockEngine) CachePayloadByHash(payload *eth.ExecutionPayloadEnvelope) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *MockEngine) GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error) {
 	out := m.Mock.Called(payloadInfo.ID)
 	return out.Get(0).(*eth.ExecutionPayloadEnvelope), out.Error(1)

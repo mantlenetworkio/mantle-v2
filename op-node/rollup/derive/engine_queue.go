@@ -30,6 +30,7 @@ type NextAttributesProvider interface {
 type Engine interface {
 	GetPayload(ctx context.Context, payloadInfo eth.PayloadInfo) (*eth.ExecutionPayloadEnvelope, error)
 	ForkchoiceUpdate(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes) (*eth.ForkchoiceUpdatedResult, error)
+	ForkchoiceUpdateWithNextDepositTxsV3(ctx context.Context, state *eth.ForkchoiceState, attr *eth.PayloadAttributes, preconf *eth.ForkchoicePreconf) (*eth.ForkchoiceUpdatedResult, error)
 	NewPayload(ctx context.Context, payload *eth.ExecutionPayload, parentBeaconBlockRoot *common.Hash) (*eth.PayloadStatusV1, error)
 	PayloadByHash(context.Context, common.Hash) (*eth.ExecutionPayloadEnvelope, error)
 	PayloadByNumber(context.Context, uint64) (*eth.ExecutionPayloadEnvelope, error)
@@ -61,6 +62,7 @@ type EngineControl interface {
 	CancelPayload(ctx context.Context, force bool) error
 	// BuildingPayload indicates if a payload is being built, and onto which block it is being built, and whether or not it is a safe payload.
 	BuildingPayload() (onto eth.L2BlockRef, id eth.PayloadInfo, safe bool)
+	StartPayloadV2(ctx context.Context, parent eth.L2BlockRef, attrs *eth.PayloadAttributes, updateSafe bool, preconf *eth.ForkchoicePreconf) (errType BlockInsertionErrType, err error)
 }
 
 // SafeHeadListener is called when the safe head is updated.
@@ -157,12 +159,14 @@ type EngineQueue struct {
 
 	safeHeadNotifs       SafeHeadListener // notified when safe head is updated
 	lastNotifiedSafeHead eth.L2BlockRef
+
+	subL1Reset chan<- uint64
 }
 
 var _ EngineControl = (*EngineQueue)(nil)
 
 // NewEngineQueue creates a new EngineQueue, which should be Reset(origin) before use.
-func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config, safeHeadNotifs SafeHeadListener) *EngineQueue {
+func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics Metrics, prev NextAttributesProvider, l1Fetcher L1Fetcher, syncCfg *sync.Config, safeHeadNotifs SafeHeadListener, subL1Reset chan<- uint64) *EngineQueue {
 	return &EngineQueue{
 		log:            log,
 		cfg:            cfg,
@@ -174,6 +178,7 @@ func NewEngineQueue(log log.Logger, cfg *rollup.Config, engine Engine, metrics M
 		l1Fetcher:      l1Fetcher,
 		syncCfg:        syncCfg,
 		safeHeadNotifs: safeHeadNotifs,
+		subL1Reset:     subL1Reset,
 	}
 }
 
@@ -742,6 +747,33 @@ func (eq *EngineQueue) StartPayload(ctx context.Context, parent eth.L2BlockRef, 
 	return BlockInsertOK, nil
 }
 
+func (eq *EngineQueue) StartPayloadV2(ctx context.Context, parent eth.L2BlockRef, attrs *eth.PayloadAttributes, updateSafe bool, preconf *eth.ForkchoicePreconf) (errType BlockInsertionErrType, err error) {
+	if preconf == nil {
+		return eq.StartPayload(ctx, parent, attrs, updateSafe)
+	} else {
+		if eq.isEngineSyncing() {
+			return BlockInsertTemporaryErr, fmt.Errorf("engine is in progess of p2p sync")
+		}
+		if eq.buildingInfo.ID != (eth.PayloadID{}) {
+			eq.log.Warn("did not finish previous block building, starting new building now", "prev_onto", eq.buildingOnto, "prev_payload_id", eq.buildingInfo.ID, "new_onto", parent)
+			// TODO: maybe worth it to force-cancel the old payload ID here.
+		}
+		fc := eth.ForkchoiceState{
+			HeadBlockHash:      parent.Hash,
+			SafeBlockHash:      eq.safeHead.Hash,
+			FinalizedBlockHash: eq.finalized.Hash,
+		}
+		id, errTyp, err := StartPayloadV2(ctx, eq.engine, fc, attrs, preconf)
+		if err != nil {
+			return errTyp, err
+		}
+		eq.buildingInfo = eth.PayloadInfo{ID: id, Timestamp: uint64(attrs.Timestamp)}
+		eq.buildingSafe = updateSafe
+		eq.buildingOnto = parent
+		return BlockInsertOK, nil
+	}
+}
+
 func (eq *EngineQueue) ConfirmPayload(ctx context.Context) (out *eth.ExecutionPayloadEnvelope, errTyp BlockInsertionErrType, err error) {
 	if eq.buildingInfo.ID == (eth.PayloadID{}) {
 		return nil, BlockInsertPrestateErr, fmt.Errorf("cannot complete payload building: not currently building a payload")
@@ -847,6 +879,7 @@ func (eq *EngineQueue) Reset(ctx context.Context, _ eth.L1BlockRef, _ eth.System
 	if err != nil {
 		return NewTemporaryError(fmt.Errorf("failed to fetch L1 config of L2 block %s: %w", pipelineL2.ID(), err))
 	}
+	eq.subL1Reset <- pipelineOrigin.Number
 	eq.log.Debug("Reset engine queue", "safeHead", safe, "unsafe", unsafe, "safe_timestamp", safe.Time, "unsafe_timestamp", unsafe.Time, "l1Origin", l1Origin)
 	eq.unsafeHead = unsafe
 	eq.engineSyncTarget = unsafe
