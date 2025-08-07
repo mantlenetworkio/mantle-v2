@@ -15,7 +15,7 @@ const resolveSidebarHeaders = (page) => {
     ];
 };
 const findMatchingSidebarConfig = (regularPath, config) => {
-    // return directly as array-type config is the moest simple config
+    // return directly as array-type config is the most simple config
     if (Array.isArray(config))
         return {
             base: "/",
