@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 )
 
 // RPCErrFaker implements an RPC by wrapping one, but returns an error when prepared with one, to test RPC error handling.
@@ -20,6 +20,15 @@ type RPCErrFaker struct {
 
 func (r RPCErrFaker) Close() {
 	r.RPC.Close()
+}
+
+func (r RPCErrFaker) Subscribe(ctx context.Context, namespace string, channel any, args ...any) (ethereum.Subscription, error) {
+	if r.ErrFn != nil {
+		if err := r.ErrFn(); err != nil {
+			return nil, err
+		}
+	}
+	return r.RPC.Subscribe(ctx, namespace, channel, args...)
 }
 
 func (r RPCErrFaker) CallContext(ctx context.Context, result any, method string, args ...any) error {
@@ -38,15 +47,6 @@ func (r RPCErrFaker) BatchCallContext(ctx context.Context, b []rpc.BatchElem) er
 		}
 	}
 	return r.RPC.BatchCallContext(ctx, b)
-}
-
-func (r RPCErrFaker) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
-	if r.ErrFn != nil {
-		if err := r.ErrFn(); err != nil {
-			return nil, err
-		}
-	}
-	return r.RPC.EthSubscribe(ctx, channel, args...)
 }
 
 var _ client.RPC = (*RPCErrFaker)(nil)

@@ -369,6 +369,12 @@ type ForkchoiceState struct {
 	FinalizedBlockHash common.Hash `json:"finalizedBlockHash"`
 }
 
+type ForkchoicePreconf struct {
+	L1BlockNumber uint64      `json:"l1BlockNumber" gencodec:"required"`
+	L1BlockHash   common.Hash `json:"l1BlockHash" gencodec:"required"`
+	Transactions  []Data      `json:"transactions,omitempty"  gencodec:"optional"`
+}
+
 type ForkchoiceUpdatedResult struct {
 	// the result of the payload execution
 	PayloadStatus PayloadStatusV1 `json:"payloadStatus"`
@@ -437,9 +443,10 @@ func (v *Uint64String) UnmarshalText(b []byte) error {
 type EngineAPIMethod string
 
 const (
-	ForkchoiceUpdatedV1 EngineAPIMethod = "engine_forkchoiceUpdatedV1"
-	ForkchoiceUpdatedV2 EngineAPIMethod = "engine_forkchoiceUpdatedV2"
-	ForkchoiceUpdatedV3 EngineAPIMethod = "engine_forkchoiceUpdatedV3"
+	ForkchoiceUpdatedV1                  EngineAPIMethod = "engine_forkchoiceUpdatedV1"
+	ForkchoiceUpdatedV2                  EngineAPIMethod = "engine_forkchoiceUpdatedV2"
+	ForkchoiceUpdatedV3                  EngineAPIMethod = "engine_forkchoiceUpdatedV3"
+	ForkchoiceUpdateWithNextDepositTxsV3 EngineAPIMethod = "engine_forkchoiceUpdatedWithNextDepositTxsV3"
 
 	NewPayloadV1 EngineAPIMethod = "engine_newPayloadV1"
 	NewPayloadV2 EngineAPIMethod = "engine_newPayloadV2"

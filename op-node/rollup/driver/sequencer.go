@@ -18,6 +18,7 @@ import (
 type Downloader interface {
 	InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error)
 	FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error)
+	PreFetchReceipts(ctx context.Context, blockHash common.Hash) (bool, error)
 }
 
 type L1OriginSelectorIface interface {
@@ -80,7 +81,7 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 	fetchCtx, cancel := context.WithTimeout(ctx, time.Second*20)
 	defer cancel()
 
-	attrs, err := d.attrBuilder.PreparePayloadAttributes(fetchCtx, l2Head, l1Origin.ID())
+	attrs, preconf, err := d.attrBuilder.PreparePayloadAttributes(fetchCtx, l2Head, l1Origin.ID())
 	if err != nil {
 		return err
 	}
@@ -96,9 +97,17 @@ func (d *Sequencer) StartBuildingBlock(ctx context.Context) error {
 		"origin", l1Origin, "origin_time", l1Origin.Time, "noTxPool", attrs.NoTxPool)
 
 	// Start a payload building process.
-	errTyp, err := d.engine.StartPayload(ctx, l2Head, attrs, false)
-	if err != nil {
-		return fmt.Errorf("failed to start building on top of L2 chain %s, error (%d): %w", l2Head, errTyp, err)
+
+	if preconf != nil {
+		errTyp, err := d.engine.StartPayloadV2(ctx, l2Head, attrs, false, preconf)
+		if err != nil {
+			return fmt.Errorf("failed to start building on top of L2 chain %s, error (%d): %w", l2Head, errTyp, err)
+		}
+	} else {
+		errTyp, err := d.engine.StartPayload(ctx, l2Head, attrs, false)
+		if err != nil {
+			return fmt.Errorf("failed to start building on top of L2 chain %s, error (%d): %w", l2Head, errTyp, err)
+		}
 	}
 	return nil
 }
@@ -226,6 +235,7 @@ func (d *Sequencer) RunNextSequencerAction(ctx context.Context) (*eth.ExecutionP
 			}
 			return nil, nil
 		} else {
+			d.attrBuilder.CachePayloadByHash(envelope)
 			d.log.Info("sequencer successfully built a new block", "block", envelope.ID(), "time", uint64(envelope.ExecutionPayload.Timestamp), "txs", len(envelope.ExecutionPayload.Transactions))
 			return envelope, nil
 		}

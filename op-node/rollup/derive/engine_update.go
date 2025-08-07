@@ -114,6 +114,46 @@ func StartPayload(ctx context.Context, eng Engine, fc eth.ForkchoiceState, attrs
 	}
 }
 
+// StartPayload starts an execution payload building process in the provided Engine, with the given attributes.
+// The severity of the error is distinguished to determine whether the same payload attributes may be re-attempted later.
+func StartPayloadV2(ctx context.Context, eng Engine, fc eth.ForkchoiceState, attrs *eth.PayloadAttributes, preconf *eth.ForkchoicePreconf) (id eth.PayloadID, errType BlockInsertionErrType, err error) {
+	if preconf == nil {
+		return StartPayload(ctx, eng, fc, attrs)
+	} else {
+		fcRes, err := eng.ForkchoiceUpdateWithNextDepositTxsV3(ctx, &fc, attrs, preconf)
+		if err != nil {
+			var inputErr eth.InputError
+			if errors.As(err, &inputErr) {
+				switch inputErr.Code {
+				case eth.InvalidForkchoiceState:
+					return eth.PayloadID{}, BlockInsertPrestateErr, fmt.Errorf("pre-block-creation forkchoice update was inconsistent with engine, need reset to resolve: %w", inputErr.Unwrap())
+				case eth.InvalidPayloadAttributes:
+					return eth.PayloadID{}, BlockInsertPayloadErr, fmt.Errorf("payload attributes are not valid, cannot build block: %w", inputErr.Unwrap())
+				default:
+					return eth.PayloadID{}, BlockInsertPrestateErr, fmt.Errorf("unexpected error code in forkchoice-updated response: %w", err)
+				}
+			} else {
+				return eth.PayloadID{}, BlockInsertTemporaryErr, fmt.Errorf("failed to create new block via forkchoice: %w", err)
+			}
+		}
+
+		switch fcRes.PayloadStatus.Status {
+		// TODO(proto): snap sync - specify explicit different error type if node is syncing
+		case eth.ExecutionInvalid, eth.ExecutionInvalidBlockHash:
+			return eth.PayloadID{}, BlockInsertPayloadErr, eth.ForkchoiceUpdateErr(fcRes.PayloadStatus)
+		case eth.ExecutionValid:
+			id := fcRes.PayloadID
+			if id == nil {
+				return eth.PayloadID{}, BlockInsertTemporaryErr, errors.New("nil id in forkchoice result when expecting a valid ID")
+			}
+			return *id, BlockInsertOK, nil
+		default:
+			return eth.PayloadID{}, BlockInsertTemporaryErr, eth.ForkchoiceUpdateErr(fcRes.PayloadStatus)
+		}
+	}
+
+}
+
 // ConfirmPayload ends an execution payload building process in the provided Engine, and persists the payload as the canonical head.
 // If updateSafe is true, then the payload will also be recognized as safe-head at the same time.
 // The severity of the error is distinguished to determine whether the payload was valid and can become canonical.

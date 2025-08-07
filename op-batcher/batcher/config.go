@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/rpc"
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eigenda"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
@@ -40,7 +40,7 @@ type Config struct {
 	metr       metrics.Metricer
 	L1Client   *ethclient.Client
 	L2Client   *ethclient.Client
-	RollupNode *sources.RollupClient
+	RollupNode *client.RollupClient
 	TxManager  txmgr.TxManager
 
 	NetworkTimeout         time.Duration

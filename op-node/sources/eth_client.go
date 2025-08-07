@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -21,9 +22,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/sources/caching"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources/caching"
 )
 
 type EthClientConfig struct {
@@ -33,8 +34,6 @@ type EthClientConfig struct {
 	// limit concurrent requests, applies to the source as a whole
 	MaxConcurrentRequests int
 
-	// cache sizes
-
 	// Number of blocks worth of receipts to cache
 	ReceiptsCacheSize int
 	// Number of blocks worth of transactions to cache
@@ -43,6 +42,8 @@ type EthClientConfig struct {
 	HeadersCacheSize int
 	// Number of payloads to cache
 	PayloadsCacheSize int
+	// Number of block ref to cache
+	BlockRefsCacheSize int
 
 	// If the RPC is untrusted, then we should not use cached information from responses,
 	// and instead verify against the block-hash.
@@ -93,20 +94,13 @@ func (c *EthClientConfig) Check() error {
 type EthClient struct {
 	client client.RPC
 
-	maxBatchSize int
+	recProvider ReceiptsProvider
 
 	trustRPC bool
 
 	mustBePostMerge bool
 
-	provKind RPCProviderKind
-
 	log log.Logger
-
-	// cache receipts in bundles per block hash
-	// We cache the receipts fetching job to not lose progress when we have to retry the `Fetch` call
-	// common.Hash -> *receiptsFetchingJob
-	receiptsCache *caching.LRUCache[common.Hash, *receiptsFetchingJob]
 
 	// cache transactions in bundles per block hash
 	// common.Hash -> types.Transactions
@@ -120,42 +114,9 @@ type EthClient struct {
 	// common.Hash -> *eth.ExecutionPayload
 	payloadsCache *caching.LRUCache[common.Hash, *eth.ExecutionPayloadEnvelope]
 
-	// availableReceiptMethods tracks which receipt methods can be used for fetching receipts
-	// This may be modified concurrently, but we don't lock since it's a single
-	// uint64 that's not critical (fine to miss or mix up a modification)
-	availableReceiptMethods ReceiptsFetchingMethod
-
-	// lastMethodsReset tracks when availableReceiptMethods was last reset.
-	// When receipt-fetching fails it falls back to available methods,
-	// but periodically it will try to reset to the preferred optimal methods.
-	lastMethodsReset time.Time
-
-	// methodResetDuration defines how long we take till we reset lastMethodsReset
-	methodResetDuration time.Duration
-}
-
-func (s *EthClient) PickReceiptsMethod(txCount uint64) ReceiptsFetchingMethod {
-	if now := time.Now(); now.Sub(s.lastMethodsReset) > s.methodResetDuration {
-		m := AvailableReceiptsFetchingMethods(s.provKind)
-		if s.availableReceiptMethods != m {
-			s.log.Warn("resetting back RPC preferences, please review RPC provider kind setting", "kind", s.provKind.String())
-		}
-		s.availableReceiptMethods = m
-		s.lastMethodsReset = now
-	}
-	return PickBestReceiptsFetchingMethod(s.provKind, s.availableReceiptMethods, txCount)
-}
-
-func (s *EthClient) OnReceiptsMethodErr(m ReceiptsFetchingMethod, err error) {
-	if unusableMethod(err) {
-		// clear the bit of the method that errored
-		s.availableReceiptMethods &^= m
-		s.log.Warn("failed to use selected RPC method for receipt fetching, temporarily falling back to alternatives",
-			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods, "err", err)
-	} else {
-		s.log.Debug("failed to use selected RPC method for receipt fetching, but method does appear to be available, so we continue to use it",
-			"provider_kind", s.provKind, "failed_method", m, "fallback", s.availableReceiptMethods&^m, "err", err)
-	}
+	// cache BlockRef by hash
+	// common.Hash -> eth.BlockRef
+	blockRefsCache *caching.LRUCache[common.Hash, eth.BlockRef]
 }
 
 // NewEthClient returns an [EthClient], wrapping an RPC with bindings to fetch ethereum data with added error logging,
@@ -165,20 +126,17 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 		return nil, fmt.Errorf("bad config, cannot create L1 source: %w", err)
 	}
 	client = LimitRPC(client, config.MaxConcurrentRequests)
+	recProvider := newRPCRecProviderFromConfig(client, log, metrics, config)
 	return &EthClient{
-		client:                  client,
-		maxBatchSize:            config.MaxRequestsPerBatch,
-		trustRPC:                config.TrustRPC,
-		mustBePostMerge:         config.MustBePostMerge,
-		provKind:                config.RPCProviderKind,
-		log:                     log,
-		receiptsCache:           caching.NewLRUCache[common.Hash, *receiptsFetchingJob](metrics, "receipts", config.ReceiptsCacheSize),
-		transactionsCache:       caching.NewLRUCache[common.Hash, types.Transactions](metrics, "txs", config.TransactionsCacheSize),
-		headersCache:            caching.NewLRUCache[common.Hash, eth.BlockInfo](metrics, "headers", config.HeadersCacheSize),
-		payloadsCache:           caching.NewLRUCache[common.Hash, *eth.ExecutionPayloadEnvelope](metrics, "payloads", config.PayloadsCacheSize),
-		availableReceiptMethods: AvailableReceiptsFetchingMethods(config.RPCProviderKind),
-		lastMethodsReset:        time.Now(),
-		methodResetDuration:     config.MethodResetDuration,
+		client:            client,
+		recProvider:       recProvider,
+		trustRPC:          config.TrustRPC,
+		mustBePostMerge:   config.MustBePostMerge,
+		log:               log,
+		transactionsCache: caching.NewLRUCache[common.Hash, types.Transactions](metrics, "txs", config.TransactionsCacheSize),
+		headersCache:      caching.NewLRUCache[common.Hash, eth.BlockInfo](metrics, "headers", config.HeadersCacheSize),
+		payloadsCache:     caching.NewLRUCache[common.Hash, *eth.ExecutionPayloadEnvelope](metrics, "payloads", config.PayloadsCacheSize),
+		blockRefsCache:    caching.NewLRUCache[common.Hash, eth.L1BlockRef](metrics, "blockrefs", config.BlockRefsCacheSize),
 	}, nil
 }
 
@@ -186,7 +144,7 @@ func NewEthClient(client client.RPC, log log.Logger, metrics caching.Metrics, co
 func (s *EthClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
 	// Note that *types.Header does not cache the block hash unlike *HeaderInfo, it always recomputes.
 	// Inefficient if used poorly, but no trust issue.
-	return s.client.EthSubscribe(ctx, ch, "newHeads")
+	return s.client.Subscribe(ctx, "eth", ch, "newHeads")
 }
 
 // rpcBlockID is an internal type to enforce header and block call results match the requested identifier
@@ -291,7 +249,7 @@ func (s *EthClient) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 func (s *EthClient) InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error) {
-	if header, ok := s.headersCache.Get(hash); ok {
+	if header, ok := s.headersCache.Peek(hash); ok {
 		return header.(eth.BlockInfo), nil
 	}
 	return s.headerCall(ctx, "eth_getBlockByHash", hashID(hash))
@@ -308,8 +266,8 @@ func (s *EthClient) InfoByLabel(ctx context.Context, label eth.BlockLabel) (eth.
 }
 
 func (s *EthClient) InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error) {
-	if header, ok := s.headersCache.Get(hash); ok {
-		if txs, ok := s.transactionsCache.Get(hash); ok {
+	if header, ok := s.headersCache.Peek(hash); ok {
+		if txs, ok := s.transactionsCache.Peek(hash); ok {
 			return header.(eth.BlockInfo), txs, nil
 		}
 	}
@@ -341,31 +299,41 @@ func (s *EthClient) PayloadByLabel(ctx context.Context, label eth.BlockLabel) (*
 	return s.payloadCall(ctx, "eth_getBlockByNumber", label)
 }
 
+func (s *EthClient) CachePayloadByHash(payload *eth.ExecutionPayloadEnvelope) bool {
+	return s.payloadsCache.Add(payload.ExecutionPayload.BlockHash, payload)
+}
+
 // FetchReceipts returns a block info and all of the receipts associated with transactions in the block.
 // It verifies the receipt hash in the block header against the receipt hash of the fetched receipts
 // to ensure that the execution engine did not fail to return any receipts.
 func (s *EthClient) FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error) {
+	blockInfo, receipts, err, _ := s.fetchReceiptsInner(ctx, blockHash, false)
+	return blockInfo, receipts, err
+}
+
+func (s *EthClient) PreFetchReceipts(ctx context.Context, blockHash common.Hash) (bool, error) {
+	_, _, err, isFull := s.fetchReceiptsInner(ctx, blockHash, true)
+	if err != nil {
+		return false, err
+	}
+	if isFull {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *EthClient) fetchReceiptsInner(ctx context.Context, blockHash common.Hash, isPreFetch bool) (eth.BlockInfo, types.Receipts, error, bool) {
 	info, txs, err := s.InfoAndTxsByHash(ctx, blockHash)
 	if err != nil {
-		return nil, nil, err
-	}
-	// Try to reuse the receipts fetcher because is caches the results of intermediate calls. This means
-	// that if just one of many calls fail, we only retry the failed call rather than all of the calls.
-	// The underlying fetcher uses the receipts hash to verify receipt integrity.
-	var job *receiptsFetchingJob
-	if v, ok := s.receiptsCache.Get(blockHash); ok {
-		job = v
-	} else {
-		txHashes := eth.TransactionsToHashes(txs)
-		job = NewReceiptsFetchingJob(s, s.client, s.maxBatchSize, eth.ToBlockID(info), info.ReceiptHash(), txHashes)
-		s.receiptsCache.Add(blockHash, job)
-	}
-	receipts, err := job.Fetch(ctx)
-	if err != nil {
-		return nil, nil, err
+		return nil, nil, err, false
 	}
 
-	return info, receipts, nil
+	txHashes, _ := eth.TransactionsToHashes(txs), eth.ToBlockID(info)
+	receipts, err, isFull := s.recProvider.FetchReceipts(ctx, info, txHashes, isPreFetch)
+	if err != nil {
+		return nil, nil, err, isFull
+	}
+	return info, receipts, nil, isFull
 }
 
 // GetProof returns an account proof result, with any optional requested storage proofs.
@@ -425,4 +393,52 @@ func (s *EthClient) ReadStorageAt(ctx context.Context, address common.Address, s
 
 func (s *EthClient) Close() {
 	s.client.Close()
+}
+
+// BlockRefByLabel returns the [eth.BlockRef] for the given block label.
+// Notice, we cannot cache a block reference by label because labels are not guaranteed to be unique.
+func (s *EthClient) BlockRefByLabel(ctx context.Context, label eth.BlockLabel) (eth.BlockRef, error) {
+	info, err := s.InfoByLabel(ctx, label)
+	if err != nil {
+		// Both geth and erigon like to serve non-standard errors for the safe and finalized heads, correct that.
+		// This happens when the chain just started and nothing is marked as safe/finalized yet.
+		if strings.Contains(err.Error(), "block not found") || strings.Contains(err.Error(), "Unknown block") {
+			err = ethereum.NotFound
+		}
+		return eth.L1BlockRef{}, fmt.Errorf("failed to fetch head header: %w", err)
+	}
+	ref := eth.InfoToL1BlockRef(info)
+	s.blockRefsCache.Add(ref.Hash, ref)
+	return ref, nil
+}
+
+// BlockRefByNumber returns an [eth.BlockRef] for the given block number.
+// Notice, we cannot cache a block reference by number because L1 re-orgs can invalidate the cached block reference.
+func (s *EthClient) BlockRefByNumber(ctx context.Context, num uint64) (eth.BlockRef, error) {
+	info, err := s.InfoByNumber(ctx, num)
+	if err != nil {
+		return eth.L1BlockRef{}, fmt.Errorf("failed to fetch header by num %d: %w", num, err)
+	}
+	ref := eth.InfoToL1BlockRef(info)
+	s.blockRefsCache.Add(ref.Hash, ref)
+	return ref, nil
+}
+
+// BlockRefByHash returns the [eth.BlockRef] for the given block hash.
+// We cache the block reference by hash as it is safe to assume collision will not occur.
+func (s *EthClient) BlockRefByHash(ctx context.Context, hash common.Hash) (eth.BlockRef, error) {
+	if v, ok := s.blockRefsCache.Get(hash); ok {
+		return v, nil
+	}
+	info, err := s.InfoByHash(ctx, hash)
+	if err != nil {
+		return eth.BlockRef{}, fmt.Errorf("failed to fetch header by hash %v: %w", hash, err)
+	}
+	ref := eth.InfoToL1BlockRef(info)
+	s.blockRefsCache.Add(ref.Hash, ref)
+	return ref, nil
+}
+
+func (s *EthClient) GetRecProvider() ReceiptsProvider {
+	return s.recProvider
 }

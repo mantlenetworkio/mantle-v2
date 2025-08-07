@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"errors"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -11,13 +12,11 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/node"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
@@ -63,7 +62,7 @@ type safeDB interface {
 
 func NewL2Verifier(t Testing, log log.Logger, l1 derive.L1Fetcher, eng L2API, cfg *rollup.Config, syncCfg *sync.Config, safeHeadListener safeDB) *L2Verifier {
 	metrics := &testutils.TestDerivationMetrics{}
-	pipeline := derive.NewDerivationPipeline(log, cfg, l1, nil, eng, metrics, syncCfg, safeHeadListener, nil)
+	pipeline := derive.NewDerivationPipeline(log, cfg, l1, nil, eng, metrics, syncCfg, safeHeadListener, nil, nil)
 	pipeline.Reset()
 
 	rollupNode := &L2Verifier{
@@ -158,8 +157,8 @@ func (s *L2Verifier) SyncStatus() *eth.SyncStatus {
 	}
 }
 
-func (s *L2Verifier) RollupClient() *sources.RollupClient {
-	return sources.NewRollupClient(s.RPCClient())
+func (s *L2Verifier) RollupClient() *client.RollupClient {
+	return client.NewRollupClient(s.RPCClient())
 }
 
 func (s *L2Verifier) RPCClient() client.RPC {

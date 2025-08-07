@@ -133,6 +133,10 @@ var _ derive.ResettableEngineControl = (*FakeEngineControl)(nil)
 
 type testAttrBuilderFn func(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error)
 
+func (fn testAttrBuilderFn) CachePayloadByHash(payload *eth.ExecutionPayload) bool {
+	return false
+}
+
 func (fn testAttrBuilderFn) PreparePayloadAttributes(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error) {
 	return fn(ctx, l2Parent, epoch)
 }

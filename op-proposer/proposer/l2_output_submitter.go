@@ -20,7 +20,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-proposer/flags"
 	"github.com/ethereum-optimism/optimism/op-proposer/metrics"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
@@ -130,7 +129,7 @@ type L2OutputSubmitter struct {
 	cancel context.CancelFunc
 
 	// RollupClient is used to retrieve output roots from
-	rollupClient *sources.RollupClient
+	rollupClient *opclient.RollupClient
 
 	l2ooContract     *bindings.L2OutputOracleCaller
 	l2ooContractAddr common.Address

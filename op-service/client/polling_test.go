@@ -61,8 +61,8 @@ func (m *MockRPC) BatchCallContext(ctx context.Context, b []rpc.BatchElem) error
 	return nil
 }
 
-func (m *MockRPC) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
-	m.t.Fatal("EthSubscribe should not be called")
+func (m *MockRPC) Subscribe(ctx context.Context, namespace string, channel any, args ...any) (ethereum.Subscription, error) {
+	m.t.Fatal("Subscribe should not be called")
 	return nil, nil
 }
 
@@ -73,7 +73,8 @@ func (m *MockRPC) popResult() {
 }
 
 func TestPollingClientSubscribeUnsubscribe(t *testing.T) {
-	lgr := log.NewLogger(log.DiscardHandler())
+	lgr := log.New()
+	lgr.SetHandler(log.DiscardHandler())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -133,7 +134,8 @@ func TestPollingClientSubscribeUnsubscribe(t *testing.T) {
 }
 
 func TestPollingClientErrorRecovery(t *testing.T) {
-	lgr := log.NewLogger(log.DiscardHandler())
+	lgr := log.New()
+	lgr.SetHandler(log.DiscardHandler())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -163,7 +165,8 @@ func TestPollingClientErrorRecovery(t *testing.T) {
 }
 
 func TestPollingClientClose(t *testing.T) {
-	lgr := log.NewLogger(log.DiscardHandler())
+	lgr := log.New()
+	lgr.SetHandler(log.DiscardHandler())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -202,5 +205,5 @@ func requireChansEqual(t *testing.T, chans []chan *types.Header, root common.Has
 }
 
 func doSubscribe(client RPC, ch chan<- *types.Header) (ethereum.Subscription, error) {
-	return client.EthSubscribe(context.Background(), ch, "newHeads")
+	return client.Subscribe(context.Background(), "eth", ch, "newHeads")
 }

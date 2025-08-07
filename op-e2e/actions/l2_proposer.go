@@ -15,9 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-proposer/metrics"
 	"github.com/ethereum-optimism/optimism/op-proposer/proposer"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
@@ -52,7 +52,7 @@ func (f fakeTxMgr) SendTx(_ context.Context, _ *types.Transaction) (*types.Recei
 	panic("unimplemented")
 }
 
-func NewL2Proposer(t Testing, log log.Logger, cfg *ProposerCfg, l1 *ethclient.Client, rollupCl *sources.RollupClient) *L2Proposer {
+func NewL2Proposer(t Testing, log log.Logger, cfg *ProposerCfg, l1 *ethclient.Client, rollupCl *client.RollupClient) *L2Proposer {
 
 	proposerCfg := proposer.Config{
 		L2OutputOracleAddr: cfg.OutputOracleAddr,

@@ -63,3 +63,29 @@ func Do[T any](ctx context.Context, maxAttempts int, strategy Strategy, op func(
 		LastErr:  err,
 	}
 }
+
+// Do0 is similar to Do and Do2, execept that `op` only returns an error
+func Do0(ctx context.Context, maxAttempts int, strategy Strategy, op func() error) error {
+	var err error
+	if maxAttempts < 1 {
+		return fmt.Errorf("need at least 1 attempt to run op, but have %d max attempts", maxAttempts)
+	}
+
+	for i := 0; i < maxAttempts; i++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		err = op()
+		if err == nil {
+			return nil
+		}
+		// Don't sleep when we are about to exit the loop & return ErrFailedPermanently
+		if i != maxAttempts-1 {
+			time.Sleep(strategy.Duration(i))
+		}
+	}
+	return &ErrFailedPermanently{
+		attempts: maxAttempts,
+		LastErr:  err,
+	}
+}

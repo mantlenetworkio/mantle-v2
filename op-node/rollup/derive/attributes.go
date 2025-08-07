@@ -9,16 +9,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // L1ReceiptsFetcher fetches L1 header info and receipts for the payload attributes derivation (the info tx and deposits)
 type L1ReceiptsFetcher interface {
 	InfoByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, error)
+	InfoAndTxsByHash(ctx context.Context, hash common.Hash) (eth.BlockInfo, types.Transactions, error)
 	FetchReceipts(ctx context.Context, blockHash common.Hash) (eth.BlockInfo, types.Receipts, error)
+	PreFetchReceipts(ctx context.Context, blockHash common.Hash) (bool, error)
+	ClearReceiptsCache(blockNumber uint64)
+	InfoByNumber(ctx context.Context, blockNumber uint64) (eth.BlockInfo, error)
 }
 
 type SystemConfigL2Fetcher interface {
 	SystemConfigByL2Hash(ctx context.Context, hash common.Hash) (eth.SystemConfig, error)
+	CachePayloadByHash(payload *eth.ExecutionPayloadEnvelope) bool
 }
 
 // FetchingAttributesBuilder fetches inputs for the building of L2 payload attributes on the fly.
@@ -41,14 +47,16 @@ func NewFetchingAttributesBuilder(cfg *rollup.Config, l1 L1ReceiptsFetcher, l2 S
 // by setting NoTxPool=false as sequencer, or by appending batch transactions as verifier.
 // The severity of the error is returned; a crit=false error means there was a temporary issue, like a failed RPC or time-out.
 // A crit=true error means the input arguments are inconsistent or invalid.
-func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, err error) {
+func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Context, l2Parent eth.L2BlockRef, epoch eth.BlockID) (attrs *eth.PayloadAttributes, preconf *eth.ForkchoicePreconf, err error) {
 	var l1Info eth.BlockInfo
 	var depositTxs []hexutil.Bytes
 	var seqNumber uint64
+	var nextDepositTxs []hexutil.Bytes
+	var nextInfo eth.BlockInfo
 
 	sysConfig, err := ba.l2.SystemConfigByL2Hash(ctx, l2Parent.Hash)
 	if err != nil {
-		return nil, NewTemporaryError(fmt.Errorf("failed to retrieve L2 parent block: %w", err))
+		return nil, nil, NewTemporaryError(fmt.Errorf("failed to retrieve L2 parent block: %w", err))
 	}
 
 	// If the L1 origin changed this block, then we are in the first block of the epoch. In this
@@ -57,10 +65,10 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	if l2Parent.L1Origin.Number != epoch.Number {
 		info, receipts, err := ba.l1.FetchReceipts(ctx, epoch.Hash)
 		if err != nil {
-			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info and receipts: %w", err))
+			return nil, nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info and receipts: %w", err))
 		}
 		if l2Parent.L1Origin.Hash != info.ParentHash() {
-			return nil, NewResetError(
+			return nil, nil, NewResetError(
 				fmt.Errorf("cannot create new block with L1 origin %s (parent %s) on top of L1 origin %s",
 					epoch, info.ParentHash(), l2Parent.L1Origin))
 		}
@@ -68,23 +76,29 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		deposits, err := DeriveDeposits(receipts, ba.cfg.DepositContractAddress)
 		if err != nil {
 			// deposits may never be ignored. Failing to process them is a critical error.
-			return nil, NewCriticalError(fmt.Errorf("failed to derive some deposits: %w", err))
+			return nil, nil, NewCriticalError(fmt.Errorf("failed to derive some deposits: %w", err))
 		}
 		// apply sysCfg changes
 		if err := UpdateSystemConfigWithL1Receipts(&sysConfig, receipts, ba.cfg); err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to apply derived L1 sysCfg updates: %w", err))
+			return nil, nil, NewCriticalError(fmt.Errorf("failed to apply derived L1 sysCfg updates: %w", err))
 		}
 
 		l1Info = info
 		depositTxs = deposits
 		seqNumber = 0
+
+		next, nextDeposit := ba.preFetchNextL1OriginPreconf(ctx, epoch)
+		if nextDeposit != nil {
+			nextDepositTxs = nextDeposit
+			nextInfo = next
+		}
 	} else {
 		if l2Parent.L1Origin.Hash != epoch.Hash {
-			return nil, NewResetError(fmt.Errorf("cannot create new block with L1 origin %s in conflict with L1 origin %s", epoch, l2Parent.L1Origin))
+			return nil, nil, NewResetError(fmt.Errorf("cannot create new block with L1 origin %s in conflict with L1 origin %s", epoch, l2Parent.L1Origin))
 		}
 		info, err := ba.l1.InfoByHash(ctx, epoch.Hash)
 		if err != nil {
-			return nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info: %w", err))
+			return nil, nil, NewTemporaryError(fmt.Errorf("failed to fetch L1 block info: %w", err))
 		}
 		l1Info = info
 		depositTxs = nil
@@ -94,7 +108,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	// Sanity check the L1 origin was correctly selected to maintain the time invariant between L1 and L2
 	nextL2Time := l2Parent.Time + ba.cfg.BlockTime
 	if nextL2Time < l1Info.Time() {
-		return nil, NewResetError(fmt.Errorf("cannot build L2 block on top %s for time %d before L1 origin %s at time %d",
+		return nil, nil, NewResetError(fmt.Errorf("cannot build L2 block on top %s for time %d before L1 origin %s at time %d",
 			l2Parent, nextL2Time, eth.ToBlockID(l1Info), l1Info.Time()))
 	}
 
@@ -102,14 +116,14 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	if ba.cfg.IsMantleSkadiActivationBlock(nextL2Time) {
 		skadiUpgradeTxs, err := MantleSkadiNetworkUpgradeTransactions()
 		if err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to build skadi network upgrade txs: %w", err))
+			return nil, nil, NewCriticalError(fmt.Errorf("failed to build skadi network upgrade txs: %w", err))
 		}
 		upgradeTxs = append(upgradeTxs, skadiUpgradeTxs...)
 	}
 
 	l1InfoTx, err := L1InfoDepositBytes(seqNumber, l1Info, sysConfig, ba.cfg.IsRegolith(nextL2Time))
 	if err != nil {
-		return nil, NewCriticalError(fmt.Errorf("failed to create l1InfoTx: %w", err))
+		return nil, nil, NewCriticalError(fmt.Errorf("failed to create l1InfoTx: %w", err))
 	}
 
 	txs := make([]hexutil.Bytes, 0, 1+len(depositTxs))
@@ -132,6 +146,14 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 			parentBeaconRoot = new(common.Hash)
 		}
 	}
+	var nextPreconf *eth.ForkchoicePreconf
+	if nextInfo != nil {
+		nextPreconf = &eth.ForkchoicePreconf{
+			L1BlockNumber: nextInfo.NumberU64(),
+			L1BlockHash:   nextInfo.Hash(),
+			Transactions:  nextDepositTxs,
+		}
+	}
 
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
@@ -143,5 +165,33 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		BaseFee:               sysConfig.BaseFee,
 		Withdrawals:           withdrawals,
 		ParentBeaconBlockRoot: parentBeaconRoot,
-	}, nil
+	}, nextPreconf, nil
+}
+
+func (ba *FetchingAttributesBuilder) CachePayloadByHash(payload *eth.ExecutionPayloadEnvelope) bool {
+	return ba.l2.CachePayloadByHash(payload)
+}
+
+func (ba *FetchingAttributesBuilder) preFetchNextL1OriginPreconf(ctx context.Context, epoch eth.BlockID) (eth.BlockInfo, []hexutil.Bytes) {
+	blockInfo, err := ba.l1.InfoByNumber(ctx, epoch.Number+1)
+	if err != nil {
+		log.Warn("pre fetch next l1 for preconf", "err", err, "epoch", epoch.Number+1)
+		return nil, nil
+	}
+	info, receipts, err := ba.l1.FetchReceipts(ctx, blockInfo.Hash())
+	if err != nil {
+		log.Warn("failed to fetch L1 block info and receipts for preconf", "err", err)
+		return nil, nil
+	}
+	if epoch.Hash != info.ParentHash() {
+		log.Warn("parent hash different for preconf")
+		return nil, nil
+	}
+	deposits, err := DeriveDeposits(receipts, ba.cfg.DepositContractAddress)
+	if err != nil {
+		// deposits may never be ignored. Failing to process them is a critical error.
+		log.Warn("failed to derive some deposits: %w", "err", err)
+		return nil, nil
+	}
+	return blockInfo, deposits
 }

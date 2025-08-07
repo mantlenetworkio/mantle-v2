@@ -2,12 +2,11 @@ package op_e2e
 
 import (
 	"context"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"math/big"
 	"testing"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-node/client"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-program/client/driver"
 	opp "github.com/ethereum-optimism/optimism/op-program/host"
 	oppconf "github.com/ethereum-optimism/optimism/op-program/host/config"
@@ -67,7 +66,7 @@ func testVerifyL2OutputRootEmptyBlock(t *testing.T, detached bool) {
 	l2Seq := sys.Clients["sequencer"]
 	rollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["sequencer"].HTTPEndpoint())
 	require.Nil(t, err)
-	rollupClient := sources.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
+	rollupClient := client.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
 
 	// Avoids flaky test by avoiding reorgs at epoch 0
 	t.Log("Wait for safe head to advance once for setup")
@@ -161,7 +160,7 @@ func testVerifyL2OutputRoot(t *testing.T, detached bool) {
 	l2Seq := sys.Clients["sequencer"]
 	rollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["sequencer"].HTTPEndpoint())
 	require.Nil(t, err)
-	rollupClient := sources.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
+	rollupClient := client.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
 
 	t.Log("Sending transactions to setup existing state, prior to challenged period")
 	aliceKey := cfg.Secrets.Alice
@@ -273,7 +272,7 @@ func testFaultProofProgramScenario(t *testing.T, ctx context.Context, sys *Syste
 	}
 }
 
-func waitForSafeHead(ctx context.Context, safeBlockNum uint64, rollupClient *sources.RollupClient) error {
+func waitForSafeHead(ctx context.Context, safeBlockNum uint64, rollupClient *client.RollupClient) error {
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	for {

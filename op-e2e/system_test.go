@@ -3,6 +3,7 @@ package op_e2e
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum-optimism/optimism/op-service/client"
 	"math/big"
 	"testing"
 	"time"
@@ -24,13 +25,11 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
 	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/metrics"
 	rollupNode "github.com/ethereum-optimism/optimism/op-node/node"
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/backoff"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
@@ -51,7 +50,7 @@ func TestL2OutputSubmitter(t *testing.T) {
 
 	rollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["sequencer"].HTTPEndpoint())
 	require.Nil(t, err)
-	rollupClient := sources.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
+	rollupClient := client.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
 
 	//  OutputOracle is already deployed
 	l2OutputOracle, err := bindings.NewL2OutputOracleCaller(predeploys.DevL2OutputOracleAddr, l1Client)
@@ -171,7 +170,7 @@ func TestSystemE2E(t *testing.T) {
 
 	rollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["sequencer"].HTTPEndpoint())
 	require.Nil(t, err)
-	rollupClient := sources.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
+	rollupClient := client.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
 	// basic check that sync status works
 	seqStatus, err := rollupClient.SyncStatus(context.Background())
 	require.Nil(t, err)
@@ -406,7 +405,7 @@ func TestMissingBatchE2E(t *testing.T) {
 	l2Verif := sys.Clients["verifier"]
 	seqRollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["sequencer"].HTTPEndpoint())
 	require.Nil(t, err)
-	seqRollupClient := sources.NewRollupClient(client.NewBaseRPCClient(seqRollupRPCClient))
+	seqRollupClient := client.NewRollupClient(client.NewBaseRPCClient(seqRollupRPCClient))
 
 	// Transactor Account
 	ethPrivKey := cfg.Secrets.Alice
@@ -1306,7 +1305,7 @@ func TestStopStartBatcher(t *testing.T) {
 
 	rollupRPCClient, err := rpc.DialContext(context.Background(), sys.RollupNodes["verifier"].HTTPEndpoint())
 	require.Nil(t, err)
-	rollupClient := sources.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
+	rollupClient := client.NewRollupClient(client.NewBaseRPCClient(rollupRPCClient))
 
 	l2Seq := sys.Clients["sequencer"]
 	l2Verif := sys.Clients["verifier"]
