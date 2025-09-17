@@ -121,6 +121,7 @@ const deployFn: DeployFunction = async (hre) => {
   if (
     (await SystemDictatorProxy.callStatic.implementation({
       from: ethers.constants.AddressZero,
+      gasLimit: 15000000,
     })) !== SystemDictatorImpl.address
   ) {
     console.log('Upgrading the SystemDictator proxy...')
@@ -138,6 +139,7 @@ const deployFn: DeployFunction = async (hre) => {
         return (
           (await SystemDictatorProxy.callStatic.implementation({
             from: ethers.constants.AddressZero,
+            gasLimit: 15000000,
           })) === SystemDictatorImpl.address
         )
       },
@@ -182,6 +184,7 @@ const deployFn: DeployFunction = async (hre) => {
   if (
     (await SystemDictatorProxy.callStatic.admin({
       from: ethers.constants.AddressZero,
+      gasLimit: 15000000,
     })) !== hre.deployConfig.controller
   ) {
     console.log('Transferring ownership of the SystemDictator proxy...')
@@ -195,6 +198,7 @@ const deployFn: DeployFunction = async (hre) => {
         return (
           (await SystemDictatorProxy.callStatic.admin({
             from: ethers.constants.AddressZero,
+            gasLimit: 15000000,
           })) === hre.deployConfig.controller
         )
       },

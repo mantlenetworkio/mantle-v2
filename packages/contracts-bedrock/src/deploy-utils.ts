@@ -142,6 +142,7 @@ export const asAdvancedContract = (opts: {
       // Now actually trigger the transaction (or call).
       const tx = await fn(...args, {
         gasPrice,
+        gasLimit: 15000000,
       })
 
       // Meant for static calls, we don't need to wait for anything, we get the result right away.
@@ -269,6 +270,7 @@ export const assertContractVariable = async (
 
   const actual = await temp.callStatic[variable]({
     from: ethers.constants.AddressZero,
+    gasLimit: 15000000,
   })
 
   if (ethers.utils.isAddress(expected)) {
