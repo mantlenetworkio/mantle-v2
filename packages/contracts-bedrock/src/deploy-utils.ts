@@ -63,6 +63,7 @@ export const deploy = async ({
       args,
       log: true,
       waitConfirmations: numDeployConfirmations,
+      gasLimit: 15000000,
     })
     console.log(`Deployed ${name} at ${result.address}`)
     // Only wait for the transaction if it was recently deployed in case the
