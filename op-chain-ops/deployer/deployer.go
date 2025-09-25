@@ -71,7 +71,7 @@ func NewBackendWithGenesisTimestamp(ts uint64) *backends.SimulatedBackend {
 	}
 
 	return backends.NewSimulatedBackendWithOpts(
-		backends.WithCacheConfig(&core.CacheConfig{
+		backends.WithBlockChainConfig(&core.BlockChainConfig{
 			Preimages: true,
 		}),
 		backends.WithGenesis(core.Genesis{
