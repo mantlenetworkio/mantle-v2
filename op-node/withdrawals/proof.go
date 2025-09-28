@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient/gethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/holiman/uint256"
 )
 
 type proofDB struct {
@@ -76,12 +77,16 @@ func VerifyStorageProof(root common.Hash, proof gethclient.StorageResult) error 
 }
 
 func VerifyProof(stateRoot common.Hash, proof *gethclient.AccountResult) error {
+	balanceU256, overflow := uint256.FromBig(proof.Balance)
+	if overflow {
+		return fmt.Errorf("address %v required balance exceeds 256 bits", proof.Address)
+	}
 	err := VerifyAccountProof(
 		stateRoot,
 		proof.Address,
 		types.StateAccount{
 			Nonce:    proof.Nonce,
-			Balance:  proof.Balance,
+			Balance:  balanceU256,
 			Root:     proof.StorageHash,
 			CodeHash: proof.CodeHash[:],
 		},
