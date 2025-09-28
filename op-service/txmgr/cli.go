@@ -35,6 +35,7 @@ const (
 	TxSendTimeoutFlagName             = "txmgr.send-timeout"
 	TxNotInMempoolTimeoutFlagName     = "txmgr.not-in-mempool-timeout"
 	ReceiptQueryIntervalFlagName      = "txmgr.receipt-query-interval"
+	EnableCellProofsFlagName          = "txmgr.enable-cell-proofs"
 	EnableHsmFlagName                 = "enable-hsm"
 	HsmCredenFlagName                 = "hsm-creden"
 	HsmAddressFlagName                = "hsm-address"
@@ -128,6 +129,12 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_RECEIPT_QUERY_INTERVAL"),
 		},
 		&cli.BoolFlag{
+			Name:    EnableCellProofsFlagName,
+			Usage:   "Enable cell proofs in blob transactions for Fusaka (EIP-7742) compatibility",
+			Value:   true,
+			EnvVars: opservice.PrefixEnvVar(envPrefix, "TXMGR_ENABLE_CELL_PROOFS"),
+		},
+		&cli.BoolFlag{
 			Name:    EnableHsmFlagName,
 			Usage:   "Whether or not to use cloud hsm",
 			EnvVars: opservice.PrefixEnvVar(envPrefix, "ENABLE_HSM"),
@@ -170,6 +177,7 @@ type CLIConfig struct {
 	NetworkTimeout            time.Duration
 	TxSendTimeout             time.Duration
 	TxNotInMempoolTimeout     time.Duration
+	EnableCellProofs          bool
 	EnableHsm                 bool
 	HsmCreden                 string
 	HsmAddress                string
@@ -222,6 +230,7 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		NetworkTimeout:            ctx.Duration(NetworkTimeoutFlagName),
 		TxSendTimeout:             ctx.Duration(TxSendTimeoutFlagName),
 		TxNotInMempoolTimeout:     ctx.Duration(TxNotInMempoolTimeoutFlagName),
+		EnableCellProofs:          ctx.Bool(EnableCellProofsFlagName),
 		EnableHsm:                 ctx.Bool(EnableHsmFlagName),
 		HsmAddress:                ctx.String(HsmAddressFlagName),
 		HsmAPIName:                ctx.String(HsmAPINameFlagName),
@@ -229,23 +238,23 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	}
 }
 
-func NewConfig(cfg CLIConfig, l log.Logger) (Config, error) {
+func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
 	if err := cfg.Check(); err != nil {
-		return Config{}, fmt.Errorf("invalid config: %w", err)
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.NetworkTimeout)
 	defer cancel()
 	l1, err := ethclient.DialContext(ctx, cfg.L1RPCURL)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not dial eth client: %w", err)
+		return nil, fmt.Errorf("could not dial eth client: %w", err)
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), cfg.NetworkTimeout)
 	defer cancel()
 	chainID, err := l1.ChainID(ctx)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
+		return nil, fmt.Errorf("could not dial fetch L1 chain ID: %w", err)
 	}
 
 	// Allow backwards compatible ways of specifying the HD path
@@ -259,33 +268,38 @@ func NewConfig(cfg CLIConfig, l log.Logger) (Config, error) {
 	ctx = context.Background()
 	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig, ctx, cfg.EnableHsm, cfg.HsmAPIName, cfg.HsmAddress, cfg.HsmCreden)
 	if err != nil {
-		return Config{}, fmt.Errorf("could not init signer: %w", err)
+		return nil, fmt.Errorf("could not init signer: %w", err)
 	}
 
 	feeLimitThreshold, err := eth.GweiToWei(cfg.FeeLimitThresholdGwei)
 	if err != nil {
-		return Config{}, fmt.Errorf("invalid fee limit threshold: %w", err)
+		return nil, fmt.Errorf("invalid fee limit threshold: %w", err)
 	}
 
-	return Config{
-		Backend:                   l1,
+	res := Config{
+		Backend: l1,
+		ChainID: chainID,
+		Signer:  signerFactory(chainID),
+		From:    from,
+
 		ResubmissionTimeout:       cfg.ResubmissionTimeout,
 		FeeLimitMultiplier:        cfg.FeeLimitMultiplier,
 		FeeLimitThreshold:         feeLimitThreshold,
-		ChainID:                   chainID,
 		TxSendTimeout:             cfg.TxSendTimeout,
 		TxNotInMempoolTimeout:     cfg.TxNotInMempoolTimeout,
 		NetworkTimeout:            cfg.NetworkTimeout,
 		ReceiptQueryInterval:      cfg.ReceiptQueryInterval,
 		NumConfirmations:          cfg.NumConfirmations,
 		SafeAbortNonceTooLowCount: cfg.SafeAbortNonceTooLowCount,
-		Signer:                    signerFactory(chainID),
-		From:                      from,
-		EnableHsm:                 cfg.EnableHsm,
-		HsmAddress:                cfg.HsmAddress,
-		HsmCreden:                 cfg.HsmCreden,
-		HsmAPIName:                cfg.HsmAPIName,
-	}, nil
+		EnableCellProofs:          cfg.EnableCellProofs,
+
+		EnableHsm:  cfg.EnableHsm,
+		HsmAddress: cfg.HsmAddress,
+		HsmCreden:  cfg.HsmCreden,
+		HsmAPIName: cfg.HsmAPIName,
+	}
+
+	return &res, nil
 }
 
 // Config houses parameters for altering the behavior of a SimpleTxManager.
@@ -304,6 +318,10 @@ type Config struct {
 	// On low-fee networks, like test networks, this allows for arbitrary fee bumps
 	// below this threshold.
 	FeeLimitThreshold *big.Int
+
+	// EnableCellProofs determines whether to use cell proofs (Version1 sidecars)
+	// for Fusaka (EIP-7742) compatibility. If false, uses legacy blob proofs (Version0).
+	EnableCellProofs bool
 
 	// ChainID is the chain ID of the L1 chain.
 	ChainID *big.Int

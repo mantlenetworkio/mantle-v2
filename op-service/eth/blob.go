@@ -300,7 +300,7 @@ func CalcBlobFeeDefault(header *types.Header) *big.Int {
 		CancunTime:         ptr(uint64(0)),
 		BlobScheduleConfig: params.DefaultBlobSchedule,
 	}
-	// We assume that the requests hash is set iff Prague is active.
+	// We assume that the requests hash is set if Prague is active.
 	if header.RequestsHash != nil {
 		dummyChainCfg.PragueTime = ptr(uint64(0))
 	}

@@ -163,7 +163,7 @@ func (db *MemoryStateDB) GetCode(addr common.Address) []byte {
 	return account.Code
 }
 
-func (db *MemoryStateDB) SetCode(addr common.Address, code []byte) []byte {
+func (db *MemoryStateDB) SetCode(addr common.Address, code []byte, reason tracing.CodeChangeReason) []byte {
 	db.rw.Lock()
 	defer db.rw.Unlock()
 

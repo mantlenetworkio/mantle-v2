@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"math/big"
 	"strings"
 
@@ -279,7 +280,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		}
 
 		memDB.CreateAccount(depAddr)
-		memDB.SetCode(depAddr, dep.Bytecode)
+		memDB.SetCode(depAddr, dep.Bytecode, tracing.CodeChangeGenesis)
 
 		for iter.Next() {
 			_, data, _, err := rlp.Split(iter.Value)
