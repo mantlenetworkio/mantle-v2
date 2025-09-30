@@ -230,12 +230,14 @@ const deployFn: DeployFunction = async (hre) => {
       assert(
         (await L1StandardBridgeProxy.callStatic.getOwner({
           from: ethers.constants.AddressZero,
+          gasLimit: 15000000,
         })) === ProxyAdmin.address
       )
 
       assert(
         (await L1ERC721BridgeProxy.callStatic.admin({
           from: ProxyAdmin.address,
+          gasLimit: 15000000,
         })) === ProxyAdmin.address
       )
 
