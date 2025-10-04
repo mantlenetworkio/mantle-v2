@@ -124,11 +124,12 @@ func NewL1EndpointConfig(ctx *cli.Context) *node.L1EndpointConfig {
 
 func NewBeaconEndpointConfig(ctx *cli.Context) node.L1BeaconEndpointSetup {
 	return &node.L1BeaconEndpointConfig{
-		BeaconAddr:             ctx.String(flags.BeaconAddr.Name),
-		BeaconHeader:           ctx.String(flags.BeaconHeader.Name),
-		BeaconArchiverAddr:     ctx.String(flags.BeaconArchiverAddr.Name),
-		BeaconCheckIgnore:      ctx.Bool(flags.BeaconCheckIgnore.Name),
-		BeaconFetchAllSidecars: ctx.Bool(flags.BeaconFetchAllSidecars.Name),
+		BeaconAddr:                 ctx.String(flags.BeaconAddr.Name),
+		BeaconHeader:               ctx.String(flags.BeaconHeader.Name),
+		BeaconArchiverAddr:         ctx.String(flags.BeaconArchiverAddr.Name),
+		BeaconCheckIgnore:          ctx.Bool(flags.BeaconCheckIgnore.Name),
+		BeaconFetchAllSidecars:     ctx.Bool(flags.BeaconFetchAllSidecars.Name),
+		BeaconSkipBlobVerification: ctx.Bool(flags.BeaconSkipBlobVerification.Name),
 	}
 }
 

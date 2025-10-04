@@ -289,6 +289,13 @@ var (
 		Usage:   "If true, all sidecars are fetched and filtered locally. Workaround for buggy Beacon nodes.",
 		EnvVars: prefixEnvVars("L1_BEACON_FETCH_ALL_SIDECARS"),
 	}
+	BeaconSkipBlobVerification = &cli.BoolFlag{
+		Name:     "l1.beacon.skip-blob-verification",
+		Usage:    "If true, skips the verification of the kzg_proof for each blob returned by the Beacon node. Not recommended unless the provided beacon endpoints are trusted.",
+		Required: false,
+		Value:    false,
+		EnvVars:  prefixEnvVars("L1_BEACON_SKIP_BLOB_VERIFICATION"),
+	}
 
 	SafeDBPath = &cli.StringFlag{
 		Name:    "safedb.path",
@@ -311,6 +318,7 @@ var optionalFlags = []cli.Flag{
 	BeaconArchiverAddr,
 	BeaconCheckIgnore,
 	BeaconFetchAllSidecars,
+	BeaconSkipBlobVerification,
 	RollupConfig,
 	Network,
 	L1TrustRPC,
