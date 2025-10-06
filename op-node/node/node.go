@@ -255,8 +255,7 @@ func (n *OpNode) initL1BeaconAPI(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("failed to setup L1 Beacon API client: %w", err)
 	}
 	beaconCfg := ssources.L1BeaconClientConfig{
-		FetchAllSidecars:     cfg.Beacon.ShouldFetchAllSidecars(),
-		SkipBlobVerification: cfg.Beacon.ShouldSkipBlobVerification(),
+		FetchAllSidecars: cfg.Beacon.ShouldFetchAllSidecars(),
 	}
 	n.beacon = ssources.NewL1BeaconClient(beaconClient, beaconCfg, fallbacks...)
 

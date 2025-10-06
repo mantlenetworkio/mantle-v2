@@ -51,17 +51,17 @@ func TestBlobsFromSidecars(t *testing.T) {
 
 	// put the sidecars in scrambled order to confirm error
 	sidecars := []*eth.BlobSidecar{sidecar2, sidecar0, sidecar1}
-	_, err := blobsFromSidecars(sidecars, hashes, false)
+	_, err := blobsFromSidecars(sidecars, hashes)
 	require.Error(t, err)
 
 	// too few sidecars should error
 	sidecars = []*eth.BlobSidecar{sidecar0, sidecar1}
-	_, err = blobsFromSidecars(sidecars, hashes, false)
+	_, err = blobsFromSidecars(sidecars, hashes)
 	require.Error(t, err)
 
 	// correct order should work
 	sidecars = []*eth.BlobSidecar{sidecar0, sidecar1, sidecar2}
-	blobs, err := blobsFromSidecars(sidecars, hashes, false)
+	blobs, err := blobsFromSidecars(sidecars, hashes)
 	require.NoError(t, err)
 	// confirm order by checking first blob byte against expected index
 	for i := range blobs {
@@ -72,20 +72,20 @@ func TestBlobsFromSidecars(t *testing.T) {
 	badProof := *sidecar0
 	badProof.KZGProof[11]++
 	sidecars[1] = &badProof
-	_, err = blobsFromSidecars(sidecars, hashes, false)
+	_, err = blobsFromSidecars(sidecars, hashes)
 	require.Error(t, err)
 
 	// mangle a commitment to make sure it's detected
 	badCommitment := *sidecar0
 	badCommitment.KZGCommitment[13]++
 	sidecars[1] = &badCommitment
-	_, err = blobsFromSidecars(sidecars, hashes, false)
+	_, err = blobsFromSidecars(sidecars, hashes)
 	require.Error(t, err)
 
 	// mangle a hash to make sure it's detected
 	sidecars[1] = sidecar0
 	hashes[2].Hash[17]++
-	_, err = blobsFromSidecars(sidecars, hashes, false)
+	_, err = blobsFromSidecars(sidecars, hashes)
 	require.Error(t, err)
 }
 
@@ -104,7 +104,7 @@ func KZGProofFromHex(s string) (kzg4844.Proof, error) {
 
 var badProof, _ = KZGProofFromHex("0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
-func TestBlobsFromSidecars_SkipBlobVerification(t *testing.T) {
+func TestBlobsFromSidecars_BadProof(t *testing.T) {
 	indices := []uint64{5, 7, 2}
 	index0, sidecar0 := makeTestBlobSidecar(indices[0])
 	index1, sidecar1 := makeTestBlobSidecar(indices[1])
@@ -116,13 +116,9 @@ func TestBlobsFromSidecars_SkipBlobVerification(t *testing.T) {
 	// Set proof to a bad / stubbed value
 	sidecars[1].KZGProof = eth.Bytes48(badProof)
 
-	// Check that verification succeeds when skipBlobVerification is true
-	_, err := blobsFromSidecars(sidecars, hashes, true)
+	// Check that verification succeeds, the proof is not required
+	_, err := blobsFromSidecars(sidecars, hashes)
 	require.NoError(t, err)
-
-	// Check that verification fails when skipBlobVerification is false
-	_, err = blobsFromSidecars(sidecars, hashes, false)
-	require.Error(t, err)
 
 }
 
