@@ -335,7 +335,7 @@ func blobsFromSidecars(blobSidecars []*eth.BlobSidecar, hashes []eth.IndexedBlob
 		}
 
 		if err := verifyBlob(&sidecar.Blob, ih.Hash); err != nil {
-			return nil, fmt.Errorf("blob %d failed verification: %w", i, err)
+			return nil, fmt.Errorf("blob %d failed verification: %w", ih.Index, err)
 		}
 
 		out[i] = &sidecar.Blob
