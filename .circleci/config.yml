@@ -2687,6 +2687,11 @@ workflows:
             - circleci-repo-readonly-authenticated-github-token
           requires:
             - initialize
+          filters:
+            tags:
+              only: /^op-deployer.*/ # ensure contract artifacts are embedded in op-deployer binary
+            branches:
+              ignore: /.*/
       # Standard (medium) cross-platform docker images go here
       - docker-build:
           matrix:
@@ -2694,6 +2699,7 @@ workflows:
               docker_name:
                 - op-node
                 - op-batcher
+                - op-deployer
                 - op-faucet
                 - op-proposer
                 - op-challenger
@@ -2703,7 +2709,6 @@ workflows:
                 - op-ufm
                 - op-supervisor
                 - op-test-sequencer
-                - op-deployer
                 - cannon
                 - op-dripper
                 - op-interop-mon
@@ -2729,6 +2734,7 @@ workflows:
               op_component:
                 - op-node
                 - op-batcher
+                - op-deployer
                 - op-faucet
                 - op-proposer
                 - op-challenger
@@ -2746,6 +2752,7 @@ workflows:
           requires:
             - op-node-docker-release
             - op-batcher-docker-release
+            - op-deployer-docker-release
             - op-faucet-docker-release
             - op-proposer-docker-release
             - op-challenger-docker-release
