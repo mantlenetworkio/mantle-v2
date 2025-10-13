@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -279,7 +280,7 @@ func BuildL1DeveloperGenesis(config *DeployConfig) (*core.Genesis, error) {
 		}
 
 		memDB.CreateAccount(depAddr)
-		memDB.SetCode(depAddr, dep.Bytecode)
+		memDB.SetCode(depAddr, dep.Bytecode, tracing.CodeChangeGenesis)
 
 		for iter.Next() {
 			_, data, _, err := rlp.Split(iter.Value)

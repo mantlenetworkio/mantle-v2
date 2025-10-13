@@ -96,11 +96,11 @@ func NewSimulatedBackend(alloc types.GenesisAlloc, gasLimit uint64) *SimulatedBa
 }
 
 type simulatedBackendConfig struct {
-	genesis     core.Genesis
-	cacheConfig *core.CacheConfig
-	database    ethdb.Database
-	vmConfig    vm.Config
-	consensus   consensus.Engine
+	genesis          core.Genesis
+	blockChainConfig *core.BlockChainConfig
+	database         ethdb.Database
+	vmConfig         vm.Config
+	consensus        consensus.Engine
 }
 
 type SimulatedBackendOpt func(s *simulatedBackendConfig)
@@ -123,9 +123,9 @@ func WithAlloc(alloc types.GenesisAlloc) SimulatedBackendOpt {
 	}
 }
 
-func WithCacheConfig(cacheConfig *core.CacheConfig) SimulatedBackendOpt {
+func WithBlockChainConfig(blockChainConfig *core.BlockChainConfig) SimulatedBackendOpt {
 	return func(s *simulatedBackendConfig) {
-		s.cacheConfig = cacheConfig
+		s.blockChainConfig = blockChainConfig
 	}
 }
 
@@ -162,7 +162,7 @@ func NewSimulatedBackendWithOpts(opts ...SimulatedBackendOpt) *SimulatedBackend 
 	}
 
 	config.genesis.MustCommit(config.database, triedb.NewDatabase(config.database, triedb.HashDefaults))
-	blockchain, _ := core.NewBlockChain(config.database, config.cacheConfig, &config.genesis, nil, config.consensus, config.vmConfig, nil)
+	blockchain, _ := core.NewBlockChain(config.database, &config.genesis, config.consensus, config.blockChainConfig)
 
 	backend := &SimulatedBackend{
 		database:   config.database,
@@ -323,7 +323,7 @@ func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash, b.config)
+	receipt, _, _, _ := ReadReceipt(b.database, txHash, b.config)
 	if receipt == nil {
 		return nil, ethereum.NotFound
 	}
@@ -342,7 +342,7 @@ func (b *SimulatedBackend) TransactionByHash(ctx context.Context, txHash common.
 	if tx != nil {
 		return tx, true, nil
 	}
-	tx, _, _, _ = rawdb.ReadTransaction(b.database, txHash)
+	tx, _, _, _ = rawdb.ReadCanonicalTransaction(b.database, txHash)
 	if tx != nil {
 		return tx, false, nil
 	}
@@ -729,16 +729,16 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 
 	// Execute the call.
 	msg := &core.Message{
-		From:             call.From,
-		To:               call.To,
-		Value:            call.Value,
-		GasLimit:         call.Gas,
-		GasPrice:         call.GasPrice,
-		GasFeeCap:        call.GasFeeCap,
-		GasTipCap:        call.GasTipCap,
-		Data:             call.Data,
-		AccessList:       call.AccessList,
-		SkipFromEOACheck: true,
+		From:                  call.From,
+		To:                    call.To,
+		Value:                 call.Value,
+		GasLimit:              call.Gas,
+		GasPrice:              call.GasPrice,
+		GasFeeCap:             call.GasFeeCap,
+		GasTipCap:             call.GasTipCap,
+		Data:                  call.Data,
+		AccessList:            call.AccessList,
+		SkipTransactionChecks: true,
 	}
 
 	// Create a new environment which holds all relevant information
@@ -951,9 +951,9 @@ func (fb *filterBackend) GetBody(ctx context.Context, hash common.Hash, number r
 }
 
 func (fb *filterBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
-	if number := rawdb.ReadHeaderNumber(fb.db, hash); number != nil {
-		if header := rawdb.ReadHeader(fb.db, hash, *number); header != nil {
-			return rawdb.ReadReceipts(fb.db, hash, *number, header.Time, fb.bc.Config()), nil
+	if number, ok := rawdb.ReadHeaderNumber(fb.db, hash); ok {
+		if header := rawdb.ReadHeader(fb.db, hash, number); header != nil {
+			return rawdb.ReadReceipts(fb.db, hash, number, header.Time, fb.bc.Config()), nil
 		}
 	}
 	return nil, nil
@@ -1018,4 +1018,31 @@ func BigMin(x, y *big.Int) *big.Int {
 		return y
 	}
 	return x
+}
+
+// ReadReceipt retrieves a specific transaction receipt from the database, along with
+// its added positional metadata.
+func ReadReceipt(db ethdb.Reader, hash common.Hash, config *params.ChainConfig) (*types.Receipt, common.Hash, uint64, uint64) {
+	// Retrieve the context of the receipt based on the transaction hash
+	blockNumber := rawdb.ReadTxLookupEntry(db, hash)
+	if blockNumber == nil {
+		return nil, common.Hash{}, 0, 0
+	}
+	blockHash := rawdb.ReadCanonicalHash(db, *blockNumber)
+	if blockHash == (common.Hash{}) {
+		return nil, common.Hash{}, 0, 0
+	}
+	blockHeader := rawdb.ReadHeader(db, blockHash, *blockNumber)
+	if blockHeader == nil {
+		return nil, common.Hash{}, 0, 0
+	}
+	// Read all the receipts from the block and return the one with the matching hash
+	receipts := rawdb.ReadReceipts(db, blockHash, *blockNumber, blockHeader.Time, config)
+	for receiptIndex, receipt := range receipts {
+		if receipt.TxHash == hash {
+			return receipt, blockHash, *blockNumber, uint64(receiptIndex)
+		}
+	}
+	log.Error("Receipt not found", "number", *blockNumber, "hash", blockHash, "txhash", hash)
+	return nil, common.Hash{}, 0, 0
 }

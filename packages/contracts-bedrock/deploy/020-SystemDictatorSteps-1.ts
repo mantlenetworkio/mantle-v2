@@ -111,6 +111,7 @@ const deployFn: DeployFunction = async (hre) => {
     needsProxyTransfer &&
     (await L1StandardBridgeProxy.callStatic.getOwner({
       from: ethers.constants.AddressZero,
+      gasLimit: 15000000,
     })) !== SystemDictator.address
   ) {
     await doOwnershipTransfer({
@@ -129,6 +130,7 @@ const deployFn: DeployFunction = async (hre) => {
     needsProxyTransfer &&
     (await L1ERC721BridgeProxy.callStatic.admin({
       from: ethers.constants.AddressZero,
+      gasLimit: 15000000,
     })) !== SystemDictator.address
   ) {
     await doOwnershipTransfer({
@@ -150,9 +152,11 @@ const deployFn: DeployFunction = async (hre) => {
       const l1StandardBridgeOwner =
         await L1StandardBridgeProxy.callStatic.getOwner({
           from: ethers.constants.AddressZero,
+          gasLimit: 15000000,
         })
       const l1Erc721BridgeOwner = await L1ERC721BridgeProxy.callStatic.admin({
         from: ethers.constants.AddressZero,
+        gasLimit: 15000000,
       })
 
       return (

@@ -64,6 +64,10 @@ func (b *mockBackendWithNonce) NonceAt(ctx context.Context, account common.Addre
 	return uint64(len(b.minedTxs)), nil
 }
 
+func (b *mockBackendWithNonce) BlobBaseFee(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(0), nil
+}
+
 func TestSend(t *testing.T) {
 	testCases := []testCase{
 		{

@@ -132,7 +132,7 @@ func setProxies(db vm.StateDB, proxyAdminAddr common.Address, namespace *big.Int
 			db.CreateAccount(addr)
 		}
 
-		db.SetCode(addr, depBytecode)
+		db.SetCode(addr, depBytecode, tracing.CodeChangeGenesis)
 		db.SetState(addr, AdminSlot, proxyAdminAddr.Hash())
 		log.Trace("Set proxy", "address", addr, "admin", proxyAdminAddr)
 	}
@@ -249,14 +249,14 @@ func setupPredeploy(db vm.StateDB, deployResults immutables.DeploymentResults, s
 	// otherwise use the artifact deployed bytecode
 	if bytecode, ok := deployResults[name]; ok {
 		log.Info("Setting deployed bytecode with immutables", "name", name, "address", implAddr)
-		db.SetCode(implAddr, bytecode)
+		db.SetCode(implAddr, bytecode, tracing.CodeChangeGenesis)
 	} else {
 		depBytecode, err := bindings.GetDeployedBytecode(name)
 		if err != nil {
 			return err
 		}
 		log.Info("Setting deployed bytecode from solc compiler output", "name", name, "address", implAddr)
-		db.SetCode(implAddr, depBytecode)
+		db.SetCode(implAddr, depBytecode, tracing.CodeChangeGenesis)
 	}
 
 	// Set the storage values

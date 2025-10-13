@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -20,12 +19,13 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/holiman/uint256"
 
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 )
 
 const (
 	// geth requires a minimum fee bump of 10% for regular tx resubmission
-	priceBump int64 = 10
+	priceBump int64 = 100
 	// geth requires a minimum fee bump of 100% for blob tx resubmission
 	blobPriceBump int64 = 100
 
@@ -85,6 +85,7 @@ type ETHBackend interface {
 	// TODO(CLI-3318): Maybe need a generic interface to support different RPC providers
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
+	BlobBaseFee(ctx context.Context) (*big.Int, error)
 	// NonceAt returns the account nonce of the given account.
 	// The block number can be nil, in which case the nonce is taken from the latest known block.
 	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
@@ -98,7 +99,8 @@ type ETHBackend interface {
 // SimpleTxManager is a implementation of TxManager that performs linear fee
 // bumping of a tx until it confirms.
 type SimpleTxManager struct {
-	cfg     Config // embed the config directly
+	cfg *Config // embed the config directly
+
 	name    string
 	chainID *big.Int
 
@@ -235,7 +237,9 @@ func (m *SimpleTxManager) craftTx(ctx context.Context, candidate TxCandidate) (*
 		if candidate.To == nil {
 			return nil, errors.New("blob txs cannot deploy contracts")
 		}
-		if sidecar, blobHashes, err = MakeSidecar(candidate.Blobs); err != nil {
+
+		// Use configuration to determine whether to enable cell proofs
+		if sidecar, blobHashes, err = MakeSidecar(candidate.Blobs, m.cfg.EnableCellProofs); err != nil {
 			return nil, fmt.Errorf("failed to make sidecar: %w", err)
 		}
 	}
@@ -600,9 +604,9 @@ func (m *SimpleTxManager) suggestGasPriceCaps(ctx context.Context) (*big.Int, *b
 		return nil, nil, nil, errors.New("txmgr does not support pre-london blocks that do not have a basefee")
 	}
 
-	var blobFee *big.Int
-	if head.ExcessBlobGas != nil {
-		blobFee = eth.CalcBlobFeeDefault(head)
+	blobFee, err := m.backend.BlobBaseFee(ctx)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	return tip, head.BaseFee, blobFee, nil
@@ -679,10 +683,23 @@ func errStringMatch(err, target error) bool {
 }
 
 // MakeSidecar builds & returns the BlobTxSidecar and corresponding blob hashes from the raw blob
-// data.
-func MakeSidecar(blobs []*eth.Blob) (*types.BlobTxSidecar, []common.Hash, error) {
-	sidecar := &types.BlobTxSidecar{}
-	blobHashes := []common.Hash{}
+// data with configurable cell proof support.
+func MakeSidecar(blobs []*eth.Blob, enableCellProofs bool) (*types.BlobTxSidecar, []common.Hash, error) {
+	var sidecar *types.BlobTxSidecar
+	if enableCellProofs {
+		sidecar = &types.BlobTxSidecar{
+			Proofs:  make([]kzg4844.Proof, 0, len(blobs)*kzg4844.CellProofsPerBlob),
+			Version: types.BlobSidecarVersion1, // Use Version1 for cell proofs (Fusaka compatibility)
+		}
+	} else {
+		sidecar = &types.BlobTxSidecar{
+			Proofs:  make([]kzg4844.Proof, 0, len(blobs)),
+			Version: types.BlobSidecarVersion0, // Use Version0 for legacy blob proofs
+		}
+	}
+
+	blobHashes := make([]common.Hash, 0, len(blobs))
+
 	for i, blob := range blobs {
 		rawBlob := blob.KZGBlob()
 		sidecar.Blobs = append(sidecar.Blobs, *rawBlob)
@@ -691,13 +708,24 @@ func MakeSidecar(blobs []*eth.Blob) (*types.BlobTxSidecar, []common.Hash, error)
 			return nil, nil, fmt.Errorf("cannot compute KZG commitment of blob %d in tx candidate: %w", i, err)
 		}
 		sidecar.Commitments = append(sidecar.Commitments, commitment)
-		proof, err := kzg4844.ComputeBlobProof(rawBlob, commitment)
-		if err != nil {
-			return nil, nil, fmt.Errorf("cannot compute KZG proof for fast commitment verification of blob %d in tx candidate: %w", i, err)
-		}
-		sidecar.Proofs = append(sidecar.Proofs, proof)
 		blobHashes = append(blobHashes, eth.KZGToVersionedHash(commitment))
+		if enableCellProofs {
+			// Version1: Use cell proofs for Fusaka compatibility
+			cellProofs, err := kzg4844.ComputeCellProofs(rawBlob)
+			if err != nil {
+				return nil, nil, fmt.Errorf("cannot compute KZG cell proofs for blob %d in tx candidate: %w", i, err)
+			}
+			sidecar.Proofs = append(sidecar.Proofs, cellProofs...)
+		} else {
+			// Version0: Use legacy blob proofs
+			proof, err := kzg4844.ComputeBlobProof(rawBlob, sidecar.Commitments[i])
+			if err != nil {
+				return nil, nil, fmt.Errorf("cannot compute KZG proof for fast commitment verification of blob %d in tx candidate: %w", i, err)
+			}
+			sidecar.Proofs = append(sidecar.Proofs, proof)
+		}
 	}
+
 	return sidecar, blobHashes, nil
 }
 

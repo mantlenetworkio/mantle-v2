@@ -55,7 +55,7 @@ func setL1CrossDomainMessenger(db vm.StateDB, successful []common.Hash) error {
 	}
 
 	db.CreateAccount(predeploys.DevL1CrossDomainMessengerAddr)
-	db.SetCode(predeploys.DevL1CrossDomainMessengerAddr, bytecode)
+	db.SetCode(predeploys.DevL1CrossDomainMessengerAddr, bytecode, tracing.CodeChangeGenesis)
 
 	msgs := make(map[any]any)
 	for _, hash := range successful {
@@ -83,7 +83,7 @@ func setL2CrossDomainMessenger(db vm.StateDB) error {
 	}
 
 	db.CreateAccount(predeploys.L2CrossDomainMessengerAddr)
-	db.SetCode(predeploys.L2CrossDomainMessengerAddr, bytecode)
+	db.SetCode(predeploys.L2CrossDomainMessengerAddr, bytecode, tracing.CodeChangeGenesis)
 
 	return state.SetStorage(
 		"L2CrossDomainMessenger",
@@ -117,7 +117,7 @@ func setL2ToL1MessagePasser(db vm.StateDB, l1MntToken common.Address) error {
 	}
 
 	db.CreateAccount(predeploys.L2ToL1MessagePasserAddr)
-	db.SetCode(predeploys.L2ToL1MessagePasserAddr, bytecode)
+	db.SetCode(predeploys.L2ToL1MessagePasserAddr, bytecode, tracing.CodeChangeGenesis)
 
 	return state.SetStorage(
 		"L2ToL1MessagePasser",

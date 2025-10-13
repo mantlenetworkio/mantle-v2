@@ -163,7 +163,7 @@ func (db *MemoryStateDB) GetCode(addr common.Address) []byte {
 	return account.Code
 }
 
-func (db *MemoryStateDB) SetCode(addr common.Address, code []byte) []byte {
+func (db *MemoryStateDB) SetCode(addr common.Address, code []byte, reason tracing.CodeChangeReason) []byte {
 	db.rw.Lock()
 	defer db.rw.Unlock()
 
@@ -203,8 +203,8 @@ func (db *MemoryStateDB) GetRefund() uint64 {
 	panic("GetRefund unimplemented")
 }
 
-func (db *MemoryStateDB) GetCommittedState(common.Address, common.Hash) common.Hash {
-	panic("GetCommittedState unimplemented")
+func (db *MemoryStateDB) GetStateAndCommittedState(address common.Address, hash common.Hash) (common.Hash, common.Hash) {
+	panic("GetStateAndCommittedState unimplemented")
 }
 
 func (db *MemoryStateDB) GetState(addr common.Address, key common.Hash) common.Hash {

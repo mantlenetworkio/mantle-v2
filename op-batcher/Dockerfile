@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.23.9-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.7-alpine3.22 AS builder
 
 ARG VERSION=v0.0.0
 
