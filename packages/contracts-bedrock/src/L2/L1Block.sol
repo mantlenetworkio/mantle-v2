@@ -172,4 +172,38 @@ contract L1Block is Semver {
             sstore(operatorFeeConstant.slot, shr(160, calldataload(164)))
         }
     }
+
+    /// @notice Updates the L1 block values for a Jovian upgraded chain.
+    /// Params are packed and passed in as raw msg.data instead of ABI to reduce calldata size.
+    /// Params are expected to be in the following order:
+    ///   1. _baseFeeScalar         L1 base fee scalar
+    ///   2. _blobBaseFeeScalar     L1 blob base fee scalar
+    ///   3. _sequenceNumber        Number of L2 blocks since epoch start.
+    ///   4. _timestamp             L1 timestamp.
+    ///   5. _number                L1 blocknumber.
+    ///   6. _basefee               L1 base fee.
+    ///   7. _blobBaseFee           L1 blob base fee.
+    ///   8. _hash                  L1 blockhash.
+    ///   9. _batcherHash           Versioned hash to authenticate batcher by.
+    ///   10. _operatorFeeScalar    Operator fee scalar.
+    ///   11. _operatorFeeConstant  Operator fee constant.
+    ///   12. _daFootprintGasScalar DA footprint gas scalar.
+    function setL1BlockValuesJovian() public {
+        setL1BlockValuesEcotone();
+        assembly {
+            // Calldata layout: operatorFeeScalar (uint32), operatorFeeConstant (uint64), daFootprintGasScalar (uint16)
+            // Slot layout: daFootprintGasScalar (uint16),  operatorFeeScalar (uint32), operatorFeeConstant (uint64)
+
+            // Load operatorFeeScalar+operatorFeeConstant from calldata
+            let opFeeParams := shr(160, calldataload(164)) // 160 = 256 - (32 + 64)
+
+            // Load daFootprintGasScalar from calldata
+            let daScalar := shr(240, calldataload(176)) // 240 = 256 - 16
+
+            // Combine full slot value, shifting daFootprintGasScalar left of operator fee params
+            let slotVal := or(shl(96, daScalar), opFeeParams) // 96 = 32 + 64
+
+            sstore(operatorFeeConstant.slot, slotVal)
+        }
+    }
 }
