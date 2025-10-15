@@ -963,6 +963,28 @@ jobs:
       - store_artifacts:
           path: ops/ai-eng/contracts-test-maintenance/log.json
           destination: log.json
+      - run:
+          name: Prepare Slack notification
+          command: |
+            set -eo pipefail
+            LOG_FILE="ops/ai-eng/contracts-test-maintenance/log.json"
+
+            PR_URL=$(jq -r '.pull_request_url // empty' "$LOG_FILE")
+            TEST_FILE=$(jq -r '.selected_files.test_path | split("/") | .[-1]' "$LOG_FILE")
+
+            if [ -n "$PR_URL" ]; then
+              MESSAGE=$'<!subteam^S07K486JEH4> AI Contracts Test Maintenance System created a PR for '"${TEST_FILE}"$'\n<'"${PR_URL}"$'|View PR> | <https://www.notion.so/oplabs/AI-Contract-Test-Maintenance-System-PR-Reviewer-Guide-288f153ee16280478c0ed1adc5edd9f9|Reviewer Guide>'
+              SLACK_JSON=$(jq -n --arg msg "$MESSAGE" '{"text": $msg}')
+              echo "export AI_PR_SLACK_TEMPLATE='${SLACK_JSON}'" >> $BASH_ENV
+            else
+              echo "No PR created, skipping notification"
+              echo "export AI_PR_SLACK_TEMPLATE=''" >> $BASH_ENV
+            fi
+          when: always
+      - slack/notify:
+          channel: C050F1GUHDG
+          event: always
+          template: AI_PR_SLACK_TEMPLATE
       - notify-failures-on-develop
 
   contracts-bedrock-coverage:
@@ -3127,5 +3149,6 @@ workflows:
             - circleci-repo-readonly-authenticated-github-token
             - circleci-api-token
             - devin-api
+            - slack
           requires:
             - initialize
