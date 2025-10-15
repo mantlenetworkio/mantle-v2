@@ -193,22 +193,29 @@ contract CustomMeterUser is ResourceMetering {
     uint256 public startGas;
     uint256 public endGas;
 
-    constructor(uint128 _prevBaseFee, uint64 _prevBoughtGas, uint64 _prevBlockNum) {
-        params = ResourceMetering.ResourceParams({
-            prevBaseFee: _prevBaseFee,
-            prevBoughtGas: _prevBoughtGas,
-            prevBlockNum: _prevBlockNum
-        });
+        vm.fee(0);
+
+        meter.use(target / 2);
+
+        (uint128 prevBaseFee, uint64 prevBoughtGas,) = meter.params();
+        assertEq(prevBoughtGas, target / 2);
+        assertGt(prevBaseFee, 0);
     }
 
     function _resourceConfig() internal pure override returns (ResourceMetering.ResourceConfig memory) {
         return Constants.DEFAULT_RESOURCE_CONFIG();
     }
 
-    function use(uint64 _amount) public returns (uint256) {
-        uint256 initialGas = gasleft();
-        _metered(_amount, initialGas);
-        return initialGas - gasleft();
+    /// @notice Tests metering with minimum base fee configuration.
+    function test_metered_minimumBaseFee_succeeds() external {
+        ResourceMetering.ResourceConfig memory rcfg = meter.resourceConfig();
+
+        meter.set(uint128(rcfg.minimumBaseFee), 0, uint64(block.number));
+
+        meter.use(100);
+
+        (, uint64 prevBoughtGas,) = meter.params();
+        assertEq(prevBoughtGas, 100);
     }
 }
 
