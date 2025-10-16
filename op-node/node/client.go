@@ -42,7 +42,7 @@ type L1EndpointSetup interface {
 }
 
 type L1BeaconEndpointSetup interface {
-	Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsFetcher, err error)
+	Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsClient, err error)
 	// ShouldIgnoreBeaconCheck returns true if the Beacon-node version check should not halt startup.
 	ShouldIgnoreBeaconCheck() bool
 	ShouldFetchAllSidecars() bool
@@ -228,7 +228,7 @@ type L1BeaconEndpointConfig struct {
 
 var _ L1BeaconEndpointSetup = (*L1BeaconEndpointConfig)(nil)
 
-func (cfg *L1BeaconEndpointConfig) Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsFetcher, err error) {
+func (cfg *L1BeaconEndpointConfig) Setup(ctx context.Context, log log.Logger) (cl ssources.BeaconClient, fb []ssources.BlobSideCarsClient, err error) {
 	var opts []sclient.BasicHTTPClientOption
 	if cfg.BeaconHeader != "" {
 		hdr, err := parseHTTPHeader(cfg.BeaconHeader)

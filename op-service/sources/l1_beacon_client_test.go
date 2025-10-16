@@ -127,7 +127,7 @@ func TestGetBlob(t *testing.T) {
 	var opts []sclient.BasicHTTPClientOption
 	a := sclient.NewBasicHTTPClient(url, oplog.NewLogger(os.Stdout, oplog.DefaultCLIConfig()), opts...)
 
-	var fallbacks []BlobSideCarsFetcher
+	var fallbacks []BlobSideCarsClient
 	l1BeaconClient := NewL1BeaconClient(NewBeaconHTTPClient(a), L1BeaconClientConfig{}, fallbacks...)
 
 	ref := eth.L1BlockRef{
