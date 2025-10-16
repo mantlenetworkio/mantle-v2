@@ -1,0 +1,21 @@
+{
+  "accountAccesses": [
+    {
+      "accessor": "0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519",
+      "account": "0x0000000000000000000000000000000000000000",
+      "chainInfo": {
+        "chainId": 31337,
+        "forkId": 0
+      },
+      "data": "0x",
+      "deployedCode": "0x",
+      "initialized": true,
+      "kind": "Call",
+      "newBalance": 1018619628817600000,
+      "oldBalance": 18619628817600000,
+      "reverted": false,
+      "storageAccesses": [],
+      "value": 1000000000000000000
+    }
+  ]
+}
