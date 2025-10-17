@@ -26,7 +26,8 @@ def main():
     devnet_dir = pjoin(monorepo_dir, '.devnet')
     ops_bedrock_dir = pjoin(monorepo_dir, 'ops-bedrock')
     contracts_bedrock_dir = pjoin(monorepo_dir, 'packages', 'contracts-bedrock')
-    deployment_dir = pjoin(contracts_bedrock_dir, 'deployments', 'devnetL1')
+    deployment_dir = pjoin(contracts_bedrock_dir, 'deployments')
+    deployment_json_path = pjoin(deployment_dir, '900-deploy.json')
     op_node_dir = pjoin(args.monorepo_dir, 'op-node')
     genesis_l1_path = pjoin(devnet_dir, 'genesis-l1.json')
     genesis_l2_path = pjoin(devnet_dir, 'genesis-l2.json')
@@ -48,8 +49,8 @@ def main():
     wait_up(8545)
 
     log.info('Generating network config.')
-    devnet_cfg_orig = pjoin(contracts_bedrock_dir, 'deploy-config', 'devnetL1.json')
-    devnet_cfg_backup = pjoin(devnet_dir, 'devnetL1.json.bak')
+    devnet_cfg_orig = pjoin(contracts_bedrock_dir, 'deploy-config', 'mantle-devnet.json')
+    devnet_cfg_backup = pjoin(devnet_dir, 'mantle-devnet.json.bak')
     shutil.copy(devnet_cfg_orig, devnet_cfg_backup)
     deploy_config = read_json(devnet_cfg_orig)
     deploy_config['l1GenesisBlockTimestamp'] = GENESIS_TMPL['timestamp']
@@ -61,18 +62,17 @@ def main():
         addresses = read_json(addresses_json_path)
     else:
         log.info('Deploying contracts.')
-        run_command(['yarn', 'hardhat', '--network', 'devnetL1', 'deploy', '--tags', 'l1'], env={
-            'CHAIN_ID': '900',
-            'L1_RPC': 'http://localhost:8545',
-            'PRIVATE_KEY_DEPLOYER': 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
-        }, cwd=contracts_bedrock_dir)
-        contracts = os.listdir(deployment_dir)
-        addresses = {}
-        for c in contracts:
-            if not c.endswith('.json'):
-                continue
-            data = read_json(pjoin(deployment_dir, c))
-            addresses[c.replace('.json', '')] = data['address']
+        run_command(
+          [
+            'forge', 'script', 'scripts/deploy/Deploy.s.sol',
+            '--rpc-url', 'http://localhost:8545',
+            '--private-key', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+            '--broadcast'
+          ],
+          env={'DEPLOY_CONFIG_PATH': devnet_cfg_orig},
+          cwd=contracts_bedrock_dir
+        )
+        addresses = read_json(pjoin(deployment_dir, '900-deploy.json'))
         sdk_addresses = {}
         sdk_addresses.update({
             'AddressManager': '0x0000000000000000000000000000000000000000',
@@ -80,8 +80,8 @@ def main():
             'CanonicalTransactionChain': '0x0000000000000000000000000000000000000000',
             'BondManager': '0x0000000000000000000000000000000000000000',
         })
-        sdk_addresses['L1CrossDomainMessenger'] = addresses['Proxy__BVM_L1CrossDomainMessenger']
-        sdk_addresses['L1StandardBridge'] = addresses['Proxy__BVM_L1StandardBridge']
+        sdk_addresses['L1CrossDomainMessenger'] = addresses['L1CrossDomainMessengerProxy']
+        sdk_addresses['L1StandardBridge'] = addresses['L1StandardBridgeProxy']
         sdk_addresses['OptimismPortal'] = addresses['OptimismPortalProxy']
         sdk_addresses['L2OutputOracle'] = addresses['L2OutputOracleProxy']
         write_json(addresses_json_path, addresses)
@@ -95,7 +95,7 @@ def main():
             'go', 'run', 'cmd/main.go', 'genesis', 'l2',
             '--l1-rpc', 'http://localhost:8545',
             '--deploy-config', devnet_cfg_orig,
-            '--deployment-dir', deployment_dir,
+            '--deployment-json', deployment_json_path,
             '--outfile.l2', pjoin(devnet_dir, 'genesis-l2.json'),
             '--outfile.rollup', pjoin(devnet_dir, 'rollup.json')
         ], cwd=op_node_dir)
