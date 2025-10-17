@@ -27,7 +27,7 @@ def main():
     ops_bedrock_dir = pjoin(monorepo_dir, 'ops-bedrock')
     contracts_bedrock_dir = pjoin(monorepo_dir, 'packages', 'contracts-bedrock')
     deployment_dir = pjoin(contracts_bedrock_dir, 'deployments')
-    deployment_json_path = pjoin(deployment_dir, '900-deploy.json')
+    deployment_json_path = pjoin(deployment_dir, '31337-deploy.json')
     op_node_dir = pjoin(args.monorepo_dir, 'op-node')
     genesis_l1_path = pjoin(devnet_dir, 'genesis-l1.json')
     genesis_l2_path = pjoin(devnet_dir, 'genesis-l2.json')
@@ -72,7 +72,7 @@ def main():
           env={'DEPLOY_CONFIG_PATH': devnet_cfg_orig},
           cwd=contracts_bedrock_dir
         )
-        addresses = read_json(pjoin(deployment_dir, '900-deploy.json'))
+        addresses = read_json(deployment_json_path)
         sdk_addresses = {}
         sdk_addresses.update({
             'AddressManager': '0x0000000000000000000000000000000000000000',
