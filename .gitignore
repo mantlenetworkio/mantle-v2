@@ -17,8 +17,6 @@ dist
 artifacts
 cache
 
-vendor
-
 packages/contracts/deployments/custom
 packages/contracts/coverage*
 packages/contracts/@ens*
