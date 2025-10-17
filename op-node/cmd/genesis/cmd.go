@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/hardhat"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 )
 
@@ -94,8 +93,8 @@ var Subcommands = cli.Commands{
 				Usage: "Path to hardhat deploy config file",
 			},
 			&cli.StringFlag{
-				Name:     "deployment-dir",
-				Usage:    "Path to deployment directory",
+				Name:     "deployment-json",
+				Usage:    "Path to deployment JSON file",
 				Required: true,
 			},
 			&cli.StringFlag{
@@ -114,15 +113,20 @@ var Subcommands = cli.Commands{
 				return err
 			}
 
-			depPath, network := filepath.Split(ctx.String("deployment-dir"))
-			hh, err := hardhat.New(network, nil, []string{depPath})
+			deploymentJSON := ctx.String("deployment-json")
+			deployment, err := os.ReadFile(deploymentJSON)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot read deployment JSON file: %w", err)
 			}
-			// Read the appropriate deployment addresses from disk
-			if err := config.GetDeployedAddresses(hh, nil); err != nil {
-				return err
+			var deploymentMap map[string]string
+			if err := json.Unmarshal(deployment, &deploymentMap); err != nil {
+				return fmt.Errorf("cannot unmarshal deployment JSON: %w", err)
 			}
+			config.L1StandardBridgeProxy = common.HexToAddress(deploymentMap["L1StandardBridgeProxy"])
+			config.L1CrossDomainMessengerProxy = common.HexToAddress(deploymentMap["L1CrossDomainMessengerProxy"])
+			config.L1ERC721BridgeProxy = common.HexToAddress(deploymentMap["L1ERC721BridgeProxy"])
+			config.OptimismPortalProxy = common.HexToAddress(deploymentMap["OptimismPortalProxy"])
+			config.SystemConfigProxy = common.HexToAddress(deploymentMap["SystemConfigProxy"])
 			// Sanity check the config
 			if err := config.Check(); err != nil {
 				return err

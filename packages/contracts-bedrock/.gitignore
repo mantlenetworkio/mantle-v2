@@ -29,6 +29,7 @@ deployments/hardhat
 deployments/getting-started
 deployments/*/.deploy
 deployments/1337
+deployments/900-deploy.json
 deployments/31337-deploy.json
 deployments/kontrol.json
 deployments/kontrol.jsonReversed
