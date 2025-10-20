@@ -2,6 +2,8 @@ package testutils
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/stretchr/testify/mock"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -135,4 +137,52 @@ func (m *MockEthClient) ReadStorageAt(ctx context.Context, address common.Addres
 
 func (m *MockEthClient) ExpectReadStorageAt(ctx context.Context, address common.Address, storageSlot common.Hash, blockHash common.Hash, result common.Hash, err error) {
 	m.Mock.On("ReadStorageAt", address, storageSlot, blockHash).Once().Return(result, err)
+}
+
+func (m *MockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	out := m.Mock.Called(number)
+	return out.Get(0).(*types.Block), out.Error(1)
+}
+
+func (m *MockEthClient) ExpectBlockByNumber(number *big.Int, block *types.Block, err error) {
+	m.Mock.On("BlockByNumber", number).Once().Return(block, err)
+}
+
+func (m *MockEthClient) BlockRefByLabel(ctx context.Context, label eth.BlockLabel) (eth.BlockRef, error) {
+	out := m.Mock.Called(label)
+	return out.Get(0).(eth.BlockRef), out.Error(1)
+}
+
+func (m *MockEthClient) ExpectBlockRefByLabel(label eth.BlockLabel, ref eth.BlockRef, err error) {
+	m.Mock.On("BlockRefByLabel", label).Once().Return(ref, err)
+}
+
+func (m *MockEthClient) BlockRefByNumber(ctx context.Context, num uint64) (eth.BlockRef, error) {
+	out := m.Mock.Called(num)
+	return out.Get(0).(eth.BlockRef), out.Error(1)
+}
+
+func (m *MockEthClient) ExpectBlockRefByNumber(num uint64, ref eth.BlockRef, err error) {
+	m.Mock.On("BlockRefByNumber", num).Once().Return(ref, err)
+}
+
+func (m *MockEthClient) BlockRefByHash(ctx context.Context, hash common.Hash) (eth.BlockRef, error) {
+	out := m.Mock.Called(hash)
+	return out.Get(0).(eth.BlockRef), out.Error(1)
+}
+
+func (m *MockEthClient) ExpectBlockRefByHash(hash common.Hash, ref eth.BlockRef, err error) {
+	m.Mock.On("BlockRefByHash", hash).Once().Return(ref, err)
+}
+
+func (m *MockEthClient) ExpectClose() {
+	m.Mock.On("Close").Once()
+}
+
+func (m *MockEthClient) MaybeClose() {
+	m.Mock.On("Close").Maybe()
+}
+
+func (m *MockEthClient) Close() {
+	m.Mock.Called()
 }

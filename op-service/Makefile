@@ -1,9 +1,3 @@
-test:
-	go test -v ./...
+DEPRECATED_TARGETS := test generate-mocks fuzz
 
-lint:
-	golangci-lint run -E asciicheck,goimports,misspell ./...
-
-.PHONY: \
-	test \
-	lint
+include ../justfiles/deprecated.mk

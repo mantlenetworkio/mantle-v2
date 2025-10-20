@@ -12,9 +12,12 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ethereum-optimism/optimism/op-service/apis"
 	"github.com/ethereum-optimism/optimism/op-service/client"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 const (
@@ -31,30 +34,12 @@ type L1BeaconClientConfig struct {
 
 // L1BeaconClient is a high level golang client for the Beacon API.
 type L1BeaconClient struct {
-	cl   BeaconClient
-	pool *ClientPool[BlobSideCarsClient]
+	cl   apis.BeaconClient
+	pool *ClientPool[apis.BlobSideCarsClient]
 	cfg  L1BeaconClientConfig
 
 	initLock     sync.Mutex
 	timeToSlotFn TimeToSlotFn
-}
-
-// BeaconClient is a thin wrapper over the Beacon APIs.
-//
-//go:generate mockery --name BeaconClient --with-expecter=true
-type BeaconClient interface {
-	NodeVersion(ctx context.Context) (string, error)
-	ConfigSpec(ctx context.Context) (eth.APIConfigResponse, error)
-	BeaconGenesis(ctx context.Context) (eth.APIGenesisResponse, error)
-	BeaconBlobs(ctx context.Context, slot uint64, hashes []eth.IndexedBlobHash) (eth.APIBeaconBlobsResponse, error)
-	BlobSideCarsClient
-}
-
-// BlobSideCarsClient provides beacon blob sidecars
-//
-//go:generate mockery --name BlobSideCarsClient --with-expecter=true
-type BlobSideCarsClient interface {
-	BeaconBlobSideCars(ctx context.Context, fetchAllSidecars bool, slot uint64, hashes []eth.IndexedBlobHash) (eth.APIGetBlobSidecarsResponse, error)
 }
 
 // BeaconHTTPClient implements BeaconClient. It provides golang types over the basic Beacon API.
@@ -73,7 +58,11 @@ func (cl *BeaconHTTPClient) apiReq(ctx context.Context, dest any, reqPath string
 	if err != nil {
 		return fmt.Errorf("http Get failed: %w", err)
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode == http.StatusNotFound {
+		errMsg, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		return fmt.Errorf("failed request with status %d: %s: %w", resp.StatusCode, string(errMsg), ethereum.NotFound)
+	} else if resp.StatusCode != http.StatusOK {
 		errMsg, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		return fmt.Errorf("failed request with status %d: %s", resp.StatusCode, string(errMsg))
@@ -184,8 +173,8 @@ func (p *ClientPool[T]) MoveToNext() {
 // NewL1BeaconClient returns a client for making requests to an L1 consensus layer node.
 // Fallbacks are optional clients that will be used for fetching blobs. L1BeaconClient will rotate between
 // the `cl` and the fallbacks whenever a client runs into an error while fetching blobs.
-func NewL1BeaconClient(cl BeaconClient, cfg L1BeaconClientConfig, fallbacks ...BlobSideCarsClient) *L1BeaconClient {
-	cs := append([]BlobSideCarsClient{cl}, fallbacks...)
+func NewL1BeaconClient(cl apis.BeaconClient, cfg L1BeaconClientConfig, fallbacks ...apis.BlobSideCarsClient) *L1BeaconClient {
+	cs := append([]apis.BlobSideCarsClient{cl}, fallbacks...)
 	return &L1BeaconClient{
 		cl:   cl,
 		pool: NewClientPool(cs...),
@@ -342,22 +331,20 @@ func (cl *L1BeaconClient) GetBlobs(ctx context.Context, ref eth.L1BlockRef, hash
 	return blobs, nil
 }
 
+// blobsFromSidecars pulls the blobs from the sidecars and verifies them against the supplied hashes.
 func blobsFromSidecars(blobSidecars []*eth.BlobSidecar, hashes []eth.IndexedBlobHash) ([]*eth.Blob, error) {
 	if len(blobSidecars) != len(hashes) {
 		return nil, fmt.Errorf("number of hashes and blobSidecars mismatch, %d != %d", len(hashes), len(blobSidecars))
 	}
-
 	out := make([]*eth.Blob, len(hashes))
 	for i, ih := range hashes {
 		sidecar := blobSidecars[i]
 		if sidx := uint64(sidecar.Index); sidx != ih.Index {
 			return nil, fmt.Errorf("expected sidecars to be ordered by hashes, but got %d != %d", sidx, ih.Index)
 		}
-
 		if err := verifyBlob(&sidecar.Blob, ih.Hash); err != nil {
-			return nil, fmt.Errorf("blob %d failed verification: %w", ih.Index, err)
+			return nil, fmt.Errorf("blob %d failed verification: %w", i, err)
 		}
-
 		out[i] = &sidecar.Blob
 	}
 	return out, nil
