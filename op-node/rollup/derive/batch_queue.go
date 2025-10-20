@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-// The batch queue is responsible for ordering unordered batches & generating empty batches
+// The BatchQueue is responsible for ordering unordered batches & generating empty batches
 // when the sequence window has passed. This is a very stateful stage.
 //
 // It receives batches that are tagged with the L1 Inclusion block of the batch. It only considers
@@ -26,237 +26,177 @@ import (
 //
 // It is internally responsible for making sure that batches with L1 inclusions block outside it's
 // working range are not considered or pruned.
-
-type NextBatchProvider interface {
-	Origin() eth.L1BlockRef
-	NextBatch(ctx context.Context) (*BatchData, error)
-}
-
-// BatchQueue contains a set of batches for every L1 block.
-// L1 blocks are contiguous and this does not support reorgs.
+//
+// Holocene replaces the BatchQueue with the [BatchStage].
 type BatchQueue struct {
-	log    log.Logger
-	config *rollup.Config
-	prev   NextBatchProvider
-	origin eth.L1BlockRef
+	baseBatchStage
 
-	l1Blocks []eth.L1BlockRef
-
-	// batches in order of when we've first seen them, grouped by L2 timestamp
-	batches map[uint64][]*BatchWithL1InclusionBlock
+	// batches in order of when we've first seen them
+	batches []*BatchWithL1InclusionBlock
 }
+
+var _ SingularBatchProvider = (*BatchQueue)(nil)
 
 // NewBatchQueue creates a BatchQueue, which should be Reset(origin) before use.
-func NewBatchQueue(log log.Logger, cfg *rollup.Config, prev NextBatchProvider) *BatchQueue {
-	return &BatchQueue{
-		log:    log,
-		config: cfg,
-		prev:   prev,
-	}
+func NewBatchQueue(log log.Logger, cfg *rollup.Config, prev NextBatchProvider, l2 SafeBlockFetcher) *BatchQueue {
+	return &BatchQueue{baseBatchStage: newBaseBatchStage(log, cfg, prev, l2)}
 }
 
-func (bq *BatchQueue) Origin() eth.L1BlockRef {
-	return bq.prev.Origin()
-}
-
-func (bq *BatchQueue) NextBatch(ctx context.Context, safeL2Head eth.L2BlockRef) (*BatchData, error) {
-	// Note: We use the origin that we will have to determine if it's behind. This is important
-	// because it's the future origin that gets saved into the l1Blocks array.
-	// We always update the origin of this stage if it is not the same so after the update code
-	// runs, this is consistent.
-	originBehind := bq.prev.Origin().Number < safeL2Head.L1Origin.Number
-
-	// Advance origin if needed
-	// Note: The entire pipeline has the same origin
-	// We just don't accept batches prior to the L1 origin of the L2 safe head
-	if bq.origin != bq.prev.Origin() {
-		bq.origin = bq.prev.Origin()
-		if !originBehind {
-			bq.l1Blocks = append(bq.l1Blocks, bq.origin)
-		} else {
-			// This is to handle the special case of startup. At startup we call Reset & include
-			// the L1 origin. That is the only time where immediately after `Reset` is called
-			// originBehind is false.
-			bq.l1Blocks = bq.l1Blocks[:0]
-		}
-		bq.log.Info("Advancing bq origin", "origin", bq.origin, "originBehind", originBehind)
+func (bq *BatchQueue) NextBatch(ctx context.Context, parent eth.L2BlockRef) (*SingularBatch, bool, error) {
+	// Early return if there are singular batches from a span batch queued up
+	if batch, last := bq.nextFromSpanBatch(parent); batch != nil {
+		return batch, last, nil
 	}
 
+	bq.updateOrigins(parent)
+
+	originBehind := bq.originBehind(parent)
 	// Load more data into the batch queue
 	outOfData := false
 	if batch, err := bq.prev.NextBatch(ctx); err == io.EOF {
 		outOfData = true
 	} else if err != nil {
-		return nil, err
+		return nil, false, err
 	} else if !originBehind {
-		bq.AddBatch(batch, safeL2Head)
+		bq.AddBatch(ctx, batch, parent)
 	}
 
 	// Skip adding data unless we are up to date with the origin, but do fully
 	// empty the previous stages
 	if originBehind {
 		if outOfData {
-			return nil, io.EOF
+			return nil, false, io.EOF
 		} else {
-			return nil, NotEnoughData
+			return nil, false, NotEnoughData
 		}
 	}
 
 	// Finally attempt to derive more batches
-	batch, err := bq.deriveNextBatch(ctx, outOfData, safeL2Head)
+	batch, err := bq.deriveNextBatch(ctx, outOfData, parent)
 	if err == io.EOF && outOfData {
-		return nil, io.EOF
+		return nil, false, io.EOF
 	} else if err == io.EOF {
-		return nil, NotEnoughData
+		return nil, false, NotEnoughData
 	} else if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return batch, nil
+
+	var nextBatch *SingularBatch
+	switch typ := batch.GetBatchType(); typ {
+	case SingularBatchType:
+		singularBatch, ok := batch.AsSingularBatch()
+		if !ok {
+			return nil, false, NewCriticalError(errors.New("failed type assertion to SingularBatch"))
+		}
+		nextBatch = singularBatch
+	case SpanBatchType:
+		spanBatch, ok := batch.AsSpanBatch()
+		if !ok {
+			return nil, false, NewCriticalError(errors.New("failed type assertion to SpanBatch"))
+		}
+		// If next batch is SpanBatch, convert it to SingularBatches.
+		singularBatches, err := spanBatch.GetSingularBatches(bq.l1Blocks, parent)
+		if err != nil {
+			return nil, false, NewCriticalError(err)
+		}
+		bq.nextSpan = singularBatches
+		// span-batches are non-empty, so the below pop is safe.
+		nextBatch = bq.popNextBatch(parent)
+	default:
+		return nil, false, NewCriticalError(fmt.Errorf("unrecognized batch type: %d", typ))
+	}
+
+	// If the nextBatch is derived from the span batch, len(bq.nextSpan) == 0 means it's the last batch of the span.
+	// For singular batches, len(bq.nextSpan) == 0 is always true.
+	return nextBatch, len(bq.nextSpan) == 0, nil
 }
 
-func (bq *BatchQueue) Reset(ctx context.Context, base eth.L1BlockRef, _ eth.SystemConfig) error {
-	// Copy over the Origin from the next stage
-	// It is set in the engine queue (two stages away) such that the L2 Safe Head origin is the progress
-	bq.origin = base
-	bq.batches = make(map[uint64][]*BatchWithL1InclusionBlock)
-	// Include the new origin as an origin to build on
-	// Note: This is only for the initialization case. During normal resets we will later
-	// throw out this block.
-	bq.l1Blocks = bq.l1Blocks[:0]
-	bq.l1Blocks = append(bq.l1Blocks, base)
+func (bq *BatchQueue) Reset(_ context.Context, base eth.L1BlockRef, _ eth.SystemConfig) error {
+	bq.baseBatchStage.reset(base)
+	bq.batches = bq.batches[:0]
 	return io.EOF
 }
 
-func (bq *BatchQueue) AddBatch(batch *BatchData, l2SafeHead eth.L2BlockRef) {
+func (bq *BatchQueue) FlushChannel() {
+	// We need to implement the ChannelFlusher interface with the BatchQueue but it's never called
+	// of which the BatchMux takes care.
+	panic("BatchQueue: invalid FlushChannel call")
+}
+
+func (bq *BatchQueue) AddBatch(ctx context.Context, batch Batch, parent eth.L2BlockRef) {
 	if len(bq.l1Blocks) == 0 {
-		panic(fmt.Errorf("cannot add batch with timestamp %d, no origin was prepared", batch.Timestamp))
+		panic(fmt.Errorf("cannot add batch with timestamp %d, no origin was prepared", batch.GetTimestamp()))
 	}
 	data := BatchWithL1InclusionBlock{
 		L1InclusionBlock: bq.origin,
 		Batch:            batch,
 	}
-	validity := CheckBatch(bq.config, bq.log, bq.l1Blocks, l2SafeHead, &data)
+	validity := CheckBatch(ctx, bq.config, bq.log, bq.l1Blocks, parent, &data, bq.l2)
 	if validity == BatchDrop {
 		return // if we do drop the batch, CheckBatch will log the drop reason with WARN level.
 	}
-	bq.log.Debug("Adding batch", "batch_timestamp", batch.Timestamp, "parent_hash", batch.ParentHash, "batch_epoch", batch.Epoch(), "txs", len(batch.Transactions))
-	bq.batches[batch.Timestamp] = append(bq.batches[batch.Timestamp], &data)
+	batch.LogContext(bq.log).Debug("Adding batch")
+	bq.batches = append(bq.batches, &data)
 }
 
 // deriveNextBatch derives the next batch to apply on top of the current L2 safe head,
 // following the validity rules imposed on consecutive batches,
 // based on currently available buffered batch and L1 origin information.
 // If no batch can be derived yet, then (nil, io.EOF) is returned.
-func (bq *BatchQueue) deriveNextBatch(ctx context.Context, outOfData bool, l2SafeHead eth.L2BlockRef) (*BatchData, error) {
+func (bq *BatchQueue) deriveNextBatch(ctx context.Context, outOfData bool, parent eth.L2BlockRef) (Batch, error) {
 	if len(bq.l1Blocks) == 0 {
 		return nil, NewCriticalError(errors.New("cannot derive next batch, no origin was prepared"))
 	}
 	epoch := bq.l1Blocks[0]
-	bq.log.Trace("Deriving the next batch", "epoch", epoch, "l2SafeHead", l2SafeHead, "outOfData", outOfData)
+	bq.log.Trace("Deriving the next batch", "epoch", epoch, "parent", parent, "outOfData", outOfData)
 
 	// Note: epoch origin can now be one block ahead of the L2 Safe Head
 	// This is in the case where we auto generate all batches in an epoch & advance the epoch
 	// but don't advance the L2 Safe Head's epoch
-	if l2SafeHead.L1Origin != epoch.ID() && l2SafeHead.L1Origin.Number != epoch.Number-1 {
-		return nil, NewResetError(fmt.Errorf("buffered L1 chain epoch %s in batch queue does not match safe head origin %s", epoch, l2SafeHead.L1Origin))
+	if parent.L1Origin != epoch.ID() && parent.L1Origin.Number != epoch.Number-1 {
+		return nil, NewResetError(fmt.Errorf("buffered L1 chain epoch %s in batch queue does not match safe head origin %s", epoch, parent.L1Origin))
 	}
 
 	// Find the first-seen batch that matches all validity conditions.
 	// We may not have sufficient information to proceed filtering, and then we stop.
 	// There may be none: in that case we force-create an empty batch
-	nextTimestamp := l2SafeHead.Time + bq.config.BlockTime
 	var nextBatch *BatchWithL1InclusionBlock
 
 	// Go over all batches, in order of inclusion, and find the first batch we can accept.
 	// We filter in-place by only remembering the batches that may be processed in the future, or those we are undecided on.
 	var remaining []*BatchWithL1InclusionBlock
-	candidates := bq.batches[nextTimestamp]
 batchLoop:
-	for i, batch := range candidates {
-		validity := CheckBatch(bq.config, bq.log.New("batch_index", i), bq.l1Blocks, l2SafeHead, batch)
+	for i, batch := range bq.batches {
+		validity := CheckBatch(ctx, bq.config, bq.log.New("batch_index", i), bq.l1Blocks, parent, batch, bq.l2)
 		switch validity {
 		case BatchFuture:
-			return nil, NewCriticalError(fmt.Errorf("found batch with timestamp %d marked as future batch, but expected timestamp %d", batch.Batch.Timestamp, nextTimestamp))
+			remaining = append(remaining, batch)
+			continue
 		case BatchDrop:
-			bq.log.Warn("dropping batch",
-				"batch_timestamp", batch.Batch.Timestamp,
-				"parent_hash", batch.Batch.ParentHash,
-				"batch_epoch", batch.Batch.Epoch(),
-				"txs", len(batch.Batch.Transactions),
-				"l2_safe_head", l2SafeHead.ID(),
-				"l2_safe_head_time", l2SafeHead.Time,
+			batch.Batch.LogContext(bq.log).Warn("Dropping batch",
+				"parent", parent.ID(),
+				"parent_time", parent.Time,
 			)
 			continue
 		case BatchAccept:
 			nextBatch = batch
 			// don't keep the current batch in the remaining items since we are processing it now,
 			// but retain every batch we didn't get to yet.
-			remaining = append(remaining, candidates[i+1:]...)
+			remaining = append(remaining, bq.batches[i+1:]...)
 			break batchLoop
 		case BatchUndecided:
-			remaining = append(remaining, batch)
-			bq.batches[nextTimestamp] = remaining
+			remaining = append(remaining, bq.batches[i:]...)
+			bq.batches = remaining
 			return nil, io.EOF
 		default:
 			return nil, NewCriticalError(fmt.Errorf("unknown batch validity type: %d", validity))
 		}
 	}
-	// clean up if we remove the final batch for this timestamp
-	if len(remaining) == 0 {
-		delete(bq.batches, nextTimestamp)
-	} else {
-		bq.batches[nextTimestamp] = remaining
-	}
+	bq.batches = remaining
 
 	if nextBatch != nil {
-		// advance epoch if necessary
-		if nextBatch.Batch.EpochNum == rollup.Epoch(epoch.Number)+1 {
-			bq.l1Blocks = bq.l1Blocks[1:]
-		}
-		bq.log.Info("Found next batch", "epoch", epoch, "batch_epoch", nextBatch.Batch.EpochNum, "batch_timestamp", nextBatch.Batch.Timestamp)
+		nextBatch.Batch.LogContext(bq.log).Info("Found next batch")
 		return nextBatch.Batch, nil
 	}
-
-	// If the current epoch is too old compared to the L1 block we are at,
-	// i.e. if the sequence window expired, we create empty batches for the current epoch
-	expiryEpoch := epoch.Number + bq.config.SeqWindowSize
-	forceEmptyBatches := (expiryEpoch == bq.origin.Number && outOfData) || expiryEpoch < bq.origin.Number
-	firstOfEpoch := epoch.Number == l2SafeHead.L1Origin.Number+1
-
-	bq.log.Trace("Potentially generating an empty batch",
-		"expiryEpoch", expiryEpoch, "forceEmptyBatches", forceEmptyBatches, "nextTimestamp", nextTimestamp,
-		"epoch_time", epoch.Time, "len_l1_blocks", len(bq.l1Blocks), "firstOfEpoch", firstOfEpoch)
-
-	if !forceEmptyBatches {
-		// sequence window did not expire yet, still room to receive batches for the current epoch,
-		// no need to force-create empty batch(es) towards the next epoch yet.
-		return nil, io.EOF
-	}
-	if len(bq.l1Blocks) < 2 {
-		// need next L1 block to proceed towards
-		return nil, io.EOF
-	}
-
-	nextEpoch := bq.l1Blocks[1]
-	// Fill with empty L2 blocks of the same epoch until we meet the time of the next L1 origin,
-	// to preserve that L2 time >= L1 time. If this is the first block of the epoch, always generate a
-	// batch to ensure that we at least have one batch per epoch.
-	if nextTimestamp < nextEpoch.Time || firstOfEpoch {
-		bq.log.Info("Generating next batch", "epoch", epoch, "timestamp", nextTimestamp)
-		return &BatchData{
-			BatchV1{
-				ParentHash:   l2SafeHead.Hash,
-				EpochNum:     rollup.Epoch(epoch.Number),
-				EpochHash:    epoch.Hash,
-				Timestamp:    nextTimestamp,
-				Transactions: nil,
-			},
-		}, nil
-	}
-
-	// At this point we have auto generated every batch for the current epoch
-	// that we can, so we can advance to the next epoch.
-	bq.log.Trace("Advancing internal L1 blocks", "next_timestamp", nextTimestamp, "next_epoch_time", nextEpoch.Time)
-	bq.l1Blocks = bq.l1Blocks[1:]
-	return nil, io.EOF
+	return bq.deriveNextEmptyBatch(ctx, outOfData, parent)
 }

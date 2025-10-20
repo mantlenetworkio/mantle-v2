@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/hashicorp/go-multierror"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -17,10 +18,12 @@ import (
 
 var (
 	SystemConfigUpdateBatcher           = common.Hash{31: 0}
-	SystemConfigUpdateGasConfig         = common.Hash{31: 1}
+	SystemConfigUpdateFeeScalars        = common.Hash{31: 1}
 	SystemConfigUpdateGasLimit          = common.Hash{31: 2}
 	SystemConfigUpdateUnsafeBlockSigner = common.Hash{31: 3}
-	SystemConfigUpdateBaseFee           = common.Hash{31: 4}
+	SystemConfigUpdateEIP1559Params     = common.Hash{31: 4}
+	SystemConfigUpdateOperatorFeeParams = common.Hash{31: 5}
+	SystemConfigUpdateMinBaseFee        = common.Hash{31: 6}
 )
 
 var (
@@ -30,7 +33,7 @@ var (
 )
 
 // UpdateSystemConfigWithL1Receipts filters all L1 receipts to find config updates and applies the config updates to the given sysCfg
-func UpdateSystemConfigWithL1Receipts(sysCfg *eth.SystemConfig, receipts []*types.Receipt, cfg *rollup.Config) error {
+func UpdateSystemConfigWithL1Receipts(sysCfg *eth.SystemConfig, receipts []*types.Receipt, cfg *rollup.Config, l1Time uint64) error {
 	var result error
 	for i, rec := range receipts {
 		if rec.Status != types.ReceiptStatusSuccessful {
@@ -38,7 +41,7 @@ func UpdateSystemConfigWithL1Receipts(sysCfg *eth.SystemConfig, receipts []*type
 		}
 		for j, log := range rec.Logs {
 			if log.Address == cfg.L1SystemConfigAddress && len(log.Topics) > 0 && log.Topics[0] == ConfigUpdateEventABIHash {
-				if err := ProcessSystemConfigUpdateLogEvent(sysCfg, log); err != nil {
+				if err := ProcessSystemConfigUpdateLogEvent(sysCfg, log, cfg, l1Time); err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted L1 system sysCfg log in receipt %d, log %d: %w", i, j, err))
 				}
 			}
@@ -56,7 +59,7 @@ func UpdateSystemConfigWithL1Receipts(sysCfg *eth.SystemConfig, receipts []*type
 //	    UpdateType indexed updateType,
 //	    bytes data
 //	);
-func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.Log) error {
+func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.Log, rollupCfg *rollup.Config, l1Time uint64) error {
 	if len(ev.Topics) != 3 {
 		return fmt.Errorf("expected 3 event topics (event identity, indexed version, indexed updateType), got %d", len(ev.Topics))
 	}
@@ -93,7 +96,7 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 		}
 		destSysCfg.BatcherAddr = address
 		return nil
-	case SystemConfigUpdateGasConfig:
+	case SystemConfigUpdateFeeScalars:
 		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
 			return NewCriticalError(errors.New("invalid pointer field"))
 		}
@@ -111,8 +114,18 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 		if !solabi.EmptyReader(reader) {
 			return NewCriticalError(errors.New("too many bytes"))
 		}
-		destSysCfg.Overhead = overhead
-		destSysCfg.Scalar = scalar
+		if rollupCfg.IsEcotone(l1Time) {
+			if err := eth.CheckEcotoneL1SystemConfigScalar(scalar); err != nil {
+				return nil // ignore invalid scalars, retain the old system-config scalar
+			}
+			// retain the scalar data in encoded form
+			destSysCfg.Scalar = scalar
+			// zero out the overhead, it will not affect the state-transition after Ecotone
+			destSysCfg.Overhead = eth.Bytes32{}
+		} else {
+			destSysCfg.Overhead = overhead
+			destSysCfg.Scalar = scalar
+		}
 		return nil
 	case SystemConfigUpdateGasLimit:
 		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
@@ -130,24 +143,56 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 		}
 		destSysCfg.GasLimit = gasLimit
 		return nil
-	case SystemConfigUpdateUnsafeBlockSigner:
-		// Ignored in derivation. This configurable applies to runtime configuration outside of the derivation.
-		return nil
-	case SystemConfigUpdateBaseFee:
+	case SystemConfigUpdateEIP1559Params:
 		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
 			return NewCriticalError(errors.New("invalid pointer field"))
 		}
 		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
 			return NewCriticalError(errors.New("invalid length field"))
 		}
-		l2BaseFee, err := solabi.ReadUint256(reader)
+		params, err := solabi.ReadEthBytes32(reader)
 		if err != nil {
-			return NewCriticalError(errors.New("could not read l2 base fee"))
+			return NewCriticalError(errors.New("could not read eip-1559 params"))
 		}
 		if !solabi.EmptyReader(reader) {
 			return NewCriticalError(errors.New("too many bytes"))
 		}
-		destSysCfg.BaseFee = l2BaseFee
+		copy(destSysCfg.EIP1559Params[:], params[24:32])
+		return nil
+	case SystemConfigUpdateOperatorFeeParams:
+		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
+			return NewCriticalError(errors.New("invalid pointer field"))
+		}
+		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
+			return NewCriticalError(errors.New("invalid length field"))
+		}
+		params, err := solabi.ReadEthBytes32(reader)
+		if err != nil {
+			return NewCriticalError(errors.New("could not read operator fee params"))
+		}
+		if !solabi.EmptyReader(reader) {
+			return NewCriticalError(errors.New("too many bytes"))
+		}
+		destSysCfg.OperatorFeeParams = params
+		return nil
+	case SystemConfigUpdateUnsafeBlockSigner:
+		// Ignored in derivation. This configurable applies to runtime configuration outside of the derivation.
+		return nil
+	case SystemConfigUpdateMinBaseFee:
+		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
+			return NewCriticalError(errors.New("invalid pointer field"))
+		}
+		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
+			return NewCriticalError(errors.New("invalid length field"))
+		}
+		minBaseFee, err := solabi.ReadUint64(reader)
+		if err != nil {
+			return NewCriticalError(errors.New("could not read minBaseFee"))
+		}
+		if !solabi.EmptyReader(reader) {
+			return NewCriticalError(errors.New("too many bytes"))
+		}
+		destSysCfg.MinBaseFee = minBaseFee
 		return nil
 	default:
 		return fmt.Errorf("unrecognized L1 sysCfg update type: %s", updateType)

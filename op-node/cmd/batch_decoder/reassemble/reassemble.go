@@ -5,23 +5,27 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"os"
 	"path"
 	"sort"
 
 	"github.com/ethereum-optimism/optimism/op-node/cmd/batch_decoder/fetch"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type ChannelWithMetadata struct {
-	ID             derive.ChannelID    `json:"id"`
-	IsReady        bool                `json:"is_ready"`
-	InvalidFrames  bool                `json:"invalid_frames"`
-	InvalidBatches bool                `json:"invalid_batches"`
-	Frames         []FrameWithMetadata `json:"frames"`
-	Batches        []derive.BatchV1    `json:"batches"`
+	ID             derive.ChannelID         `json:"id"`
+	IsReady        bool                     `json:"is_ready"`
+	InvalidFrames  bool                     `json:"invalid_frames"`
+	InvalidBatches bool                     `json:"invalid_batches"`
+	Frames         []FrameWithMetadata      `json:"frames"`
+	Batches        []derive.Batch           `json:"batches"`
+	BatchTypes     []int                    `json:"batch_types"`
+	ComprAlgos     []derive.CompressionAlgo `json:"compr_algos"`
 }
 
 type FrameWithMetadata struct {
@@ -33,9 +37,12 @@ type FrameWithMetadata struct {
 }
 
 type Config struct {
-	BatchInbox   common.Address
-	InDirectory  string
-	OutDirectory string
+	BatchInbox    common.Address
+	InDirectory   string
+	OutDirectory  string
+	L2ChainID     *big.Int
+	L2GenesisTime uint64
+	L2BlockTime   uint64
 }
 
 func LoadFrames(directory string, inbox common.Address) []FrameWithMetadata {
@@ -48,7 +55,6 @@ func LoadFrames(directory string, inbox common.Address) []FrameWithMetadata {
 		} else {
 			return txns[i].BlockNumber < txns[j].BlockNumber
 		}
-
 	})
 	return transactionsToFrames(txns)
 }
@@ -56,7 +62,7 @@ func LoadFrames(directory string, inbox common.Address) []FrameWithMetadata {
 // Channels loads all transactions from the given input directory that are submitted to the
 // specified batch inbox and then re-assembles all channels & writes the re-assembled channels
 // to the out directory.
-func Channels(config Config) {
+func Channels(config Config, rollupCfg *rollup.Config) {
 	if err := os.MkdirAll(config.OutDirectory, 0750); err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +72,7 @@ func Channels(config Config) {
 		framesByChannel[frame.Frame.ID] = append(framesByChannel[frame.Frame.ID], frame)
 	}
 	for id, frames := range framesByChannel {
-		ch := processFrames(id, frames)
+		ch := ProcessFrames(config, rollupCfg, id, frames)
 		filename := path.Join(config.OutDirectory, fmt.Sprintf("%s.json", id.String()))
 		if err := writeChannel(ch, filename); err != nil {
 			log.Fatal(err)
@@ -84,8 +90,11 @@ func writeChannel(ch ChannelWithMetadata, filename string) error {
 	return enc.Encode(ch)
 }
 
-func processFrames(id derive.ChannelID, frames []FrameWithMetadata) ChannelWithMetadata {
-	ch := derive.NewChannel(id, eth.L1BlockRef{Number: frames[0].InclusionBlock})
+// ProcessFrames processes the frames for a given channel and reads batches and other relevant metadata
+// from the channel. Returns a ChannelWithMetadata struct containing all the relevant data.
+func ProcessFrames(cfg Config, rollupCfg *rollup.Config, id derive.ChannelID, frames []FrameWithMetadata) ChannelWithMetadata {
+	spec := rollup.NewChainSpec(rollupCfg)
+	ch := derive.NewChannel(id, eth.L1BlockRef{Number: frames[0].InclusionBlock}, rollupCfg.IsHolocene(frames[0].Timestamp))
 	invalidFrame := false
 
 	for _, frame := range frames {
@@ -94,23 +103,50 @@ func processFrames(id derive.ChannelID, frames []FrameWithMetadata) ChannelWithM
 			invalidFrame = true
 			break
 		}
-		if err := ch.AddFrame(frame.Frame, eth.L1BlockRef{Number: frame.InclusionBlock}); err != nil {
+		if err := ch.AddFrame(frame.Frame, eth.L1BlockRef{Number: frame.InclusionBlock, Time: frame.Timestamp}); err != nil {
 			fmt.Printf("Error adding to channel %v. Err: %v\n", id.String(), err)
 			invalidFrame = true
 		}
 	}
 
-	var batches []derive.BatchV1
+	var (
+		batches    []derive.Batch
+		batchTypes []int
+		comprAlgos []derive.CompressionAlgo
+	)
+
 	invalidBatches := false
 	if ch.IsReady() {
-		br, err := derive.BatchReader(ch.Reader(), eth.L1BlockRef{})
+		br, err := derive.BatchReader(ch.Reader(), spec.MaxRLPBytesPerChannel(ch.HighestBlock().Time), rollupCfg.IsFjord(ch.HighestBlock().Time))
 		if err == nil {
-			for batch, err := br(); err != io.EOF; batch, err = br() {
+			for batchData, err := br(); err != io.EOF; batchData, err = br() {
 				if err != nil {
-					fmt.Printf("Error reading batch for channel %v. Err: %v\n", id.String(), err)
+					fmt.Printf("Error reading batchData for channel %v. Err: %v\n", id.String(), err)
 					invalidBatches = true
 				} else {
-					batches = append(batches, batch.Batch.BatchV1)
+					comprAlgos = append(comprAlgos, batchData.ComprAlgo)
+					batchType := batchData.GetBatchType()
+					batchTypes = append(batchTypes, int(batchType))
+					switch batchType {
+					case derive.SingularBatchType:
+						singularBatch, err := derive.GetSingularBatch(batchData)
+						if err != nil {
+							invalidBatches = true
+							fmt.Printf("Error converting singularBatch from batchData for channel %v. Err: %v\n", id.String(), err)
+						}
+						// singularBatch will be nil when errored
+						batches = append(batches, singularBatch)
+					case derive.SpanBatchType:
+						spanBatch, err := derive.DeriveSpanBatch(batchData, cfg.L2BlockTime, cfg.L2GenesisTime, cfg.L2ChainID)
+						if err != nil {
+							invalidBatches = true
+							fmt.Printf("Error deriving spanBatch from batchData for channel %v. Err: %v\n", id.String(), err)
+						}
+						// spanBatch will be nil when errored
+						batches = append(batches, spanBatch)
+					default:
+						fmt.Printf("unrecognized batch type: %d for channel %v.\n", batchData.GetBatchType(), id.String())
+					}
 				}
 			}
 		} else {
@@ -127,6 +163,8 @@ func processFrames(id derive.ChannelID, frames []FrameWithMetadata) ChannelWithM
 		InvalidFrames:  invalidFrame,
 		InvalidBatches: invalidBatches,
 		Batches:        batches,
+		BatchTypes:     batchTypes,
+		ComprAlgos:     comprAlgos,
 	}
 }
 

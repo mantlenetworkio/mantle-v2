@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"sync"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -116,6 +115,7 @@ func (d *SafeDB) SafeHeadUpdated(safeHead eth.L2BlockRef, l1Head eth.BlockID) er
 func (d *SafeDB) SafeHeadReset(safeHead eth.L2BlockRef) error {
 	d.m.Lock()
 	defer d.m.Unlock()
+	d.log.Info("Resetting safe head db", "l2", safeHead.ID())
 	iter, err := d.db.NewIter(safeByL1BlockNumKey.IterRange())
 	if err != nil {
 		return fmt.Errorf("reset failed to create iterator: %w", err)
@@ -167,7 +167,7 @@ func (d *SafeDB) SafeHeadReset(safeHead eth.L2BlockRef) error {
 func (d *SafeDB) SafeHeadAtL1(ctx context.Context, l1BlockNum uint64) (l1Block eth.BlockID, safeHead eth.BlockID, err error) {
 	d.m.RLock()
 	defer d.m.RUnlock()
-	iter, err := d.db.NewIter(safeByL1BlockNumKey.IterRange())
+	iter, err := d.db.NewIterWithContext(ctx, safeByL1BlockNumKey.IterRange())
 	if err != nil {
 		return
 	}

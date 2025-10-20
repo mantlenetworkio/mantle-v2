@@ -27,6 +27,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 
+	"github.com/ethereum-optimism/optimism/op-node/p2p/store"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 )
 
@@ -97,7 +98,7 @@ func (conf *Config) Discovery(log log.Logger, rollupCfg *rollup.Config, tcpPort 
 
 	cfg := discover.Config{
 		PrivateKey:   priv,
-		NetRestrict:  nil,
+		NetRestrict:  conf.NetRestrict,
 		Bootnodes:    conf.Bootnodes,
 		Unhandled:    nil, // Not used in dv5
 		Log:          log,
@@ -355,10 +356,22 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, cfg *rol
 			if err != nil {
 				continue
 			}
+
+			// record metadata to the peerstore if it is an extended peerstore
+			if eps, ok := pstore.(store.ExtendedPeerstore); ok {
+				_, err := eps.SetPeerMetadata(info.ID, store.PeerMetadata{
+					ENR:       found.String(),
+					OPStackID: dat.chainID,
+				})
+				if err != nil {
+					log.Warn("failed to set peer metadata", "peer", info.ID, "err", err)
+				}
+			}
 			// We add the addresses to the peerstore, and update the address TTL.
-			//After that we stop using the address, assuming it may not be valid anymore (until we rediscover the node)
+			// After that we stop using the address, assuming it may not be valid anymore (until we rediscover the node)
 			pstore.AddAddrs(info.ID, info.Addrs, discoveredAddrTTL)
 			_ = pstore.AddPubKey(info.ID, pub)
+
 			// Tag the peer, we'd rather have the connection manager prune away old peers,
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
@@ -398,7 +411,7 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, cfg *rol
 						continue
 					}
 					// skip peers that we were just connected to
-					if n.Host().Network().Connectedness(id) == network.CannotConnect {
+					if n.Host().Network().Connectedness(id) == network.Limited {
 						continue
 					}
 					// schedule, if there is still space to schedule (this may block)

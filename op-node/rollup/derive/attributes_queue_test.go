@@ -10,10 +10,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/predeploys"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
@@ -42,13 +43,13 @@ func TestAttributesQueue(t *testing.T) {
 	safeHead.L1Origin = l1Info.ID()
 	safeHead.Time = l1Info.InfoTime
 
-	batch := &BatchData{BatchV1{
+	batch := SingularBatch{
 		ParentHash:   safeHead.Hash,
 		EpochNum:     rollup.Epoch(l1Info.InfoNum),
 		EpochHash:    l1Info.InfoHash,
 		Timestamp:    safeHead.Time + cfg.BlockTime,
 		Transactions: []eth.Data{eth.Data("foobar"), eth.Data("example")},
-	}}
+	}
 
 	parentL1Cfg := eth.SystemConfig{
 		BatcherAddr: common.Address{42},
@@ -66,7 +67,8 @@ func TestAttributesQueue(t *testing.T) {
 	l2Fetcher := &testutils.MockL2Client{}
 	l2Fetcher.ExpectSystemConfigByL2Hash(safeHead.Hash, parentL1Cfg, nil)
 
-	l1InfoTx, err := L1InfoDepositBytes(safeHead.SequenceNumber+1, l1Info, expectedL1Cfg, false)
+	rollupCfg := rollup.Config{}
+	l1InfoTx, err := L1InfoDepositBytes(&rollupCfg, params.MergedTestChainConfig, expectedL1Cfg, safeHead.SequenceNumber+1, l1Info, 0)
 	require.NoError(t, err)
 	attrs := eth.PayloadAttributes{
 		Timestamp:             eth.Uint64Quantity(safeHead.Time + cfg.BlockTime),
@@ -76,11 +78,11 @@ func TestAttributesQueue(t *testing.T) {
 		NoTxPool:              true,
 		GasLimit:              (*eth.Uint64Quantity)(&expectedL1Cfg.GasLimit),
 	}
-	attrBuilder := NewFetchingAttributesBuilder(cfg, l1Fetcher, l2Fetcher)
+	attrBuilder := NewFetchingAttributesBuilder(cfg, params.MergedTestChainConfig, nil, l1Fetcher, l2Fetcher)
 
 	aq := NewAttributesQueue(testlog.Logger(t, log.LevelError), cfg, attrBuilder, nil)
 
-	actual, err := aq.createNextAttributes(context.Background(), batch, safeHead)
+	actual, err := aq.createNextAttributes(context.Background(), &batch, safeHead)
 
 	require.NoError(t, err)
 	require.Equal(t, attrs, *actual)

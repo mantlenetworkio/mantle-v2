@@ -3,6 +3,7 @@ package derive
 import (
 	"context"
 	"io"
+	"slices"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -29,27 +30,27 @@ type NextFrameProvider interface {
 
 // ChannelBank buffers channel frames, and emits full channel data
 type ChannelBank struct {
-	log log.Logger
-	cfg *rollup.Config
+	log     log.Logger
+	spec    *rollup.ChainSpec
+	metrics Metrics
 
 	channels     map[ChannelID]*Channel // channels by ID
 	channelQueue []ChannelID            // channels in FIFO order
 
-	prev    NextFrameProvider
-	fetcher L1Fetcher
+	prev NextFrameProvider
 }
 
-var _ ResetableStage = (*ChannelBank)(nil)
+var _ RawChannelProvider = (*ChannelBank)(nil)
 
 // NewChannelBank creates a ChannelBank, which should be Reset(origin) before use.
-func NewChannelBank(log log.Logger, cfg *rollup.Config, prev NextFrameProvider, fetcher L1Fetcher) *ChannelBank {
+func NewChannelBank(log log.Logger, spec *rollup.ChainSpec, prev NextFrameProvider, m Metrics) *ChannelBank {
 	return &ChannelBank{
 		log:          log,
-		cfg:          cfg,
+		spec:         spec,
+		metrics:      m,
 		channels:     make(map[ChannelID]*Channel),
 		channelQueue: make([]ChannelID, 0, 10),
 		prev:         prev,
-		fetcher:      fetcher,
 	}
 }
 
@@ -64,7 +65,7 @@ func (cb *ChannelBank) prune() {
 		totalSize += ch.size
 	}
 	// prune until it is reasonable again. The high-priority channel failed to be read, so we start pruning there.
-	for totalSize > MaxChannelBankSize {
+	for totalSize > cb.spec.MaxChannelBankSize(cb.Origin().Time) {
 		id := cb.channelQueue[0]
 		ch := cb.channels[id]
 		cb.channelQueue = cb.channelQueue[1:]
@@ -83,15 +84,19 @@ func (cb *ChannelBank) IngestFrame(f Frame) {
 
 	currentCh, ok := cb.channels[f.ID]
 	if !ok {
+		// Only record a head channel if it can immediately be active.
+		if len(cb.channelQueue) == 0 {
+			cb.metrics.RecordHeadChannelOpened()
+		}
 		// create new channel if it doesn't exist yet
-		currentCh = NewChannel(f.ID, origin)
+		currentCh = NewChannel(f.ID, origin, false)
 		cb.channels[f.ID] = currentCh
 		cb.channelQueue = append(cb.channelQueue, f.ID)
 		log.Info("created new channel")
 	}
 
 	// check if the channel is not timed out
-	if currentCh.OpenBlockNumber()+cb.cfg.ChannelTimeout < origin.Number {
+	if currentCh.OpenBlockNumber()+cb.spec.ChannelTimeout(origin.Time) < origin.Number {
 		log.Warn("channel is timed out, ignore frame")
 		return
 	}
@@ -101,6 +106,7 @@ func (cb *ChannelBank) IngestFrame(f Frame) {
 		log.Warn("failed to ingest frame into channel", "err", err)
 		return
 	}
+	cb.metrics.RecordFrame()
 
 	// Prune after the frame is loaded.
 	cb.prune()
@@ -109,37 +115,67 @@ func (cb *ChannelBank) IngestFrame(f Frame) {
 // Read the raw data of the first channel, if it's timed-out or closed.
 // Read returns io.EOF if there is nothing new to read.
 func (cb *ChannelBank) Read() (data []byte, err error) {
+	// Common Code pre/post canyon. Return io.EOF if no channels
 	if len(cb.channelQueue) == 0 {
 		return nil, io.EOF
 	}
+	// Return nil,nil on the first channel if it is timed out. There may be more timed out
+	// channels at the head of the queue and we want to remove them all.
 	first := cb.channelQueue[0]
 	ch := cb.channels[first]
-	timedOut := ch.OpenBlockNumber()+cb.cfg.ChannelTimeout < cb.Origin().Number
+	timedOut := ch.OpenBlockNumber()+cb.spec.ChannelTimeout(cb.Origin().Time) < cb.Origin().Number
 	if timedOut {
 		cb.log.Info("channel timed out", "channel", first, "frames", len(ch.inputs))
+		cb.metrics.RecordChannelTimedOut()
 		delete(cb.channels, first)
 		cb.channelQueue = cb.channelQueue[1:]
 		return nil, nil // multiple different channels may all be timed out
 	}
-	if !ch.IsReady() {
+
+	// At the point we have removed all timed out channels from the front of the channelQueue.
+	// Pre-Canyon we simply check the first index.
+	// Post-Canyon we read the entire channelQueue for the first ready channel. If no channel is
+	// available, we return `nil, io.EOF`.
+	// Canyon is activated when the first L1 block whose time >= CanyonTime, not on the L2 timestamp.
+	if !cb.spec.IsCanyon(cb.Origin().Time) {
+		return cb.tryReadChannelAtIndex(0)
+	}
+
+	for i := 0; i < len(cb.channelQueue); i++ {
+		if data, err := cb.tryReadChannelAtIndex(i); err == nil {
+			return data, nil
+		}
+	}
+	return nil, io.EOF
+}
+
+// tryReadChannelAtIndex attempts to read the channel at the specified index. If the channel is
+// not ready (or timed out), it will return io.EOF.
+// If the channel read was successful, it will remove the channel from the channelQueue.
+func (cb *ChannelBank) tryReadChannelAtIndex(i int) (data []byte, err error) {
+	chanID := cb.channelQueue[i]
+	ch := cb.channels[chanID]
+	timedOut := ch.OpenBlockNumber()+cb.spec.ChannelTimeout(cb.Origin().Time) < cb.Origin().Number
+	if timedOut || !ch.IsReady() {
 		return nil, io.EOF
 	}
-	cb.log.Info("Reading channel", "channel", first, "frames", len(ch.inputs))
+	cb.log.Info("Reading channel", "channel", chanID, "frames", len(ch.inputs))
 
-	delete(cb.channels, first)
-	cb.channelQueue = cb.channelQueue[1:]
+	delete(cb.channels, chanID)
+	cb.channelQueue = slices.Delete(cb.channelQueue, i, i+1)
+	cb.metrics.RecordHeadChannelOpened()
 	r := ch.Reader()
 	// Suppress error here. io.ReadAll does return nil instead of io.EOF though.
 	data, _ = io.ReadAll(r)
 	return data, nil
 }
 
-// NextData pulls the next piece of data from the channel bank.
+// NextRawChannel pulls the next piece of data from the channel bank.
 // Note that it attempts to pull data out of the channel bank prior to
 // loading data in (unlike most other stages). This is to ensure maintain
 // consistency around channel bank pruning which depends upon the order
 // of operations.
-func (cb *ChannelBank) NextData(ctx context.Context) ([]byte, error) {
+func (cb *ChannelBank) NextRawChannel(ctx context.Context) ([]byte, error) {
 	// Do the read from the channel bank first
 	data, err := cb.Read()
 	if err == io.EOF {
@@ -165,6 +201,12 @@ func (cb *ChannelBank) Reset(ctx context.Context, base eth.L1BlockRef, _ eth.Sys
 	cb.channels = make(map[ChannelID]*Channel)
 	cb.channelQueue = make([]ChannelID, 0, 10)
 	return io.EOF
+}
+
+func (bq *ChannelBank) FlushChannel() {
+	// We need to implement the ChannelFlusher interface with the ChannelBank but it's never called
+	// of which the ChannelMux takes care.
+	panic("ChannelBank: invalid FlushChannel call")
 }
 
 type L1BlockRefByHashFetcher interface {
