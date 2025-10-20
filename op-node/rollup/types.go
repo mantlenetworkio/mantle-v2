@@ -132,6 +132,26 @@ type Config struct {
 	// Active if InteropTime != nil && L2 block timestamp >= *InteropTime, inactive otherwise.
 	InteropTime *uint64 `json:"interop_time,omitempty"`
 
+	// MantleEverestTime sets the activation time of the Everest network-upgrade:
+	// Active if MantleEverestTime != nil && L2 block timestamp >= *MantleEverestTime, inactive otherwise.
+	MantleEverestTime *uint64 `json:"mantle_everest_time,omitempty"`
+
+	// MantleEuboeaTime sets the activation time of the Euboea network-upgrade:
+	// Active if MantleEuboeaTime != nil && L2 block timestamp >= *MantleEuboeaTime, inactive otherwise.
+	MantleEuboeaTime *uint64 `json:"mantle_euboea_time,omitempty"`
+
+	// MantleSkadiTime sets the activation time of the Skadi network-upgrade:
+	// Active if MantleSkadiTime != nil && L2 block timestamp >= *MantleSkadiTime, inactive otherwise.
+	MantleSkadiTime *uint64 `json:"mantle_skadi_time,omitempty"`
+
+	// MantleLimbTime sets the activation time of the Limb network-upgrade:
+	// Active if MantleLimbTime != nil && L2 block timestamp >= *MantleLimbTime, inactive otherwise.
+	MantleLimbTime *uint64 `json:"mantle_limb_time,omitempty"`
+
+	// MantleArsiaTime sets the activation time of the Arsia network-upgrade:
+	// Active if MantleArsiaTime != nil && L2 block timestamp >= *MantleArsiaTime, inactive otherwise.
+	MantleArsiaTime *uint64 `json:"mantle_arsia_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -339,25 +359,16 @@ func (cfg *Config) Check() error {
 		return err
 	}
 
-	if err := checkFork(cfg.RegolithTime, cfg.CanyonTime, Regolith, Canyon); err != nil {
+	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.CanyonTime, cfg.DeltaTime, Canyon, Delta); err != nil {
+	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.DeltaTime, cfg.EcotoneTime, Delta, Ecotone); err != nil {
+	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.EcotoneTime, cfg.FjordTime, Ecotone, Fjord); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.FjordTime, cfg.GraniteTime, Fjord, Granite); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.GraniteTime, cfg.HoloceneTime, Granite, Holocene); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.HoloceneTime, cfg.IsthmusTime, Holocene, Isthmus); err != nil {
+	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
 		return err
 	}
 
@@ -436,6 +447,11 @@ func (c *Config) IsForkActive(fork ForkName, timestamp uint64) bool {
 	return activationTime != nil && timestamp >= *activationTime
 }
 
+func (c *Config) IsMantleForkActive(fork MantleForkName, timestamp uint64) bool {
+	activationTime := c.MantleActivationTimeFor(fork)
+	return activationTime != nil && timestamp >= *activationTime
+}
+
 // IsRegolith returns true if the Regolith hardfork is active at or past the given timestamp.
 func (c *Config) IsRegolith(timestamp uint64) bool {
 	return c.IsForkActive(Regolith, timestamp)
@@ -484,6 +500,31 @@ func (c *Config) IsJovian(timestamp uint64) bool {
 // IsInterop returns true if the Interop hardfork is active at or past the given timestamp.
 func (c *Config) IsInterop(timestamp uint64) bool {
 	return c.IsForkActive(Interop, timestamp)
+}
+
+// IsMantleEverest returns true if the MantleEverest hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleEverest(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleEverest, timestamp)
+}
+
+// IsMantleEuboea returns true if the MantleEuboea hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleEuboea(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleEuboea, timestamp)
+}
+
+// IsMantleSkadi returns true if the MantleSkadi hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleSkadi(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleSkadi, timestamp)
+}
+
+// IsMantleLimb returns true if the MantleLimb hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleLimb(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleLimb, timestamp)
+}
+
+// IsMantleArsia returns true if the MantleArsia hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleArsia(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleArsia, timestamp)
 }
 
 func (c *Config) IsRegolithActivationBlock(l2BlockTime uint64) bool {
@@ -558,28 +599,62 @@ func (c *Config) IsInteropActivationBlock(l2BlockTime uint64) bool {
 		!c.IsInterop(l2BlockTime-c.BlockTime)
 }
 
+// IsMantleEverestActivationBlock returns whether the specified block is the first block subject to the
+// MantleEverest upgrade.
+func (c *Config) IsMantleEverestActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleEverest, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleEverest, l2BlockTime-c.BlockTime)
+}
+
+// IsMantleEuboeaActivationBlock returns whether the specified block is the first block subject to the
+// MantleEuboea upgrade.
+func (c *Config) IsMantleEuboeaActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleEuboea, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleEuboea, l2BlockTime-c.BlockTime)
+}
+
+// IsMantleSkadiActivationBlock returns whether the specified block is the first block subject to the
+// MantleSkadi upgrade.
+func (c *Config) IsMantleSkadiActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleSkadi, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleSkadi, l2BlockTime-c.BlockTime)
+}
+
+// IsMantleLimbActivationBlock returns whether the specified block is the first block subject to the
+// MantleLimb upgrade.
+func (c *Config) IsMantleLimbActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleLimb, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleLimb, l2BlockTime-c.BlockTime)
+}
+
+// IsMantleArsiaActivationBlock returns whether the specified block is the first block subject to the
+// MantleArsia upgrade.
+func (c *Config) IsMantleArsiaActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleArsia, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleArsia, l2BlockTime-c.BlockTime)
+}
+
 func (c *Config) ActivationTimeFor(fork ForkName) *uint64 {
+	return c.MantleActivationTimeFor(ForkToMantleFork(fork))
+}
+
+func (c *Config) MantleActivationTimeFor(fork MantleForkName) *uint64 {
 	switch fork {
-	case Interop:
-		return c.InteropTime
-	case Jovian:
-		return c.JovianTime
-	case Isthmus:
-		return c.IsthmusTime
-	case Holocene:
-		return c.HoloceneTime
-	case Granite:
-		return c.GraniteTime
-	case Fjord:
-		return c.FjordTime
-	case Ecotone:
-		return c.EcotoneTime
-	case Delta:
-		return c.DeltaTime
-	case Canyon:
-		return c.CanyonTime
-	case Regolith:
-		return c.RegolithTime
+	case MantleArsia:
+		return c.MantleArsiaTime
+	case MantleLimb:
+		return c.MantleLimbTime
+	case MantleSkadi:
+		return c.MantleSkadiTime
+	case MantleEuboea:
+		return c.MantleEuboeaTime
+	case MantleEverest:
+		return c.MantleEverestTime
 	default:
 		panic(fmt.Sprintf("unknown fork: %v", fork))
 	}
@@ -624,41 +699,27 @@ func (c *Config) IsActivationBlockForFork(l2BlockTime uint64, forkName ForkName)
 }
 
 func (c *Config) ActivateAtGenesis(hardfork ForkName) {
-	// IMPORTANT! ordered from newest to oldest
+	// Existing the case for activating multiple optimism forks at the same time.
+	c.ActivateAtGenesisForMantle(ForkToMantleFork(hardfork))
+}
+
+func (c *Config) ActivateAtGenesisForMantle(hardfork MantleForkName) {
 	switch hardfork {
-	case Jovian:
-		c.JovianTime = new(uint64)
+	case MantleArsia:
+		c.MantleArsiaTime = new(uint64)
 		fallthrough
-	case Interop:
-		c.InteropTime = new(uint64)
+	case MantleLimb:
+		c.MantleLimbTime = new(uint64)
 		fallthrough
-	case Isthmus:
-		c.IsthmusTime = new(uint64)
+	case MantleSkadi:
+		c.MantleSkadiTime = new(uint64)
 		fallthrough
-	case Holocene:
-		c.HoloceneTime = new(uint64)
+	case MantleEuboea:
+		c.MantleEuboeaTime = new(uint64)
 		fallthrough
-	case Granite:
-		c.GraniteTime = new(uint64)
-		fallthrough
-	case Fjord:
-		c.FjordTime = new(uint64)
-		fallthrough
-	case Ecotone:
-		c.EcotoneTime = new(uint64)
-		fallthrough
-	case Delta:
-		c.DeltaTime = new(uint64)
-		fallthrough
-	case Canyon:
-		c.CanyonTime = new(uint64)
-		fallthrough
-	case Regolith:
-		c.RegolithTime = new(uint64)
-		fallthrough
-	case Bedrock:
-		// default
-	case None:
+	case MantleEverest:
+		c.MantleEverestTime = new(uint64)
+	case MantleNone:
 		break
 	}
 }
