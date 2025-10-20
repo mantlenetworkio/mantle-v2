@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/predeploys"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
@@ -13,9 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-
-	"github.com/ethereum-optimism/optimism/op-bindings/predeploys"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
@@ -56,6 +55,16 @@ func NewBlockProcessorFromPayloadAttributes(provider BlockDataProvider, parent c
 		Nonce:            types.EncodeNonce(0),
 		ParentBeaconRoot: attrs.ParentBeaconBlockRoot,
 	}
+	if attrs.EIP1559Params != nil {
+		d, e := eip1559.DecodeHolocene1559Params(attrs.EIP1559Params[:])
+		if d == 0 {
+			d = provider.Config().BaseFeeChangeDenominator(header.Time)
+			e = provider.Config().ElasticityMultiplier()
+		}
+		if provider.Config().IsOptimismHolocene(header.Time) {
+			header.Extra = eip1559.EncodeOptimismExtraData(provider.Config(), header.Time, d, e, attrs.MinBaseFee)
+		}
+	}
 
 	return NewBlockProcessorFromHeader(provider, header)
 }
@@ -75,14 +84,19 @@ func NewBlockProcessorFromHeader(provider BlockDataProvider, h *types.Header) (*
 		return nil, fmt.Errorf("get parent state: %w", err)
 	}
 	header.Number = new(big.Int).Add(parentHeader.Number, common.Big1)
-	header.BaseFee = eip1559.CalcBaseFee(provider.Config(), parentHeader)
+	header.BaseFee = eip1559.CalcBaseFee(provider.Config(), parentHeader, header.Time)
 	header.GasUsed = 0
 	gasPool := new(core.GasPool).AddGas(header.GasLimit)
 	mkEVM := func() *vm.EVM {
 		// Unfortunately this is not part of any Geth environment setup,
 		// we just have to apply it, like how the Geth block-builder worker does.
 		context := core.NewEVMBlockContext(header, provider, nil, provider.Config(), statedb)
-		vmenv := vm.NewEVM(context, statedb, provider.Config(), vm.Config{})
+		// NOTE: Unlikely to be needed for the beacon block root, but we setup any precompile overrides anyways for forwards-compatibility
+		var precompileOverrides vm.PrecompileOverrides
+		if vmConfig := provider.GetVMConfig(); vmConfig != nil && vmConfig.PrecompileOverrides != nil {
+			precompileOverrides = vmConfig.PrecompileOverrides
+		}
+		vmenv := vm.NewEVM(context, statedb, provider.Config(), vm.Config{PrecompileOverrides: precompileOverrides})
 		return vmenv
 	}
 	var vmenv *vm.EVM
@@ -102,7 +116,7 @@ func NewBlockProcessorFromHeader(provider BlockDataProvider, h *types.Header) (*
 	if provider.Config().IsPrague(header.Number, header.Time) {
 		core.ProcessParentBlockHash(header.ParentHash, vmenv)
 	}
-	if provider.Config().IsMantleSkadi(header.Time) {
+	if provider.Config().IsIsthmus(header.Time) {
 		// set the header withdrawals root for Isthmus blocks
 		mpHash := statedb.GetStorageRoot(predeploys.L2ToL1MessagePasserAddr)
 		header.WithdrawalsHash = &mpHash
@@ -149,13 +163,17 @@ func (b *BlockProcessor) Assemble() (*types.Block, types.Receipts, error) {
 
 	// Processing for EIP-7685 requests would happen here, but is skipped on OP.
 	// Kept here to minimize diff.
-	if b.dataProvider.Config().IsPrague(b.header.Number, b.header.Time) && !b.dataProvider.Config().IsMantleSkadi(b.header.Time) {
+	if b.dataProvider.Config().IsPrague(b.header.Number, b.header.Time) && !b.dataProvider.Config().IsIsthmus(b.header.Time) {
 		_requests := [][]byte{}
 		// EIP-6110 - no-op because we just ignore all deposit requests, so no need to parse logs
 		// EIP-7002
-		core.ProcessWithdrawalQueue(&_requests, b.evm)
+		if err := core.ProcessWithdrawalQueue(&_requests, b.evm); err != nil {
+			return nil, nil, err
+		}
 		// EIP-7251
-		core.ProcessConsolidationQueue(&_requests, b.evm)
+		if err := core.ProcessConsolidationQueue(&_requests, b.evm); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	block, err := b.dataProvider.Engine().FinalizeAndAssemble(b.dataProvider, b.header, b.state, &body, b.receipts)

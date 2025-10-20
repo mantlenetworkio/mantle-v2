@@ -1,1 +1,1 @@
-Please see our security policy document [here](https://github.com/mantlenetworkio/.github/blob/main/SECURITY.md).
+Please see our security policy document [here](https://github.com/ethereum-optimism/.github/blob/master/SECURITY.md).

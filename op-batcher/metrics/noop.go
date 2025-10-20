@@ -1,16 +1,25 @@
 package metrics
 
 import (
+	"io"
+	"math"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
+
+	"github.com/ethereum-optimism/optimism/op-batcher/config"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	txmetrics "github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type noopMetrics struct {
 	opmetrics.NoopRefMetrics
 	txmetrics.NoopTxMetrics
+	opmetrics.NoopRPCMetrics
 }
 
 var NoopMetrics Metricer = new(noopMetrics)
@@ -24,40 +33,48 @@ func (*noopMetrics) RecordLatestL1Block(l1ref eth.L1BlockRef)               {}
 func (*noopMetrics) RecordL2BlocksLoaded(eth.L2BlockRef)                    {}
 func (*noopMetrics) RecordChannelOpened(derive.ChannelID, int)              {}
 func (*noopMetrics) RecordL2BlocksAdded(eth.L2BlockRef, int, int, int, int) {}
-func (*noopMetrics) RecordL2BlockInPendingQueue(*types.Block)               {}
-func (*noopMetrics) RecordL2BlockInChannel(*types.Block)                    {}
+func (*noopMetrics) RecordL2BlockInPendingQueue(uint64, uint64)             {}
+func (*noopMetrics) RecordL2BlockInChannel(uint64, uint64)                  {}
+func (*noopMetrics) RecordPendingBlockPruned(uint64, uint64)                {}
 
 func (*noopMetrics) RecordChannelClosed(derive.ChannelID, int, int, int, int, error) {}
 
 func (*noopMetrics) RecordChannelFullySubmitted(derive.ChannelID) {}
 func (*noopMetrics) RecordChannelTimedOut(derive.ChannelID)       {}
+func (*noopMetrics) RecordChannelQueueLength(int)                 {}
+
+func (*noopMetrics) RecordThrottleIntensity(intensity float64, controllerType config.ThrottleControllerType) {
+}
+func (*noopMetrics) RecordThrottleParams(maxTxSize, maxBlockSize uint64)                       {}
+func (*noopMetrics) RecordThrottleControllerType(controllerType config.ThrottleControllerType) {}
+func (*noopMetrics) RecordUnsafeBytesVsThreshold(pendingBytes, threshold uint64, controllerType config.ThrottleControllerType) {
+}
+
+func (*noopMetrics) RecordUnsafeDABytes(int64) {}
+
+// PID Controller specific metrics
+func (*noopMetrics) RecordThrottleControllerState(error, integral, derivative float64) {}
+func (*noopMetrics) RecordThrottleResponseTime(duration time.Duration)                 {}
 
 func (*noopMetrics) RecordBatchTxSubmitted() {}
 func (*noopMetrics) RecordBatchTxSuccess()   {}
 func (*noopMetrics) RecordBatchTxFailed()    {}
-
-func (*noopMetrics) RecordBatchTxInitDataSubmitted() {}
-func (*noopMetrics) RecordBatchTxInitDataSuccess()   {}
-func (*noopMetrics) RecordBatchTxInitDataFailed()    {}
-
-func (*noopMetrics) RecordBatchTxConfirmDataSubmitted() {}
-func (*noopMetrics) RecordBatchTxConfirmDataSuccess()   {}
-func (*noopMetrics) RecordBatchTxConfirmDataFailed()    {}
-
-func (*noopMetrics) RecordRollupRetry(time int32) {}
-func (*noopMetrics) RecordDaRetry(time int32)     {}
-
-func (m *noopMetrics) RecordInitReferenceBlockNumber(dataStoreId uint32) {}
-func (m *noopMetrics) RecordConfirmedDataStoreId(dataStoreId uint32)     {}
-
-func (*noopMetrics) RecordTxOverMaxLimit() {}
-
-func (*noopMetrics) RecordDaNonSignerPubkeys(num int) {
-
+func (*noopMetrics) RecordBlobUsedBytes(int) {}
+func (*noopMetrics) StartBalanceMetrics(log.Logger, *ethclient.Client, common.Address) io.Closer {
+	return nil
+}
+func (nm *noopMetrics) PendingDABytes() float64 {
+	return 0.0
 }
 
-func (*noopMetrics) RecordEigenDAFailback(txs int) {}
-
-func (*noopMetrics) RecordInterval(method string) func(error) {
-	return func(error) {}
+// ThrottlingMetrics is a noopMetrics that always returns a max value for PendingDABytes, to use in testing batcher
+// backlog throttling.
+type ThrottlingMetrics struct {
+	noopMetrics
 }
+
+func (nm *ThrottlingMetrics) PendingDABytes() float64 {
+	return math.MaxFloat64
+}
+
+func (*noopMetrics) ClearAllStateMetrics() {}

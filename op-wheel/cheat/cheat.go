@@ -5,30 +5,32 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/tracing"
-	"github.com/holiman/uint256"
 	"io"
 	"math/big"
+	"path/filepath"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/ethdb/leveldb"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 
-	"github.com/ethereum-optimism/optimism/op-chain-ops/db"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-var HundredETH = uint256.NewInt(0).Mul(uint256.NewInt(100), uint256.NewInt(1000000000000000000))
+var HundredETH = big.NewInt(0).Mul(big.NewInt(100), big.NewInt(params.Ether))
 
 type Cheater struct {
 	// The database of the chain with the head block that we patch the state-root of, once the state is updated.
@@ -41,9 +43,17 @@ type Cheater struct {
 
 func OpenGethRawDB(dataDirPath string, readOnly bool) (ethdb.Database, error) {
 	// don't use readonly mode in actual DB, it doesn't work with Geth.
-	db, err := db.Open(dataDirPath, 2048, 500, true)
+	kvs, err := leveldb.New(dataDirPath, 2048, 500, "", readOnly)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open leveldb: %w", err)
+	}
+	db, err := rawdb.Open(kvs, rawdb.OpenOptions{
+		Ancient:          filepath.Join(dataDirPath, "ancient"),
+		MetricsNamespace: "",
+		ReadOnly:         readOnly,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to open db with freezer: %w", err)
 	}
 	return db, nil
 }
@@ -54,8 +64,7 @@ func OpenGethDB(dataDirPath string, readOnly bool) (*Cheater, error) {
 	if err != nil {
 		return nil, err
 	}
-	ch, err := core.NewBlockChain(db, nil, nil, nil,
-		beacon.New(ethash.NewFullFaker()), vm.Config{}, nil)
+	ch, err := core.NewBlockChain(db, nil, beacon.New(ethash.NewFullFaker()), nil)
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("failed to open blockchain around chain db: %w", err)
@@ -71,7 +80,7 @@ func (ch *Cheater) Close() error {
 	return ch.DB.Close()
 }
 
-type HeadFn func(headState *state.StateDB) error
+type HeadFn func(header *types.Header, headState *state.StateDB) error
 
 // RunAndClose runs the given function on the head-state, and then persists any changes (if not ReadOnly),
 // and updates the blockchain headers indexes to reflect the new state-root, so geth will believe the cheat
@@ -86,7 +95,7 @@ func (ch *Cheater) RunAndClose(fn HeadFn) error {
 		_ = ch.Close()
 		return fmt.Errorf("failed to look up head state: %w", err)
 	}
-	if err := fn(state); err != nil {
+	if err := fn(preHeader, state); err != nil {
 		_ = ch.Close()
 		return fmt.Errorf("failed to run state change: %w", err)
 	}
@@ -94,8 +103,9 @@ func (ch *Cheater) RunAndClose(fn HeadFn) error {
 		return ch.Close()
 	}
 
+	isCancun := ch.Blockchain.Config().IsCancun(preHeader.Number, preHeader.Time)
 	// commit the changes, and then update the state-root
-	stateRoot, err := state.Commit(preHeader.Number.Uint64()+1, false, false)
+	stateRoot, err := state.Commit(preHeader.Number.Uint64()+1, true, isCancun)
 	if err != nil {
 		_ = ch.Close()
 		return fmt.Errorf("failed to commit state change: %w", err)
@@ -159,7 +169,7 @@ func (ch *Cheater) RunAndClose(fn HeadFn) error {
 
 // StorageSet modifies the storage of the given address at the given key to the given value.
 func StorageSet(address common.Address, key common.Hash, value common.Hash) HeadFn {
-	return func(headState *state.StateDB) error {
+	return func(_ *types.Header, headState *state.StateDB) error {
 		headState.SetState(address, key, value)
 		return nil
 	}
@@ -167,7 +177,7 @@ func StorageSet(address common.Address, key common.Hash, value common.Hash) Head
 
 // StorageGet just reads the storage of the given address at the given key.
 func StorageGet(address common.Address, key common.Hash, w io.Writer) HeadFn {
-	return func(headState *state.StateDB) error {
+	return func(_ *types.Header, headState *state.StateDB) error {
 		value := headState.GetState(address, key)
 		_, err := io.WriteString(w, value.Hex())
 		return err
@@ -179,7 +189,7 @@ func StorageGet(address common.Address, key common.Hash, w io.Writer) HeadFn {
 // Combined with StoragePatch this allows for quick surgery of 1 account in one database,
 // to another account (maybe even in a different database!).
 func StorageReadAll(address common.Address, w io.Writer) HeadFn {
-	return func(headState *state.StateDB) error {
+	return func(_ *types.Header, headState *state.StateDB) error {
 		storage, err := headState.OpenStorageTrie(address)
 		if err != nil {
 			return fmt.Errorf("failed to open storage trie of addr %s: %w", address, err)
@@ -187,11 +197,11 @@ func StorageReadAll(address common.Address, w io.Writer) HeadFn {
 		if storage == nil {
 			return fmt.Errorf("no storage trie in state for account %s", address)
 		}
-		nit, err := storage.NodeIterator(nil)
+		nodeIter, err := storage.NodeIterator(nil)
 		if err != nil {
-			return fmt.Errorf("failed to get node iterator, err: %s", err)
+			return fmt.Errorf("failed to create node iterator for storage of %s: %w", address, err)
 		}
-		iter := trie.NewIterator(nit)
+		iter := trie.NewIterator(nodeIter)
 		for iter.Next() {
 			if _, err := fmt.Fprintf(w, "+ %x = %x\n", iter.Key, dbValueToHash(iter.Value)); err != nil {
 				return err
@@ -216,7 +226,7 @@ func dbValueToHash(enc []byte) common.Hash {
 // StorageDiff compares the storage of two different accounts, and writes a patch with differences.
 // Each difference is expressed with 1 character + or - to indicate the change from a to b, followed by key = value.
 func StorageDiff(out io.Writer, addressA, addressB common.Address) HeadFn {
-	return func(headState *state.StateDB) error {
+	return func(_ *types.Header, headState *state.StateDB) error {
 		aStorage, err := headState.OpenStorageTrie(addressA)
 		if err != nil {
 			return fmt.Errorf("failed to open storage trie of addr A %s: %w", addressA, err)
@@ -231,16 +241,16 @@ func StorageDiff(out io.Writer, addressA, addressB common.Address) HeadFn {
 		if bStorage == nil {
 			return fmt.Errorf("no storage trie in state for account B %s", addressB)
 		}
-		anit, err := aStorage.NodeIterator(nil)
+		aNodeIter, err := aStorage.NodeIterator(nil)
 		if err != nil {
-			return fmt.Errorf("failed to get node iterator, err: %s", err)
+			return fmt.Errorf("failed to create node iterator for storage of %s (A): %w", addressA, err)
 		}
-		bnit, err := bStorage.NodeIterator(nil)
+		bNodeIter, err := bStorage.NodeIterator(nil)
 		if err != nil {
-			return fmt.Errorf("failed to get node iterator, err: %s", err)
+			return fmt.Errorf("failed to create node iterator for storage of %s (b): %w", addressB, err)
 		}
-		aIter := trie.NewIterator(anit)
-		bIter := trie.NewIterator(bnit)
+		aIter := trie.NewIterator(aNodeIter)
+		bIter := trie.NewIterator(bNodeIter)
 		hasA := aIter.Next()
 		hasB := bIter.Next()
 		for {
@@ -284,7 +294,7 @@ func StorageDiff(out io.Writer, addressA, addressB common.Address) HeadFn {
 // Deletions are prefixed with (-) and overwrite it to a zero value.
 // Comments (#) and empty lines are ignored.
 func StoragePatch(patch io.Reader, address common.Address) HeadFn {
-	return func(headState *state.StateDB) error {
+	return func(head *types.Header, headState *state.StateDB) error {
 		s := bufio.NewScanner(patch)
 		i := 0
 		for s.Scan() {
@@ -312,7 +322,8 @@ func StoragePatch(patch io.Reader, address common.Address) HeadFn {
 			}
 			i += 1
 			if i%1000 == 0 { // for every 1000 values, commit to disk
-				if _, err := headState.Commit(uint64(i), false, false); err != nil {
+				// warning: if the account is empty, the storage change will not persist.
+				if _, err := headState.Commit(head.Number.Uint64(), true, false); err != nil {
 					return fmt.Errorf("failed to commit state to disk after patching %d entries: %w", i, err)
 				}
 			}
@@ -321,68 +332,23 @@ func StoragePatch(patch io.Reader, address common.Address) HeadFn {
 	}
 }
 
-type OvmOwnersConfig struct {
-	Network   string         `json:"network"`
-	Owner     common.Address `json:"owner"`
-	Sequencer common.Address `json:"sequencer"`
-	Proposer  common.Address `json:"proposer"`
-}
-
-func OvmOwners(conf *OvmOwnersConfig) HeadFn {
-	return func(headState *state.StateDB) error {
-		var addressManager common.Address // Lib_AddressManager
-		var l1SBProxy common.Address      // Proxy__OVM_L1StandardBridge
-		var l1XDMProxy common.Address     // Proxy__OVM_L1CrossDomainMessenger
-		var l1ERC721BridgeProxy common.Address
-		switch conf.Network {
-		case "mainnet":
-			addressManager = common.HexToAddress("0xdE1FCfB0851916CA5101820A69b13a4E276bd81F")
-			l1SBProxy = common.HexToAddress("0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1")
-			l1XDMProxy = common.HexToAddress("0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1")
-			l1ERC721BridgeProxy = common.HexToAddress("0x5a7749f83b81B301cAb5f48EB8516B986DAef23D")
-		case "goerli":
-			addressManager = common.HexToAddress("0xa6f73589243a6A7a9023b1Fa0651b1d89c177111")
-			l1SBProxy = common.HexToAddress("0x636Af16bf2f682dD3109e60102b8E1A089FedAa8")
-			l1XDMProxy = common.HexToAddress("0x5086d1eEF304eb5284A0f6720f79403b4e9bE294")
-			l1ERC721BridgeProxy = common.HexToAddress("0x8DD330DdE8D9898d43b4dc840Da27A07dF91b3c9")
-		default:
-			return fmt.Errorf("unknown network: %q", conf.Network)
-		}
-		// See Proxy.sol OWNER_KEY: https://eips.ethereum.org/EIPS/eip-1967#admin-address
-		ownerSlot := common.HexToHash("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
-
-		// Address manager owner
-		// Ownable, first storage slot
-		headState.SetState(addressManager, common.Hash{}, conf.Owner.Hash())
-		// L1SB proxy owner
-		headState.SetState(l1SBProxy, ownerSlot, conf.Owner.Hash())
-		// L1XDM owner
-		// 0x33 = 51. L1CrossDomainMessenger is L1CrossDomainMessenger (0) Lib_AddressResolver (1) OwnableUpgradeable (1, but covered by gap) + ContextUpgradeable (special gap of 50) and then _owner
-		headState.SetState(l1XDMProxy, common.Hash{31: 0x33}, conf.Owner.Hash())
-		// L1 ERC721 bridge owner
-		headState.SetState(l1ERC721BridgeProxy, ownerSlot, conf.Owner.Hash())
-		// Legacy sequencer/proposer addresses
-		// See AddressManager.sol "addresses" mapping(bytes32 => address), at slot position 1
-		addressesSlot := common.BigToHash(big.NewInt(1))
-		headState.SetState(addressManager, crypto.Keccak256Hash(crypto.Keccak256([]byte("OVM_Sequencer")), addressesSlot.Bytes()), conf.Sequencer.Hash())
-		headState.SetState(addressManager, crypto.Keccak256Hash(crypto.Keccak256([]byte("OVM_Proposer")), addressesSlot.Bytes()), conf.Proposer.Hash())
-		// Fund sequencer and proposer with 100 ETH
-		headState.SetBalance(conf.Sequencer, HundredETH, tracing.BalanceMint)
-		headState.SetBalance(conf.Proposer, HundredETH, tracing.BalanceMint)
+func SetBalance(addr common.Address, amount *big.Int) HeadFn {
+	return func(_ *types.Header, headState *state.StateDB) error {
+		headState.SetBalance(addr, uint256.MustFromBig(amount), tracing.BalanceChangeUnspecified)
 		return nil
 	}
 }
 
-func SetBalance(addr common.Address, amount *uint256.Int) HeadFn {
-	return func(headState *state.StateDB) error {
-		headState.SetBalance(addr, amount, tracing.BalanceMint)
+func SetCode(addr common.Address, code hexutil.Bytes) HeadFn {
+	return func(_ *types.Header, headState *state.StateDB) error {
+		headState.SetCode(addr, code)
 		return nil
 	}
 }
 
 func SetNonce(addr common.Address, nonce uint64) HeadFn {
-	return func(headState *state.StateDB) error {
-		headState.SetNonce(addr, nonce, tracing.NonceChangeUnspecified)
+	return func(_ *types.Header, headState *state.StateDB) error {
+		headState.SetNonce(addr, nonce, tracing.NonceChangeEoACall)
 		return nil
 	}
 }

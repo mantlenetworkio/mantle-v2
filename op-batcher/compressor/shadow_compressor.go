@@ -1,22 +1,29 @@
 package compressor
 
 import (
-	"bytes"
-	"compress/zlib"
-
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+)
+
+const (
+	// safeCompressionOverhead is the largest potential blow-up in bytes we expect to see when
+	// compressing arbitrary (e.g. random) data.  Here we account for a 2 byte header, 4 byte
+	// digest, 5 byte EOF indicator, and then 5 byte flate block header for each 16k of potential
+	// data. Assuming frames are max 128k size (the current max blob size) this is 2+4+5+(5*8) = 51
+	// bytes.  If we start using larger frames (e.g. should max blob size increase) a larger blowup
+	// might be possible, but it would be highly unlikely, and the system still works if our
+	// estimate is wrong -- we just end up writing one more tx for the overflow.
+	safeCompressionOverhead = 51
 )
 
 type ShadowCompressor struct {
 	config Config
 
-	buf      bytes.Buffer
-	compress *zlib.Writer
-
-	shadowBuf      bytes.Buffer
-	shadowCompress *zlib.Writer
+	compressor       derive.ChannelCompressor
+	shadowCompressor derive.ChannelCompressor
 
 	fullErr error
+
+	bound uint64 // best known upperbound on the size of the compressed output
 }
 
 // NewShadowCompressor creates a new derive.Compressor implementation that contains two
@@ -32,60 +39,74 @@ func NewShadowCompressor(config Config) (derive.Compressor, error) {
 	}
 
 	var err error
-	c.compress, err = zlib.NewWriterLevel(&c.buf, zlib.BestCompression)
+	c.compressor, err = derive.NewChannelCompressor(config.CompressionAlgo)
 	if err != nil {
 		return nil, err
 	}
-	c.shadowCompress, err = zlib.NewWriterLevel(&c.shadowBuf, zlib.BestCompression)
+	c.shadowCompressor, err = derive.NewChannelCompressor(config.CompressionAlgo)
 	if err != nil {
 		return nil, err
 	}
 
+	c.bound = safeCompressionOverhead
 	return c, nil
 }
 
 func (t *ShadowCompressor) Write(p []byte) (int, error) {
-	_, err := t.shadowCompress.Write(p)
+	if t.fullErr != nil {
+		return 0, t.fullErr
+	}
+	_, err := t.shadowCompressor.Write(p)
 	if err != nil {
 		return 0, err
 	}
-	err = t.shadowCompress.Flush()
-	if err != nil {
-		return 0, err
-	}
-	if uint64(t.shadowBuf.Len()) > t.config.TargetFrameSize*uint64(t.config.TargetNumFrames) {
-		t.fullErr = derive.CompressorFullErr
-		if t.Len() > 0 {
-			// only return an error if we've already written data to this compressor before
-			// (otherwise individual blocks over the target would never be written)
-			return 0, t.fullErr
+	newBound := t.bound + uint64(len(p))
+	if newBound > t.config.TargetOutputSize {
+		// Do not flush the buffer unless there's some chance we will be over the size limit.
+		// This reduces CPU but more importantly it makes the shadow compression ratio more
+		// closely reflect the ultimate compression ratio.
+		if err = t.shadowCompressor.Flush(); err != nil {
+			return 0, err
+		}
+		newBound = uint64(t.shadowCompressor.Len()) + CloseOverheadZlib
+		if newBound > t.config.TargetOutputSize {
+			t.fullErr = derive.ErrCompressorFull
+			if t.Len() > 0 {
+				// only return an error if we've already written data to this compressor before
+				// (otherwise single blocks over the target would never be written)
+				return 0, t.fullErr
+			}
 		}
 	}
-	return t.compress.Write(p)
+	t.bound = newBound
+	return t.compressor.Write(p)
 }
 
 func (t *ShadowCompressor) Close() error {
-	return t.compress.Close()
+	err := t.shadowCompressor.Close()
+	if err != nil {
+		return err
+	}
+	return t.compressor.Close()
 }
 
 func (t *ShadowCompressor) Read(p []byte) (int, error) {
-	return t.buf.Read(p)
+	return t.compressor.Read(p)
 }
 
 func (t *ShadowCompressor) Reset() {
-	t.buf.Reset()
-	t.compress.Reset(&t.buf)
-	t.shadowBuf.Reset()
-	t.shadowCompress.Reset(&t.shadowBuf)
+	t.compressor.Reset()
+	t.shadowCompressor.Reset()
 	t.fullErr = nil
+	t.bound = safeCompressionOverhead
 }
 
 func (t *ShadowCompressor) Len() int {
-	return t.buf.Len()
+	return t.compressor.Len()
 }
 
 func (t *ShadowCompressor) Flush() error {
-	return t.compress.Flush()
+	return t.compressor.Flush()
 }
 
 func (t *ShadowCompressor) FullErr() error {

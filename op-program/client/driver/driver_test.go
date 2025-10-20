@@ -3,127 +3,118 @@ package driver
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
-	"github.com/ethereum-optimism/optimism/op-service/testlog"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum/go-ethereum/log"
+
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/event"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
 
-func TestDerivationComplete(t *testing.T) {
-	driver := createDriver(t, fmt.Errorf("derivation complete: %w", io.EOF))
-	err := driver.Step(context.Background())
-	require.ErrorIs(t, err, io.EOF)
+var mockErr = errors.New("mock error")
+
+type fakeEnd struct {
+	closing bool
+	result  error
 }
 
-func TestTemporaryError(t *testing.T) {
-	driver := createDriver(t, fmt.Errorf("whoopsie: %w", derive.ErrTemporary))
-	err := driver.Step(context.Background())
-	require.ErrorIs(t, err, derive.ErrTemporary)
+func (d *fakeEnd) Closing() bool {
+	return d.closing
 }
 
-func TestNotEnoughDataError(t *testing.T) {
-	driver := createDriver(t, fmt.Errorf("idk: %w", derive.NotEnoughData))
-	err := driver.Step(context.Background())
-	require.NoError(t, err)
+func (d *fakeEnd) Result() (eth.L2BlockRef, error) {
+	return eth.L2BlockRef{}, d.result
 }
 
-func TestGenericError(t *testing.T) {
-	expected := errors.New("boom")
-	driver := createDriver(t, expected)
-	err := driver.Step(context.Background())
-	require.ErrorIs(t, err, expected)
-}
-
-func TestTargetBlock(t *testing.T) {
-	t.Run("Reached", func(t *testing.T) {
-		driver := createDriverWithNextBlock(t, derive.NotEnoughData, 1000)
-		driver.targetBlockNum = 1000
-		err := driver.Step(context.Background())
-		require.ErrorIs(t, err, io.EOF)
-	})
-
-	t.Run("Exceeded", func(t *testing.T) {
-		driver := createDriverWithNextBlock(t, derive.NotEnoughData, 1000)
-		driver.targetBlockNum = 500
-		err := driver.Step(context.Background())
-		require.ErrorIs(t, err, io.EOF)
-	})
-
-	t.Run("NotYetReached", func(t *testing.T) {
-		driver := createDriverWithNextBlock(t, derive.NotEnoughData, 1000)
-		driver.targetBlockNum = 1001
-		err := driver.Step(context.Background())
-		// No error to indicate derivation should continue
-		require.NoError(t, err)
-	})
-}
-
-func TestNoError(t *testing.T) {
-	driver := createDriver(t, nil)
-	err := driver.Step(context.Background())
-	require.NoError(t, err)
-}
-
-func TestValidateClaim(t *testing.T) {
-	t.Run("Valid", func(t *testing.T) {
-		driver := createDriver(t, io.EOF)
-		expected := eth.Bytes32{0x11}
-		driver.l2OutputRoot = func() (eth.Bytes32, error) {
-			return expected, nil
+func TestDriver(t *testing.T) {
+	newTestDriver := func(t *testing.T, onEvent func(d *Driver, end *fakeEnd, ev event.Event)) *Driver {
+		logger := testlog.Logger(t, log.LevelInfo)
+		end := &fakeEnd{}
+		d := &Driver{
+			logger: logger,
+			end:    end,
 		}
-		err := driver.ValidateClaim(expected)
+		d.deriver = event.DeriverFunc(func(ctx context.Context, ev event.Event) bool {
+			onEvent(d, end, ev)
+			return true
+		})
+		return d
+	}
+
+	t.Run("insta complete", func(t *testing.T) {
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			end.closing = true
+		})
+		_, err := d.RunComplete()
 		require.NoError(t, err)
 	})
 
-	t.Run("Invalid", func(t *testing.T) {
-		driver := createDriver(t, io.EOF)
-		driver.l2OutputRoot = func() (eth.Bytes32, error) {
-			return eth.Bytes32{0x22}, nil
-		}
-		err := driver.ValidateClaim(eth.Bytes32{0x11})
-		require.ErrorIs(t, err, ErrClaimNotValid)
+	t.Run("insta error", func(t *testing.T) {
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			end.closing = true
+			end.result = mockErr
+		})
+		_, err := d.RunComplete()
+		require.ErrorIs(t, mockErr, err)
 	})
 
-	t.Run("Error", func(t *testing.T) {
-		driver := createDriver(t, io.EOF)
-		expectedErr := errors.New("boom")
-		driver.l2OutputRoot = func() (eth.Bytes32, error) {
-			return eth.Bytes32{}, expectedErr
-		}
-		err := driver.ValidateClaim(eth.Bytes32{0x11})
-		require.ErrorIs(t, err, expectedErr)
+	t.Run("success after a few events", func(t *testing.T) {
+		count := 0
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			if count > 3 {
+				end.closing = true
+				return
+			}
+			count += 1
+			d.Emit(context.Background(), TestEvent{})
+		})
+		_, err := d.RunComplete()
+		require.NoError(t, err)
 	})
-}
 
-func createDriver(t *testing.T, derivationResult error) *Driver {
-	return createDriverWithNextBlock(t, derivationResult, 0)
-}
+	t.Run("error after a few events", func(t *testing.T) {
+		count := 0
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			if count > 3 {
+				end.closing = true
+				end.result = mockErr
+				return
+			}
+			count += 1
+			d.Emit(context.Background(), TestEvent{})
+		})
+		_, err := d.RunComplete()
+		require.ErrorIs(t, mockErr, err)
+	})
 
-func createDriverWithNextBlock(t *testing.T, derivationResult error, nextBlockNum uint64) *Driver {
-	derivation := &stubDerivation{nextErr: derivationResult, nextBlockNum: nextBlockNum}
-	return &Driver{
-		logger:         testlog.Logger(t, log.LvlDebug),
-		pipeline:       derivation,
-		targetBlockNum: 1_000_000,
-	}
-}
+	t.Run("exhaust events", func(t *testing.T) {
+		count := 0
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			if count < 3 { // stop generating events after a while, without changing end condition
+				d.Emit(context.Background(), TestEvent{})
+			}
+			count += 1
+		})
+		// No further processing to be done so evaluate if the claims output root is correct.
+		_, err := d.RunComplete()
+		require.NoError(t, err)
+	})
 
-type stubDerivation struct {
-	nextErr      error
-	nextBlockNum uint64
-}
-
-func (s stubDerivation) Step(ctx context.Context) error {
-	return s.nextErr
-}
-
-func (s stubDerivation) SafeL2Head() eth.L2BlockRef {
-	return eth.L2BlockRef{
-		Number: s.nextBlockNum,
-	}
+	t.Run("queued events", func(t *testing.T) {
+		count := 0
+		d := newTestDriver(t, func(d *Driver, end *fakeEnd, ev event.Event) {
+			if count < 3 {
+				d.Emit(context.Background(), TestEvent{})
+				d.Emit(context.Background(), TestEvent{})
+			}
+			count += 1
+		})
+		_, err := d.RunComplete()
+		require.NoError(t, err)
+		// add 1 for initial event that RunComplete fires
+		require.Equal(t, 1+3*2, count, "must have queued up 2 events 3 times")
+	})
 }

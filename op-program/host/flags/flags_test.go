@@ -19,7 +19,6 @@ func TestUniqueFlags(t *testing.T) {
 			}
 			seenCLI[name] = struct{}{}
 		}
-
 	}
 }
 
@@ -40,22 +39,22 @@ func TestCorrectEnvVarPrefix(t *testing.T) {
 	for _, flag := range Flags {
 		envVar := envVarForFlag(flag)
 		if envVar == "" {
-			t.Errorf("Failed to find EnvVars for flag %v", flag.Names())
+			t.Errorf("Failed to find EnvVar for flag %v", flag.Names()[0])
 		}
 		if !strings.HasPrefix(envVar, "OP_PROGRAM_") {
-			t.Errorf("Flag %v env var (%v) does not start with OP_PROGRAM_", flag.Names(), envVar)
+			t.Errorf("Flag %v env var (%v) does not start with OP_PROGRAM_", flag.Names()[0], envVar)
 		}
 		if strings.Contains(envVar, "__") {
-			t.Errorf("Flag %v env var (%v) has duplicate underscores", flag.Names(), envVar)
+			t.Errorf("Flag %v env var (%v) has duplicate underscores", flag.Names()[0], envVar)
 		}
 	}
 }
 
 func envVarForFlag(flag cli.Flag) string {
 	values := reflect.ValueOf(flag)
-	envVarValue := values.FieldByName("EnvVars")
-	if envVarValue == (reflect.Value{}) {
+	envVarValue := values.Elem().FieldByName("EnvVars")
+	if envVarValue == (reflect.Value{}) || envVarValue.Len() == 0 {
 		return ""
 	}
-	return envVarValue.String()
+	return envVarValue.Index(0).String()
 }

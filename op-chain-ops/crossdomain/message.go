@@ -16,8 +16,7 @@ type CrossDomainMessage struct {
 	Nonce    *big.Int       `json:"nonce"`
 	Sender   common.Address `json:"sender"`
 	Target   common.Address `json:"target"`
-	MntValue *big.Int       `json:"mntValue"`
-	EthValue *big.Int       `json:"ethValue"`
+	Value    *big.Int       `json:"value"`
 	GasLimit *big.Int       `json:"gasLimit"`
 	Data     []byte         `json:"data"`
 }
@@ -26,15 +25,14 @@ type CrossDomainMessage struct {
 func NewCrossDomainMessage(
 	nonce *big.Int,
 	sender, target common.Address,
-	mntValue, ethValue, gasLimit *big.Int,
+	value, gasLimit *big.Int,
 	data []byte,
 ) *CrossDomainMessage {
 	return &CrossDomainMessage{
 		Nonce:    nonce,
 		Sender:   sender,
 		Target:   target,
-		MntValue: mntValue,
-		EthValue: ethValue,
+		Value:    value,
 		GasLimit: gasLimit,
 		Data:     data,
 	}
@@ -54,7 +52,7 @@ func (c *CrossDomainMessage) Encode() ([]byte, error) {
 	case 0:
 		return EncodeCrossDomainMessageV0(c.Target, c.Sender, c.Data, c.Nonce)
 	case 1:
-		return EncodeCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.MntValue, c.EthValue, c.GasLimit, c.Data)
+		return EncodeCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.Value, c.GasLimit, c.Data)
 	default:
 		return nil, fmt.Errorf("unknown version %d", version)
 	}
@@ -67,7 +65,7 @@ func (c *CrossDomainMessage) Hash() (common.Hash, error) {
 	case 0:
 		return HashCrossDomainMessageV0(c.Target, c.Sender, c.Data, c.Nonce)
 	case 1:
-		return HashCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.MntValue, c.EthValue, c.GasLimit, c.Data)
+		return HashCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.Value, c.GasLimit, c.Data)
 	default:
 		return common.Hash{}, fmt.Errorf("unknown version %d", version)
 	}
@@ -76,5 +74,5 @@ func (c *CrossDomainMessage) Hash() (common.Hash, error) {
 // HashV1 forces using the V1 hash even if its a legacy hash. This is used
 // for the migration process.
 func (c *CrossDomainMessage) HashV1() (common.Hash, error) {
-	return HashCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.MntValue, c.EthValue, c.GasLimit, c.Data)
+	return HashCrossDomainMessageV1(c.Nonce, c.Sender, c.Target, c.Value, c.GasLimit, c.Data)
 }
