@@ -1,6 +1,6 @@
 module github.com/ethereum-optimism/optimism
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.23.8
 
@@ -75,6 +75,8 @@ require (
 	golang.org/x/time v0.11.0
 	gonum.org/v1/plot v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
+	github.com/go-resty/resty/v2 v2.16.5
+	cloud.google.com/go/kms v1.12.1
 )
 
 require (
@@ -308,7 +310,7 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101603.1-rc.1
+replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0
 
 // replace github.com/ethereum/go-ethereum => ../op-geth
 
