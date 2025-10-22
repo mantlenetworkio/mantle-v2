@@ -60,9 +60,36 @@ contract L1Block is Semver {
     uint256 public l1FeeScalar;
 
     /**
+     * @notice The scalar value applied to the L1 base fee portion of the
+     *         blob-capable L1 cost func.
+     */
+    uint32 public baseFeeScalar;
+
+    /**
+     * @notice The scalar value applied to the L1 blob base fee portion of the
+     *         blob-capable L1 cost func.
+     */
+    uint32 public blobBaseFeeScalar;
+
+    /**
+     * @notice The latest L1 blob base fee.
+     */
+    uint256 public blobBaseFee;
+
+    /**
+     * @notice The constant value applied to the operator fee.
+     */
+    uint64 public operatorFeeConstant;
+
+    /**
+     * @notice The scalar value applied to the operator fee.
+     */
+    uint32 public operatorFeeScalar;
+
+    /**
      * @custom:semver 1.0.0
      */
-    constructor() Semver(1, 0, 0) {}
+    constructor() Semver(1, 0, 0) { }
 
     /**
      * @notice Updates the L1 block values.
@@ -85,11 +112,10 @@ contract L1Block is Semver {
         bytes32 _batcherHash,
         uint256 _l1FeeOverhead,
         uint256 _l1FeeScalar
-    ) external {
-        require(
-            msg.sender == DEPOSITOR_ACCOUNT,
-            "L1Block: only the depositor account can set L1 block values"
-        );
+    )
+        external
+    {
+        require(msg.sender == DEPOSITOR_ACCOUNT, "L1Block: only the depositor account can set L1 block values");
 
         number = _number;
         timestamp = _timestamp;
@@ -99,5 +125,60 @@ contract L1Block is Semver {
         batcherHash = _batcherHash;
         l1FeeOverhead = _l1FeeOverhead;
         l1FeeScalar = _l1FeeScalar;
+    }
+
+    /// @notice Updates the L1 block values for Arsia upgraded chain.
+    /// Params are packed and passed in as raw msg.data instead of ABI to reduce calldata size.
+    /// Params are expected to be in the following order:
+    ///   1. _baseFeeScalar        L1 base fee scalar (uint32)             - 4 bytes
+    ///   2. _blobBaseFeeScalar    L1 blob base fee scalar (uint32)       - 4 bytes
+    ///   3. _sequenceNumber       Number of L2 blocks since epoch (uint64) - 8 bytes
+    ///   4. _timestamp            L1 timestamp (uint64)                   - 8 bytes
+    ///   5. _number               L1 blocknumber (uint64)                 - 8 bytes
+    ///   6. _basefee              L1 base fee (uint256)                   - 32 bytes
+    ///   7. _blobBaseFee          L1 blob base fee (uint256)              - 32 bytes
+    ///   8. _hash                 L1 blockhash (bytes32)                  - 32 bytes
+    ///   9. _batcherHash          Versioned hash (bytes32)                - 32 bytes
+    ///   10. _operatorFeeScalar   Operator fee scalar (uint32)            - 4 bytes
+    ///   11. _operatorFeeConstant Operator fee constant (uint64)          - 8 bytes
+    function setL1BlockValuesArsia() public {
+        _setL1BlockValuesArsia();
+    }
+
+    /// @notice Internal function to set L1 block values for Arsia upgrade.
+    ///         Uses assembly for gas optimization. Calls Ecotone setter first,
+    ///         then adds operator fee parameters.
+    function _setL1BlockValuesArsia() internal {
+        assembly {
+            // Revert if the caller is not the depositor account.
+            if xor(caller(), DEPOSITOR_ACCOUNT) {
+                mstore(0x00, 0x3cc50b45) // 0x3cc50b45 is the 4-byte selector of "NotDepositor()"
+                revert(0x1C, 0x04) // returns the stored 4-byte selector from above
+            }
+
+            // sequenceNumber (uint64), blobBaseFeeScalar (uint32), baseFeeScalar (uint32)
+            sstore(sequenceNumber.slot, shr(128, calldataload(4)))
+
+            // number (uint64) and timestamp (uint64)
+            sstore(number.slot, shr(128, calldataload(20)))
+
+            // basefee (uint256)
+            sstore(basefee.slot, calldataload(36))
+
+            // blobBaseFee (uint256)
+            sstore(blobBaseFee.slot, calldataload(68))
+
+            // hash (bytes32)
+            sstore(hash.slot, calldataload(100))
+
+            // batcherHash (bytes32)
+            sstore(batcherHash.slot, calldataload(132))
+
+            // operatorFeeConstant (uint64), operatorFeeScalar (uint32)
+            // Bytes 164-167: operatorFeeScalar (uint32)
+            // Bytes 168-175: operatorFeeConstant (uint64)
+            // Packed: [operatorFeeScalar(32)][operatorFeeConstant(64)]
+            sstore(operatorFeeConstant.slot, shr(160, calldataload(164)))
+        }
     }
 }

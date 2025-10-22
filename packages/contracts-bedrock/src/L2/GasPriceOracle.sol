@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { Semver } from "../universal/Semver.sol";
 import { Predeploys } from "../libraries/Predeploys.sol";
 import { L1Block } from "../L2/L1Block.sol";
+import { Arithmetic } from "../libraries/Arithmetic.sol";
 
 /**
  * @custom:proxied
@@ -31,32 +32,44 @@ contract GasPriceOracle is Semver {
     address public operator;
 
     /**
-     * @custom:semver 1.0.0
+     * @notice Indicates whether the network uses Arsia gas calculation.
      */
-    constructor() Semver(1, 0, 0) {}
+    bool public isArsia;
 
-    /**********
-    * Events *
-    **********/
+    /**
+     *
+     * Events *
+     *
+     */
     event TokenRatioUpdated(uint256 indexed previousTokenRatio, uint256 indexed newTokenRatio);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
 
-    /**********
-    * Modifiers *
-    **********/
+    /**
+     *
+     * Modifiers *
+     *
+     */
     modifier onlyOwner() {
         require(owner == msg.sender, "Caller is not the owner");
         _;
     }
+
     modifier onlyOperator() {
         require(operator == msg.sender, "Caller is not the operator");
         _;
     }
 
     /**
-    * Allows the owner to modify the operator.
-    * @param _operator New operator
+     * @custom:semver 1.0.0
+     */
+    constructor() Semver(1, 0, 0) {
+        isArsia = false;
+    }
+
+    /**
+     * Allows the owner to modify the operator.
+     * @param _operator New operator
      */
     // slither-disable-next-line external-function
     function setOperator(address _operator) external onlyOwner {
@@ -77,14 +90,22 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-    * Allows the operator to modify the token ratio.
-    * @param _tokenRatio New tokenRatio
+     * Allows the operator to modify the token ratio.
+     * @param _tokenRatio New tokenRatio
      */
     // slither-disable-next-line external-function
     function setTokenRatio(uint256 _tokenRatio) external onlyOperator {
         uint256 previousTokenRatio = tokenRatio;
         tokenRatio = _tokenRatio;
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
+    }
+
+    /**
+     * @notice Set chain to be Arsia chain (callable by owner)
+     */
+    function setArsia() external onlyOwner {
+        require(isArsia == false, "GasPriceOracle: Arsia already active");
+        isArsia = true;
     }
 
     /**
@@ -96,12 +117,10 @@ contract GasPriceOracle is Semver {
      * @return L1 fee that should be paid for the tx
      */
     function getL1Fee(bytes memory _data) external view returns (uint256) {
-        uint256 l1GasUsed = getL1GasUsed(_data);
-        uint256 l1Fee = l1GasUsed * l1BaseFee();
-        uint256 divisor = 10**DECIMALS;
-        uint256 unscaled = l1Fee * scalar();
-        uint256 scaled = unscaled / divisor;
-        return scaled;
+        if (isArsia) {
+            return _getL1FeeArsia(_data);
+        }
+        return _getL1FeeBedrock(_data);
     }
 
     /**
@@ -150,13 +169,48 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-     * @custom:legacy
-     * @notice Retrieves the number of decimals used in the scalar.
+     * @notice Retrieves the current blob base fee.
      *
-     * @return Number of decimals used in the scalar.
+     * @return Current blob base fee.
      */
-    function decimals() public pure returns (uint256) {
-        return DECIMALS;
+    function blobBaseFee() public view returns (uint256) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).blobBaseFee();
+    }
+
+    /**
+     * @notice Retrieves the current base fee scalar.
+     *
+     * @return Current base fee scalar.
+     */
+    function baseFeeScalar() public view returns (uint32) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).baseFeeScalar();
+    }
+
+    /**
+     * @notice Retrieves the current blob base fee scalar.
+     *
+     * @return Current blob base fee scalar.
+     */
+    function blobBaseFeeScalar() public view returns (uint32) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).blobBaseFeeScalar();
+    }
+
+    /**
+     * @notice Retrieves the operator fee scalar.
+     *
+     * @return Operator fee scalar.
+     */
+    function operatorFeeScalar() public view returns (uint32) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).operatorFeeScalar();
+    }
+
+    /**
+     * @notice Retrieves the operator fee constant.
+     *
+     * @return Operator fee constant.
+     */
+    function operatorFeeConstant() public view returns (uint64) {
+        return L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).operatorFeeConstant();
     }
 
     /**
@@ -170,6 +224,69 @@ contract GasPriceOracle is Semver {
      * @return Amount of L1 gas used to publish the transaction.
      */
     function getL1GasUsed(bytes memory _data) public view returns (uint256) {
+        uint256 l1GasUsed = _getCalldataGas(_data);
+        return l1GasUsed + overhead();
+    }
+
+    function getOperatorFee(uint256 _gasUsed) public view returns (uint256) {
+        if (!isArsia) {
+            return 0;
+        }
+        return Arithmetic.saturatingAdd(
+            Arithmetic.saturatingMul(_gasUsed, operatorFeeScalar()) / 1e6, operatorFeeConstant()
+        );
+    }
+
+    /**
+     * @custom:legacy
+     * @notice Retrieves the number of decimals used in the scalar.
+     *
+     * @return Number of decimals used in the scalar.
+     */
+    function decimals() public pure returns (uint256) {
+        return DECIMALS;
+    }
+
+    /**
+     * @notice Computes the L1 portion of the fee for Bedrock.
+     *
+     * @param _data Unsigned fully RLP-encoded transaction to get the L1 fee for.
+     *
+     * @return L1 fee that should be paid for the tx
+     */
+    function _getL1FeeBedrock(bytes memory _data) internal view returns (uint256) {
+        uint256 l1GasUsed = getL1GasUsed(_data);
+        uint256 l1Fee = l1GasUsed * l1BaseFee();
+        uint256 divisor = 10 ** DECIMALS;
+        uint256 unscaled = l1Fee * scalar();
+        uint256 scaled = unscaled / divisor;
+        return scaled;
+    }
+
+    /**
+     * @notice Computes the L1 portion of the fee for Arsia.
+     *
+     * @param _data Unsigned fully RLP-encoded transaction to get the L1 fee for.
+     *
+     * @return L1 fee that should be paid for the tx
+     */
+    function _getL1FeeArsia(bytes memory _data) internal view returns (uint256) {
+        uint256 l1GasUsed = _getCalldataGas(_data);
+        uint256 scaledBaseFee = baseFeeScalar() * 16 * l1BaseFee();
+        uint256 scaledBlobBaseFee = blobBaseFeeScalar() * blobBaseFee();
+        uint256 fee = l1GasUsed * (scaledBaseFee + scaledBlobBaseFee);
+        return fee / (16 * 10 ** DECIMALS);
+    }
+
+    /**
+     * @notice Computes the amount of L1 gas used for a transaction. Adds 68 bytes
+     *         of padding to account for the fact that the input does not have a signature.
+     *
+     * @param _data Unsigned fully RLP-encoded transaction to get the L1 gas for.
+     *
+     * @return Amount of L1 gas used to publish the transaction.
+     */
+    function _getCalldataGas(bytes memory _data) internal pure returns (uint256) {
         uint256 total = 0;
         uint256 length = _data.length;
         for (uint256 i = 0; i < length; i++) {
@@ -179,7 +296,6 @@ contract GasPriceOracle is Semver {
                 total += 16;
             }
         }
-        uint256 unsigned = total + overhead();
-        return unsigned + (68 * 16);
+        return total + (68 * 16);
     }
 }

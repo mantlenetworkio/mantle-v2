@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import {
-    OwnableUpgradeable
-} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Semver } from "../universal/Semver.sol";
 import { ResourceMetering } from "./ResourceMetering.sol";
 
@@ -22,13 +20,23 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @custom:value GAS_LIMIT            Represents an update to gas limit on L2.
      * @custom:value UNSAFE_BLOCK_SIGNER  Represents an update to the signer key for unsafe
      *                                    block distrubution.
+     * @custom:value BASE_FEE             Represents an update to L2 base fee.
+     * @custom:value MIN_BASE_FEE         Represents an update to the minimum base fee.
+     * @custom:value EIP_1559_PARAMS      Represents an update to EIP-1559 parameters.
+     * @custom:value FEE_SCALARS          Represents an update to l1 data fee scalars.
+     * @custom:value OPERATOR_FEE_PARAMS  Represents an update to operator fee parameters.
      */
     enum UpdateType {
-        BATCHER,                // Batcher submitter address
-        GAS_CONFIG,             // L2 gas overhead/scalar
-        GAS_LIMIT,              // L2 gas limit
-        UNSAFE_BLOCK_SIGNER,    // L2 sequencer signer
-        BASE_FEE                // L2 base fee
+        BATCHER, // Batcher submitter address
+        GAS_CONFIG, // L2 gas overhead/scalar (legacy)
+        GAS_LIMIT, // L2 gas limit
+        UNSAFE_BLOCK_SIGNER, // L2 sequencer signer
+        BASE_FEE, // L2 base fee
+        MIN_BASE_FEE, // Minimum base fee
+        FEE_SCALARS, // L1 base fee and blob fee scalars
+        EIP_1559_PARAMS, // EIP-1559 parameters
+        OPERATOR_FEE_PARAMS // Operator fee scalar and constant
+
     }
 
     /**
@@ -77,6 +85,41 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     uint256 public baseFee;
 
     /**
+     * @notice The EIP-1559 base fee max change denominator.
+     */
+    uint32 public eip1559Denominator;
+
+    /**
+     * @notice The EIP-1559 elasticity multiplier.
+     */
+    uint32 public eip1559Elasticity;
+
+    /**
+     * @notice The minimum base fee, in wei.
+     */
+    uint64 public minBaseFee;
+
+    /**
+     * @notice Basefee scalar value. Part of the L2 fee calculation.
+     */
+    uint32 public basefeeScalar;
+
+    /**
+     * @notice Blobbasefee scalar value. Part of the L2 fee calculation.
+     */
+    uint32 public blobbasefeeScalar;
+
+    /**
+     * @notice The operator fee scalar.
+     */
+    uint32 public operatorFeeScalar;
+
+    /**
+     * @notice The operator fee constant.
+     */
+    uint64 public operatorFeeConstant;
+
+    /**
      * @notice Emitted when configuration is updated
      *
      * @param version    SystemConfig version.
@@ -95,6 +138,8 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @param _gasLimit          Initial gas limit.
      * @param _unsafeBlockSigner Initial unsafe block signer address.
      * @param _config            Initial resource config.
+     * @param _basefeeScalar     Initial basefee scalar value.
+     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      */
     constructor(
         address _owner,
@@ -104,8 +149,12 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        ResourceMetering.ResourceConfig memory _config
-    ) Semver(1, 3, 0) {
+        ResourceMetering.ResourceConfig memory _config,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar
+    )
+        Semver(1, 3, 0)
+    {
         initialize({
             _owner: _owner,
             _overhead: _overhead,
@@ -114,7 +163,9 @@ contract SystemConfig is OwnableUpgradeable, Semver {
             _gasLimit: _gasLimit,
             _baseFee: _baseFee,
             _unsafeBlockSigner: _unsafeBlockSigner,
-            _config: _config
+            _config: _config,
+            _basefeeScalar: _basefeeScalar,
+            _blobbasefeeScalar: _blobbasefeeScalar
         });
     }
 
@@ -129,6 +180,8 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @param _gasLimit          Initial gas limit.
      * @param _unsafeBlockSigner Initial unsafe block signer address.
      * @param _config            Initial ResourceConfig.
+     * @param _basefeeScalar     Initial basefee scalar value.
+     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      */
     function initialize(
         address _owner,
@@ -138,8 +191,13 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        ResourceMetering.ResourceConfig memory _config
-    ) public initializer {
+        ResourceMetering.ResourceConfig memory _config,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar
+    )
+        public
+        initializer
+    {
         __Ownable_init();
         transferOwnership(_owner);
         overhead = _overhead;
@@ -147,6 +205,8 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         batcherHash = _batcherHash;
         gasLimit = _gasLimit;
         baseFee = _baseFee;
+        basefeeScalar = _basefeeScalar;
+        blobbasefeeScalar = _blobbasefeeScalar;
         _setUnsafeBlockSigner(_unsafeBlockSigner);
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
@@ -245,6 +305,70 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         emit ConfigUpdate(VERSION, UpdateType.BASE_FEE, data);
     }
 
+    /// @notice Updates the EIP-1559 parameters of the chain. Can only be called by the owner.
+    /// @param _denominator EIP-1559 base fee max change denominator.
+    /// @param _elasticity  EIP-1559 elasticity multiplier.
+    function setEIP1559Params(uint32 _denominator, uint32 _elasticity) external onlyOwner {
+        _setEIP1559Params(_denominator, _elasticity);
+    }
+
+    /// @notice Internal function for updating the EIP-1559 parameters.
+    function _setEIP1559Params(uint32 _denominator, uint32 _elasticity) internal {
+        // require the parameters have sane values:
+        require(_denominator >= 1, "SystemConfig: denominator must be >= 1");
+        require(_elasticity >= 1, "SystemConfig: elasticity must be >= 1");
+        eip1559Denominator = _denominator;
+        eip1559Elasticity = _elasticity;
+
+        bytes memory data = abi.encode(uint256(_denominator) << 32 | uint64(_elasticity));
+        emit ConfigUpdate(VERSION, UpdateType.EIP_1559_PARAMS, data);
+    }
+
+    /// @notice Updates the minimum base fee. Can only be called by the owner.
+    ///         Setting this value to 0 is equivalent to disabling the min base fee feature
+    /// @param _minBaseFee New minimum base fee.
+    function setMinBaseFee(uint64 _minBaseFee) external onlyOwner {
+        _setMinBaseFee(_minBaseFee);
+    }
+
+    /// @notice Internal function for updating the minimum base fee.
+    function _setMinBaseFee(uint64 _minBaseFee) internal {
+        minBaseFee = _minBaseFee;
+        bytes memory data = abi.encode(_minBaseFee);
+        emit ConfigUpdate(VERSION, UpdateType.MIN_BASE_FEE, data);
+    }
+
+    /**
+     * @notice Updates gas config for Arsia.
+     *
+     * @param _basefeeScalar     New basefeeScalar value.
+     * @param _blobbasefeeScalar New blobbasefeeScalar value.
+     */
+    function setGasConfigArsia(uint32 _basefeeScalar, uint32 _blobbasefeeScalar) external onlyOwner {
+        basefeeScalar = _basefeeScalar;
+        blobbasefeeScalar = _blobbasefeeScalar;
+
+        // Update the legacy scalar field for compatibility
+        scalar = (uint256(0x01) << 248) | (uint256(_blobbasefeeScalar) << 32) | _basefeeScalar;
+
+        bytes memory data = abi.encode(overhead, scalar);
+        emit ConfigUpdate(VERSION, UpdateType.FEE_SCALARS, data);
+    }
+
+    /**
+     * @notice Updates the operator fee parameters.
+     *
+     * @param _operatorFeeScalar   New operator fee scalar.
+     * @param _operatorFeeConstant New operator fee constant.
+     */
+    function setOperatorFeeScalars(uint32 _operatorFeeScalar, uint64 _operatorFeeConstant) external onlyOwner {
+        operatorFeeScalar = _operatorFeeScalar;
+        operatorFeeConstant = _operatorFeeConstant;
+
+        bytes memory data = abi.encode((uint256(_operatorFeeScalar) << 64) | _operatorFeeConstant);
+        emit ConfigUpdate(VERSION, UpdateType.OPERATOR_FEE_PARAMS, data);
+    }
+
     /**
      * @notice Low level setter for the unsafe block signer address. This function exists to
      *         deduplicate code around storing the unsafeBlockSigner address in storage.
@@ -288,29 +412,19 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     function _setResourceConfig(ResourceMetering.ResourceConfig memory _config) internal {
         // Min base fee must be less than or equal to max base fee.
         require(
-            _config.minimumBaseFee <= _config.maximumBaseFee,
-            "SystemConfig: min base fee must be less than max base"
+            _config.minimumBaseFee <= _config.maximumBaseFee, "SystemConfig: min base fee must be less than max base"
         );
         // Base fee change denominator must be greater than 1.
-        require(
-            _config.baseFeeMaxChangeDenominator > 1,
-            "SystemConfig: denominator must be larger than 1"
-        );
+        require(_config.baseFeeMaxChangeDenominator > 1, "SystemConfig: denominator must be larger than 1");
         // Max resource limit plus system tx gas must be less than or equal to the L2 gas limit.
         // The gas limit must be increased before these values can be increased.
-        require(
-            _config.maxResourceLimit + _config.systemTxMaxGas <= gasLimit,
-            "SystemConfig: gas limit too low"
-        );
+        require(_config.maxResourceLimit + _config.systemTxMaxGas <= gasLimit, "SystemConfig: gas limit too low");
         // Elasticity multiplier must be greater than 0.
-        require(
-            _config.elasticityMultiplier > 0,
-            "SystemConfig: elasticity multiplier cannot be 0"
-        );
+        require(_config.elasticityMultiplier > 0, "SystemConfig: elasticity multiplier cannot be 0");
         // No precision loss when computing target resource limit.
         require(
-            ((_config.maxResourceLimit / _config.elasticityMultiplier) *
-                _config.elasticityMultiplier) == _config.maxResourceLimit,
+            ((_config.maxResourceLimit / _config.elasticityMultiplier) * _config.elasticityMultiplier)
+                == _config.maxResourceLimit,
             "SystemConfig: precision loss with target resource limit"
         );
 
