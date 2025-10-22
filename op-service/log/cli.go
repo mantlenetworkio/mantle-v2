@@ -249,18 +249,7 @@ func NewLogger(wr io.Writer, cfg CLIConfig) log.Logger {
 func SetGlobalLogHandler(h slog.Handler) {
 	l := log.NewLogger(h)
 	ctx := logfilter.AddLogAttrToContext(context.Background(), "global", true)
-
-	// Try to use SetContext if available (newer versions),
-	// otherwise fall back to With() for backward compatibility
-	type contextSetter interface {
-		SetContext(context.Context)
-	}
-	if setter, ok := l.(contextSetter); ok {
-		setter.SetContext(ctx)
-	} else {
-		// For older versions without SetContext, use With() instead
-		l = l.With("global", true)
-	}
+	l.SetContext(ctx)
 	log.SetDefault(l)
 }
 
