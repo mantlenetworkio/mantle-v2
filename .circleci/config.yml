@@ -2746,6 +2746,7 @@ workflows:
             - da-server-docker-release
             - op-ufm-docker-release
             - op-supervisor-docker-release
+            - op-supernode-docker-release
             - op-test-sequencer-docker-release
             - cannon-docker-release
             - op-dripper-docker-release
@@ -2924,6 +2925,7 @@ workflows:
                 - op-dispute-mon
                 - op-conductor
                 - op-supervisor
+                - op-supernode
                 - op-test-sequencer
                 - cannon
                 - op-dripper
@@ -2953,6 +2955,7 @@ workflows:
                 - op-dispute-mon
                 - op-conductor
                 - op-supervisor
+                - op-supernode
                 - op-test-sequencer
                 - cannon
                 - op-dripper
