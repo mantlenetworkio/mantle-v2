@@ -29,6 +29,8 @@ contract DeployImplementations is Script {
         uint256 systemConfig_baseFee;
         address systemConfig_unsafeBlockSigner;
         IResourceMetering.ResourceConfig systemConfig_config;
+        uint32 systemConfig_basefeeScalar;
+        uint32 systemConfig_blobbasefeeScalar;
         IOptimismPortal optimismPortal;
         address l1mnt;
         IL1CrossDomainMessenger l1CrossDomainMessenger;
@@ -104,7 +106,9 @@ contract DeployImplementations is Script {
                             _input.systemConfig_gasLimit,
                             _input.systemConfig_baseFee,
                             _input.systemConfig_unsafeBlockSigner,
-                            _input.systemConfig_config
+                            _input.systemConfig_config,
+                            _input.systemConfig_basefeeScalar,
+                            _input.systemConfig_blobbasefeeScalar
                         )
                     )
                 )

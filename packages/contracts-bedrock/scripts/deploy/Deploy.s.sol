@@ -161,6 +161,8 @@ contract Deploy is Deployer {
                 systemConfig_baseFee: cfg.l2GenesisBlockBaseFeePerGas(),
                 systemConfig_unsafeBlockSigner: cfg.p2pSequencerAddress(),
                 systemConfig_config: defaultResourceConfig(),
+                systemConfig_basefeeScalar: 0,
+                systemConfig_blobbasefeeScalar: 0,
                 optimismPortal: IOptimismPortal(payable(artifacts.mustGetAddress("OptimismPortalProxy"))),
                 l1mnt: cfg.l1MantleToken(),
                 l1CrossDomainMessenger: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessengerProxy")),
@@ -273,7 +275,9 @@ contract Deploy is Deployer {
                 uint64(cfg.l2GenesisBlockGasLimit()),
                 cfg.l2GenesisBlockBaseFeePerGas(),
                 cfg.p2pSequencerAddress(),
-                defaultResourceConfig()
+                defaultResourceConfig(),
+                0,
+                0
             )
         );
         vm.broadcast(msg.sender);
