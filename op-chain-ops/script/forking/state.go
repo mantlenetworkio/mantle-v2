@@ -278,8 +278,12 @@ func (fst *ForkableState) GetCode(address common.Address) []byte {
 	return fst.stateFor(address).GetCode(address)
 }
 
-func (fst *ForkableState) SetCode(address common.Address, bytes []byte) []byte {
-	return fst.stateFor(address).SetCode(address, bytes)
+func (fst *ForkableState) SetCodeDefault(address common.Address, bytes []byte) []byte {
+	return fst.stateFor(address).SetCode(address, bytes, tracing.CodeChangeUnspecified)
+}
+
+func (fst *ForkableState) SetCode(address common.Address, bytes []byte, reason tracing.CodeChangeReason) []byte {
+	return fst.stateFor(address).SetCode(address, bytes, reason)
 }
 
 func (fst *ForkableState) GetCodeSize(address common.Address) int {
