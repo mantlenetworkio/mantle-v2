@@ -16,26 +16,24 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @notice Enum representing different types of updates.
      *
      * @custom:value BATCHER              Represents an update to the batcher hash.
-     * @custom:value GAS_CONFIG           Represents an update to txn fee config on L2.
+     * @custom:value FEE_SCALARS          Represents an update to l1 data fee scalars.
      * @custom:value GAS_LIMIT            Represents an update to gas limit on L2.
      * @custom:value UNSAFE_BLOCK_SIGNER  Represents an update to the signer key for unsafe
      *                                    block distrubution.
      * @custom:value BASE_FEE             Represents an update to L2 base fee.
-     * @custom:value MIN_BASE_FEE         Represents an update to the minimum base fee.
      * @custom:value EIP_1559_PARAMS      Represents an update to EIP-1559 parameters.
-     * @custom:value FEE_SCALARS          Represents an update to l1 data fee scalars.
      * @custom:value OPERATOR_FEE_PARAMS  Represents an update to operator fee parameters.
+     * @custom:value MIN_BASE_FEE         Represents an update to the minimum base fee.
      */
     enum UpdateType {
         BATCHER, // Batcher submitter address
-        GAS_CONFIG, // L2 gas overhead/scalar (legacy)
+        FEE_SCALARS, // L1 base fee and blob fee scalars
         GAS_LIMIT, // L2 gas limit
         UNSAFE_BLOCK_SIGNER, // L2 sequencer signer
         BASE_FEE, // L2 base fee
-        MIN_BASE_FEE, // Minimum base fee
-        FEE_SCALARS, // L1 base fee and blob fee scalars
         EIP_1559_PARAMS, // EIP-1559 parameters
-        OPERATOR_FEE_PARAMS // Operator fee scalar and constant
+        OPERATOR_FEE_PARAMS, // Operator fee scalar and constant
+        MIN_BASE_FEE // Minimum base fee
 
     }
 
@@ -85,21 +83,6 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     uint256 public baseFee;
 
     /**
-     * @notice The EIP-1559 base fee max change denominator.
-     */
-    uint32 public eip1559Denominator;
-
-    /**
-     * @notice The EIP-1559 elasticity multiplier.
-     */
-    uint32 public eip1559Elasticity;
-
-    /**
-     * @notice The minimum base fee, in wei.
-     */
-    uint64 public minBaseFee;
-
-    /**
      * @notice Basefee scalar value. Part of the L2 fee calculation.
      */
     uint32 public basefeeScalar;
@@ -108,6 +91,16 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @notice Blobbasefee scalar value. Part of the L2 fee calculation.
      */
     uint32 public blobbasefeeScalar;
+
+    /**
+     * @notice The EIP-1559 base fee max change denominator.
+     */
+    uint32 public eip1559Denominator;
+
+    /**
+     * @notice The EIP-1559 elasticity multiplier.
+     */
+    uint32 public eip1559Elasticity;
 
     /**
      * @notice The operator fee scalar.
@@ -120,6 +113,11 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     uint64 public operatorFeeConstant;
 
     /**
+     * @notice The minimum base fee, in wei.
+     */
+    uint64 public minBaseFee;
+
+    /**
      * @notice Emitted when configuration is updated
      *
      * @param version    SystemConfig version.
@@ -129,43 +127,37 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     event ConfigUpdate(uint256 indexed version, UpdateType indexed updateType, bytes data);
 
     /**
-     * @custom:semver 1.3.0
+     * @custom:semver 1.4.0
      *
      * @param _owner             Initial owner of the contract.
-     * @param _overhead          Initial overhead value.
-     * @param _scalar            Initial scalar value.
+     * @param _basefeeScalar     Initial basefee scalar value.
+     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      * @param _batcherHash       Initial batcher hash.
      * @param _gasLimit          Initial gas limit.
      * @param _unsafeBlockSigner Initial unsafe block signer address.
      * @param _config            Initial resource config.
-     * @param _basefeeScalar     Initial basefee scalar value.
-     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      */
     constructor(
         address _owner,
-        uint256 _overhead,
-        uint256 _scalar,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        ResourceMetering.ResourceConfig memory _config,
-        uint32 _basefeeScalar,
-        uint32 _blobbasefeeScalar
+        ResourceMetering.ResourceConfig memory _config
     )
-        Semver(1, 3, 0)
+        Semver(1, 4, 0)
     {
         initialize({
             _owner: _owner,
-            _overhead: _overhead,
-            _scalar: _scalar,
+            _basefeeScalar: _basefeeScalar,
+            _blobbasefeeScalar: _blobbasefeeScalar,
             _batcherHash: _batcherHash,
             _gasLimit: _gasLimit,
             _baseFee: _baseFee,
             _unsafeBlockSigner: _unsafeBlockSigner,
-            _config: _config,
-            _basefeeScalar: _basefeeScalar,
-            _blobbasefeeScalar: _blobbasefeeScalar
+            _config: _config
         });
     }
 
@@ -174,34 +166,28 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      *         require check.
      *
      * @param _owner             Initial owner of the contract.
-     * @param _overhead          Initial overhead value.
-     * @param _scalar            Initial scalar value.
+     * @param _basefeeScalar     Initial basefee scalar value.
+     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      * @param _batcherHash       Initial batcher hash.
      * @param _gasLimit          Initial gas limit.
      * @param _unsafeBlockSigner Initial unsafe block signer address.
      * @param _config            Initial ResourceConfig.
-     * @param _basefeeScalar     Initial basefee scalar value.
-     * @param _blobbasefeeScalar Initial blobbasefee scalar value.
      */
     function initialize(
         address _owner,
-        uint256 _overhead,
-        uint256 _scalar,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        ResourceMetering.ResourceConfig memory _config,
-        uint32 _basefeeScalar,
-        uint32 _blobbasefeeScalar
+        ResourceMetering.ResourceConfig memory _config
     )
         public
         initializer
     {
         __Ownable_init();
         transferOwnership(_owner);
-        overhead = _overhead;
-        scalar = _scalar;
         batcherHash = _batcherHash;
         gasLimit = _gasLimit;
         baseFee = _baseFee;
@@ -268,7 +254,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
 
     /**
      * @notice Updates gas config.
-     *
+     *         Deprecated in favor of setGasConfigArsia since the Arsia upgrade.
      * @param _overhead New overhead value.
      * @param _scalar   New scalar value.
      */
@@ -277,7 +263,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         scalar = _scalar;
 
         bytes memory data = abi.encode(_overhead, _scalar);
-        emit ConfigUpdate(VERSION, UpdateType.GAS_CONFIG, data);
+        emit ConfigUpdate(VERSION, UpdateType.FEE_SCALARS, data);
     }
 
     /**

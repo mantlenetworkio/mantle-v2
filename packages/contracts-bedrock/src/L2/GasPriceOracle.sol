@@ -61,11 +61,9 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-     * @custom:semver 1.0.0
+     * @custom:semver 1.1.0
      */
-    constructor() Semver(1, 0, 0) {
-        isArsia = false;
-    }
+    constructor() Semver(1, 1, 0) { }
 
     /**
      * Allows the owner to modify the operator.

@@ -8,40 +8,34 @@ import { IResourceMetering } from "interfaces/L1/IResourceMetering.sol";
 interface ISystemConfig {
     /// @notice Constructor function with the same parameters as SystemConfig
     /// @param _owner             Initial owner of the contract
-    /// @param _overhead          Initial overhead value
-    /// @param _scalar            Initial scalar value
+    /// @param _basefeeScalar     Initial basefee scalar value
+    /// @param _blobbasefeeScalar Initial blobbasefee scalar value
     /// @param _batcherHash       Initial batcher hash
     /// @param _gasLimit          Initial gas limit
     /// @param _baseFee           Initial base fee
     /// @param _unsafeBlockSigner Initial unsafe block signer address
     /// @param _config            Initial resource config
-    /// @param _basefeeScalar     Initial basefee scalar value
-    /// @param _blobbasefeeScalar Initial blobbasefee scalar value
     function __constructor__(
         address _owner,
-        uint256 _overhead,
-        uint256 _scalar,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        IResourceMetering.ResourceConfig memory _config,
-        uint32 _basefeeScalar,
-        uint32 _blobbasefeeScalar
+        IResourceMetering.ResourceConfig memory _config
     )
         external;
 
     function initialize(
         address _owner,
-        uint256 _overhead,
-        uint256 _scalar,
+        uint32 _basefeeScalar,
+        uint32 _blobbasefeeScalar,
         bytes32 _batcherHash,
         uint64 _gasLimit,
         uint256 _baseFee,
         address _unsafeBlockSigner,
-        IResourceMetering.ResourceConfig memory _config,
-        uint32 _basefeeScalar,
-        uint32 _blobbasefeeScalar
+        IResourceMetering.ResourceConfig memory _config
     )
         external;
 

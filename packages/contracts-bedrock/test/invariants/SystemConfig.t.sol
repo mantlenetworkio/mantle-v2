@@ -13,8 +13,8 @@ contract SystemConfig_GasLimitLowerBound_Invariant is Test {
 
         config = new SystemConfig({
             _owner: address(0xbeef),
-            _overhead: 2100,
-            _scalar: 1000000,
+            _basefeeScalar: 0,
+            _blobbasefeeScalar: 0,
             _batcherHash: bytes32(hex"abcd"),
             _gasLimit: 30_000_000,
             _baseFee: 1_000_000_000,

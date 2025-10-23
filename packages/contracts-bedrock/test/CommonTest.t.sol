@@ -206,8 +206,8 @@ contract Portal_Initializer is BVMETH_Initializer {
 
         systemConfig = new SystemConfig({
             _owner: address(1),
-            _overhead: 0,
-            _scalar: 10000,
+            _basefeeScalar: 0,
+            _blobbasefeeScalar: 0,
             _batcherHash: bytes32(0),
             _gasLimit: 30_000_000,
             _baseFee: 1_000_000_000,
