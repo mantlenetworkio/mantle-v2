@@ -72,7 +72,7 @@ func fuzzReceipts(typeProvider *fuzz.Fuzzer, blockHash common.Hash, depositContr
 				}
 
 				// Marshal our actual log event
-				ev, err = MarshalDepositLogEvent(depositContractAddr, dep)
+				ev, err = MarshalDepositLogEventV0(depositContractAddr, dep)
 				if err != nil {
 					panic(err)
 				}

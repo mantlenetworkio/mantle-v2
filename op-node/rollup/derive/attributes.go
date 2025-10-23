@@ -122,44 +122,15 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	}
 
 	var upgradeTxs []hexutil.Bytes
-	if ba.rollupCfg.IsEcotoneActivationBlock(nextL2Time) {
-		upgradeTxs, err = EcotoneNetworkUpgradeTransactions()
+	if ba.rollupCfg.IsMantleSkadiActivationBlock(nextL2Time) {
+		mantleSkadi, err := MantleSkadiNetworkUpgradeTransactions()
 		if err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to build ecotone network upgrade txs: %w", err))
+			return nil, NewCriticalError(fmt.Errorf("failed to build mantle skadi network upgrade txs: %w", err))
 		}
+		upgradeTxs = append(upgradeTxs, mantleSkadi...)
 	}
 
-	if ba.rollupCfg.IsFjordActivationBlock(nextL2Time) {
-		fjord, err := FjordNetworkUpgradeTransactions()
-		if err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to build fjord network upgrade txs: %w", err))
-		}
-		upgradeTxs = append(upgradeTxs, fjord...)
-	}
-
-	if ba.rollupCfg.IsIsthmusActivationBlock(nextL2Time) {
-		isthmus, err := IsthmusNetworkUpgradeTransactions()
-		if err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to build isthmus network upgrade txs: %w", err))
-		}
-		upgradeTxs = append(upgradeTxs, isthmus...)
-	}
-
-	if ba.rollupCfg.IsInteropActivationBlock(nextL2Time) {
-		interop, err := InteropNetworkUpgradeTransactions()
-		if err != nil {
-			return nil, NewCriticalError(fmt.Errorf("failed to build interop network upgrade txs: %w", err))
-		}
-		upgradeTxs = append(upgradeTxs, interop...)
-
-		if len(ba.depSet.Chains()) > 1 {
-			txs, err := InteropActivateCrossL2InboxTransactions()
-			if err != nil {
-				return nil, NewCriticalError(fmt.Errorf("failed to build interop cross l2 inbox txs: %w", err))
-			}
-			upgradeTxs = append(upgradeTxs, txs...)
-		}
-	}
+	// TODO-ARSIA: Add mantle arsia network upgrade txs
 
 	l1InfoTx, err := L1InfoDepositBytes(ba.rollupCfg, ba.l1ChainConfig, sysConfig, seqNumber, l1Info, nextL2Time)
 	if err != nil {
@@ -203,6 +174,9 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	}
 	if ba.rollupCfg.IsMinBaseFee(nextL2Time) {
 		r.MinBaseFee = &sysConfig.MinBaseFee
+	}
+	if ba.rollupCfg.IsMantleBaseFee(nextL2Time) && !ba.rollupCfg.IsMantleArsia(nextL2Time) {
+		r.BaseFee = sysConfig.BaseFee
 	}
 	return r, nil
 }

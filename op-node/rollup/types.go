@@ -132,6 +132,10 @@ type Config struct {
 	// Active if InteropTime != nil && L2 block timestamp >= *InteropTime, inactive otherwise.
 	InteropTime *uint64 `json:"interop_time,omitempty"`
 
+	// MantleBaseFeeTime sets the activation time of the Mantle BaseFee network-upgrade:
+	// Active if MantleBaseFeeTime != nil && L2 block timestamp >= *MantleBaseFeeTime, inactive otherwise.
+	MantleBaseFeeTime *uint64 `json:"mantle_base_fee_time,omitempty"`
+
 	// MantleEverestTime sets the activation time of the Everest network-upgrade:
 	// Active if MantleEverestTime != nil && L2 block timestamp >= *MantleEverestTime, inactive otherwise.
 	MantleEverestTime *uint64 `json:"mantle_everest_time,omitempty"`
@@ -359,6 +363,9 @@ func (cfg *Config) Check() error {
 		return err
 	}
 
+	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
+		return err
+	}
 	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
 		return err
 	}
@@ -500,6 +507,11 @@ func (c *Config) IsJovian(timestamp uint64) bool {
 // IsInterop returns true if the Interop hardfork is active at or past the given timestamp.
 func (c *Config) IsInterop(timestamp uint64) bool {
 	return c.IsForkActive(Interop, timestamp)
+}
+
+// IsMantleBaseFee returns true if the MantleBaseFee hardfork is active at or past the given timestamp.
+func (c *Config) IsMantleBaseFee(timestamp uint64) bool {
+	return c.IsMantleForkActive(MantleBaseFee, timestamp)
 }
 
 // IsMantleEverest returns true if the MantleEverest hardfork is active at or past the given timestamp.
@@ -655,6 +667,10 @@ func (c *Config) MantleActivationTimeFor(fork MantleForkName) *uint64 {
 		return c.MantleEuboeaTime
 	case MantleEverest:
 		return c.MantleEverestTime
+	case MantleBaseFee:
+		return c.MantleBaseFeeTime
+	case MantleNoSupport:
+		return nil
 	default:
 		panic(fmt.Sprintf("unknown fork: %v", fork))
 	}
@@ -719,6 +735,9 @@ func (c *Config) ActivateAtGenesisForMantle(hardfork MantleForkName) {
 		fallthrough
 	case MantleEverest:
 		c.MantleEverestTime = new(uint64)
+		fallthrough
+	case MantleBaseFee:
+		c.MantleBaseFeeTime = new(uint64)
 	case MantleNone:
 		break
 	}
