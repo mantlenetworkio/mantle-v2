@@ -10,7 +10,7 @@ Applies to Solidity files.
 ## Comments
 - Use triple-slash solidity natspec comment style
 - Always use `@notice` instead of `@dev`
-- Use a line-length of 100 characters
+- Use a line-length of 120 characters
 - Custom tags:
   - `@custom:proxied`: Add to a contract whenever it's meant to live behind a proxy
   - `@custom:upgradeable`: Add to a contract whenever it's meant to be inherited by an upgradeable contract

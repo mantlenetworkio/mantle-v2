@@ -22,13 +22,13 @@ import { Solarray } from "scripts/libraries/Solarray.sol";
 contract DeployImplementations is Script {
     struct Input {
         address systemConfig_owner;
-        uint256 systemConfig_overhead;
-        uint256 systemConfig_scalar;
         bytes32 systemConfig_batcherHash;
         uint64 systemConfig_gasLimit;
         uint256 systemConfig_baseFee;
         address systemConfig_unsafeBlockSigner;
         IResourceMetering.ResourceConfig systemConfig_config;
+        uint32 systemConfig_basefeeScalar;
+        uint32 systemConfig_blobbasefeeScalar;
         IOptimismPortal optimismPortal;
         address l1mnt;
         IL1CrossDomainMessenger l1CrossDomainMessenger;
@@ -98,8 +98,8 @@ contract DeployImplementations is Script {
                         ISystemConfig.__constructor__,
                         (
                             _input.systemConfig_owner,
-                            _input.systemConfig_overhead,
-                            _input.systemConfig_scalar,
+                            _input.systemConfig_basefeeScalar,
+                            _input.systemConfig_blobbasefeeScalar,
                             _input.systemConfig_batcherHash,
                             _input.systemConfig_gasLimit,
                             _input.systemConfig_baseFee,
