@@ -145,13 +145,15 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	txs = append(txs, afterForceIncludeTxs...)
 	txs = append(txs, upgradeTxs...)
 
+	// MANTLE_FEATURES
+	// After MantleSkadi, the withdrawals list is non nil and empty, and the parent beacon block root is set.
 	var withdrawals *types.Withdrawals
-	if ba.rollupCfg.IsCanyon(nextL2Time) {
+	if ba.rollupCfg.IsCanyon(nextL2Time) || ba.rollupCfg.IsMantleSkadi(nextL2Time) {
 		withdrawals = &types.Withdrawals{}
 	}
 
 	var parentBeaconRoot *common.Hash
-	if ba.rollupCfg.IsEcotone(nextL2Time) {
+	if ba.rollupCfg.IsEcotone(nextL2Time) || ba.rollupCfg.IsMantleSkadi(nextL2Time) {
 		parentBeaconRoot = l1Info.ParentBeaconRoot()
 		if parentBeaconRoot == nil { // default to zero hash if there is no beacon-block-root available
 			parentBeaconRoot = new(common.Hash)
