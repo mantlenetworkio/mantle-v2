@@ -96,8 +96,8 @@ library ChainAssertions {
 
         if (_isProxy) {
             require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-10");
-            require(config.overhead() == _cfg.gasPriceOracleOverhead(), "CHECK-SCFG-20");
-            require(config.scalar() == _cfg.gasPriceOracleScalar(), "CHECK-SCFG-30");
+            require(config.overhead() == 0, "CHECK-SCFG-20");
+            require(config.scalar() == 0, "CHECK-SCFG-30");
             require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))), "CHECK-SCFG-40");
             require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-50");
             require(config.baseFee() == _cfg.l2GenesisBlockBaseFeePerGas(), "CHECK-SCFG-60");
@@ -111,8 +111,8 @@ library ChainAssertions {
             require(resourceConfig.maximumBaseFee == type(uint128).max, "CHECK-SCFG-130");
         } else {
             require(config.owner() == _cfg.finalSystemOwner(), "CHECK-SCFG-210");
-            require(config.overhead() == _cfg.gasPriceOracleOverhead(), "CHECK-SCFG-220");
-            require(config.scalar() == _cfg.gasPriceOracleScalar(), "CHECK-SCFG-230");
+            require(config.overhead() == 0, "CHECK-SCFG-220");
+            require(config.scalar() == 0, "CHECK-SCFG-230");
             require(config.batcherHash() == bytes32(uint256(uint160(_cfg.batchSenderAddress()))), "CHECK-SCFG-240");
             require(config.gasLimit() == uint64(_cfg.l2GenesisBlockGasLimit()), "CHECK-SCFG-250");
             require(config.baseFee() == _cfg.l2GenesisBlockBaseFeePerGas(), "CHECK-SCFG-260");

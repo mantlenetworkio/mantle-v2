@@ -148,6 +148,30 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 			err: false,
 		},
 		{
+			// The base fee should be updated.
+			name: "SystemConfigUpdateBaseFee",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateBaseFee,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				baseFee := big.NewInt(1000000000) // 1 Gwei
+				numberData, err := oneUint256.Pack(baseFee)
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				BaseFee: big.NewInt(1000000000),
+			},
+			err: false,
+		},
+		{
 			// The ecotone scalars should be updated
 			name: "SystemConfigUpdateGasConfigEcotone",
 			log: &types.Log{
@@ -261,7 +285,11 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			config := eth.SystemConfig{}
-			rollupCfg := rollup.Config{EcotoneTime: test.ecotoneTime}
+			// In Mantle, Ecotone fork maps to MantleArsia, so we need to set MantleArsiaTime
+			rollupCfg := rollup.Config{
+				EcotoneTime:     test.ecotoneTime,
+				MantleArsiaTime: test.ecotoneTime,
+			}
 
 			err := ProcessSystemConfigUpdateLogEvent(&config, test.hook(t, test.log), &rollupCfg, test.l1Time)
 			if test.err {

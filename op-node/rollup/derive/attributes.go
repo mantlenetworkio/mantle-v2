@@ -130,7 +130,13 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		upgradeTxs = append(upgradeTxs, mantleSkadi...)
 	}
 
-	// TODO-ARSIA: Add mantle arsia network upgrade txs
+	if ba.rollupCfg.IsMantleArsiaActivationBlock(nextL2Time) {
+		mantleArsia, err := MantleArsiaNetworkUpgradeTransactions()
+		if err != nil {
+			return nil, NewCriticalError(fmt.Errorf("failed to build mantle arsia network upgrade txs: %w", err))
+		}
+		upgradeTxs = append(upgradeTxs, mantleArsia...)
+	}
 
 	l1InfoTx, err := L1InfoDepositBytes(ba.rollupCfg, ba.l1ChainConfig, sysConfig, seqNumber, l1Info, nextL2Time)
 	if err != nil {
