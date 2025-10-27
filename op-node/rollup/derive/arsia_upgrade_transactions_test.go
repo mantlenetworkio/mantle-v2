@@ -1,10 +1,12 @@
 package derive
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-service/predeploys"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
@@ -41,8 +43,22 @@ func TestArsiaSourcesMatchSpec(t *testing.T) {
 	}
 }
 
+func toDepositTxn(t *testing.T, data hexutil.Bytes) (common.Address, *types.Transaction) {
+	txn := new(types.Transaction)
+	err := txn.UnmarshalBinary(data)
+	require.NoError(t, err)
+	require.Truef(t, txn.IsDepositTx(), "expected deposit txn, got %v", txn.Type())
+	require.False(t, txn.IsSystemTx())
+
+	signer := types.NewLondonSigner(big.NewInt(420))
+	from, err := signer.Sender(txn)
+	require.NoError(t, err)
+
+	return from, txn
+}
+
 func TestArsiaNetworkTransactions(t *testing.T) {
-	upgradeTxns, err := ArsiaNetworkUpgradeTransactions()
+	upgradeTxns, err := MantleArsiaNetworkUpgradeTransactions()
 	require.NoError(t, err)
 	require.Len(t, upgradeTxns, 5, "Arsia upgrade should have 5 transactions")
 
@@ -172,7 +188,7 @@ func TestArsiaUpgradeTransactionOrder(t *testing.T) {
 	// Verify the upgrade transaction order is correct
 	// This is critical for the upgrade to work properly
 
-	upgradeTxns, err := ArsiaNetworkUpgradeTransactions()
+	upgradeTxns, err := MantleArsiaNetworkUpgradeTransactions()
 	require.NoError(t, err)
 
 	// Expected order:

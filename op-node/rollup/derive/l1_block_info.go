@@ -22,6 +22,7 @@ const (
 	L1InfoFuncBedrockSignature = "setL1BlockValues(uint64,uint64,uint256,bytes32,uint64,bytes32,uint256,uint256)"
 	L1InfoFuncEcotoneSignature = "setL1BlockValuesEcotone()"
 	L1InfoFuncIsthmusSignature = "setL1BlockValuesIsthmus()"
+	L1InfoFuncArsiaSignature   = "setL1BlockValuesArsia()"
 	L1InfoArguments            = 8
 	L1InfoBedrockLen           = 4 + 32*L1InfoArguments
 	L1InfoEcotoneLen           = 4 + 32*5         // after Ecotone upgrade, args are packed into 5 32-byte slots
@@ -32,6 +33,7 @@ var (
 	L1InfoFuncBedrockBytes4 = crypto.Keccak256([]byte(L1InfoFuncBedrockSignature))[:4]
 	L1InfoFuncEcotoneBytes4 = crypto.Keccak256([]byte(L1InfoFuncEcotoneSignature))[:4]
 	L1InfoFuncIsthmusBytes4 = crypto.Keccak256([]byte(L1InfoFuncIsthmusSignature))[:4]
+	L1InfoFuncArsiaBytes4   = crypto.Keccak256([]byte(L1InfoFuncArsiaSignature))[:4]
 	L1InfoDepositerAddress  = common.HexToAddress("0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001")
 	L1BlockAddress          = predeploys.L1BlockAddr
 	ErrInvalidFormat        = errors.New("invalid ecotone l1 block info format")
@@ -271,7 +273,10 @@ func (info *L1BlockInfo) unmarshalBinaryEcotone(data []byte) error {
 // +---------+--------------------------+
 
 func (info *L1BlockInfo) marshalBinaryIsthmus() ([]byte, error) {
-	out, err := marshalBinaryWithSignature(info, L1InfoFuncIsthmusBytes4)
+	// Mantle's Arsia upgrade includes all Isthmus features with identical data format and encoding,
+	// but uses the setL1BlockValuesArsia() function signature instead of setL1BlockValuesIsthmus().
+	// Therefore, we use L1InfoFuncArsiaBytes4 signature to encode the same binary format.
+	out, err := marshalBinaryWithSignature(info, L1InfoFuncArsiaBytes4)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Isthmus l1 block info: %w", err)
 	}
@@ -375,7 +380,10 @@ func unmarshalBinaryWithSignatureAndData(info *L1BlockInfo, signature []byte, da
 }
 
 func (info *L1BlockInfo) unmarshalBinaryIsthmus(data []byte) error {
-	return unmarshalBinaryWithSignatureAndData(info, L1InfoFuncIsthmusBytes4, data)
+	// Mantle's Arsia upgrade includes all Isthmus features with identical data format and encoding,
+	// but uses the setL1BlockValuesArsia() function signature instead of setL1BlockValuesIsthmus().
+	// Therefore, we directly use L1InfoFuncArsiaBytes4 signature to decode the same binary format.
+	return unmarshalBinaryWithSignatureAndData(info, L1InfoFuncArsiaBytes4, data)
 }
 
 // isEcotoneButNotFirstBlock returns whether the specified block is subject to the Ecotone upgrade,

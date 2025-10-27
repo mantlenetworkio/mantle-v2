@@ -21,9 +21,10 @@ var (
 	SystemConfigUpdateFeeScalars        = common.Hash{31: 1}
 	SystemConfigUpdateGasLimit          = common.Hash{31: 2}
 	SystemConfigUpdateUnsafeBlockSigner = common.Hash{31: 3}
-	SystemConfigUpdateEIP1559Params     = common.Hash{31: 4}
-	SystemConfigUpdateOperatorFeeParams = common.Hash{31: 5}
-	SystemConfigUpdateMinBaseFee        = common.Hash{31: 6}
+	SystemConfigUpdateBaseFee           = common.Hash{31: 4}
+	SystemConfigUpdateEIP1559Params     = common.Hash{31: 5}
+	SystemConfigUpdateOperatorFeeParams = common.Hash{31: 6}
+	SystemConfigUpdateMinBaseFee        = common.Hash{31: 7}
 )
 
 var (
@@ -142,6 +143,22 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 			return NewCriticalError(errors.New("too many bytes"))
 		}
 		destSysCfg.GasLimit = gasLimit
+		return nil
+	case SystemConfigUpdateBaseFee:
+		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
+			return NewCriticalError(errors.New("invalid pointer field"))
+		}
+		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
+			return NewCriticalError(errors.New("invalid length field"))
+		}
+		baseFee, err := solabi.ReadUint256(reader)
+		if err != nil {
+			return NewCriticalError(errors.New("could not read base fee"))
+		}
+		if !solabi.EmptyReader(reader) {
+			return NewCriticalError(errors.New("too many bytes"))
+		}
+		destSysCfg.BaseFee = baseFee
 		return nil
 	case SystemConfigUpdateEIP1559Params:
 		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
