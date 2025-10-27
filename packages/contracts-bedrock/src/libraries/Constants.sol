@@ -32,10 +32,14 @@ library Constants {
     bytes32 internal constant PROXY_IMPLEMENTATION_ADDRESS =
         0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
+    /// @notice The address that represents the system caller responsible for L1 attributes
+    ///         transactions.
+    address internal constant DEPOSITOR_ACCOUNT = 0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001;
     /**
      * @notice Returns the default values for the ResourceConfig. These are the recommended values
      *         for a production network.
      */
+
     function DEFAULT_RESOURCE_CONFIG() internal pure returns (ResourceMetering.ResourceConfig memory) {
         ResourceMetering.ResourceConfig memory config = ResourceMetering.ResourceConfig({
             maxResourceLimit: 20_000_000,

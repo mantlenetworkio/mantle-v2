@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
+// Libraries
+import { Constants } from "src/libraries/Constants.sol";
+
 import { Semver } from "../universal/Semver.sol";
+
+// // Interfaces
+// import { ISemver } from "interfaces/universal/ISemver.sol";
 
 /**
  * @custom:proxied
@@ -13,14 +19,14 @@ import { Semver } from "../universal/Semver.sol";
  *         are created by the protocol whenever we move to a new epoch.
  */
 contract L1Block is Semver {
-    /**
-     * @notice Address of the special depositor account.
-     */
-    address public constant DEPOSITOR_ACCOUNT = 0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001;
-
+    /// @notice Address of the special depositor account.
+    function DEPOSITOR_ACCOUNT() public pure returns (address addr_) {
+        addr_ = Constants.DEPOSITOR_ACCOUNT;
+    }
     /**
      * @notice The latest L1 block number known by the L2 system.
      */
+
     uint64 public number;
 
     /**
@@ -115,7 +121,7 @@ contract L1Block is Semver {
     )
         external
     {
-        require(msg.sender == DEPOSITOR_ACCOUNT, "L1Block: only the depositor account can set L1 block values");
+        require(msg.sender == DEPOSITOR_ACCOUNT(), "L1Block: only the depositor account can set L1 block values");
 
         number = _number;
         timestamp = _timestamp;
@@ -148,9 +154,10 @@ contract L1Block is Semver {
     /// @notice Internal function to set L1 block values for Arsia upgrade.
     ///         Uses assembly for gas optimization.
     function _setL1BlockValuesArsia() internal {
+        address depositor = DEPOSITOR_ACCOUNT();
         assembly {
             // Revert if the caller is not the depositor account.
-            if xor(caller(), DEPOSITOR_ACCOUNT) {
+            if xor(caller(), depositor) {
                 mstore(0x00, 0x3cc50b45) // 0x3cc50b45 is the 4-byte selector of "NotDepositor()"
                 revert(0x1C, 0x04) // returns the stored 4-byte selector from above
             }
