@@ -2,6 +2,8 @@ module github.com/ethereum-optimism/optimism
 
 go 1.24.0
 
+toolchain go1.24.9
+
 require (
 	cloud.google.com/go/kms v1.20.1
 	github.com/BurntSushi/toml v1.5.0

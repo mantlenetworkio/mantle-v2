@@ -611,6 +611,14 @@ func (c *Config) IsInteropActivationBlock(l2BlockTime uint64) bool {
 		!c.IsInterop(l2BlockTime-c.BlockTime)
 }
 
+// IsMantleBaseFeeActivationBlock returns whether the specified block is the first block subject to the
+// MantleBaseFee upgrade.
+func (c *Config) IsMantleBaseFeeActivationBlock(l2BlockTime uint64) bool {
+	return c.IsMantleForkActive(MantleBaseFee, l2BlockTime) &&
+		l2BlockTime >= c.BlockTime &&
+		!c.IsMantleForkActive(MantleBaseFee, l2BlockTime-c.BlockTime)
+}
+
 // IsMantleEverestActivationBlock returns whether the specified block is the first block subject to the
 // MantleEverest upgrade.
 func (c *Config) IsMantleEverestActivationBlock(l2BlockTime uint64) bool {
