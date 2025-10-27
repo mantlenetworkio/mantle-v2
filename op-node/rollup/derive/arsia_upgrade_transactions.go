@@ -1,14 +1,19 @@
 package derive
 
 import (
+	"bytes"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-service/predeploys"
+	"github.com/ethereum-optimism/optimism/op-service/solabi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
+
+const UpgradeToFuncSignature = "upgradeTo(address)"
 
 var (
 	// L1Block Parameters for Arsia
@@ -27,6 +32,8 @@ var (
 	enableArsiaSource = UpgradeDepositSource{Intent: "Arsia: Gas Price Oracle Set Arsia"}
 	enableArsiaInput  = crypto.Keccak256([]byte("setArsia()"))[:4]
 
+	UpgradeToFuncBytes4 = crypto.Keccak256([]byte(UpgradeToFuncSignature))[:4]
+
 	// Bytecodes for Arsia
 	// Run:
 	// cat forge-artifacts/L1Block.sol/L1Block.json | jq -r '.bytecode.object' > l1block_bytecode.txt
@@ -37,7 +44,7 @@ var (
 
 // ArsiaNetworkUpgradeTransactions returns the upgrade transactions for the Arsia network upgrade.
 // The Arsia upgrade introduces operator fees and updates the L1 data fee calculation model.
-func ArsiaNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
+func MantleArsiaNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 	upgradeTxns := make([]hexutil.Bytes, 0, 5)
 
 	// 1. Deploy new L1Block implementation with operator fee support
@@ -131,4 +138,15 @@ func ArsiaNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 	upgradeTxns = append(upgradeTxns, enableArsia)
 
 	return upgradeTxns, nil
+}
+
+func upgradeToCalldata(addr common.Address) []byte {
+	buf := bytes.NewBuffer(make([]byte, 0, 4+20))
+	if err := solabi.WriteSignature(buf, UpgradeToFuncBytes4); err != nil {
+		panic(fmt.Errorf("failed to write upgradeTo signature data: %w", err))
+	}
+	if err := solabi.WriteAddress(buf, addr); err != nil {
+		panic(fmt.Errorf("failed to write upgradeTo address data: %w", err))
+	}
+	return buf.Bytes()
 }

@@ -154,8 +154,10 @@ func checkWithdrawals(rollupCfg *rollup.Config, attrs *eth.PayloadAttributes, bl
 	attrWithdrawals := attrs.Withdrawals
 	blockWithdrawals := block.Withdrawals
 
-	isCanyon := rollupCfg.IsCanyon(uint64(block.Timestamp))
-	isIsthmus := rollupCfg.IsIsthmus(uint64(block.Timestamp))
+	// MANTLE_FEATURES
+	// Some of the Canyon and Isthmus features are enabled in MantleSkadi.
+	isCanyon := rollupCfg.IsCanyon(uint64(block.Timestamp)) || rollupCfg.IsMantleSkadi(uint64(block.Timestamp))
+	isIsthmus := rollupCfg.IsIsthmus(uint64(block.Timestamp)) || rollupCfg.IsMantleSkadi(uint64(block.Timestamp))
 
 	if isCanyon {
 		// canyon: the withdrawals list should be non nil and empty

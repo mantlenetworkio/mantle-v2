@@ -128,7 +128,9 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		// In Mantle, Ecotone fork maps to MantleArsia which uses Isthmus format with Arsia signature
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4])
 	})
 	t.Run("activation-block ecotone", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -141,7 +143,9 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		require.Equal(t, L1InfoBedrockLen, len(depTx.Data))
+		// In Mantle, Delta also maps to MantleArsia, so the activation block uses Isthmus format with Arsia signature
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4])
 	})
 	t.Run("genesis-block ecotone", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -152,7 +156,9 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		// In Mantle, Ecotone at genesis uses Isthmus format with Arsia signature
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4])
 	})
 	t.Run("isthmus", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -178,9 +184,10 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		// Isthmus activates, but ecotone L1 info is still used at this upgrade block
-		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
-		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
+		// Isthmus activation block still uses previous format
+		// In Mantle, Granite also maps to MantleArsia, so it uses Isthmus format with Arsia signature
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4])
 	})
 	t.Run("genesis-block isthmus", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -197,6 +204,9 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
 		info := testutils.MakeBlockInfo(nil)(rng)
 		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		// In Mantle, Interop is not supported, so we need to activate Isthmus (maps to MantleArsia)
+		// to get both the expected IsSystemTransaction = false and Isthmus format
+		rollupCfg.ActivateAtGenesis(rollup.Isthmus)
 		rollupCfg.ActivateAtGenesis(rollup.Interop)
 		// run 1 block after interop transition
 		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
@@ -217,19 +227,44 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		// Interop activates, but isthmus L1 info is still used at this upgrade block
+		// Continue using Isthmus format with Arsia signature (since Isthmus maps to MantleArsia)
 		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
-		require.Equal(t, L1InfoFuncIsthmusBytes4, depTx.Data[:4])
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4])
 	})
 	t.Run("genesis-block interop", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
 		info := testutils.MakeBlockInfo(nil)(rng)
 		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		// In Mantle, Interop is not supported, so we need to activate Isthmus (maps to MantleArsia)
+		// to get both the expected IsSystemTransaction = false and Isthmus format
+		rollupCfg.ActivateAtGenesis(rollup.Isthmus)
 		rollupCfg.ActivateAtGenesis(rollup.Interop)
 		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, rollupCfg.Genesis.L2Time)
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+	})
+	t.Run("arsia uses isthmus format with arsia signature", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(rollup.Isthmus)
+		// Arsia timestamp - one block after genesis to avoid activation block
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		// Arsia (via Isthmus) uses same data length as Isthmus
 		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		// Mantle's Arsia fork includes Isthmus features but uses Arsia function signature
+		// Since Isthmus maps to MantleArsia, the signature should be Arsia
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4], "Isthmus activation should use Arsia signature for Mantle")
+
+		// Verify it can be decoded back
+		res, err := L1BlockInfoFromBytes(&rollupCfg, timestamp, depTx.Data)
+		require.NoError(t, err, "should decode Arsia format")
+		assert.Equal(t, res.Number, info.NumberU64())
+		assert.Equal(t, res.Time, info.Time())
 	})
 }

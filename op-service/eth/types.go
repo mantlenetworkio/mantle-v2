@@ -475,15 +475,15 @@ func BlockAsPayload(bl *types.Block, config *params.ChainConfig) (*ExecutionPayl
 		// WithdrawalsRoot is only set starting at Isthmus
 	}
 
-	// TODO-ARSIA
-	// if config.ShanghaiTime != nil && uint64(payload.Timestamp) >= *config.ShanghaiTime {
-	if config.IsCanyon(uint64(payload.Timestamp)) {
+	// MANTLE_FEATURES
+	// After MantleSkadi, the withdrawals list is non nil and empty
+	if config.IsCanyon(uint64(payload.Timestamp)) || config.IsMantleSkadi(uint64(payload.Timestamp)) {
 		payload.Withdrawals = &types.Withdrawals{}
 	}
 
-	// TODO-ARSIA
-	// if config.MantleSkadiTime != nil && uint64(payload.Timestamp) >= *config.MantleSkadiTime {
-	if config.IsIsthmus(uint64(payload.Timestamp)) {
+	// MANTLE_FEATURES
+	// After MantleSkadi, the withdrawals root is set
+	if config.IsIsthmus(uint64(payload.Timestamp)) || config.IsMantleSkadi(uint64(payload.Timestamp)) {
 		payload.WithdrawalsRoot = bl.Header().WithdrawalsHash
 	}
 
