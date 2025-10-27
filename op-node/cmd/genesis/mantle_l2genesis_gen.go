@@ -70,8 +70,6 @@ func GenerateL2Genesis(logger log.Logger, deployer common.Address, config *genes
 		return nil, fmt.Errorf("failed to create L2Genesis script: %w", err)
 	}
 
-	host.AllowCheatcodes(common.HexToAddress("0xfdAf657f7146c1AB9db4d70cEd5FDEa7dC4906c0"))
-
 	if err := script.Run(MantleL2GenesisInput{
 		L1ChainID:                   new(big.Int).SetUint64(config.L1ChainID),
 		L2ChainID:                   new(big.Int).SetUint64(config.L2ChainID),
