@@ -242,33 +242,33 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
         (bool success,) = address(l1Block).call(abi.encodePacked(l1Block.setL1BlockValuesArsia.selector, data));
         require(success, "L1Block setup failed");
 
-        // Set owner and enable Arsia
-        vm.store(address(gasOracle), bytes32(uint256(1)), bytes32(uint256(uint160(address(this))))); // Set owner
+        // Enable Arsia using depositor account
+        vm.prank(depositor);
         gasOracle.setArsia();
     }
 
     function test_setArsia_succeeds() external {
         // Create a new oracle that hasn't been set to Arsia yet
         GasPriceOracle newOracle = new GasPriceOracle();
-        vm.store(address(newOracle), bytes32(uint256(1)), bytes32(uint256(uint160(address(this)))));
 
         assertEq(newOracle.isArsia(), false);
 
+        vm.prank(depositor);
         newOracle.setArsia();
 
         assertEq(newOracle.isArsia(), true);
     }
 
-    function test_setArsia_notOwner_reverts() external {
+    function test_setArsia_notDepositor_reverts() external {
         GasPriceOracle newOracle = new GasPriceOracle();
-        vm.store(address(newOracle), bytes32(uint256(1)), bytes32(uint256(uint160(alice))));
 
         vm.prank(bob);
-        vm.expectRevert("Caller is not the owner");
+        vm.expectRevert("GasPriceOracle: only the depositor account can set isArsia flag");
         newOracle.setArsia();
     }
 
     function test_setArsia_alreadyActive_reverts() external {
+        vm.prank(depositor);
         vm.expectRevert("GasPriceOracle: Arsia already active");
         gasOracle.setArsia();
     }
