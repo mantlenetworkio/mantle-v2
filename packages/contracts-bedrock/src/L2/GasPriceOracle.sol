@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { Semver } from "../universal/Semver.sol";
-import { Predeploys } from "../libraries/Predeploys.sol";
-import { L1Block } from "../L2/L1Block.sol";
-import { Arithmetic } from "../libraries/Arithmetic.sol";
+// Interfaces
+// import { ISemver } from "interfaces/universal/ISemver.sol";
+import { Semver } from "src/universal/Semver.sol";
+import { L1Block } from "src/L2/L1Block.sol";
+
+// Libraries
+import { Predeploys } from "src/libraries/Predeploys.sol";
+import { Constants } from "src/libraries/Constants.sol";
+import { Arithmetic } from "src/libraries/Arithmetic.sol";
 
 /**
  * @custom:proxied
@@ -99,9 +104,12 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-     * @notice Set chain to be Arsia chain (callable by owner)
+     * @notice Set chain to be Arsia chain (callable by depositor account)
      */
-    function setArsia() external onlyOwner {
+    function setArsia() external {
+        require(
+            msg.sender == Constants.DEPOSITOR_ACCOUNT, "GasPriceOracle: only the depositor account can set isArsia flag"
+        );
         require(isArsia == false, "GasPriceOracle: Arsia already active");
         isArsia = true;
     }

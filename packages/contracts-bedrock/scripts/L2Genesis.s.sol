@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
+// Testing
+import { EIP1967Helper } from "test/mocks/EIP1967Helper.sol";
+
 // Scripts
 import { Script } from "forge-std/Script.sol";
-import { DeployUtils } from "./libraries/DeployUtils.sol";
+import { OutputMode, OutputModeUtils, MantleFork, MantleForkUtils } from "scripts/libraries/Config.sol";
+import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
 
 // Libraries
-import { Predeploys } from "../src/libraries/Predeploys.sol";
+import { Predeploys } from "src/libraries/Predeploys.sol";
 
 // Interfaces
-import { IOptimismMintableERC20Factory } from "../interfaces/universal/IOptimismMintableERC20Factory.sol";
-import { IProxy } from "../interfaces/universal/IProxy.sol";
+import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
+import { IProxy } from "interfaces/universal/IProxy.sol";
+import { IGasPriceOracle } from "interfaces/L2/IGasPriceOracle.sol";
+import { IL1Block } from "interfaces/L2/IL1Block.sol";
 
 /// @title L2Genesis
 /// @notice Generates the genesis state for the Mantle L2 network.
@@ -26,13 +32,17 @@ contract L2Genesis is Script {
         address payable l1CrossDomainMessengerProxy;
         address payable l1StandardBridgeProxy;
         address payable l1ERC721BridgeProxy;
-        address l1MNTAddress; // L1 Mantle Token address (maps to "l1MantleToken" in config)
+        address l1MNTAddress;
         address opChainProxyAdminOwner;
         address sequencerFeeVaultRecipient;
         address baseFeeVaultRecipient;
         address l1FeeVaultRecipient;
+        uint256 mantleFork;
         bool fundDevAccounts;
     }
+
+    using MantleForkUtils for MantleFork;
+    using OutputModeUtils for OutputMode;
 
     uint256 internal constant PRECOMPILE_COUNT = 256;
     uint80 internal constant DEV_ACCOUNT_FUND_AMT = 10_000 ether;
@@ -73,21 +83,51 @@ contract L2Genesis is Script {
         0x9DCCe783B6464611f38631e6C851bf441907c710 // 29
     ];
 
-    /// @notice Alias for `runWithStateDump` so that no `--sig` needs to be specified.
+    /// @notice Main entry point for L2 genesis generation.
     function run(Input memory _input) public {
         address deployer = makeAddr("deployer");
         vm.startPrank(deployer);
         vm.chainId(_input.l2ChainID);
 
         dealEthToPrecompiles();
-        setPredeployProxies();
+        setPredeployProxies(_input);
         setPredeployImplementations(_input);
+
         if (_input.fundDevAccounts) {
             fundDevAccounts();
         }
         vm.stopPrank();
         vm.deal(deployer, 0);
         vm.resetNonce(deployer);
+
+        // Activate Mantle fork if specified
+        MantleFork fork = MantleFork(_input.mantleFork);
+
+        if (fork == MantleFork.NONE) {
+            return;
+        }
+
+        if (fork == MantleFork.MANTLE_EVEREST) {
+            return;
+        }
+
+        if (fork == MantleFork.MANTLE_EUBOEA) {
+            return;
+        }
+
+        if (fork == MantleFork.MANTLE_SKADI) {
+            return;
+        }
+
+        if (fork == MantleFork.MANTLE_LIMB) {
+            return;
+        }
+
+        activateMantleArsia();
+
+        if (fork == MantleFork.MANTLE_ARSIA) {
+            return;
+        }
     }
 
     /// @notice Give all of the precompiles 1 wei
@@ -101,42 +141,71 @@ contract L2Genesis is Script {
     ///         The Proxy bytecode should be set. All proxied predeploys should have
     ///         the 1967 admin slot set to the ProxyAdmin predeploy. All defined predeploys
     ///         should have their implementations set.
-    function setPredeployProxies() internal {
+    ///         Warning: the predeploy accounts have contract code, but 0 nonce value, contrary
+    ///         to the expected nonce of 1 per EIP-161. This is because the legacy go genesis
+    //          script didn't set the nonce and we didn't want to change that behavior when
+    ///         migrating genesis generation to Solidity.
+    function setPredeployProxies(Input memory _input) internal {
         bytes memory code = vm.getDeployedCode("Proxy.sol:Proxy");
 
-        // Set proxies for contracts that are proxied
-        address[15] memory proxiedPredeploys = [
-            Predeploys.L2_TO_L1_MESSAGE_PASSER,
-            Predeploys.DEPLOYER_WHITELIST,
-            Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-            Predeploys.GAS_PRICE_ORACLE,
-            Predeploys.L2_STANDARD_BRIDGE,
-            Predeploys.SEQUENCER_FEE_WALLET,
-            Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY,
-            Predeploys.L1_BLOCK_NUMBER,
-            Predeploys.L2_ERC721_BRIDGE,
-            Predeploys.L1_BLOCK_ATTRIBUTES,
-            Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY,
-            Predeploys.PROXY_ADMIN,
-            Predeploys.BASE_FEE_VAULT,
-            Predeploys.L1_FEE_VAULT,
-            Predeploys.LEGACY_MESSAGE_PASSER
-        ];
+        uint160 prefix = uint160(0x420) << 148;
 
-        for (uint256 i = 0; i < proxiedPredeploys.length; i++) {
-            address addr = proxiedPredeploys[i];
+        for (uint256 i = 0; i < Predeploys.PREDEPLOY_COUNT; i++) {
+            address addr = address(prefix | uint160(i));
+            if (Predeploys.notProxied(addr)) {
+                continue;
+            }
+
             vm.etch(addr, code);
-            // Set admin to ProxyAdmin
-            bytes32 adminSlot = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
-            vm.store(addr, adminSlot, bytes32(uint256(uint160(Predeploys.PROXY_ADMIN))));
+            EIP1967Helper.setAdmin(addr, Predeploys.PROXY_ADMIN);
+
+            if (Predeploys.isSupportedPredeploy(addr, _input.mantleFork)) {
+                address implementation = Predeploys.predeployToCodeNamespace(addr);
+                EIP1967Helper.setImplementation(addr, implementation);
+            }
         }
+
+        // // Set proxies for contracts that are proxied
+        // address[15] memory proxiedPredeploys = [
+        //     Predeploys.L2_TO_L1_MESSAGE_PASSER,
+        //     Predeploys.DEPLOYER_WHITELIST,
+        //     Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+        //     Predeploys.GAS_PRICE_ORACLE,
+        //     Predeploys.L2_STANDARD_BRIDGE,
+        //     Predeploys.SEQUENCER_FEE_WALLET,
+        //     Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY,
+        //     Predeploys.L1_BLOCK_NUMBER,
+        //     Predeploys.L2_ERC721_BRIDGE,
+        //     Predeploys.L1_BLOCK_ATTRIBUTES,
+        //     Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY,
+        //     Predeploys.PROXY_ADMIN,
+        //     Predeploys.BASE_FEE_VAULT,
+        //     Predeploys.L1_FEE_VAULT,
+        //     Predeploys.LEGACY_MESSAGE_PASSER
+        // ];
+
+        // bytes32 adminSlot = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+        // bytes32 implSlot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+
+        // for (uint256 i = 0; i < proxiedPredeploys.length; i++) {
+        //     address addr = proxiedPredeploys[i];
+        //     vm.etch(addr, code);
+        //     // Set admin to ProxyAdmin
+        //     vm.store(addr, adminSlot, bytes32(uint256(uint160(Predeploys.PROXY_ADMIN))));
+
+        //     // Set implementation to code namespace
+        //     address implementation = _predeployToCodeNamespace(addr);
+        //     vm.store(addr, implSlot, bytes32(uint256(uint160(implementation))));
+        // }
     }
 
     /// @notice Sets all the implementations for the predeploy proxies. For contracts without proxies,
     ///      sets the deployed bytecode at their expected predeploy address.
     function setPredeployImplementations(Input memory _input) internal {
         setLegacyMessagePasser(); // 0
+        // 01: legacy, not used in OP-Stack
         setDeployerWhitelist(); // 2
+        // 3,4,5: legacy, not used in OP-Stack.
         setBVM_ETH(); // BVM_ETH - Mantle specific
         setL2CrossDomainMessenger(_input); // 7
         setGasPriceOracle(); // f
@@ -170,7 +239,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(_input.l1MNTAddress);
         address vault = DeployUtils.create1({ _name: "L2ToL1MessagePasser", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.L2_TO_L1_MESSAGE_PASSER);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_TO_L1_MESSAGE_PASSER);
         vm.etch(impl, address(vault).code);
 
         /// Reset so its not included state dump
@@ -184,7 +253,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(address(_input.l1CrossDomainMessengerProxy), _input.l1MNTAddress);
         address messenger = DeployUtils.create1({ _name: "L2CrossDomainMessenger", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
         vm.etch(impl, address(messenger).code);
 
         /// Reset so its not included state dump
@@ -198,7 +267,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(payable(_input.l1StandardBridgeProxy), _input.l1MNTAddress);
         address bridge = DeployUtils.create1({ _name: "L2StandardBridge", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.L2_STANDARD_BRIDGE);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_STANDARD_BRIDGE);
         vm.etch(impl, address(bridge).code);
 
         /// Reset so its not included state dump
@@ -212,7 +281,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(Predeploys.L2_CROSS_DOMAIN_MESSENGER, payable(_input.l1ERC721BridgeProxy));
         address bridge = DeployUtils.create1({ _name: "L2ERC721Bridge", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.L2_ERC721_BRIDGE);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_ERC721_BRIDGE);
         vm.etch(impl, address(bridge).code);
 
         /// Reset so its not included state dump
@@ -225,7 +294,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(_input.sequencerFeeVaultRecipient);
         address vault = DeployUtils.create1({ _name: "SequencerFeeVault", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.SEQUENCER_FEE_WALLET);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.SEQUENCER_FEE_WALLET);
         vm.etch(impl, address(vault).code);
 
         /// Reset so its not included state dump
@@ -239,7 +308,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(Predeploys.L2_STANDARD_BRIDGE);
         address factory = DeployUtils.create1({ _name: "OptimismMintableERC20Factory", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
         vm.etch(impl, address(factory).code);
 
         /// Reset so its not included state dump
@@ -252,7 +321,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(Predeploys.L2_ERC721_BRIDGE, _input.l1ChainID);
         address factory = DeployUtils.create1({ _name: "OptimismMintableERC721Factory", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY);
         vm.etch(impl, address(factory).code);
 
         /// Reset so its not included state dump
@@ -262,6 +331,8 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #1.
     function setL1Block() internal {
+        // Note: L1 block attributes are set to 0.
+        // Before the first user-tx the state is overwritten with actual L1 attributes.
         _setImplementationCode(Predeploys.L1_BLOCK_ATTRIBUTES);
     }
 
@@ -296,7 +367,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(_input.baseFeeVaultRecipient);
         address vault = DeployUtils.create1({ _name: "BaseFeeVault", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.BASE_FEE_VAULT);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.BASE_FEE_VAULT);
         vm.etch(impl, address(vault).code);
 
         /// Reset so its not included state dump
@@ -309,7 +380,7 @@ contract L2Genesis is Script {
         bytes memory args = abi.encode(_input.l1FeeVaultRecipient);
         address vault = DeployUtils.create1({ _name: "L1FeeVault", _args: args });
 
-        address impl = _predeployToCodeNamespace(Predeploys.L1_FEE_VAULT);
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.L1_FEE_VAULT);
         vm.etch(impl, address(vault).code);
 
         /// Reset so its not included state dump
@@ -319,10 +390,17 @@ contract L2Genesis is Script {
 
     /// @notice Sets the bytecode in state
     function _setImplementationCode(address _addr) internal returns (address) {
-        string memory cname = _getPredeployName(_addr);
-        address impl = _predeployToCodeNamespace(_addr);
+        string memory cname = Predeploys.getName(_addr);
+        address impl = Predeploys.predeployToCodeNamespace(_addr);
         vm.etch(impl, vm.getDeployedCode(string.concat(cname, ".sol:", cname)));
         return impl;
+    }
+
+    /// @notice Activate Mantle Arsia network upgrade.
+    ///         This calls setArsia() on the GasPriceOracle predeploy.
+    function activateMantleArsia() internal {
+        vm.prank(IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).DEPOSITOR_ACCOUNT());
+        IGasPriceOracle(Predeploys.GAS_PRICE_ORACLE).setArsia();
     }
 
     /// @notice Funds the default dev accounts with ether
@@ -332,30 +410,30 @@ contract L2Genesis is Script {
         }
     }
 
-    /// @notice Returns the name of the predeploy at the given address.
-    function _getPredeployName(address _addr) internal pure returns (string memory) {
-        if (_addr == Predeploys.LEGACY_MESSAGE_PASSER) return "LegacyMessagePasser";
-        if (_addr == Predeploys.DEPLOYER_WHITELIST) return "DeployerWhitelist";
-        if (_addr == Predeploys.L2_CROSS_DOMAIN_MESSENGER) return "L2CrossDomainMessenger";
-        if (_addr == Predeploys.GAS_PRICE_ORACLE) return "GasPriceOracle";
-        if (_addr == Predeploys.L2_STANDARD_BRIDGE) return "L2StandardBridge";
-        if (_addr == Predeploys.SEQUENCER_FEE_WALLET) return "SequencerFeeVault";
-        if (_addr == Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY) return "OptimismMintableERC20Factory";
-        if (_addr == Predeploys.L1_BLOCK_NUMBER) return "L1BlockNumber";
-        if (_addr == Predeploys.L2_ERC721_BRIDGE) return "L2ERC721Bridge";
-        if (_addr == Predeploys.L1_BLOCK_ATTRIBUTES) return "L1Block";
-        if (_addr == Predeploys.L2_TO_L1_MESSAGE_PASSER) return "L2ToL1MessagePasser";
-        if (_addr == Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY) return "OptimismMintableERC721Factory";
-        if (_addr == Predeploys.PROXY_ADMIN) return "ProxyAdmin";
-        if (_addr == Predeploys.BASE_FEE_VAULT) return "BaseFeeVault";
-        if (_addr == Predeploys.L1_FEE_VAULT) return "L1FeeVault";
-        if (_addr == Predeploys.BVM_ETH) return "BVM_ETH";
-        revert("Predeploy name not found");
-    }
+    // /// @notice Returns the name of the predeploy at the given address.
+    // function _getPredeployName(address _addr) internal pure returns (string memory) {
+    //     if (_addr == Predeploys.LEGACY_MESSAGE_PASSER) return "LegacyMessagePasser";
+    //     if (_addr == Predeploys.DEPLOYER_WHITELIST) return "DeployerWhitelist";
+    //     if (_addr == Predeploys.L2_CROSS_DOMAIN_MESSENGER) return "L2CrossDomainMessenger";
+    //     if (_addr == Predeploys.GAS_PRICE_ORACLE) return "GasPriceOracle";
+    //     if (_addr == Predeploys.L2_STANDARD_BRIDGE) return "L2StandardBridge";
+    //     if (_addr == Predeploys.SEQUENCER_FEE_WALLET) return "SequencerFeeVault";
+    //     if (_addr == Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY) return "OptimismMintableERC20Factory";
+    //     if (_addr == Predeploys.L1_BLOCK_NUMBER) return "L1BlockNumber";
+    //     if (_addr == Predeploys.L2_ERC721_BRIDGE) return "L2ERC721Bridge";
+    //     if (_addr == Predeploys.L1_BLOCK_ATTRIBUTES) return "L1Block";
+    //     if (_addr == Predeploys.L2_TO_L1_MESSAGE_PASSER) return "L2ToL1MessagePasser";
+    //     if (_addr == Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY) return "OptimismMintableERC721Factory";
+    //     if (_addr == Predeploys.PROXY_ADMIN) return "ProxyAdmin";
+    //     if (_addr == Predeploys.BASE_FEE_VAULT) return "BaseFeeVault";
+    //     if (_addr == Predeploys.L1_FEE_VAULT) return "L1FeeVault";
+    //     if (_addr == Predeploys.BVM_ETH) return "BVM_ETH";
+    //     revert("Predeploy name not found");
+    // }
 
-    /// @notice Returns the predeploy implementation address for the given predeploy.
-    function _predeployToCodeNamespace(address _addr) internal pure returns (address) {
-        uint160 prefix = uint160(0xc0D3C0d3C0d3C0D3c0d3C0d3c0D3C0d3c0d30000);
-        return address(prefix | uint160(_addr));
-    }
+    // /// @notice Returns the predeploy implementation address for the given predeploy.
+    // function _predeployToCodeNamespace(address _addr) internal pure returns (address) {
+    //     uint160 prefix = uint160(0xc0D3C0d3C0d3C0D3c0d3C0d3c0D3C0d3c0d30000);
+    //     return address(prefix | uint160(_addr));
+    // }
 }
