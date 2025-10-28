@@ -4,6 +4,8 @@ import os
 import subprocess
 import json
 import socket
+import requests
+import copy
 
 import time
 
@@ -40,7 +42,18 @@ def main():
         log.info('L2 genesis already generated.')
     else:
         log.info('Generating L1 genesis.')
-        write_json(genesis_l1_path, GENESIS_TMPL)
+        # Try to fetch chain ID from localhost:8545
+        log.info('Fetching chain ID from localhost:8545...')
+        chain_id = get_chain_id_from_rpc('http://localhost:8545')
+
+        if chain_id is not None:
+            log.info(f'Using chain ID {chain_id} from localhost:8545')
+            genesis = copy.deepcopy(GENESIS_TMPL)
+            genesis['config']['chainId'] = chain_id
+            write_json(genesis_l1_path, genesis)
+        else:
+            log.warning('Failed to fetch chain ID from localhost:8545, using default template')
+            write_json(genesis_l1_path, GENESIS_TMPL)
 
     log.info('Starting L1.')
     run_command(['docker-compose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
@@ -119,6 +132,33 @@ def main():
     })
 
     log.info('Devnet ready.')
+
+
+def get_chain_id_from_rpc(rpc_url='http://localhost:8545'):
+    """Fetch chain ID from an Ethereum RPC endpoint."""
+    try:
+        response = requests.post(
+            rpc_url,
+            json={
+                'jsonrpc': '2.0',
+                'method': 'eth_chainId',
+                'params': [],
+                'id': 1
+            },
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+        response.raise_for_status()
+        result = response.json()
+        chain_id_hex = result.get('result')
+        if chain_id_hex:
+            return int(chain_id_hex, 16)
+        else:
+            log.error(f'No chain ID in response: {result}')
+            return None
+    except Exception as e:
+        log.error(f'Failed to fetch chain ID from {rpc_url}: {e}')
+        return None
 
 
 def run_command(args, check=True, shell=False, cwd=None, env=None):
