@@ -2,6 +2,8 @@ module github.com/ethereum-optimism/optimism
 
 go 1.24.0
 
+toolchain go1.24.9
+
 require (
 	cloud.google.com/go/kms v1.20.1
 	github.com/BurntSushi/toml v1.5.0
@@ -321,7 +323,7 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0.0.20251022081703-d0dcac8073c9
+replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0.0.20251027145855-6f389280af37
 
 replace github.com/ethereum/go-ethereum/superchain => ./superchain
 

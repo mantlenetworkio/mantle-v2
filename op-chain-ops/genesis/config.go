@@ -125,6 +125,13 @@ type OwnershipDeployConfig struct {
 	// FinalSystemOwner is the owner of the system on L1. Any L1 contract that is ownable has
 	// this account set as its owner.
 	FinalSystemOwner common.Address `json:"finalSystemOwner"`
+
+	// MANTLE_FEATURES
+	// PortalGuardian represents the guardian of the OptimismPortal.
+	PortalGuardian common.Address `json:"portalGuardian"`
+	// legacy fields
+	// Controller the deployer of the contracts on L1.
+	Controller common.Address `json:"controller"`
 }
 
 var _ ConfigChecker = (*OwnershipDeployConfig)(nil)
@@ -237,6 +244,13 @@ type GasPriceOracleDeployConfig struct {
 	GasPriceOracleOperatorFeeScalar uint32 `json:"gasPriceOracleOperatorFeeScalar" evm:"operatorfeeScalar"`
 	// GasPriceOracleOperatorFeeConstant represents the value of the operator fee constant used for fee calculations.
 	GasPriceOracleOperatorFeeConstant uint64 `json:"gasPriceOracleOperatorFeeConstant" evm:"operatorfeeConstant"`
+
+	// MANTLE_FEATURES
+	// GasPriceOracleTokenRatio represents the token ratio of ETH to MNT.
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
+	// legacy fields
+	// GasPriceOracleOwner represents the owner of the GasPriceOracle.
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
 }
 
 var _ ConfigChecker = (*GasPriceOracleDeployConfig)(nil)
@@ -336,6 +350,38 @@ func (d *EIP1559DeployConfig) Check(log log.Logger) error {
 
 // UpgradeScheduleDeployConfig configures when network upgrades activate.
 type UpgradeScheduleDeployConfig struct {
+	// MANTLE_FEATURES mantle forks
+	// L2GenesisMantleBaseFeeTimeOffset is the number of seconds after genesis block that the Mantle BaseFee hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BaseFee.
+	L2GenesisMantleBaseFeeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBaseFeeTimeOffset,omitempty"`
+	// L2GenesisMantleBVMETHMintUpgradeTimeOffset is the number of seconds after genesis block that the Mantle BVM_ETH mint upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BVM_ETH mint upgrade.
+	L2GenesisMantleBVMETHMintUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBVMETHMintUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV2UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV2 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV2 upgrade.
+	L2GenesisMantleMetaTxV2UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV2UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV3UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV3 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV3 upgrade.
+	L2GenesisMantleMetaTxV3UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV3UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleProxyOwnerUpgradeTimeOffset is the number of seconds after genesis block that the Mantle ProxyOwner upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle ProxyOwner upgrade.
+	L2GenesisMantleProxyOwnerUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleProxyOwnerUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleEverestTimeOffset is the number of seconds after genesis block that the Mantle Everest hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Everest.
+	L2GenesisMantleEverestTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEverestTimeOffset,omitempty"`
+	// L2GenesisMantleEuboeaTimeOffset is the number of seconds after genesis block that the Mantle Euboea hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Euboea.
+	L2GenesisMantleEuboeaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEuboeaTimeOffset,omitempty"`
+	// L2GenesisMantleSkadiTimeOffset is the number of seconds after genesis block that the Mantle Skadi hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Skadi.
+	L2GenesisMantleSkadiTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleSkadiTimeOffset,omitempty"`
+	// L2GenesisMantleLimbTimeOffset is the number of seconds after genesis block that the Mantle Limb hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Limb.
+	L2GenesisMantleLimbTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleLimbTimeOffset,omitempty"`
+	// L2GenesisMantleArsiaTimeOffset is the number of seconds after genesis block that the Mantle Arsia hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Arsia.
+	L2GenesisMantleArsiaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleArsiaTimeOffset,omitempty"`
+
 	// L2GenesisRegolithTimeOffset is the number of seconds after genesis block that Regolith hard fork activates.
 	// Set it to 0 to activate at genesis. Nil to disable Regolith.
 	L2GenesisRegolithTimeOffset *hexutil.Uint64 `json:"l2GenesisRegolithTimeOffset,omitempty"`
@@ -493,27 +539,27 @@ func (d *UpgradeScheduleDeployConfig) RegolithTime(genesisTime uint64) *uint64 {
 }
 
 func (d *UpgradeScheduleDeployConfig) CanyonTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisCanyonTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) DeltaTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisDeltaTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) EcotoneTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisEcotoneTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) FjordTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisFjordTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) GraniteTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisGraniteTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) HoloceneTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisHoloceneTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) PectraBlobScheduleTime(genesisTime uint64) *uint64 {
@@ -521,15 +567,55 @@ func (d *UpgradeScheduleDeployConfig) PectraBlobScheduleTime(genesisTime uint64)
 }
 
 func (d *UpgradeScheduleDeployConfig) IsthmusTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisIsthmusTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) JovianTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisJovianTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) InteropTime(genesisTime uint64) *uint64 {
-	return offsetToUpgradeTime(d.L2GenesisInteropTimeOffset, genesisTime)
+	return d.MantleArsiaTime(genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleBaseFeeTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleBaseFeeTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleBVMETHMintUpgradeTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleBVMETHMintUpgradeTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleMetaTxV2UpgradeTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleMetaTxV2UpgradeTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleMetaTxV3UpgradeTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleMetaTxV3UpgradeTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleProxyOwnerUpgradeTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleProxyOwnerUpgradeTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleEverestTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleEverestTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleEuboeaTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleEuboeaTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleSkadiTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleSkadiTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleLimbTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleLimbTimeOffset, genesisTime)
+}
+
+func (d *UpgradeScheduleDeployConfig) MantleArsiaTime(genesisTime uint64) *uint64 {
+	return offsetToUpgradeTime(d.L2GenesisMantleArsiaTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) AllocMode(genesisTime uint64) L2AllocsMode {
@@ -564,6 +650,32 @@ func (d *UpgradeScheduleDeployConfig) forks() []Fork {
 		{L2GenesisTimeOffset: d.L2GenesisJovianTimeOffset, Name: string(L2AllocsJovian)},
 		{L2GenesisTimeOffset: d.L2GenesisInteropTimeOffset, Name: string(L2AllocsInterop)},
 	}
+}
+
+func (d *UpgradeScheduleDeployConfig) mantleForks() []Fork {
+	return []Fork{
+		{L2GenesisTimeOffset: d.L2GenesisMantleBaseFeeTimeOffset, Name: "mantle_base_fee"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleBVMETHMintUpgradeTimeOffset, Name: "mantle_bvm_eth_mint_upgrade"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleMetaTxV2UpgradeTimeOffset, Name: "mantle_meta_tx_v2_upgrade"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleMetaTxV3UpgradeTimeOffset, Name: "mantle_meta_tx_v3_upgrade"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleProxyOwnerUpgradeTimeOffset, Name: "mantle_proxy_owner_upgrade"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleEverestTimeOffset, Name: "mantle_everest"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleEuboeaTimeOffset, Name: "mantle_euboea"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleSkadiTimeOffset, Name: "mantle_skadi"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleLimbTimeOffset, Name: "mantle_limb"},
+		{L2GenesisTimeOffset: d.L2GenesisMantleArsiaTimeOffset, Name: "mantle_arsia"},
+	}
+}
+
+func (d *UpgradeScheduleDeployConfig) SolidityMantleForkNumber(genesisTime uint64) int64 {
+	forks := d.mantleForks()
+	for i := len(forks) - 1; i >= 4; i-- {
+		if forkTime := offsetToUpgradeTime(forks[i].L2GenesisTimeOffset, genesisTime); forkTime != nil && *forkTime == 0 {
+			// Subtract 4 since Solidity does not have the first five forks and have a "none" fork type
+			return int64(i - 4)
+		}
+	}
+	panic("should never reach here")
 }
 
 // SolidityForkNumber converts a genesis time to a fork number suitable for use with
@@ -611,6 +723,12 @@ func (d *UpgradeScheduleDeployConfig) Check(log log.Logger) error {
 	forks := d.forks()
 	for i := 0; i < len(forks)-1; i++ {
 		if err := checkFork(forks[i].L2GenesisTimeOffset, forks[i+1].L2GenesisTimeOffset, forks[i].Name, forks[i+1].Name); err != nil {
+			return err
+		}
+	}
+	mantleForks := d.mantleForks()
+	for i := 0; i < len(mantleForks)-1; i++ {
+		if err := checkFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
 			return err
 		}
 	}
@@ -756,6 +874,10 @@ type DevL1DeployConfig struct {
 	L1GenesisBlockBaseFeePerGas *hexutil.Big    `json:"l1GenesisBlockBaseFeePerGas"`
 	L1GenesisBlockExcessBlobGas *hexutil.Uint64 `json:"l1GenesisBlockExcessBlobGas,omitempty"` // EIP-4844
 	L1GenesisBlockBlobGasUsed   *hexutil.Uint64 `json:"l1GenesisBlockblobGasUsed,omitempty"`   // EIP-4844
+
+	// MANTLE_FEATURES legacy fields
+	// CliqueSignerAddress represents the signer of the Clique consensus mechanism.
+	CliqueSignerAddress common.Address `json:"cliqueSignerAddress"`
 }
 
 // SuperchainL1DeployConfig configures parameters of the superchain-wide deployed contracts to L1.
@@ -773,6 +895,10 @@ type SuperchainL1DeployConfig struct {
 }
 
 func (d *SuperchainL1DeployConfig) Check(log log.Logger) error {
+	// MANTLE_FEATURES
+	// Superchain is not supported on Mantle
+	return nil
+
 	if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
 		log.Warn("RequiredProtocolVersion is empty")
 	}
@@ -900,6 +1026,10 @@ type L1DependenciesConfig struct {
 	DAChallengeProxy common.Address `json:"daChallengeProxy"`
 
 	ProtocolVersionsProxy common.Address `json:"protocolVersionsProxy"`
+
+	// MANTLE_FEATURES
+	// L1MantleToken represents the Mantle token address on L1.
+	L1MantleToken common.Address `json:"l1MantleToken"`
 }
 
 // DependencyContext is the contextual configuration needed to verify the L1 dependencies,
@@ -1107,6 +1237,12 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *eth.BlockRef, l2GenesisBlockHa
 		IsthmusTime:             d.IsthmusTime(l1StartTime),
 		JovianTime:              d.JovianTime(l1StartTime),
 		InteropTime:             d.InteropTime(l1StartTime),
+		MantleBaseFeeTime:       d.MantleBaseFeeTime(l1StartTime),
+		MantleEverestTime:       d.MantleEverestTime(l1StartTime),
+		MantleEuboeaTime:        d.MantleEuboeaTime(l1StartTime),
+		MantleSkadiTime:         d.MantleSkadiTime(l1StartTime),
+		MantleLimbTime:          d.MantleLimbTime(l1StartTime),
+		MantleArsiaTime:         d.MantleArsiaTime(l1StartTime),
 		ProtocolVersionsAddress: d.ProtocolVersionsProxy,
 		AltDAConfig:             altDA,
 		ChainOpConfig:           chainOpConfig,
