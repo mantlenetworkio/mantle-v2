@@ -4,12 +4,11 @@ import os
 import subprocess
 import json
 import socket
-import requests
-import copy
-
 import time
-
 import shutil
+import copy
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 import devnet.log_setup
 from devnet.genesis import GENESIS_TMPL
@@ -23,16 +22,12 @@ log = logging.getLogger()
 def main():
     args = parser.parse_args()
 
-
-    chain_id = get_chain_id_from_rpc('http://localhost:8545')
-
     pjoin = os.path.join
     monorepo_dir = os.path.abspath(args.monorepo_dir)
     devnet_dir = pjoin(monorepo_dir, '.devnet')
     ops_bedrock_dir = pjoin(monorepo_dir, 'ops-bedrock')
     contracts_bedrock_dir = pjoin(monorepo_dir, 'packages', 'contracts-bedrock')
     deployment_dir = pjoin(contracts_bedrock_dir, 'deployments')
-    deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
     op_node_dir = pjoin(args.monorepo_dir, 'op-node')
     genesis_l1_path = pjoin(devnet_dir, 'genesis-l1.json')
     genesis_l2_path = pjoin(devnet_dir, 'genesis-l2.json')
@@ -45,23 +40,24 @@ def main():
         log.info('L2 genesis already generated.')
     else:
         log.info('Generating L1 genesis.')
-        # Try to fetch chain ID from localhost:8545
-        log.info('Fetching chain ID from localhost:8545...')
-
-        if chain_id is not None:
-            log.info(f'Using chain ID {chain_id} from localhost:8545')
-            genesis = copy.deepcopy(GENESIS_TMPL)
-            genesis['config']['chainId'] = chain_id
-            write_json(genesis_l1_path, genesis)
-        else:
-            log.warning('Failed to fetch chain ID from localhost:8545, using default template')
-            write_json(genesis_l1_path, GENESIS_TMPL)
+        write_json(genesis_l1_path, GENESIS_TMPL)
 
     log.info('Starting L1.')
     run_command(['mockdockercompose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir
     })
     wait_up(8545)
+
+    # Fetch chain ID from localhost:8545 AFTER L1 is up
+    log.info('Fetching chain ID from localhost:8545...')
+    chain_id = get_chain_id_from_rpc('http://localhost:8545')
+    if chain_id is None:
+        log.error('Failed to fetch chain ID from localhost:8545 after L1 startup')
+        raise Exception('Cannot determine L1 chain ID')
+    log.info(f'Using chain ID {chain_id} from localhost:8545')
+    
+    # Update deployment_json_path with actual chain_id
+    deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
 
     log.info('Generating network config.')
     devnet_cfg_orig = pjoin(contracts_bedrock_dir, 'deploy-config', 'mantle-devnet.json')
@@ -139,25 +135,22 @@ def main():
 def get_chain_id_from_rpc(rpc_url='http://localhost:8545'):
     """Fetch chain ID from an Ethereum RPC endpoint."""
     try:
-        response = requests.post(
-            rpc_url,
-            json={
-                'jsonrpc': '2.0',
-                'method': 'eth_chainId',
-                'params': [],
-                'id': 1
-            },
-            headers={'Content-Type': 'application/json'},
-            timeout=5
-        )
-        response.raise_for_status()
-        result = response.json()
-        chain_id_hex = result.get('result')
-        if chain_id_hex:
-            return int(chain_id_hex, 16)
-        else:
-            log.error(f'No chain ID in response: {result}')
-            return None
+        data = json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'eth_chainId',
+            'params': [],
+            'id': 1
+        }).encode('utf-8')
+        
+        req = Request(rpc_url, data=data, headers={'Content-Type': 'application/json'})
+        with urlopen(req, timeout=5) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            chain_id_hex = result.get('result')
+            if chain_id_hex:
+                return int(chain_id_hex, 16)
+            else:
+                log.error(f'No chain ID in response: {result}')
+                return None
     except Exception as e:
         log.error(f'Failed to fetch chain ID from {rpc_url}: {e}')
         return None
