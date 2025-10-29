@@ -23,13 +23,16 @@ log = logging.getLogger()
 def main():
     args = parser.parse_args()
 
+
+    chain_id = get_chain_id_from_rpc('http://localhost:8545')
+
     pjoin = os.path.join
     monorepo_dir = os.path.abspath(args.monorepo_dir)
     devnet_dir = pjoin(monorepo_dir, '.devnet')
     ops_bedrock_dir = pjoin(monorepo_dir, 'ops-bedrock')
     contracts_bedrock_dir = pjoin(monorepo_dir, 'packages', 'contracts-bedrock')
     deployment_dir = pjoin(contracts_bedrock_dir, 'deployments')
-    deployment_json_path = pjoin(deployment_dir, '31337-deploy.json')
+    deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
     op_node_dir = pjoin(args.monorepo_dir, 'op-node')
     genesis_l1_path = pjoin(devnet_dir, 'genesis-l1.json')
     genesis_l2_path = pjoin(devnet_dir, 'genesis-l2.json')
@@ -44,7 +47,6 @@ def main():
         log.info('Generating L1 genesis.')
         # Try to fetch chain ID from localhost:8545
         log.info('Fetching chain ID from localhost:8545...')
-        chain_id = get_chain_id_from_rpc('http://localhost:8545')
 
         if chain_id is not None:
             log.info(f'Using chain ID {chain_id} from localhost:8545')
@@ -56,7 +58,7 @@ def main():
             write_json(genesis_l1_path, GENESIS_TMPL)
 
     log.info('Starting L1.')
-    run_command(['docker-compose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'l1'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir
     })
     wait_up(8545)
@@ -108,7 +110,7 @@ def main():
             'go', 'run', 'cmd/main.go', 'genesis', 'l2',
             '--l1-rpc', 'http://localhost:8545',
             '--deploy-config', devnet_cfg_orig,
-            '--deployment-json', deployment_json_path,
+            '--l1-deployments', deployment_json_path,
             '--outfile.l2', pjoin(devnet_dir, 'genesis-l2.json'),
             '--outfile.rollup', pjoin(devnet_dir, 'rollup.json')
         ], cwd=op_node_dir)
@@ -119,13 +121,13 @@ def main():
         shutil.move(devnet_cfg_backup, devnet_cfg_orig)
 
     log.info('Bringing up L2.')
-    run_command(['docker-compose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir
     })
     wait_up(9545)
 
     log.info('Bringing up everything else.')
-    run_command(['docker-compose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
+    run_command(['mockdockercompose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
         'PWD': ops_bedrock_dir,
         'L2OO_ADDRESS': addresses['L2OutputOracleProxy'],
         'SEQUENCER_BATCH_INBOX_ADDRESS': rollup_config['batch_inbox_address']
