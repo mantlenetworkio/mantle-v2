@@ -9,6 +9,7 @@ build-contracts:
   just ../packages/contracts-bedrock/forge-build
 
 copy-contract-artifacts:
+    mkdir -p ./pkg/deployer/artifacts/forge-artifacts
     rm -f ./pkg/deployer/artifacts/forge-artifacts/artifacts.tgz
     tar -cvzf ./pkg/deployer/artifacts/forge-artifacts/artifacts.tgz -C ../packages/contracts-bedrock/forge-artifacts --exclude="*.t.sol" .
 
