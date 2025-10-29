@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.24.0
 
-replace github.com/ethereum/go-ethereum v1.16.4 => github.com/mantlenetworkio/op-geth v1.4.0-rc0
+replace github.com/ethereum/go-ethereum v1.16.5 => github.com/mantlenetworkio/op-geth v0.0.0-20251029084033-e30d7a92193c
 
 require (
 	cloud.google.com/go/kms v1.12.1
@@ -13,10 +13,10 @@ require (
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.3
-	github.com/ethereum/go-ethereum v1.16.4
+	github.com/ethereum/go-ethereum v1.16.5
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-resty/resty/v2 v2.16.5
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
+	github.com/golang/snappy v1.0.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/gofuzz v1.2.1-0.20220503160820-4a35382e8fc8
 	github.com/hashicorp/go-multierror v1.1.1
@@ -53,7 +53,7 @@ require (
 	cloud.google.com/go/iam v1.1.1 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
+	github.com/VictoriaMetrics/fastcache v1.13.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect
