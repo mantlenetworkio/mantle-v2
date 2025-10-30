@@ -111,6 +111,10 @@ op-proposer: ## Builds op-proposer binary
 	just $(JUSTFLAGS) ./op-proposer/op-proposer
 .PHONY: op-proposer
 
+gas-oracle: ## Builds the gas-oracle binary
+	make -C ./gas-oracle gas-oracle
+.PHONY: gas-oracle
+
 op-challenger: ## Builds op-challenger binary
 	make -C ./op-challenger op-challenger
 .PHONY: op-challenger

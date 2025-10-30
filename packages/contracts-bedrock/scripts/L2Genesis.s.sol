@@ -37,6 +37,7 @@ contract L2Genesis is Script {
         address sequencerFeeVaultRecipient;
         address baseFeeVaultRecipient;
         address l1FeeVaultRecipient;
+        address gasPriceOracleOwner;
         uint256 mantleFork;
         bool fundDevAccounts;
     }
@@ -208,7 +209,7 @@ contract L2Genesis is Script {
         // 3,4,5: legacy, not used in OP-Stack.
         setBVM_ETH(); // BVM_ETH - Mantle specific
         setL2CrossDomainMessenger(_input); // 7
-        setGasPriceOracle(); // f
+        setGasPriceOracle(_input); // f
         setL2StandardBridge(_input); // 10
         setSequencerFeeVault(_input); // 11
         setOptimismMintableERC20Factory(); // 12
@@ -337,8 +338,17 @@ contract L2Genesis is Script {
     }
 
     /// @notice This predeploy is following the safety invariant #1.
-    function setGasPriceOracle() internal {
+    function setGasPriceOracle(Input memory _input) internal {
         _setImplementationCode(Predeploys.GAS_PRICE_ORACLE);
+
+        // Set owner and operator directly in storage
+        // owner is at slot 1, operator is at slot 2
+        bytes32 ownerSlot = bytes32(uint256(1));
+        bytes32 operatorSlot = bytes32(uint256(2));
+
+        // Set in proxy (storage is only used in proxy, not in implementation)
+        vm.store(Predeploys.GAS_PRICE_ORACLE, ownerSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
+        vm.store(Predeploys.GAS_PRICE_ORACLE, operatorSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
     }
 
     /// @notice This predeploy is following the safety invariant #1.
