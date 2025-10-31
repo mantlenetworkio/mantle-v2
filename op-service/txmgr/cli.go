@@ -45,6 +45,10 @@ const (
 	ReceiptQueryIntervalFlagName       = "txmgr.receipt-query-interval"
 	AlreadyPublishedCustomErrsFlagName = "txmgr.already-published-custom-errs"
 	EnableCellProofsFlagName           = "txmgr.enable-cell-proofs"
+	EnableHsmFlagName                  = "enable-hsm"
+	HsmAddressFlagName                 = "hsm-address"
+	HsmAPINameFlagName                 = "hsm-api-name"
+	HsmCredenFlagName                  = "hsm-creden"
 )
 
 var (
@@ -247,6 +251,30 @@ func CLIFlagsWithDefaults(envPrefix string, defaults DefaultFlagValues) []cli.Fl
 			Value:   false,
 			EnvVars: prefixEnvVars("TXMGR_ENABLE_CELL_PROOFS"),
 		},
+		&cli.BoolFlag{
+			Name:    EnableHsmFlagName,
+			Usage:   "Whether or not to use cloud hsm",
+			Value:   false,
+			EnvVars: prefixEnvVars("ENABLE_HSM"),
+		},
+		&cli.StringFlag{
+			Name:    HsmAddressFlagName,
+			Usage:   "The address of private-key in hsm",
+			Value:   "",
+			EnvVars: prefixEnvVars("HSM_ADDRESS"),
+		},
+		&cli.StringFlag{
+			Name:    HsmAPINameFlagName,
+			Usage:   "The api-name of private-key in hsm",
+			Value:   "",
+			EnvVars: prefixEnvVars("HSM_API_NAME"),
+		},
+		&cli.StringFlag{
+			Name:    HsmCredenFlagName,
+			Usage:   "The creden of private-key in hsm",
+			Value:   "",
+			EnvVars: prefixEnvVars("HSM_CREDEN"),
+		},
 	}, opsigner.CLIFlags(envPrefix, "")...)
 }
 
@@ -276,6 +304,10 @@ type CLIConfig struct {
 	TxNotInMempoolTimeout      time.Duration
 	AlreadyPublishedCustomErrs []string
 	EnableCellProofs           bool
+	EnableHsm                  bool
+	HsmCreden                  string
+	HsmAddress                 string
+	HsmAPIName                 string
 }
 
 func NewCLIConfig(l1RPCURL string, defaults DefaultFlagValues) CLIConfig {
@@ -379,6 +411,10 @@ func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 		TxNotInMempoolTimeout:      ctx.Duration(TxNotInMempoolTimeoutFlagName),
 		AlreadyPublishedCustomErrs: ctx.StringSlice(AlreadyPublishedCustomErrsFlagName),
 		EnableCellProofs:           ctx.Bool(EnableCellProofsFlagName),
+		EnableHsm:                  ctx.Bool(EnableHsmFlagName),
+		HsmAddress:                 ctx.String(HsmAddressFlagName),
+		HsmAPIName:                 ctx.String(HsmAPINameFlagName),
+		HsmCreden:                  ctx.String(HsmCredenFlagName),
 	}
 }
 
@@ -409,7 +445,7 @@ func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
 		hdPath = cfg.L2OutputHDPath
 	}
 
-	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig)
+	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig, cfg.EnableHsm, cfg.HsmCreden, cfg.HsmAddress, cfg.HsmAPIName)
 	if err != nil {
 		return nil, fmt.Errorf("could not init signer: %w", err)
 	}
