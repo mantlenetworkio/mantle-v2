@@ -57,8 +57,8 @@ contract DeployConfig is Script {
     uint256 public l2GenesisBlockBaseFeePerGas;
     address public gasPriceOracleOwner;
     uint256 public gasPriceOracleTokenRatio;
-    uint256 public gasPriceOracleOverhead;
-    uint256 public gasPriceOracleScalar;
+    uint32 public basefeeScalar;
+    uint32 public blobbasefeeScalar;
     string public governanceTokenSymbol;
     string public governanceTokenName;
     address public governanceTokenOwner;
@@ -112,14 +112,14 @@ contract DeployConfig is Script {
         l2GenesisBlockBaseFeePerGas = stdJson.readUint(_json, "$.l2GenesisBlockBaseFeePerGas");
         gasPriceOracleOwner = stdJson.readAddress(_json, "$.gasPriceOracleOwner");
         gasPriceOracleTokenRatio = stdJson.readUint(_json, "$.gasPriceOracleTokenRatio");
-        gasPriceOracleOverhead = stdJson.readUint(_json, "$.gasPriceOracleOverhead");
-        gasPriceOracleScalar = stdJson.readUint(_json, "$.gasPriceOracleScalar");
         governanceTokenSymbol = stdJson.readString(_json, "$.governanceTokenSymbol");
         governanceTokenName = stdJson.readString(_json, "$.governanceTokenName");
         governanceTokenOwner = stdJson.readAddress(_json, "$.governanceTokenOwner");
         eip1559Denominator = stdJson.readUint(_json, "$.eip1559Denominator");
         eip1559Elasticity = stdJson.readUint(_json, "$.eip1559Elasticity");
         l1GenesisBlockTimestamp = stdJson.readUint(_json, "$.l1GenesisBlockTimestamp");
+        basefeeScalar = uint32(_readOr(_json, "$.gasPriceOracleBaseFeeScalar", 1368));
+        blobbasefeeScalar = uint32(_readOr(_json, "$.gasPriceOracleBlobBaseFeeScalar", 810949));
     }
 
     function fork() public view returns (Fork fork_) {

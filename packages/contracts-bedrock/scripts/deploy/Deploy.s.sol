@@ -154,8 +154,8 @@ contract Deploy is Deployer {
         DeployImplementations.Output memory dio = di.run(
             DeployImplementations.Input({
                 systemConfig_owner: cfg.finalSystemOwner(),
-                systemConfig_basefeeScalar: 0,
-                systemConfig_blobbasefeeScalar: 0,
+                systemConfig_basefeeScalar: uint32(cfg.basefeeScalar()),
+                systemConfig_blobbasefeeScalar: uint32(cfg.blobbasefeeScalar()),
                 systemConfig_batcherHash: bytes32(uint256(uint160(cfg.batchSenderAddress()))),
                 systemConfig_gasLimit: uint64(cfg.l2GenesisBlockGasLimit()),
                 systemConfig_baseFee: cfg.l2GenesisBlockBaseFeePerGas(),
@@ -267,8 +267,8 @@ contract Deploy is Deployer {
             ISystemConfig.initialize,
             (
                 cfg.finalSystemOwner(),
-                0, // basefeeScalar
-                0, // blobbasefeeScalar
+                uint32(cfg.basefeeScalar()), // basefeeScalar
+                uint32(cfg.blobbasefeeScalar()), // blobbasefeeScalar
                 bytes32(uint256(uint160(cfg.batchSenderAddress()))),
                 uint64(cfg.l2GenesisBlockGasLimit()),
                 cfg.l2GenesisBlockBaseFeePerGas(),
