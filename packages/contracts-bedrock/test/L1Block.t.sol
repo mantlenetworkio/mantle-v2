@@ -138,15 +138,13 @@ contract L1Block_ArsiaTest is CommonTest {
         require(success, "Call failed");
 
         // Verify values by reading from storage
-        // sequenceNumber is in slot 3 (standalone)
+        // sequenceNumber, blobBaseFeeScalar, and baseFeeScalar are packed in slot 3
+        // Storage layout: sequenceNumber in bits 0-63, blobBaseFeeScalar in bits 64-95, baseFeeScalar in bits 96-127
         bytes32 slot3 = vm.load(address(lb), bytes32(uint256(3)));
         uint64 sequenceNumberRead = uint64(uint256(slot3));
+        uint32 blobBaseFeeScalarRead = uint32(uint256(slot3) >> 64);
+        uint32 baseFeeScalarRead = uint32(uint256(slot3) >> 96);
         assertEq(sequenceNumberRead, 5, "sequenceNumber mismatch");
-
-        // baseFeeScalar and blobBaseFeeScalar are packed in slot 7
-        bytes32 slot7 = vm.load(address(lb), bytes32(uint256(7)));
-        uint32 baseFeeScalarRead = uint32(uint256(slot7));
-        uint32 blobBaseFeeScalarRead = uint32(uint256(slot7) >> 32);
         assertEq(baseFeeScalarRead, 1000, "baseFeeScalar mismatch");
         assertEq(blobBaseFeeScalarRead, 2000, "blobBaseFeeScalar mismatch");
 
@@ -158,10 +156,11 @@ contract L1Block_ArsiaTest is CommonTest {
         assertEq(lb.hash(), keccak256("test"));
         assertEq(lb.batcherHash(), keccak256("batcher"));
 
-        // operatorFeeScalar and operatorFeeConstant are packed in slot 9
-        bytes32 slot9 = vm.load(address(lb), bytes32(uint256(9)));
-        uint64 operatorFeeConstantRead = uint64(uint256(slot9));
-        uint32 operatorFeeScalarRead = uint32(uint256(slot9) >> 64);
+        // operatorFeeConstant and operatorFeeScalar are packed in slot 8
+        // Storage layout: operatorFeeConstant in bits 0-63, operatorFeeScalar in bits 64-95
+        bytes32 slot8 = vm.load(address(lb), bytes32(uint256(8)));
+        uint64 operatorFeeConstantRead = uint64(uint256(slot8));
+        uint32 operatorFeeScalarRead = uint32(uint256(slot8) >> 64);
 
         assertEq(operatorFeeScalarRead, 500000, "operatorFeeScalar mismatch");
         assertEq(operatorFeeConstantRead, 1000, "operatorFeeConstant mismatch");

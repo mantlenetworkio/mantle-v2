@@ -50,6 +50,16 @@ contract L1Block is Semver {
     uint64 public sequenceNumber;
 
     /**
+     * @notice The scalar value applied to the L1 blob base fee portion of the blob-capable L1 cost func.
+     */
+    uint32 public blobBaseFeeScalar;
+
+    /**
+     * @notice The scalar value applied to the L1 base fee portion of the blob-capable L1 cost func.
+     */
+    uint32 public baseFeeScalar;
+
+    /**
      * @notice The versioned hash to authenticate the batcher by.
      */
     bytes32 public batcherHash;
@@ -64,18 +74,6 @@ contract L1Block is Semver {
      * @notice The scalar value applied to the L1 portion of the transaction fee.
      */
     uint256 public l1FeeScalar;
-
-    /**
-     * @notice The scalar value applied to the L1 base fee portion of the
-     *         blob-capable L1 cost func.
-     */
-    uint32 public baseFeeScalar;
-
-    /**
-     * @notice The scalar value applied to the L1 blob base fee portion of the
-     *         blob-capable L1 cost func.
-     */
-    uint32 public blobBaseFeeScalar;
 
     /**
      * @notice The latest L1 blob base fee.
@@ -161,70 +159,17 @@ contract L1Block is Semver {
                 mstore(0x00, 0x3cc50b45) // 0x3cc50b45 is the 4-byte selector of "NotDepositor()"
                 revert(0x1C, 0x04) // returns the stored 4-byte selector from above
             }
+            // sequencenum (uint64), blobBaseFeeScalar (uint32), baseFeeScalar (uint32)
+            sstore(sequenceNumber.slot, shr(128, calldataload(4)))
+            // number (uint64) and timestamp (uint64)
+            sstore(number.slot, shr(128, calldataload(20)))
+            sstore(basefee.slot, calldataload(36)) // uint256
+            sstore(blobBaseFee.slot, calldataload(68)) // uint256
+            sstore(hash.slot, calldataload(100)) // bytes32
+            sstore(batcherHash.slot, calldataload(132)) // bytes32
 
-            // Calldata layout (after 4-byte selector):
-            // Bytes 4-7:     baseFeeScalar (uint32)
-            // Bytes 8-11:    blobBaseFeeScalar (uint32)
-            // Bytes 12-19:   sequenceNumber (uint64)
-            // Bytes 20-27:   timestamp (uint64)
-            // Bytes 28-35:   number (uint64)
-            // Bytes 36-67:   basefee (uint256)
-            // Bytes 68-99:   blobBaseFee (uint256)
-            // Bytes 100-131: hash (bytes32)
-            // Bytes 132-163: batcherHash (bytes32)
-            // Bytes 164-167: operatorFeeScalar (uint32)
-            // Bytes 168-175: operatorFeeConstant (uint64)
-
-            // Store baseFeeScalar and blobBaseFeeScalar to slot 7
-            // calldataload(4) loads bytes 4-35 (32 bytes starting at offset 4)
-            // baseFeeScalar is at bytes 4-7, blobBaseFeeScalar is at bytes 8-11
-            let scalarData := calldataload(4)
-            // Extract baseFeeScalar from bits 224-255 (first 4 bytes)
-            let baseFeeScalarVal := shr(224, scalarData)
-            // Extract blobBaseFeeScalar from bits 192-223 (next 4 bytes)
-            let blobBaseFeeScalarVal := and(shr(192, scalarData), 0xFFFFFFFF)
-            // Pack into slot 7: baseFeeScalar in bits 0-31, blobBaseFeeScalar in bits 32-63
-            sstore(baseFeeScalar.slot, or(baseFeeScalarVal, shl(32, blobBaseFeeScalarVal)))
-
-            // Store sequenceNumber to slot 3
-            // sequenceNumber is at bytes 12-19
-            // calldataload(12) loads bytes 12-43
-            // sequenceNumber occupies the first 8 bytes (bits 192-255)
-            sstore(sequenceNumber.slot, shr(192, calldataload(12)))
-
-            // Store number and timestamp to slot 0
-            // timestamp is at bytes 20-27, number is at bytes 28-35
-            // calldataload(20) loads bytes 20-51
-            // timestamp occupies bits 192-255 (first 8 bytes)
-            // number occupies bits 128-191 (next 8 bytes)
-            let timeData := calldataload(20)
-            let timestampVal := shr(192, timeData)
-            let numberVal := and(shr(128, timeData), 0xFFFFFFFFFFFFFFFF)
-            // Pack into slot 0: number in bits 0-63, timestamp in bits 64-127
-            sstore(number.slot, or(numberVal, shl(64, timestampVal)))
-
-            // Store basefee to slot 1 (bytes 36-67)
-            sstore(basefee.slot, calldataload(36))
-
-            // Store blobBaseFee to slot 8 (bytes 68-99)
-            sstore(blobBaseFee.slot, calldataload(68))
-
-            // Store hash to slot 2 (bytes 100-131)
-            sstore(hash.slot, calldataload(100))
-
-            // Store batcherHash to slot 4 (bytes 132-163)
-            sstore(batcherHash.slot, calldataload(132))
-
-            // Store operatorFeeScalar and operatorFeeConstant to slot 9
-            // operatorFeeScalar is at bytes 164-167, operatorFeeConstant is at bytes 168-175
-            // calldataload(164) loads bytes 164-195
-            let operatorData := calldataload(164)
-            // operatorFeeScalar occupies bits 224-255 (first 4 bytes)
-            let operatorFeeScalarVal := shr(224, operatorData)
-            // operatorFeeConstant occupies bits 160-223 (next 8 bytes)
-            let operatorFeeConstantVal := and(shr(160, operatorData), 0xFFFFFFFFFFFFFFFF)
-            // Pack into slot 9: operatorFeeConstant in bits 0-63, operatorFeeScalar in bits 64-95
-            sstore(operatorFeeConstant.slot, or(operatorFeeConstantVal, shl(64, operatorFeeScalarVal)))
+            // operatorFeeScalar (uint32), operatorFeeConstant (uint64)
+            sstore(operatorFeeConstant.slot, shr(160, calldataload(164)))
         }
     }
 }
