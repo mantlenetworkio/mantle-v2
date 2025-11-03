@@ -1190,9 +1190,11 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *eth.BlockRef, l2GenesisBlockHa
 	}
 
 	chainOpConfig := &params.OptimismConfig{
-		EIP1559Elasticity:        d.EIP1559Elasticity,
-		EIP1559Denominator:       d.EIP1559Denominator,
-		EIP1559DenominatorCanyon: &d.EIP1559DenominatorCanyon,
+		EIP1559Elasticity:  d.EIP1559Elasticity,
+		EIP1559Denominator: d.EIP1559Denominator,
+		// Mantle features
+		// use the same denominator since Mantle don't have a canyon fork
+		EIP1559DenominatorCanyon: &d.EIP1559Denominator,
 	}
 
 	var altDA *rollup.AltDAConfig
