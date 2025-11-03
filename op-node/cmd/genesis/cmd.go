@@ -199,11 +199,14 @@ var Subcommands = cli.Commands{
 
 			// Mantle features
 			// setup initial 1559 params in rollup system config
+			if config.L2GenesisHoloceneTimeOffset == nil {
+				rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true
+			}
 			if config.L2GenesisHoloceneTimeOffset != nil && *config.L2GenesisHoloceneTimeOffset == 0 {
 				rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(config.EIP1559Denominator, config.EIP1559Elasticity))
 			}
 			if config.L2GenesisJovianTimeOffset != nil && *config.L2GenesisJovianTimeOffset == 0 {
-				rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeMinBaseFeeExtraData(config.EIP1559Denominator, config.EIP1559Elasticity, config.MinBaseFee))
+				rollupConfig.Genesis.SystemConfig.BaseFee = new(big.Int).SetUint64(config.MinBaseFee)
 			}
 
 			if err := rollupConfig.Check(); err != nil {
