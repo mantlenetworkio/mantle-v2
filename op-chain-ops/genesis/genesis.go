@@ -35,10 +35,9 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 	if eip1559Denom == 0 {
 		eip1559Denom = 50
 	}
-	eip1559DenomCanyon := config.EIP1559DenominatorCanyon
-	if eip1559DenomCanyon == 0 {
-		eip1559DenomCanyon = 250
-	}
+	// Mantle features
+	// use the same denominator since Mantle don't have a canyon fork
+	eip1559DenomCanyon := eip1559Denom
 	eip1559Elasticity := config.EIP1559Elasticity
 	if eip1559Elasticity == 0 {
 		eip1559Elasticity = 10
@@ -130,10 +129,11 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 		genesis.BlobGasUsed = u64ptr(0)
 		genesis.ExcessBlobGas = u64ptr(0)
 	}
-	if optimismChainConfig.IsHolocene(genesis.Timestamp) || optimismChainConfig.IsMantleSkadi(genesis.Timestamp) {
+	if optimismChainConfig.IsHolocene(genesis.Timestamp) {
 		genesis.ExtraData = HoloceneExtraData
 	}
 	if optimismChainConfig.IsIsthmus(genesis.Timestamp) || optimismChainConfig.IsMantleSkadi(genesis.Timestamp) {
+		genesis.Alloc[params.BeaconRootsAddress] = types.Account{Nonce: 1, Code: params.BeaconRootsCode, Balance: common.Big0}
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 	if optimismChainConfig.IsMinBaseFee(genesis.Timestamp) {
