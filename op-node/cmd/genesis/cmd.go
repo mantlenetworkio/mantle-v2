@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/ioutil"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
@@ -195,6 +196,19 @@ var Subcommands = cli.Commands{
 			if err != nil {
 				return err
 			}
+
+			// Mantle features
+			// setup initial 1559 params in rollup system config
+			if config.L2GenesisMantleArsiaTimeOffset == nil {
+				rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true
+			}
+			if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
+				rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(config.EIP1559Denominator, config.EIP1559Elasticity))
+			}
+			if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
+				rollupConfig.Genesis.SystemConfig.MinBaseFee = config.MinBaseFee
+			}
+
 			if err := rollupConfig.Check(); err != nil {
 				return fmt.Errorf("generated rollup config does not pass validation: %w", err)
 			}
