@@ -1113,6 +1113,9 @@ type DeployConfig struct {
 
 	// Legacy, ignored, here for strict-JSON decoding to be accepted.
 	LegacyDeployConfig `evm:"-"`
+
+	// Used to setup the genesis SystemConfig for rollup config
+	MinBaseFee uint64 `json:"minBaseFee"`
 }
 
 // Copy will deeply copy the DeployConfig. This does a JSON roundtrip to copy
