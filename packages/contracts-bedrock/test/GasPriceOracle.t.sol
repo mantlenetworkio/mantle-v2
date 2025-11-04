@@ -293,29 +293,27 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
         assertEq(gasOracle.operatorFeeConstant(), operatorFeeConstant_val);
     }
 
-    function test_getL1Fee_arsia_succeeds() external view {
-        bytes memory data = hex"dead";
-        uint256 fee = gasOracle.getL1Fee(data);
+    function test_getL1FeeRegression_succeeds() external view {
+        // fastlzSize: 235, inc signature
+        bytes memory data =
+            hex"1d2c3ec4f5a9b3f3cd2c024e455c1143a74bbd637c324adcbd4f74e346786ac44e23e78f47d932abedd8d1"
+            hex"06daadcea350be16478461046273101034601364012364701331dfad43729dc486abd134bcad61b34d6ca1"
+            hex"f2eb31655b7d61ca33ba6d172cdf7d8b5b0ef389a314ca7a9a831c09fc2ca9090d059b4dd25194f3de297b"
+            hex"dba6d6d796e4f80be94f8a9151d685607826e7ba25177b40cb127ea9f1438470";
 
-        // Verify fee is non-zero
-        assertGt(fee, 0);
+        uint256 gas = gasOracle.getL1GasUsed(data);
+        assertEq(gas, 2463); // 235 * 16
+        uint256 price = gasOracle.getL1Fee(data);
+        // linearRegression = -42.5856 + 235 * 0.8365 = 153.9919
+        // 153_991_900 * (20 * 16 * 2 * 1e6 + 3 * 1e6 * 15) / 1e12
+        assertEq(price, 105484);
 
-        // Calculate expected fee manually
-        // hex"dead" = 2 non-zero bytes (0xde, 0xad) + 68 bytes padding
-        uint256 l1GasUsed = (2 * 16 + 68 * 16); // 2 non-zero bytes + 68 padding
-        uint256 scaledBaseFee = baseFeeScalar * 16 * l1BaseFee;
-        uint256 scaledBlobBaseFee = blobBaseFeeScalar * l1BlobBaseFee;
-        uint256 expectedFee = l1GasUsed * (scaledBaseFee + scaledBlobBaseFee) / (16 * 10 ** 6);
-
-        assertEq(fee, expectedFee);
-    }
-
-    function testFuzz_getL1Fee_arsia_succeeds(bytes memory data) external view {
-        // Bound data length to avoid gas limit issues
-        vm.assume(data.length > 0 && data.length < 10000);
-
-        uint256 fee = gasOracle.getL1Fee(data);
-        assertGt(fee, 0);
+        assertEq(data.length, 161);
+        // flzUpperBound = (161 + 68) + ((161 + 68) / 255) + 16 = 245
+        // linearRegression = -42.5856 + 245 * 0.8365 = 162.3569
+        // 162_356_900 * (20 * 16 * 2 * 1e6 + 3 * 1e6 * 15) / 1e12 == 111,214.4765
+        uint256 upperBound = gasOracle.getL1FeeUpperBound(data.length);
+        assertEq(upperBound, 111214);
     }
 
     function test_getOperatorFee_succeeds() external view {
@@ -346,6 +344,61 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
         GasPriceOracle newOracle = new GasPriceOracle();
         uint256 fee = newOracle.getOperatorFee(1_000_000);
         assertEq(fee, 0);
+    }
+
+    function test_getL1FeeMinimumBound_succeeds() external view {
+        bytes memory data = hex"0000010203"; // fastlzSize: 74, inc signature
+        uint256 gas = gasOracle.getL1GasUsed(data);
+        assertEq(gas, 1600); // 100 (minimum size) * 16
+        uint256 price = gasOracle.getL1Fee(data);
+        // linearRegression = -42.5856 + 74 * 0.8365 = 19.3154
+        // under the minTxSize of 100, so linear regression output is ignored
+        // 100_000_000 * (20 * 16 * 2 * 1e6 + 3 * 1e6 * 15) / 1e12
+        assertEq(price, 68500);
+
+        assertEq(data.length, 5);
+        // flzUpperBound = (5 + 68) + ((5 + 68) / 255) + 16 = 89
+        // linearRegression = -42.5856 + 89 * 0.8365 = 31.8629
+        // under the minTxSize of 100, so output is ignored
+        // 100_000_000 * (20 * 16 * 2 * 1e6 + 3 * 1e6 * 15) / 1e12
+        uint256 upperBound = gasOracle.getL1FeeUpperBound(data.length);
+        assertEq(upperBound, 68500);
+    }
+
+    function test_getL1FeeUpperBound_notArsia_reverts() external {
+        // Create a new oracle without Arsia enabled
+        GasPriceOracle newOracle = new GasPriceOracle();
+
+        vm.expectRevert("GasPriceOracle: getL1FeeUpperBound only supports Arsia");
+        newOracle.getL1FeeUpperBound(1000);
+    }
+
+    function testFuzz_getL1FeeUpperBound_succeeds(uint256 txSize) external view {
+        // Bound tx size to reasonable values
+        vm.assume(txSize > 0 && txSize < 100000);
+
+        uint256 upperBound = gasOracle.getL1FeeUpperBound(txSize);
+        assertGt(upperBound, 0);
+    }
+
+    function test_getL1GasUsed_arsia_succeeds() external view {
+        bytes memory data = hex"dead";
+        uint256 gasUsed = gasOracle.getL1GasUsed(data);
+
+        // Verify gas used is non-zero
+        assertGt(gasUsed, 0);
+
+        // Gas used should be reasonable (not too high or too low)
+        assertGt(gasUsed, 100);
+        assertLt(gasUsed, 1_000_000);
+    }
+
+    function testFuzz_getL1GasUsed_arsia_succeeds(bytes memory data) external view {
+        // Bound data length to avoid gas limit issues
+        vm.assume(data.length > 0 && data.length < 10000);
+
+        uint256 gasUsed = gasOracle.getL1GasUsed(data);
+        assertGt(gasUsed, 0);
     }
 }
 
