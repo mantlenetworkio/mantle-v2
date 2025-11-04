@@ -94,6 +94,10 @@ func RollupNodeMain(ctx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.
 		cfg.Rollup.LogDescription(log, chaincfg.L2ChainIDToNetworkDisplayName)
 	}
 
+	// Mantle features
+	// Apply Mantle overrides to the config
+	cfg.Rollup.ApplyMantleOverrides()
+
 	n, err := node.New(ctx.Context, cfg, log, VersionWithMeta, m)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the rollup node: %w", err)

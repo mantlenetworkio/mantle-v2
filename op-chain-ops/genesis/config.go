@@ -575,7 +575,7 @@ func (d *UpgradeScheduleDeployConfig) JovianTime(genesisTime uint64) *uint64 {
 }
 
 func (d *UpgradeScheduleDeployConfig) InteropTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return nil
 }
 
 func (d *UpgradeScheduleDeployConfig) MantleBaseFeeTime(genesisTime uint64) *uint64 {
