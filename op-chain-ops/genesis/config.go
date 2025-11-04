@@ -539,27 +539,27 @@ func (d *UpgradeScheduleDeployConfig) RegolithTime(genesisTime uint64) *uint64 {
 }
 
 func (d *UpgradeScheduleDeployConfig) CanyonTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisCanyonTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) DeltaTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisDeltaTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) EcotoneTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisEcotoneTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) FjordTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisFjordTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) GraniteTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisGraniteTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) HoloceneTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisHoloceneTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) PectraBlobScheduleTime(genesisTime uint64) *uint64 {
@@ -567,15 +567,15 @@ func (d *UpgradeScheduleDeployConfig) PectraBlobScheduleTime(genesisTime uint64)
 }
 
 func (d *UpgradeScheduleDeployConfig) IsthmusTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisIsthmusTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) JovianTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisJovianTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) InteropTime(genesisTime uint64) *uint64 {
-	return d.MantleArsiaTime(genesisTime)
+	return offsetToUpgradeTime(d.L2GenesisInteropTimeOffset, genesisTime)
 }
 
 func (d *UpgradeScheduleDeployConfig) MantleBaseFeeTime(genesisTime uint64) *uint64 {
@@ -1190,11 +1190,9 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *eth.BlockRef, l2GenesisBlockHa
 	}
 
 	chainOpConfig := &params.OptimismConfig{
-		EIP1559Elasticity:  d.EIP1559Elasticity,
-		EIP1559Denominator: d.EIP1559Denominator,
-		// Mantle features
-		// use the same denominator since Mantle don't have a canyon fork
-		EIP1559DenominatorCanyon: &d.EIP1559Denominator,
+		EIP1559Elasticity:        d.EIP1559Elasticity,
+		EIP1559Denominator:       d.EIP1559Denominator,
+		EIP1559DenominatorCanyon: &d.EIP1559DenominatorCanyon,
 	}
 
 	var altDA *rollup.AltDAConfig

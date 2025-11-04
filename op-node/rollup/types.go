@@ -660,7 +660,30 @@ func (c *Config) IsMantleArsiaActivationBlock(l2BlockTime uint64) bool {
 }
 
 func (c *Config) ActivationTimeFor(fork ForkName) *uint64 {
-	return c.MantleActivationTimeFor(ForkToMantleFork(fork))
+	switch fork {
+	case Interop:
+		return c.InteropTime
+	case Jovian:
+		return c.JovianTime
+	case Isthmus:
+		return c.IsthmusTime
+	case Holocene:
+		return c.HoloceneTime
+	case Granite:
+		return c.GraniteTime
+	case Fjord:
+		return c.FjordTime
+	case Ecotone:
+		return c.EcotoneTime
+	case Delta:
+		return c.DeltaTime
+	case Canyon:
+		return c.CanyonTime
+	case Regolith:
+		return c.RegolithTime
+	default:
+		panic(fmt.Sprintf("unknown fork: %v", fork))
+	}
 }
 
 func (c *Config) MantleActivationTimeFor(fork MantleForkName) *uint64 {
@@ -723,30 +746,41 @@ func (c *Config) IsActivationBlockForFork(l2BlockTime uint64, forkName ForkName)
 }
 
 func (c *Config) ActivateAtGenesis(hardfork ForkName) {
-	// Existing the case for activating multiple optimism forks at the same time.
-	c.ActivateAtGenesisForMantle(ForkToMantleFork(hardfork))
-}
-
-func (c *Config) ActivateAtGenesisForMantle(hardfork MantleForkName) {
+	// IMPORTANT! ordered from newest to oldest
 	switch hardfork {
-	case MantleArsia:
-		c.MantleArsiaTime = new(uint64)
+	case Jovian:
+		c.JovianTime = new(uint64)
 		fallthrough
-	case MantleLimb:
-		c.MantleLimbTime = new(uint64)
+	case Interop:
+		c.InteropTime = new(uint64)
 		fallthrough
-	case MantleSkadi:
-		c.MantleSkadiTime = new(uint64)
+	case Isthmus:
+		c.IsthmusTime = new(uint64)
 		fallthrough
-	case MantleEuboea:
-		c.MantleEuboeaTime = new(uint64)
+	case Holocene:
+		c.HoloceneTime = new(uint64)
 		fallthrough
-	case MantleEverest:
-		c.MantleEverestTime = new(uint64)
+	case Granite:
+		c.GraniteTime = new(uint64)
 		fallthrough
-	case MantleBaseFee:
-		c.MantleBaseFeeTime = new(uint64)
-	case MantleNone:
+	case Fjord:
+		c.FjordTime = new(uint64)
+		fallthrough
+	case Ecotone:
+		c.EcotoneTime = new(uint64)
+		fallthrough
+	case Delta:
+		c.DeltaTime = new(uint64)
+		fallthrough
+	case Canyon:
+		c.CanyonTime = new(uint64)
+		fallthrough
+	case Regolith:
+		c.RegolithTime = new(uint64)
+		fallthrough
+	case Bedrock:
+		// default
+	case None:
 		break
 	}
 }
@@ -931,6 +965,22 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 		return fmt.Errorf("failed to decode rollup config: %w", err)
 	}
 	return nil
+}
+
+func (c *Config) ApplyMantleOverrides() {
+	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
+	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+
+	// Map Optimism forks to Mantle forks
+	c.CanyonTime = c.MantleArsiaTime
+	c.DeltaTime = c.MantleArsiaTime
+	c.EcotoneTime = c.MantleArsiaTime
+	c.FjordTime = c.MantleArsiaTime
+	c.GraniteTime = c.MantleArsiaTime
+	c.HoloceneTime = c.MantleArsiaTime
+	c.IsthmusTime = c.MantleArsiaTime
+	c.JovianTime = c.MantleArsiaTime
+	c.InteropTime = nil
 }
 
 func fmtForkTimeOrUnset(v *uint64) string {
