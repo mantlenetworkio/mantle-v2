@@ -10,6 +10,7 @@ import { L1Block } from "src/L2/L1Block.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Arithmetic } from "src/libraries/Arithmetic.sol";
+import { LibZip } from "@solady/utils/LibZip.sol";
 
 /**
  * @custom:proxied
@@ -35,6 +36,24 @@ contract GasPriceOracle is Semver {
     uint256 public tokenRatio;
     address public owner;
     address public operator;
+
+    /**
+     * @notice This is the intercept value for the linear regression used to estimate the final size of the
+     *         compressed transaction.
+     */
+    int32 private constant COST_INTERCEPT = -42_585_600;
+
+    /**
+     * @notice This is the coefficient value for the linear regression used to estimate the final size of the
+     *         compressed transaction.
+     */
+    uint32 private constant COST_FASTLZ_COEF = 836_500;
+
+    /**
+     * @notice This is the minimum bound for the fastlz to brotli size estimation. Any estimations below this
+     *         are set to this value.
+     */
+    uint256 private constant MIN_TRANSACTION_SIZE = 100;
 
     /**
      * @notice Indicates whether the network uses Arsia gas calculation.
@@ -130,6 +149,27 @@ contract GasPriceOracle is Semver {
     }
 
     /**
+     * @notice returns an upper bound for the L1 fee for a given transaction size.
+     *         It is provided for callers who wish to estimate L1 transaction costs in the
+     *         write path, and is much more gas efficient than `getL1Fee`.
+     *         It assumes the worst case of fastlz upper-bound which covers %99.99 txs.
+     *
+     * @param _unsignedTxSize Unsigned fully RLP-encoded transaction size to get the L1 fee for.
+     *
+     * @return L1 estimated upper-bound fee that should be paid for the tx
+     */
+    function getL1FeeUpperBound(uint256 _unsignedTxSize) external view returns (uint256) {
+        require(isArsia, "GasPriceOracle: getL1FeeUpperBound only supports Arsia");
+
+        // Add 68 to the size to account for unsigned tx:
+        uint256 txSize = _unsignedTxSize + 68;
+        // txSize / 255 + 16 is the practical fastlz upper-bound covers %99.99 txs.
+        uint256 flzUpperBound = txSize + txSize / 255 + 16;
+
+        return _arsiaL1Cost(flzUpperBound);
+    }
+
+    /**
      * @notice Retrieves the current gas price (base fee).
      *
      * @return Current L2 gas price (base fee).
@@ -220,16 +260,23 @@ contract GasPriceOracle is Semver {
     }
 
     /**
-     * @notice Computes the amount of L1 gas used for a transaction. Adds the overhead which
-     *         represents the per-transaction gas overhead of posting the transaction and state
-     *         roots to L1. Adds 68 bytes of padding to account for the fact that the input does
-     *         not have a signature.
+     * @notice Computes the amount of L1 gas used for a transaction. Adds 68 bytes
+     *         of padding to account for the fact that the input does not have a signature.
      *
      * @param _data Unsigned fully RLP-encoded transaction to get the L1 gas for.
      *
      * @return Amount of L1 gas used to publish the transaction.
+     *
+     * @custom:deprecated This method does not accurately estimate the gas used for a transaction.
+     *                    If you are calculating fees use getL1Fee or getL1FeeUpperBound.
      */
     function getL1GasUsed(bytes memory _data) public view returns (uint256) {
+        if (isArsia) {
+            // Add 68 to the size to account for unsigned tx
+            // Assume the compressed data is mostly non-zero, and would pay 16 gas per calldata byte
+            // Divide by 1e6 due to the scaling factor of the linear regression
+            return _arsiaLinearRegression(LibZip.flzCompress(_data).length + 68) * 16 / 1e6;
+        }
         uint256 l1GasUsed = _getCalldataGas(_data);
         return l1GasUsed + overhead();
     }
@@ -277,11 +324,7 @@ contract GasPriceOracle is Semver {
      * @return L1 fee that should be paid for the tx
      */
     function _getL1FeeArsia(bytes memory _data) internal view returns (uint256) {
-        uint256 l1GasUsed = _getCalldataGas(_data);
-        uint256 scaledBaseFee = baseFeeScalar() * 16 * l1BaseFee();
-        uint256 scaledBlobBaseFee = blobBaseFeeScalar() * blobBaseFee();
-        uint256 fee = l1GasUsed * (scaledBaseFee + scaledBlobBaseFee);
-        return fee / (16 * 10 ** DECIMALS);
+        return _arsiaL1Cost(LibZip.flzCompress(_data).length + 68);
     }
 
     /**
@@ -303,5 +346,34 @@ contract GasPriceOracle is Semver {
             }
         }
         return total + (68 * 16);
+    }
+
+    /**
+     * @notice Arsia L1 cost based on the compressed and original tx size.
+     *
+     * @param _fastLzSize estimated compressed tx size.
+     *
+     * @return Arsia L1 fee that should be paid for the tx
+     */
+    function _arsiaL1Cost(uint256 _fastLzSize) internal view returns (uint256) {
+        // Apply the linear regression to estimate the Brotli 10 size
+        uint256 estimatedSize = _arsiaLinearRegression(_fastLzSize);
+        uint256 feeScaled = baseFeeScalar() * 16 * l1BaseFee() + blobBaseFeeScalar() * blobBaseFee();
+        return estimatedSize * feeScaled / (10 ** (DECIMALS * 2));
+    }
+
+    /**
+     * @notice Takes the fastLz size compression and returns the estimated Brotli
+     *
+     * @param _fastLzSize fastlz compressed tx size.
+     *
+     * @return Number of bytes in the compressed transaction
+     */
+    function _arsiaLinearRegression(uint256 _fastLzSize) internal pure returns (uint256) {
+        int256 estimatedSize = COST_INTERCEPT + int256(COST_FASTLZ_COEF * _fastLzSize);
+        if (estimatedSize < int256(MIN_TRANSACTION_SIZE) * 1e6) {
+            estimatedSize = int256(MIN_TRANSACTION_SIZE) * 1e6;
+        }
+        return uint256(estimatedSize);
     }
 }
