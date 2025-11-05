@@ -187,6 +187,12 @@ type Config struct {
 	// This feature (de)activates by L1 origin timestamp, to keep a consistent L1 block info per L2
 	// epoch.
 	PectraBlobScheduleTime *uint64 `json:"pectra_blob_schedule_time,omitempty"`
+
+	// Mantle features: Legacy fields
+	// Use Da from MantleDA(EigenDA)
+	MantleDaSwitch bool `json:"mantle_da_switch,omitempty"`
+	// MantleDA(EigenDA) DataLayrServiceManage contract address
+	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr,omitempty"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.
