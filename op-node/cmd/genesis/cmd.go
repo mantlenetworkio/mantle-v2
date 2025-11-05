@@ -199,7 +199,9 @@ var Subcommands = cli.Commands{
 
 			// Mantle features
 			// Apply Mantle overrides to the rollup config
-			rollupConfig.ApplyMantleOverrides()
+			if err := rollupConfig.ApplyMantleOverrides(); err != nil {
+				return fmt.Errorf("failed to apply mantle overrides: %w", err)
+			}
 			// setup initial 1559 params in rollup system config
 			if config.L2GenesisMantleArsiaTimeOffset == nil {
 				rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true

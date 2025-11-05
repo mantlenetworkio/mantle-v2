@@ -798,7 +798,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 		return eth.FCUV3
 	}
 	ts := uint64(attr.Timestamp)
-	if c.IsEcotone(ts) {
+	if c.IsEcotone(ts) || c.IsMantleSkadi(ts) {
 		// Cancun
 		return eth.FCUV3
 	} else if c.IsCanyon(ts) {
@@ -813,7 +813,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 
 // NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.NewPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
@@ -825,7 +825,7 @@ func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 
 // GetPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.GetPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
@@ -973,9 +973,13 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 	return nil
 }
 
-func (c *Config) ApplyMantleOverrides() {
+func (c *Config) ApplyMantleOverrides() error {
 	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+	if c.MantleArsiaTime != nil && c.ChainOpConfig == nil {
+		return fmt.Errorf("chain op config is required for mantle arsia fork")
+	} else if c.ChainOpConfig != nil {
+		c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+	}
 
 	// Map Optimism forks to Mantle forks
 	c.CanyonTime = c.MantleArsiaTime
@@ -987,6 +991,8 @@ func (c *Config) ApplyMantleOverrides() {
 	c.IsthmusTime = c.MantleArsiaTime
 	c.JovianTime = c.MantleArsiaTime
 	c.InteropTime = nil
+
+	return nil
 }
 
 func fmtForkTimeOrUnset(v *uint64) string {

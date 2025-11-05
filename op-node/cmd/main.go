@@ -96,7 +96,9 @@ func RollupNodeMain(ctx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.
 
 	// Mantle features
 	// Apply Mantle overrides to the config
-	cfg.Rollup.ApplyMantleOverrides()
+	if err := cfg.Rollup.ApplyMantleOverrides(); err != nil {
+		return nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
+	}
 
 	n, err := node.New(ctx.Context, cfg, log, VersionWithMeta, m)
 	if err != nil {
