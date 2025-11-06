@@ -63,7 +63,7 @@ func MantleArsiaNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 		To:                  nil, // Contract deployment
 		Mint:                big.NewInt(0),
 		Value:               big.NewInt(0),
-		Gas:                 500_000, // Estimated gas for deployment
+		Gas:                 700_000, // Estimated gas for deployment
 		IsSystemTransaction: false,
 		Data:                l1BlockArsiaDeploymentBytecode,
 	}).MarshalBinary()
@@ -81,7 +81,7 @@ func MantleArsiaNetworkUpgradeTransactions() ([]hexutil.Bytes, error) {
 		To:                  nil, // Contract deployment
 		Mint:                big.NewInt(0),
 		Value:               big.NewInt(0),
-		Gas:                 1_200_000, // Estimated gas for deployment
+		Gas:                 1_800_000, // Estimated gas for deployment
 		IsSystemTransaction: false,
 		Data:                gasPriceOracleArsiaDeploymentBytecode,
 	}).MarshalBinary()
