@@ -2004,11 +2004,10 @@ jobs:
           mentions: "@proofs-team"
 
   preimage-reproducibility:
-    docker:
-      - image: <<pipeline.parameters.default_docker_image>>
+    machine: true
+    resource_class: large
     steps:
       - utils/checkout-with-mise
-      - setup_remote_docker
       - run:
           name: Verify reproducibility
           command: make -C op-program verify-reproducibility
