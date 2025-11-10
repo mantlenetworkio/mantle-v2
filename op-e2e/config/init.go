@@ -54,6 +54,7 @@ const (
 	AllocTypeAltDA        AllocType = "alt-da"
 	AllocTypeMTCannon     AllocType = "mt-cannon"
 	AllocTypeMTCannonNext AllocType = "mt-cannon-next"
+	AllocTypeFastGame     AllocType = "fast-game"
 
 	DefaultAllocType = AllocTypeMTCannon
 )
@@ -67,14 +68,14 @@ func (a AllocType) Check() error {
 
 func (a AllocType) UsesProofs() bool {
 	switch a {
-	case AllocTypeMTCannon, AllocTypeMTCannonNext, AllocTypeAltDA:
+	case AllocTypeMTCannon, AllocTypeMTCannonNext, AllocTypeAltDA, AllocTypeFastGame:
 		return true
 	default:
 		return false
 	}
 }
 
-var allocTypes = []AllocType{AllocTypeAltDA, AllocTypeMTCannon, AllocTypeMTCannonNext}
+var allocTypes = []AllocType{AllocTypeAltDA, AllocTypeMTCannon, AllocTypeMTCannonNext, AllocTypeFastGame}
 
 var (
 	// All of the following variables are set in the init function
@@ -242,6 +243,9 @@ func initAllocType(root string, allocType AllocType) {
 					DABondSize:                 1000000,
 					DAResolverRefundPercentage: 0,
 				}
+			}
+			if allocType == AllocTypeFastGame {
+				intent.GlobalDeployOverrides["preimageOracleChallengePeriod"] = 1
 			}
 
 			baseUpgradeSchedule := map[string]any{
@@ -415,13 +419,10 @@ func defaultIntent(root string, loc *artifacts.Locator, deployer common.Address,
 							DisputeMaxGameDepth:     14 + 3 + 1,
 							DisputeSplitDepth:       14,
 							DisputeClockExtension:   0,
-							DisputeMaxClockDuration: 0,
+							DisputeMaxClockDuration: 120,
 						},
-						VMType:                       state.VMTypeAlphabet,
-						UseCustomOracle:              true,
-						OracleMinProposalSize:        10000,
-						OracleChallengePeriodSeconds: 0,
-						MakeRespected:                true,
+						VMType:        state.VMTypeAlphabet,
+						MakeRespected: true,
 					},
 					{
 						ChainProofParams: state.ChainProofParams{
