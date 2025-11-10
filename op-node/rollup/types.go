@@ -974,12 +974,14 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 }
 
 func (c *Config) ApplyMantleOverrides() error {
-	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-	if c.MantleArsiaTime != nil && c.ChainOpConfig == nil {
-		return fmt.Errorf("chain op config is required for mantle arsia fork")
-	} else if c.ChainOpConfig != nil {
-		c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+	if c.ChainOpConfig == nil {
+		c.ChainOpConfig = &params.OptimismConfig{
+			EIP1559Elasticity:  10,
+			EIP1559Denominator: 50,
+		}
 	}
+	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
+	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
 
 	// Map Optimism forks to Mantle forks
 	c.CanyonTime = c.MantleArsiaTime
