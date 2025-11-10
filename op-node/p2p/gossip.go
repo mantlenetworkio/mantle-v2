@@ -604,7 +604,7 @@ func (p *publisher) publishRawSignedPayload(ctx context.Context, timestamp uint6
 	// This also copies the data, freeing up the original buffer to go back into the pool
 	out := snappy.Encode(nil, data)
 
-	if p.cfg.IsIsthmus(timestamp) {
+	if p.cfg.IsIsthmus(timestamp) || p.cfg.IsMantleSkadi(timestamp) {
 		return p.blocksV4.topic.Publish(ctx, out)
 	} else if p.cfg.IsEcotone(timestamp) {
 		return p.blocksV3.topic.Publish(ctx, out)
