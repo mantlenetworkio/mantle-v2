@@ -1942,6 +1942,55 @@ jobs:
             - "op-program/bin/prestate*"
             - "op-program/bin/meta*"
 
+  cannon-kona-prestate:
+    machine:
+      docker_layer_caching: true # we rely on this for faster builds, and actively warm it up for builds with common stages
+    steps:
+      - checkout-from-workspace
+      - restore_cache:
+          name: Restore kona cache
+          key: kona-prestate-{{ checksum "./kona/justfile" }}
+      - run:
+          name: Build kona prestates
+          command: just build-prestates
+          working_directory: kona
+      - save_cache:
+          key: kona-prestate-{{ checksum "./kona/justfile" }}
+          name: Save Kona to cache
+          paths:
+            - "kona/prestates/"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - "kona/prestates/*"
+
+  cannon-kona-host:
+    docker:
+      - image: <<pipeline.parameters.default_docker_image>>
+    steps:
+      - checkout-from-workspace
+      - restore_cache:
+          name: Restore kona host cache
+          key: kona-host-{{ checksum "./kona/justfile" }}
+      - run: # The mise plugin for clang is broken so install via apt-get
+          name: Install clang
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends clang
+      - run:
+          name: Build kona host
+          command: just build-kona-host
+          working_directory: kona
+      - save_cache:
+          key: kona-host-{{ checksum "./kona/justfile" }}
+          name: Save Kona host to cache
+          paths:
+            - "kona/bin/kona-host"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - "kona/bin/kona-host"
+
   publish-cannon-prestates:
     resource_class: medium
     docker:
@@ -3209,6 +3258,16 @@ workflows:
             - circleci-repo-readonly-authenticated-github-token
           requires:
             - initialize
+      - cannon-kona-prestate: # needed for sysgo tests (if any package is in-memory)
+          context:
+            - circleci-repo-readonly-authenticated-github-token
+          requires:
+            - initialize
+      - cannon-kona-host: # needed for sysgo tests (if any package is in-memory)
+          context:
+            - circleci-repo-readonly-authenticated-github-token
+          requires:
+            - initialize
       # IN-MEMORY (all)
       - op-acceptance-tests:
           name: memory-all
@@ -3221,6 +3280,8 @@ workflows:
           requires:
             - contracts-bedrock-build
             - cannon-prestate-quick
+            - cannon-kona-prestate
+            - cannon-kona-host
       # Generate flaky test report
       - generate-flaky-report:
           name: generate-flaky-tests-report
