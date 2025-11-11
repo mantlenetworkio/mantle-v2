@@ -1000,12 +1000,25 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 func (c *Config) ApplyMantleOverrides() error {
 	if c.ChainOpConfig == nil {
 		c.ChainOpConfig = &params.OptimismConfig{
-			EIP1559Elasticity:  10,
+			EIP1559Elasticity:  4,
 			EIP1559Denominator: 50,
 		}
 	}
 	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
 	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+
+	upgradeConfig := params.GetUpgradeConfigForMantle(c.L2ChainID)
+	if upgradeConfig == nil {
+		c.MantleBaseFeeTime = nil
+		return nil
+	}
+	c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
+	c.MantleEverestTime = upgradeConfig.MantleEverestTime
+	// No consensus&execution update for Euboea, just use the same as Skadi
+	c.MantleEuboeaTime = upgradeConfig.MantleSkadiTime
+	c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
+	c.MantleLimbTime = upgradeConfig.MantleLimbTime
+	c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
 
 	// Map Optimism forks to Mantle forks
 	c.CanyonTime = c.MantleArsiaTime
@@ -1016,7 +1029,6 @@ func (c *Config) ApplyMantleOverrides() error {
 	c.HoloceneTime = c.MantleArsiaTime
 	c.IsthmusTime = c.MantleArsiaTime
 	c.JovianTime = c.MantleArsiaTime
-	c.InteropTime = nil
 
 	return nil
 }
