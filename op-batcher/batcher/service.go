@@ -290,8 +290,8 @@ func (bs *BatcherService) initChannelConfig(cfg *CLIConfig) error {
 
 	cc.InitCompressorConfig(cfg.ApproxComprRatio, cfg.Compressor, cfg.CompressionAlgo)
 
-	if cc.UseBlobs && !bs.RollupConfig.IsEcotone(uint64(time.Now().Unix())) {
-		return errors.New("cannot use Blobs before Ecotone")
+	if cc.UseBlobs && !bs.RollupConfig.IsEcotone(uint64(time.Now().Unix())) && !bs.RollupConfig.IsMantleEverest(uint64(time.Now().Unix())) {
+		return errors.New("cannot use Blobs before Ecotone or MantleEverest")
 	}
 	if !cc.UseBlobs && bs.RollupConfig.IsEcotone(uint64(time.Now().Unix())) {
 		bs.Log.Warn("Ecotone upgrade is active, but batcher is not configured to use Blobs!")

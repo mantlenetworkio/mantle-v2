@@ -45,6 +45,9 @@ type DataSourceFactory struct {
 	blobsFetcher L1BlobsFetcher
 	altDAFetcher AltDAInputFetcher
 	ecotoneTime  *uint64
+
+	// Mantle Features
+	mantleEverestTime *uint64
 }
 
 func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher, blobsFetcher L1BlobsFetcher, altDAFetcher AltDAInputFetcher) *DataSourceFactory {
@@ -54,12 +57,13 @@ func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher,
 		altDAEnabled:      cfg.AltDAEnabled(),
 	}
 	return &DataSourceFactory{
-		log:          log,
-		dsCfg:        config,
-		fetcher:      fetcher,
-		blobsFetcher: blobsFetcher,
-		altDAFetcher: altDAFetcher,
-		ecotoneTime:  cfg.EcotoneTime,
+		log:               log,
+		dsCfg:             config,
+		fetcher:           fetcher,
+		blobsFetcher:      blobsFetcher,
+		altDAFetcher:      altDAFetcher,
+		ecotoneTime:       cfg.EcotoneTime,
+		mantleEverestTime: cfg.MantleEverestTime,
 	}
 }
 
@@ -68,7 +72,7 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 	// Creates a data iterator from blob or calldata source so we can forward it to the altDA source
 	// if enabled as it still requires an L1 data source for fetching input commmitments.
 	var src DataIter
-	if ds.ecotoneTime != nil && ref.Time >= *ds.ecotoneTime {
+	if (ds.ecotoneTime != nil && ref.Time >= *ds.ecotoneTime) || (ds.mantleEverestTime != nil && ref.Time >= *ds.mantleEverestTime) {
 		if ds.blobsFetcher == nil {
 			return nil, fmt.Errorf("ecotone upgrade active but beacon endpoint not configured")
 		}
