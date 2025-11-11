@@ -369,19 +369,25 @@ func (cfg *Config) Check() error {
 		return err
 	}
 
-	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
+	if err := checkFork(cfg.RegolithTime, cfg.CanyonTime, Regolith, Canyon); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
+	if err := checkFork(cfg.CanyonTime, cfg.DeltaTime, Canyon, Delta); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
+	if err := checkFork(cfg.DeltaTime, cfg.EcotoneTime, Delta, Ecotone); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
+	if err := checkFork(cfg.EcotoneTime, cfg.FjordTime, Ecotone, Fjord); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
+	if err := checkFork(cfg.FjordTime, cfg.GraniteTime, Fjord, Granite); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.GraniteTime, cfg.HoloceneTime, Granite, Holocene); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.HoloceneTime, cfg.IsthmusTime, Holocene, Isthmus); err != nil {
 		return err
 	}
 
@@ -1029,6 +1035,26 @@ func (c *Config) ApplyMantleOverrides() error {
 	c.HoloceneTime = c.MantleArsiaTime
 	c.IsthmusTime = c.MantleArsiaTime
 	c.JovianTime = c.MantleArsiaTime
+
+	return c.CheckMantleForks()
+}
+
+func (cfg *Config) CheckMantleForks() error {
+	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
+		return err
+	}
 
 	return nil
 }
