@@ -273,12 +273,17 @@ func (info *L1BlockInfo) unmarshalBinaryEcotone(data []byte) error {
 // +---------+--------------------------+
 
 func (info *L1BlockInfo) marshalBinaryIsthmus() ([]byte, error) {
-	// Mantle's Arsia upgrade includes all Isthmus features with identical data format and encoding,
-	// but uses the setL1BlockValuesArsia() function signature instead of setL1BlockValuesIsthmus().
-	// Therefore, we use L1InfoFuncArsiaBytes4 signature to encode the same binary format.
-	out, err := marshalBinaryWithSignature(info, L1InfoFuncArsiaBytes4)
+	out, err := marshalBinaryWithSignature(info, L1InfoFuncIsthmusBytes4)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Isthmus l1 block info: %w", err)
+	}
+	return out, nil
+}
+
+func (info *L1BlockInfo) marshalBinaryMantleArsia() ([]byte, error) {
+	out, err := marshalBinaryWithSignature(info, L1InfoFuncArsiaBytes4)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Mantle Arsia l1 block info: %w", err)
 	}
 	return out, nil
 }
@@ -380,9 +385,10 @@ func unmarshalBinaryWithSignatureAndData(info *L1BlockInfo, signature []byte, da
 }
 
 func (info *L1BlockInfo) unmarshalBinaryIsthmus(data []byte) error {
-	// Mantle's Arsia upgrade includes all Isthmus features with identical data format and encoding,
-	// but uses the setL1BlockValuesArsia() function signature instead of setL1BlockValuesIsthmus().
-	// Therefore, we directly use L1InfoFuncArsiaBytes4 signature to decode the same binary format.
+	return unmarshalBinaryWithSignatureAndData(info, L1InfoFuncIsthmusBytes4, data)
+}
+
+func (info *L1BlockInfo) unmarshalBinaryMantleArsia(data []byte) error {
 	return unmarshalBinaryWithSignatureAndData(info, L1InfoFuncArsiaBytes4, data)
 }
 
@@ -398,10 +404,19 @@ func isIsthmusButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64) boo
 	return rollupCfg.IsIsthmus(l2Timestamp) && !rollupCfg.IsIsthmusActivationBlock(l2Timestamp)
 }
 
+// isMantleArsiaButNotFirstBlock returns whether the specified block is subject to the Mantle Arsia upgrade,
+// but is not the activation block itself.
+func isMantleArsiaButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64) bool {
+	return rollupCfg.IsMantleArsia(l2Timestamp) && !rollupCfg.IsMantleArsiaActivationBlock(l2Timestamp)
+}
+
 // L1BlockInfoFromBytes is the inverse of L1InfoDeposit, to see where the L2 chain is derived from
 func L1BlockInfoFromBytes(rollupCfg *rollup.Config, l2BlockTime uint64, data []byte) (*L1BlockInfo, error) {
 	var info L1BlockInfo
 	// Important, this should be ordered from most recent to oldest
+	if isMantleArsiaButNotFirstBlock(rollupCfg, l2BlockTime) {
+		return &info, info.unmarshalBinaryMantleArsia(data)
+	}
 	if isIsthmusButNotFirstBlock(rollupCfg, l2BlockTime) {
 		return &info, info.unmarshalBinaryIsthmus(data)
 	}
@@ -425,6 +440,7 @@ func L1InfoDeposit(rollupCfg *rollup.Config, l1ChainConfig *params.ChainConfig, 
 	var data []byte
 	if isEcotoneButNotFirstBlock(rollupCfg, l2Timestamp) {
 		isIsthmusActivated := isIsthmusButNotFirstBlock(rollupCfg, l2Timestamp)
+		isMantleArsiaActivated := isMantleArsiaButNotFirstBlock(rollupCfg, l2Timestamp)
 		l1BlockInfo.BlobBaseFee = block.BlobBaseFee(l1ChainConfig)
 
 		// Apply Cancun blob base fee calculation if this chain needs the L1 Pectra
@@ -456,7 +472,13 @@ func L1InfoDeposit(rollupCfg *rollup.Config, l1ChainConfig *params.ChainConfig, 
 			l1BlockInfo.OperatorFeeConstant = operatorFee.Constant
 		}
 
-		if isIsthmusActivated {
+		if isMantleArsiaActivated {
+			out, err := l1BlockInfo.marshalBinaryMantleArsia()
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal Mantle Arsia l1 block info: %w", err)
+			}
+			data = out
+		} else if isIsthmusActivated {
 			out, err := l1BlockInfo.marshalBinaryIsthmus()
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal Isthmus l1 block info: %w", err)

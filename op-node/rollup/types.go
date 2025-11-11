@@ -791,6 +791,30 @@ func (c *Config) ActivateAtGenesis(hardfork ForkName) {
 	}
 }
 
+func (c *Config) MantleActivateAtGenesis(fork MantleForkName) {
+	switch fork {
+	case MantleArsia:
+		c.MantleArsiaTime = new(uint64)
+		fallthrough
+	case MantleLimb:
+		c.MantleLimbTime = new(uint64)
+		fallthrough
+	case MantleSkadi:
+		c.MantleSkadiTime = new(uint64)
+		fallthrough
+	case MantleEuboea:
+		c.MantleEuboeaTime = new(uint64)
+		fallthrough
+	case MantleEverest:
+		c.MantleEverestTime = new(uint64)
+		fallthrough
+	case MantleBaseFee:
+		c.MantleBaseFeeTime = new(uint64)
+	case MantleNone:
+		break
+	}
+}
+
 // ForkchoiceUpdatedVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod {
 	if attr == nil {
