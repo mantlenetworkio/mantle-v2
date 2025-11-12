@@ -1455,7 +1455,7 @@ jobs:
       resource_class:
         description: Machine resource class
         type: string
-        default: ethereum-optimism/latitude-1-go-e2e
+        default: 2xlarge
       no_output_timeout:
         description: Timeout for when CircleCI kills the job if there's no output
         type: string
@@ -1631,7 +1631,7 @@ jobs:
     docker:
       - image: <<pipeline.parameters.default_docker_image>>
     circleci_ip_ranges: true
-    resource_class: 2xlarge
+    resource_class: 2xlarge+
     steps:
       - utils/checkout-with-mise:
          checkout-method: blobless
@@ -2953,7 +2953,7 @@ workflows:
           mentions: "@proofs-team"
           no_output_timeout: 90m
           test_timeout: 480m
-          resource_class: ethereum-optimism/latitude-fps-1
+          resource_class: large
           context:
             - slack
             - circleci-repo-readonly-authenticated-github-token
