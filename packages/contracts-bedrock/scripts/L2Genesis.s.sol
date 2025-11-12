@@ -37,6 +37,7 @@ contract L2Genesis is Script {
         address sequencerFeeVaultRecipient;
         address baseFeeVaultRecipient;
         address l1FeeVaultRecipient;
+        address operatorFeeVaultRecipient;
         address gasPriceOracleOwner;
         uint256 mantleFork;
         bool fundDevAccounts;
@@ -221,6 +222,7 @@ contract L2Genesis is Script {
         setProxyAdmin(_input); // 18
         setBaseFeeVault(_input); // 19
         setL1FeeVault(_input); // 1A
+        setOperatorFeeVault(_input); // 1B
     }
 
     function setProxyAdmin(Input memory _input) internal {
@@ -391,6 +393,19 @@ contract L2Genesis is Script {
         address vault = DeployUtils.create1({ _name: "L1FeeVault", _args: args });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L1_FEE_VAULT);
+        vm.etch(impl, address(vault).code);
+
+        /// Reset so its not included state dump
+        vm.etch(address(vault), "");
+        vm.resetNonce(address(vault));
+    }
+
+    /// @notice This predeploy is following the safety invariant #2.
+    function setOperatorFeeVault(Input memory _input) internal {
+        bytes memory args = abi.encode(_input.operatorFeeVaultRecipient);
+        address vault = DeployUtils.create1({ _name: "OperatorFeeVault", _args: args });
+
+        address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPERATOR_FEE_VAULT);
         vm.etch(impl, address(vault).code);
 
         /// Reset so its not included state dump
