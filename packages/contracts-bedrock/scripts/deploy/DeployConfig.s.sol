@@ -50,6 +50,7 @@ contract DeployConfig is Script {
     address public baseFeeVaultRecipient;
     address public l1FeeVaultRecipient;
     address public sequencerFeeVaultRecipient;
+    address public operatorFeeVaultRecipient;
     address public proxyAdminOwner;
     uint256 public finalizationPeriodSeconds;
     uint256 public numDeployConfirmations;
@@ -105,6 +106,7 @@ contract DeployConfig is Script {
         baseFeeVaultRecipient = stdJson.readAddress(_json, "$.baseFeeVaultRecipient");
         l1FeeVaultRecipient = stdJson.readAddress(_json, "$.l1FeeVaultRecipient");
         sequencerFeeVaultRecipient = stdJson.readAddress(_json, "$.sequencerFeeVaultRecipient");
+        operatorFeeVaultRecipient = stdJson.readAddress(_json, "$.operatorFeeVaultRecipient");
         proxyAdminOwner = stdJson.readAddress(_json, "$.proxyAdminOwner");
         finalizationPeriodSeconds = stdJson.readUint(_json, "$.finalizationPeriodSeconds");
         numDeployConfirmations = stdJson.readUint(_json, "$.deploymentWaitConfirmations");

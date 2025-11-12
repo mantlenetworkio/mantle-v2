@@ -33,6 +33,7 @@ type MantleL2GenesisInput struct {
 	SequencerFeeVaultRecipient  common.Address
 	BaseFeeVaultRecipient       common.Address
 	L1FeeVaultRecipient         common.Address
+	OperatorFeeVaultRecipient   common.Address
 	GasPriceOracleOwner         common.Address
 	MantleFork                  *big.Int
 	FundDevAccounts             bool
@@ -82,6 +83,7 @@ func GenerateL2Genesis(logger log.Logger, deployer common.Address, config *genes
 		BaseFeeVaultRecipient:       config.BaseFeeVaultRecipient,
 		L1FeeVaultRecipient:         config.L1FeeVaultRecipient,
 		SequencerFeeVaultRecipient:  config.SequencerFeeVaultRecipient,
+		OperatorFeeVaultRecipient:   config.OperatorFeeVaultRecipient,
 		GasPriceOracleOwner:         config.GasPriceOracleOwner,
 		MantleFork:                  big.NewInt(config.SolidityMantleForkNumber(1)),
 		FundDevAccounts:             config.FundDevAccounts,
