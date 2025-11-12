@@ -219,6 +219,13 @@ commands:
           branch_pattern: develop
           mentions: "<< parameters.mentions >>"
 
+  install-zstd:
+    description: "Install zstd compression utility"
+    steps:
+      - run:
+          name: Install zstd
+          command: sudo apt-get update && sudo apt-get install -y zstd=1.4.8*
+
   get-target-branch:
     description: "Determine the PR target branch and export TARGET_BRANCH for subsequent steps"
     steps:
@@ -573,6 +580,7 @@ jobs:
     steps:
       - utils/checkout-with-mise:
          checkout-method: blobless
+      - install-zstd
       - install-contracts-dependencies
       - run:
           name: Print forge version
@@ -896,6 +904,7 @@ jobs:
     steps:
       - utils/checkout-with-mise:
          checkout-method: blobless
+      - install-zstd
       - run:
           name: Check if test list is empty
           command: |
@@ -962,6 +971,7 @@ jobs:
     steps:
       - utils/checkout-with-mise:
          checkout-method: blobless
+      - install-zstd
       - run:
           name: Print dependencies
           command: just dep-status
@@ -1070,6 +1080,7 @@ jobs:
       - utils/checkout-with-mise:
          checkout-method: blobless
       - install-contracts-dependencies
+      - install-zstd
       - attach_workspace:
           at: .
       - check-changed:
@@ -1166,6 +1177,7 @@ jobs:
     steps:
       - utils/checkout-with-mise
       - install-contracts-dependencies
+      - install-zstd
       - attach_workspace:
           at: .
       - check-changed:
@@ -2272,6 +2284,7 @@ jobs:
       - utils/checkout-with-mise:
           checkout-method: blobless
       - install-contracts-dependencies
+      - install-zstd
       - run:
           name: Pull artifacts
           command: bash scripts/ops/pull-artifacts.sh
