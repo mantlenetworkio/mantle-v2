@@ -1004,37 +1004,67 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 }
 
 func (c *Config) ApplyMantleOverrides() error {
-	if c.ChainOpConfig == nil {
-		c.ChainOpConfig = &params.OptimismConfig{
-			EIP1559Elasticity:  4,
-			EIP1559Denominator: 50,
-		}
-	}
-	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
-
 	upgradeConfig := params.GetUpgradeConfigForMantle(c.L2ChainID)
 	if upgradeConfig == nil {
 		c.MantleBaseFeeTime = nil
-		return nil
-	}
-	c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
-	c.MantleEverestTime = upgradeConfig.MantleEverestTime
-	// No consensus&execution update for Euboea, just use the same as Skadi
-	c.MantleEuboeaTime = upgradeConfig.MantleSkadiTime
-	c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
-	c.MantleLimbTime = upgradeConfig.MantleLimbTime
-	c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
+	} else {
+		if c.MantleBaseFeeTime == nil {
+			c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
+		}
+		if c.MantleEverestTime == nil {
+			c.MantleEverestTime = upgradeConfig.MantleEverestTime
+		}
+		if c.MantleEuboeaTime == nil {
+			// No consensus&execution update for Euboea, just use the same as Everest
+			c.MantleEuboeaTime = upgradeConfig.MantleEverestTime
+		}
+		if c.MantleSkadiTime == nil {
+			c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
+		}
+		if c.MantleLimbTime == nil {
+			c.MantleLimbTime = upgradeConfig.MantleLimbTime
+		}
+		if c.MantleArsiaTime == nil {
+			c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
+		}
 
-	// Map Optimism forks to Mantle forks
-	c.CanyonTime = c.MantleArsiaTime
-	c.DeltaTime = c.MantleArsiaTime
-	c.EcotoneTime = c.MantleArsiaTime
-	c.FjordTime = c.MantleArsiaTime
-	c.GraniteTime = c.MantleArsiaTime
-	c.HoloceneTime = c.MantleArsiaTime
-	c.IsthmusTime = c.MantleArsiaTime
-	c.JovianTime = c.MantleArsiaTime
+		// Map Optimism forks to Mantle forks
+		if c.CanyonTime == nil {
+			c.CanyonTime = c.MantleArsiaTime
+		}
+		if c.DeltaTime == nil {
+			c.DeltaTime = c.MantleArsiaTime
+		}
+		if c.EcotoneTime == nil {
+			c.EcotoneTime = c.MantleArsiaTime
+		}
+		if c.FjordTime == nil {
+			c.FjordTime = c.MantleArsiaTime
+		}
+		if c.GraniteTime == nil {
+			c.GraniteTime = c.MantleArsiaTime
+		}
+		if c.HoloceneTime == nil {
+			c.HoloceneTime = c.MantleArsiaTime
+		}
+		if c.IsthmusTime == nil {
+			c.IsthmusTime = c.MantleArsiaTime
+		}
+		if c.JovianTime == nil {
+			c.JovianTime = c.MantleArsiaTime
+		}
+	}
+
+	if c.MantleArsiaTime != nil {
+		if c.ChainOpConfig == nil {
+			c.ChainOpConfig = &params.OptimismConfig{
+				EIP1559Elasticity:  4,
+				EIP1559Denominator: 50,
+			}
+		}
+		// Mantle don't have a historical change of the denominator, so we use the same as the denominator
+		c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
+	}
 
 	return c.CheckMantleForks()
 }
