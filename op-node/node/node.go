@@ -347,7 +347,7 @@ func (n *OpNode) initRuntimeConfig(ctx context.Context, cfg *config.Config) erro
 
 func (n *OpNode) initL1BeaconAPI(ctx context.Context, cfg *config.Config) error {
 	// If Ecotone upgrade is not scheduled yet, then there is no need for a Beacon API.
-	if cfg.Rollup.EcotoneTime == nil {
+	if cfg.Rollup.EcotoneTime == nil && cfg.Rollup.MantleEverestTime == nil {
 		return nil
 	}
 	// Once the Ecotone upgrade is scheduled, we must have initialized the Beacon API settings.
