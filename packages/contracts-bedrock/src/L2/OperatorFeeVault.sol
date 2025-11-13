@@ -10,7 +10,7 @@ import { FeeVault } from "../universal/FeeVault.sol";
 /// @notice The OperatorFeeVault accumulates the operator portion of the transaction fees.
 contract OperatorFeeVault is FeeVault, Semver {
     /**
-     * @custom:semver 1.1.0
+     * @custom:semver 1.0.0
      *
      * @param _recipient Address that will receive the accumulated fees.
      */
