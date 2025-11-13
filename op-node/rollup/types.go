@@ -1030,16 +1030,14 @@ func (c *Config) ApplyMantleOverrides() error {
 		c.JovianTime = c.MantleArsiaTime
 	}
 
-	if c.MantleArsiaTime != nil {
-		if c.ChainOpConfig == nil {
-			c.ChainOpConfig = &params.OptimismConfig{
-				EIP1559Elasticity:  4,
-				EIP1559Denominator: 50,
-			}
+	if c.ChainOpConfig == nil {
+		c.ChainOpConfig = &params.OptimismConfig{
+			EIP1559Elasticity:  4,
+			EIP1559Denominator: 50,
 		}
-		// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-		c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
 	}
+	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
+	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
 
 	return c.CheckMantleForks()
 }
