@@ -60,13 +60,13 @@ func toDepositTxn(t *testing.T, data hexutil.Bytes) (common.Address, *types.Tran
 func TestArsiaNetworkTransactions(t *testing.T) {
 	upgradeTxns, err := MantleArsiaNetworkUpgradeTransactions()
 	require.NoError(t, err)
-	require.Len(t, upgradeTxns, 5, "Arsia upgrade should have 5 transactions")
+	require.Len(t, upgradeTxns, 7, "Arsia upgrade should have 7 transactions")
 
 	// Test 1: Deploy L1Block implementation
 	deployL1BlockSender, deployL1Block := toDepositTxn(t, upgradeTxns[0])
 	require.Equal(t, deployL1BlockSender, L1BlockArsiaDeployerAddress,
-		"L1Block deployer should be 0x4210...0000")
-	require.Equal(t, common.HexToAddress("0x4210000000000000000000000000000000000000"), deployL1BlockSender,
+		"L1Block deployer should be 0x4250...0000")
+	require.Equal(t, common.HexToAddress("0x4250000000000000000000000000000000000000"), deployL1BlockSender,
 		"L1Block deployer address verification")
 	require.Equal(t, deployArsiaL1BlockSource.SourceHash(), deployL1Block.SourceHash(),
 		"L1Block source hash should match")
@@ -77,8 +77,8 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 	// Test 2: Deploy GasPriceOracle implementation
 	deployGasPriceOracleSender, deployGasPriceOracle := toDepositTxn(t, upgradeTxns[1])
 	require.Equal(t, deployGasPriceOracleSender, GasPriceOracleArsiaDeployerAddress,
-		"GasPriceOracle deployer should be 0x4210...0001")
-	require.Equal(t, common.HexToAddress("0x4210000000000000000000000000000000000001"), deployGasPriceOracleSender,
+		"GasPriceOracle deployer should be 0x4250...0001")
+	require.Equal(t, common.HexToAddress("0x4250000000000000000000000000000000000001"), deployGasPriceOracleSender,
 		"GasPriceOracle deployer address verification")
 	require.Equal(t, deployArsiaGasPriceOracleSource.SourceHash(), deployGasPriceOracle.SourceHash(),
 		"GasPriceOracle source hash should match")
@@ -87,7 +87,7 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 		"GasPriceOracle deployment bytecode should match")
 
 	// Test 3: Update L1Block proxy
-	updateL1BlockProxySender, updateL1BlockProxy := toDepositTxn(t, upgradeTxns[2])
+	updateL1BlockProxySender, updateL1BlockProxy := toDepositTxn(t, upgradeTxns[3])
 	require.Equal(t, updateL1BlockProxySender, common.Address{},
 		"L1Block proxy update should be from zero address (proxy admin)")
 	require.Equal(t, updateArsiaL1BlockProxySource.SourceHash(), updateL1BlockProxy.SourceHash(),
@@ -111,7 +111,7 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 		"L1Block proxy update should point to new implementation address")
 
 	// Test 4: Update GasPriceOracle proxy
-	updateGasPriceOracleSender, updateGasPriceOracle := toDepositTxn(t, upgradeTxns[3])
+	updateGasPriceOracleSender, updateGasPriceOracle := toDepositTxn(t, upgradeTxns[4])
 	require.Equal(t, updateGasPriceOracleSender, common.Address{},
 		"GasPriceOracle proxy update should be from zero address (proxy admin)")
 	require.Equal(t, updateArsiaGasPriceOracleProxySource.SourceHash(), updateGasPriceOracle.SourceHash(),
@@ -135,7 +135,7 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 		"GasPriceOracle proxy update should point to new implementation address")
 
 	// Test 5: Enable Arsia in GasPriceOracle
-	enableArsiaSender, enableArsia := toDepositTxn(t, upgradeTxns[4])
+	enableArsiaSender, enableArsia := toDepositTxn(t, upgradeTxns[6])
 	require.Equal(t, enableArsiaSender, L1InfoDepositerAddress,
 		"Enable Arsia should be from L1InfoDepositer address")
 	require.Equal(t, common.HexToAddress("0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001"), enableArsiaSender,
@@ -155,13 +155,13 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 
 func TestArsiaDeployerAddresses(t *testing.T) {
 	// Verify deployer addresses are correctly set
-	require.Equal(t, common.HexToAddress("0x4210000000000000000000000000000000000000"),
+	require.Equal(t, common.HexToAddress("0x4250000000000000000000000000000000000000"),
 		L1BlockArsiaDeployerAddress,
-		"L1Block Arsia deployer address should be 0x4210...0000")
+		"L1Block Arsia deployer address should be 0x4250...0000")
 
-	require.Equal(t, common.HexToAddress("0x4210000000000000000000000000000000000001"),
+	require.Equal(t, common.HexToAddress("0x4250000000000000000000000000000000000001"),
 		GasPriceOracleArsiaDeployerAddress,
-		"GasPriceOracle Arsia deployer address should be 0x4210...0001")
+		"GasPriceOracle Arsia deployer address should be 0x4250...0001")
 
 	// Verify deployer addresses are sequential
 	l1BlockLastByte := L1BlockArsiaDeployerAddress.Bytes()[19]

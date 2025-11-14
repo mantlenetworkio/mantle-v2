@@ -19,19 +19,19 @@ var (
 	// L1Block Parameters for Arsia
 	deployArsiaL1BlockSource      = UpgradeDepositSource{Intent: "Arsia: L1 Block Deployment"}
 	updateArsiaL1BlockProxySource = UpgradeDepositSource{Intent: "Arsia: L1 Block Proxy Update"}
-	L1BlockArsiaDeployerAddress   = common.HexToAddress("0x4210000000000000000000000000000000000000")
+	L1BlockArsiaDeployerAddress   = common.HexToAddress("0x4250000000000000000000000000000000000000")
 	arsiaL1BlockAddress           = crypto.CreateAddress(L1BlockArsiaDeployerAddress, 0)
 
 	// Gas Price Oracle Parameters for Arsia
 	deployArsiaGasPriceOracleSource      = UpgradeDepositSource{Intent: "Arsia: Gas Price Oracle Deployment"}
 	updateArsiaGasPriceOracleProxySource = UpgradeDepositSource{Intent: "Arsia: Gas Price Oracle Proxy Update"}
-	GasPriceOracleArsiaDeployerAddress   = common.HexToAddress("0x4210000000000000000000000000000000000001")
+	GasPriceOracleArsiaDeployerAddress   = common.HexToAddress("0x4250000000000000000000000000000000000001")
 	arsiaGasPriceOracleAddress           = crypto.CreateAddress(GasPriceOracleArsiaDeployerAddress, 0)
 
 	// Operator Fee Vault Parameters for Arsia
 	deployArsiaOperatorFeeVaultSource      = UpgradeDepositSource{Intent: "Arsia: Operator Fee Vault Deployment"}
 	updateArsiaOperatorFeeVaultProxySource = UpgradeDepositSource{Intent: "Arsia: Operator Fee Vault Proxy Update"}
-	OperatorFeeVaultArsiaDeployerAddress   = common.HexToAddress("0x4210000000000000000000000000000000000002")
+	OperatorFeeVaultArsiaDeployerAddress   = common.HexToAddress("0x4250000000000000000000000000000000000002")
 	arsiaOperatorFeeVaultAddress           = crypto.CreateAddress(OperatorFeeVaultArsiaDeployerAddress, 0)
 
 	// Enable Arsia Parameters
