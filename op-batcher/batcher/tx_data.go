@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive/params"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -52,6 +54,55 @@ func (td *txData) Blobs() ([]*eth.Blob, error) {
 		}
 		blobs = append(blobs, &blob)
 	}
+	return blobs, nil
+}
+
+// MantleBlobs generates blobs using the Mantle way: prepends version byte to each frame's data,
+// encodes them as an RLP-encoded frame array, and splits the result across multiple blobs.
+// This is the reverse of how mantle_blob_source.go decodes blobs.
+func (td *txData) MantleBlobs() ([]*eth.Blob, error) {
+	// Return empty blob array if there are no frames (matching Blobs() behavior)
+	if len(td.frames) == 0 {
+		return []*eth.Blob{}, nil
+	}
+
+	// Prepend version byte to each frame's data (like Blobs() does for individual frames)
+	frameDataArray := make([]eth.Data, 0, len(td.frames))
+	for _, f := range td.frames {
+		// Prepend version byte to frame data before encoding
+		frameWithVersion := append([]byte{params.DerivationVersion0}, f.data...)
+		frameDataArray = append(frameDataArray, frameWithVersion)
+	}
+
+	// Encode all frame data (with version bytes) as an RLP-encoded frame array
+	wholeBlobData, err := rlp.EncodeToBytes(frameDataArray)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode frame data as RLP: %w", err)
+	}
+
+	// Split the RLP-encoded data across multiple blobs
+	// Each blob can hold MaxBlobDataSize bytes
+	maxDataPerBlob := eth.MaxBlobDataSize
+	blobs := make([]*eth.Blob, 0)
+
+	for offset := 0; offset < len(wholeBlobData); {
+		// Determine how much data to put in this blob
+		chunkSize := maxDataPerBlob
+		if offset+chunkSize > len(wholeBlobData) {
+			chunkSize = len(wholeBlobData) - offset
+		}
+
+		// Create blob from chunk (version bytes are already in the RLP-encoded data)
+		blobData := wholeBlobData[offset : offset+chunkSize]
+		var blob eth.Blob
+		if err := blob.FromData(blobData); err != nil {
+			return nil, fmt.Errorf("failed to create blob from data: %w", err)
+		}
+		blobs = append(blobs, &blob)
+
+		offset += chunkSize
+	}
+
 	return blobs, nil
 }
 

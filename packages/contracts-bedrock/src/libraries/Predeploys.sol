@@ -110,6 +110,9 @@ library Predeploys {
      */
     address internal constant L1_FEE_VAULT = 0x420000000000000000000000000000000000001A;
 
+    /// @notice Address of the OperatorFeeVault predeploy.
+    address internal constant OPERATOR_FEE_VAULT = 0x420000000000000000000000000000000000001b;
+
     /**
      * @notice Address of the GovernanceToken predeploy.
      */
@@ -134,6 +137,7 @@ library Predeploys {
         if (_addr == PROXY_ADMIN) return "ProxyAdmin";
         if (_addr == BASE_FEE_VAULT) return "BaseFeeVault";
         if (_addr == L1_FEE_VAULT) return "L1FeeVault";
+        if (_addr == OPERATOR_FEE_VAULT) return "OperatorFeeVault";
         if (_addr == GOVERNANCE_TOKEN) return "GovernanceToken";
         revert("Predeploys: unnamed predeploy");
     }
@@ -150,7 +154,7 @@ library Predeploys {
             || _addr == SEQUENCER_FEE_WALLET || _addr == OPTIMISM_MINTABLE_ERC20_FACTORY || _addr == L1_BLOCK_NUMBER
             || _addr == L2_ERC721_BRIDGE || _addr == L1_BLOCK_ATTRIBUTES || _addr == L2_TO_L1_MESSAGE_PASSER
             || _addr == OPTIMISM_MINTABLE_ERC721_FACTORY || _addr == PROXY_ADMIN || _addr == BASE_FEE_VAULT
-            || _addr == L1_FEE_VAULT || _addr == GOVERNANCE_TOKEN;
+            || _addr == L1_FEE_VAULT || _addr == OPERATOR_FEE_VAULT || _addr == GOVERNANCE_TOKEN;
     }
 
     function isPredeployNamespace(address _addr) internal pure returns (bool) {

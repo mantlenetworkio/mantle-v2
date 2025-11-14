@@ -369,19 +369,25 @@ func (cfg *Config) Check() error {
 		return err
 	}
 
-	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
+	if err := checkFork(cfg.RegolithTime, cfg.CanyonTime, Regolith, Canyon); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
+	if err := checkFork(cfg.CanyonTime, cfg.DeltaTime, Canyon, Delta); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
+	if err := checkFork(cfg.DeltaTime, cfg.EcotoneTime, Delta, Ecotone); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
+	if err := checkFork(cfg.EcotoneTime, cfg.FjordTime, Ecotone, Fjord); err != nil {
 		return err
 	}
-	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
+	if err := checkFork(cfg.FjordTime, cfg.GraniteTime, Fjord, Granite); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.GraniteTime, cfg.HoloceneTime, Granite, Holocene); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.HoloceneTime, cfg.IsthmusTime, Holocene, Isthmus); err != nil {
 		return err
 	}
 
@@ -791,6 +797,30 @@ func (c *Config) ActivateAtGenesis(hardfork ForkName) {
 	}
 }
 
+func (c *Config) MantleActivateAtGenesis(fork MantleForkName) {
+	switch fork {
+	case MantleArsia:
+		c.MantleArsiaTime = new(uint64)
+		fallthrough
+	case MantleLimb:
+		c.MantleLimbTime = new(uint64)
+		fallthrough
+	case MantleSkadi:
+		c.MantleSkadiTime = new(uint64)
+		fallthrough
+	case MantleEuboea:
+		c.MantleEuboeaTime = new(uint64)
+		fallthrough
+	case MantleEverest:
+		c.MantleEverestTime = new(uint64)
+		fallthrough
+	case MantleBaseFee:
+		c.MantleBaseFeeTime = new(uint64)
+	case MantleNone:
+		break
+	}
+}
+
 // ForkchoiceUpdatedVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.EngineAPIMethod {
 	if attr == nil {
@@ -798,7 +828,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 		return eth.FCUV3
 	}
 	ts := uint64(attr.Timestamp)
-	if c.IsEcotone(ts) {
+	if c.IsEcotone(ts) || c.IsMantleSkadi(ts) {
 		// Cancun
 		return eth.FCUV3
 	} else if c.IsCanyon(ts) {
@@ -813,7 +843,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 
 // NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.NewPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
@@ -825,7 +855,7 @@ func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 
 // GetPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.GetPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
@@ -973,20 +1003,63 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 	return nil
 }
 
-func (c *Config) ApplyMantleOverrides() {
+func (c *Config) ApplyMantleOverrides() error {
+	// Since we get the upgrade config from op-geth, configuration in rollup json will not be effective.
+	// Which also means that we cannot customize the devnet upgrades through deploy config. The only way
+	// to make it is to override the upgrade time in op-geth code.
+	upgradeConfig := params.GetUpgradeConfigForMantle(c.L2ChainID)
+	if upgradeConfig == nil {
+		c.MantleBaseFeeTime = nil
+	} else {
+		c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
+		c.MantleEverestTime = upgradeConfig.MantleEverestTime
+		// No consensus&execution update for Euboea, just use the same as Everest
+		c.MantleEuboeaTime = upgradeConfig.MantleEverestTime
+		c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
+		c.MantleLimbTime = upgradeConfig.MantleLimbTime
+		c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
+
+		// Map Optimism forks to Mantle forks
+		c.CanyonTime = c.MantleArsiaTime
+		c.DeltaTime = c.MantleArsiaTime
+		c.EcotoneTime = c.MantleArsiaTime
+		c.FjordTime = c.MantleArsiaTime
+		c.GraniteTime = c.MantleArsiaTime
+		c.HoloceneTime = c.MantleArsiaTime
+		c.IsthmusTime = c.MantleArsiaTime
+		c.JovianTime = c.MantleArsiaTime
+	}
+
+	if c.ChainOpConfig == nil {
+		c.ChainOpConfig = &params.OptimismConfig{
+			EIP1559Elasticity:  4,
+			EIP1559Denominator: 50,
+		}
+	}
 	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
 	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
 
-	// Map Optimism forks to Mantle forks
-	c.CanyonTime = c.MantleArsiaTime
-	c.DeltaTime = c.MantleArsiaTime
-	c.EcotoneTime = c.MantleArsiaTime
-	c.FjordTime = c.MantleArsiaTime
-	c.GraniteTime = c.MantleArsiaTime
-	c.HoloceneTime = c.MantleArsiaTime
-	c.IsthmusTime = c.MantleArsiaTime
-	c.JovianTime = c.MantleArsiaTime
-	c.InteropTime = nil
+	return c.CheckMantleForks()
+}
+
+func (cfg *Config) CheckMantleForks() error {
+	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
+		return err
+	}
+	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func fmtForkTimeOrUnset(v *uint64) string {

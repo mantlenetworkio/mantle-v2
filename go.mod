@@ -323,11 +323,9 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0.0.20251027145855-6f389280af37
+replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v0.0.0-20251113092740-13f718f59d4d
 
 replace github.com/ethereum/go-ethereum/superchain => ./superchain
-
-// replace github.com/ethereum/go-ethereum => ../op-geth
 
 // replace github.com/ethereum-optimism/superchain-registry/superchain => ../superchain-registry/superchain
 // This release keeps breaking Go builds. Stop that.

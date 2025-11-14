@@ -45,6 +45,9 @@ type DataSourceFactory struct {
 	blobsFetcher L1BlobsFetcher
 	altDAFetcher AltDAInputFetcher
 	ecotoneTime  *uint64
+
+	// Mantle Features
+	mantleEverestTime *uint64
 }
 
 func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher, blobsFetcher L1BlobsFetcher, altDAFetcher AltDAInputFetcher) *DataSourceFactory {
@@ -54,12 +57,13 @@ func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher,
 		altDAEnabled:      cfg.AltDAEnabled(),
 	}
 	return &DataSourceFactory{
-		log:          log,
-		dsCfg:        config,
-		fetcher:      fetcher,
-		blobsFetcher: blobsFetcher,
-		altDAFetcher: altDAFetcher,
-		ecotoneTime:  cfg.EcotoneTime,
+		log:               log,
+		dsCfg:             config,
+		fetcher:           fetcher,
+		blobsFetcher:      blobsFetcher,
+		altDAFetcher:      altDAFetcher,
+		ecotoneTime:       cfg.EcotoneTime,
+		mantleEverestTime: cfg.MantleEverestTime,
 	}
 }
 
@@ -73,6 +77,11 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 			return nil, fmt.Errorf("ecotone upgrade active but beacon endpoint not configured")
 		}
 		src = NewBlobDataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ds.blobsFetcher, ref, batcherAddr)
+	} else if ds.mantleEverestTime != nil && ref.Time >= *ds.mantleEverestTime {
+		if ds.blobsFetcher == nil {
+			return nil, fmt.Errorf("mantle everest upgrade active but beacon endpoint not configured")
+		}
+		src = NewMantleBlobDataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ds.blobsFetcher, ref, batcherAddr)
 	} else {
 		src = NewCalldataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ref, batcherAddr)
 	}
