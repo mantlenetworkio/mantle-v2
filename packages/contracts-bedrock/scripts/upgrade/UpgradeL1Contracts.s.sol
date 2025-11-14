@@ -12,20 +12,25 @@ import { ResourceMetering } from "src/L1/ResourceMetering.sol";
 /// @dev This script only upgrades SystemConfig (1.3.0 → 1.4.0)
 ///      L2OutputOracle and OptimismPortal remain unchanged as their versions are the same
 contract UpgradeL1Contracts is Script {
-    /// @notice Deploys new SystemConfig implementation and upgrades proxy (all-in-one with default Arsia params)
+    /// @notice Deploys new SystemConfig implementation and upgrades proxy (all-in-one with default params)
     /// @param proxyAdmin Address of the ProxyAdmin contract
     /// @param systemConfigProxy Address of the SystemConfig proxy to read current config
+    /// @dev Constructor values default to 0. Use setter methods (setBaseFee, setGasConfigArsia) after upgrade to set
+    /// actual values and emit ConfigUpdate events for op-node.
     function run(address proxyAdmin, address systemConfigProxy) public {
-        // Use default Arsia values
-        run(proxyAdmin, systemConfigProxy, 1368, 810949, 1000000000);
+        // Use default values (0) - setter methods should be called after upgrade
+        run(proxyAdmin, systemConfigProxy, 0, 0, 0);
     }
 
     /// @notice Deploys new SystemConfig implementation and upgrades proxy (all-in-one with custom params)
     /// @param proxyAdmin Address of the ProxyAdmin contract
     /// @param systemConfigProxy Address of the SystemConfig proxy to read current config
-    /// @param baseFeeScalar Base fee scalar for Arsia
-    /// @param blobBaseFeeScalar Blob base fee scalar for Arsia
-    /// @param baseFee Initial base fee (in wei)
+    /// @param baseFeeScalar Base fee scalar for Arsia (default: 0, should be set via setGasConfigArsia after upgrade)
+    /// @param blobBaseFeeScalar Blob base fee scalar for Arsia (default: 0, should be set via setGasConfigArsia after
+    /// upgrade)
+    /// @param baseFee Initial base fee in wei (default: 0, should be set via setBaseFee after upgrade)
+    /// @dev Note: Constructor values are stored but do not emit ConfigUpdate events.
+    ///      Call setBaseFee() and setGasConfigArsia() after upgrade to emit events for op-node to detect changes.
     function run(
         address proxyAdmin,
         address systemConfigProxy,
@@ -50,6 +55,7 @@ contract UpgradeL1Contracts is Script {
         bytes32 batcherHash = currentConfig.batcherHash();
         uint64 gasLimit = currentConfig.gasLimit();
         address unsafeBlockSigner = currentConfig.unsafeBlockSigner();
+        ResourceMetering.ResourceConfig memory resourceConfig = currentConfig.resourceConfig();
 
         console.log("Current Configuration:");
         console.log("  owner:", owner);
@@ -58,21 +64,17 @@ contract UpgradeL1Contracts is Script {
         console.log("  unsafeBlockSigner:", unsafeBlockSigner);
         console.log("");
 
-        console.log("Arsia Configuration:");
+        console.log("Arsia Configuration (constructor values):");
         console.log("  baseFeeScalar:", baseFeeScalar);
         console.log("  blobBaseFeeScalar:", blobBaseFeeScalar);
         console.log("  baseFee:", baseFee);
+        if (baseFeeScalar == 0 && blobBaseFeeScalar == 0 && baseFee == 0) {
+            console.log(
+                "  Note: Values are 0. Call setBaseFee() and setGasConfigArsia() after upgrade to set actual values and emit ConfigUpdate events."
+            );
+        }
+        console.log("  ResourceConfig: Preserved from current configuration");
         console.log("");
-
-        // ResourceConfig for Arsia (same as Limb defaults)
-        ResourceMetering.ResourceConfig memory resourceConfig = ResourceMetering.ResourceConfig({
-            maxResourceLimit: 20000000,
-            elasticityMultiplier: 10,
-            baseFeeMaxChangeDenominator: 8,
-            minimumBaseFee: 1000000000,
-            systemTxMaxGas: 1000000,
-            maximumBaseFee: type(uint128).max
-        });
 
         vm.startBroadcast();
 
@@ -105,6 +107,11 @@ contract UpgradeL1Contracts is Script {
         console.log("");
         console.log("=== Upgrade Complete ===");
         console.log("Note: L2OutputOracle and OptimismPortal were NOT upgraded (versions unchanged)");
+        console.log("");
+        console.log("Important: Constructor values are stored but do not emit ConfigUpdate events.");
+        console.log("To make op-node detect the changes, call setter methods after upgrade:");
+        console.log("  - systemConfig.setBaseFee(<value>)");
+        console.log("  - systemConfig.setGasConfigArsia(<baseFeeScalar>, <blobBaseFeeScalar>)");
         console.log("");
 
         // Verify upgrade
