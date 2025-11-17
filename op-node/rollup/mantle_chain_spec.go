@@ -1,69 +1,69 @@
 package rollup
 
-import "fmt"
+// import "fmt"
 
-type MantleForkName string
+// type MantleForkName string
 
-const (
-	MantleBaseFee MantleForkName = "mantle_base_fee"
-	MantleEverest MantleForkName = "mantle_everest"
-	MantleEuboea  MantleForkName = "mantle_euboea"
-	MantleSkadi   MantleForkName = "mantle_skadi"
-	MantleLimb    MantleForkName = "mantle_limb"
-	MantleArsia   MantleForkName = "mantle_arsia"
-	MantleNone    MantleForkName = ""
-	// This fork never existed, it is used to indicate that a optimism fork is not active at a given timestamp.
-	MantleNoSupport MantleForkName = "mantle_no_support"
-)
+// const (
+// 	MantleBaseFee MantleForkName = "mantle_base_fee"
+// 	MantleEverest MantleForkName = "mantle_everest"
+// 	MantleEuboea  MantleForkName = "mantle_euboea"
+// 	MantleSkadi   MantleForkName = "mantle_skadi"
+// 	MantleLimb    MantleForkName = "mantle_limb"
+// 	MantleArsia   MantleForkName = "mantle_arsia"
+// 	MantleNone    MantleForkName = ""
+// 	// This fork never existed, it is used to indicate that a optimism fork is not active at a given timestamp.
+// 	MantleNoSupport MantleForkName = "mantle_no_support"
+// )
 
-var AllMantleForks = []MantleForkName{
-	MantleNoSupport,
-	MantleBaseFee,
-	MantleEverest,
-	MantleEuboea,
-	MantleSkadi,
-	MantleLimb,
-	MantleArsia,
-	// ADD NEW FORKS HERE!
-}
+// var AllMantleForks = []MantleForkName{
+// 	MantleNoSupport,
+// 	MantleBaseFee,
+// 	MantleEverest,
+// 	MantleEuboea,
+// 	MantleSkadi,
+// 	MantleLimb,
+// 	MantleArsia,
+// 	// ADD NEW FORKS HERE!
+// }
 
-func ForkToMantleFork(fork ForkName) MantleForkName {
-	switch fork {
-	case Interop:
-		return MantleNoSupport
-	case Canyon, Delta, Ecotone, Fjord, Granite, Holocene, Isthmus, Jovian:
-		return MantleArsia
-	case Bedrock, Regolith:
-		return MantleSkadi
-	default:
-		return MantleNone
-	}
-}
+// func ForkToMantleFork(fork ForkName) MantleForkName {
+// 	switch fork {
+// 	case Interop:
+// 		return MantleNoSupport
+// 	case Canyon, Delta, Ecotone, Fjord, Granite, Holocene, Isthmus, Jovian:
+// 		return MantleArsia
+// 	case Bedrock, Regolith:
+// 		return MantleSkadi
+// 	default:
+// 		return MantleNone
+// 	}
+// }
 
-var LatestMantleFork = AllMantleForks[len(AllMantleForks)-1]
+// var LatestMantleFork = AllMantleForks[len(AllMantleForks)-1]
 
-func MantleForksFrom(fork MantleForkName) []MantleForkName {
-	for i, f := range AllMantleForks {
-		if f == fork {
-			return AllMantleForks[i:]
-		}
-	}
-	panic(fmt.Sprintf("invalid mantle fork: %s", fork))
-}
+// func MantleForksFrom(fork MantleForkName) []MantleForkName {
+// 	for i, f := range AllMantleForks {
+// 		if f == fork {
+// 			return AllMantleForks[i:]
+// 		}
+// 	}
+// 	panic(fmt.Sprintf("invalid mantle fork: %s", fork))
+// }
 
-var nextMantleFork = func() map[MantleForkName]MantleForkName {
-	m := make(map[MantleForkName]MantleForkName, len(AllMantleForks))
-	for i, f := range AllMantleForks {
-		if i == len(AllMantleForks)-1 {
-			m[f] = MantleNone
-			break
-		}
-		m[f] = AllMantleForks[i+1]
-	}
-	return m
-}()
+// var nextMantleFork = func() map[MantleForkName]MantleForkName {
+// 	m := make(map[MantleForkName]MantleForkName, len(AllMantleForks))
+// 	for i, f := range AllMantleForks {
+// 		if i == len(AllMantleForks)-1 {
+// 			m[f] = MantleNone
+// 			break
+// 		}
+// 		m[f] = AllMantleForks[i+1]
+// 	}
+// 	return m
+// }()
 
-func IsValidMantleFork(fork MantleForkName) bool {
-	_, ok := nextMantleFork[fork]
-	return ok
-}
+// func IsValidMantleFork(fork MantleForkName) bool {
+// 	_, ok := nextMantleFork[fork]
+// 	return ok
+// }

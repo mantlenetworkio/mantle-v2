@@ -522,36 +522,6 @@ func (c *Config) IsInterop(timestamp uint64) bool {
 	return c.IsForkActive(forks.Interop, timestamp)
 }
 
-// IsMantleBaseFee returns true if the MantleBaseFee hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleBaseFee(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleBaseFee, timestamp)
-}
-
-// IsMantleEverest returns true if the MantleEverest hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleEverest(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleEverest, timestamp)
-}
-
-// IsMantleEuboea returns true if the MantleEuboea hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleEuboea(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleEuboea, timestamp)
-}
-
-// IsMantleSkadi returns true if the MantleSkadi hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleSkadi(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleSkadi, timestamp)
-}
-
-// IsMantleLimb returns true if the MantleLimb hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleLimb(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleLimb, timestamp)
-}
-
-// IsMantleArsia returns true if the MantleArsia hardfork is active at or past the given timestamp.
-func (c *Config) IsMantleArsia(timestamp uint64) bool {
-	return c.IsMantleForkActive(MantleArsia, timestamp)
-}
-
 func (c *Config) IsRegolithActivationBlock(l2BlockTime uint64) bool {
 	return c.IsRegolith(l2BlockTime) &&
 		l2BlockTime >= c.BlockTime &&
@@ -624,54 +594,6 @@ func (c *Config) IsInteropActivationBlock(l2BlockTime uint64) bool {
 		!c.IsInterop(l2BlockTime-c.BlockTime)
 }
 
-// IsMantleBaseFeeActivationBlock returns whether the specified block is the first block subject to the
-// MantleBaseFee upgrade.
-func (c *Config) IsMantleBaseFeeActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleBaseFee, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleBaseFee, l2BlockTime-c.BlockTime)
-}
-
-// IsMantleEverestActivationBlock returns whether the specified block is the first block subject to the
-// MantleEverest upgrade.
-func (c *Config) IsMantleEverestActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleEverest, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleEverest, l2BlockTime-c.BlockTime)
-}
-
-// IsMantleEuboeaActivationBlock returns whether the specified block is the first block subject to the
-// MantleEuboea upgrade.
-func (c *Config) IsMantleEuboeaActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleEuboea, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleEuboea, l2BlockTime-c.BlockTime)
-}
-
-// IsMantleSkadiActivationBlock returns whether the specified block is the first block subject to the
-// MantleSkadi upgrade.
-func (c *Config) IsMantleSkadiActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleSkadi, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleSkadi, l2BlockTime-c.BlockTime)
-}
-
-// IsMantleLimbActivationBlock returns whether the specified block is the first block subject to the
-// MantleLimb upgrade.
-func (c *Config) IsMantleLimbActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleLimb, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleLimb, l2BlockTime-c.BlockTime)
-}
-
-// IsMantleArsiaActivationBlock returns whether the specified block is the first block subject to the
-// MantleArsia upgrade.
-func (c *Config) IsMantleArsiaActivationBlock(l2BlockTime uint64) bool {
-	return c.IsMantleForkActive(MantleArsia, l2BlockTime) &&
-		l2BlockTime >= c.BlockTime &&
-		!c.IsMantleForkActive(MantleArsia, l2BlockTime-c.BlockTime)
-}
-
 func (c *Config) ActivationTime(fork ForkName) *uint64 {
 	// NEW FORKS MUST BE ADDED HERE
 	switch fork {
@@ -695,27 +617,6 @@ func (c *Config) ActivationTime(fork ForkName) *uint64 {
 		return c.CanyonTime
 	case forks.Regolith:
 		return c.RegolithTime
-	default:
-		panic(fmt.Sprintf("unknown fork: %v", fork))
-	}
-}
-
-func (c *Config) MantleActivationTime(fork MantleForkName) *uint64 {
-	switch fork {
-	case MantleArsia:
-		return c.MantleArsiaTime
-	case MantleLimb:
-		return c.MantleLimbTime
-	case MantleSkadi:
-		return c.MantleSkadiTime
-	case MantleEuboea:
-		return c.MantleEuboeaTime
-	case MantleEverest:
-		return c.MantleEverestTime
-	case MantleBaseFee:
-		return c.MantleBaseFeeTime
-	case MantleNoSupport:
-		return nil
 	default:
 		panic(fmt.Sprintf("unknown fork: %v", fork))
 	}
@@ -746,25 +647,6 @@ func (c *Config) SetActivationTime(fork ForkName, timestamp *uint64) {
 		c.RegolithTime = timestamp
 	default:
 		panic(fmt.Sprintf("unknown fork: %v", fork))
-	}
-}
-
-func (c *Config) SetMantleActivationTime(fork MantleForkName, timestamp *uint64) {
-	switch fork {
-	case MantleArsia:
-		c.MantleArsiaTime = timestamp
-	case MantleLimb:
-		c.MantleLimbTime = timestamp
-	case MantleSkadi:
-		c.MantleSkadiTime = timestamp
-	case MantleEuboea:
-		c.MantleEuboeaTime = timestamp
-	case MantleEverest:
-		c.MantleEverestTime = timestamp
-	case MantleBaseFee:
-		c.MantleBaseFeeTime = timestamp
-	default:
-		panic(fmt.Sprintf("unknown mantle fork: %v", fork))
 	}
 }
 
@@ -811,30 +693,6 @@ func (c *Config) ActivateAt(fork ForkName, timestamp uint64) {
 			ts = nil
 		} else {
 			c.SetActivationTime(scheduleableForks[i], ts)
-		}
-	}
-}
-
-var scheduleableMantleForks = MantleForksFrom(MantleNoSupport)
-
-func (c *Config) MantleActivateAtGenesis(hardfork MantleForkName) {
-	c.MantleActivateAt(hardfork, 0)
-}
-
-func (c *Config) MantleActivateAt(fork MantleForkName, timestamp uint64) {
-	if !IsValidMantleFork(fork) {
-		panic(fmt.Sprintf("invalid mantle fork: %s", fork))
-	}
-	ts := new(uint64)
-	if fork == MantleNoSupport {
-		ts = nil
-	}
-	for i, f := range scheduleableMantleForks {
-		if f == fork {
-			c.SetMantleActivationTime(fork, &timestamp)
-			ts = nil
-		} else {
-			c.SetMantleActivationTime(scheduleableMantleForks[i], ts)
 		}
 	}
 }
@@ -1018,65 +876,6 @@ func (c *Config) ParseRollupConfig(in io.Reader) error {
 	if err := dec.Decode(c); err != nil {
 		return fmt.Errorf("failed to decode rollup config: %w", err)
 	}
-	return nil
-}
-
-func (c *Config) ApplyMantleOverrides() error {
-	// Since we get the upgrade config from op-geth, configuration in rollup json will not be effective.
-	// Which also means that we cannot customize the devnet upgrades through deploy config. The only way
-	// to make it is to override the upgrade time in op-geth code.
-	upgradeConfig := params.GetUpgradeConfigForMantle(c.L2ChainID)
-	if upgradeConfig == nil {
-		c.MantleBaseFeeTime = nil
-	} else {
-		c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
-		c.MantleEverestTime = upgradeConfig.MantleEverestTime
-		// No consensus&execution update for Euboea, just use the same as Everest
-		c.MantleEuboeaTime = upgradeConfig.MantleEverestTime
-		c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
-		c.MantleLimbTime = upgradeConfig.MantleLimbTime
-		c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
-
-		// Map Optimism forks to Mantle forks
-		c.CanyonTime = c.MantleArsiaTime
-		c.DeltaTime = c.MantleArsiaTime
-		c.EcotoneTime = c.MantleArsiaTime
-		c.FjordTime = c.MantleArsiaTime
-		c.GraniteTime = c.MantleArsiaTime
-		c.HoloceneTime = c.MantleArsiaTime
-		c.IsthmusTime = c.MantleArsiaTime
-		c.JovianTime = c.MantleArsiaTime
-	}
-
-	if c.ChainOpConfig == nil {
-		c.ChainOpConfig = &params.OptimismConfig{
-			EIP1559Elasticity:  4,
-			EIP1559Denominator: 50,
-		}
-	}
-	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
-
-	return c.CheckMantleForks()
-}
-
-func (cfg *Config) CheckMantleForks() error {
-	if err := checkFork(cfg.MantleBaseFeeTime, cfg.MantleEverestTime, ForkName(MantleBaseFee), ForkName(MantleEverest)); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.MantleEverestTime, cfg.MantleEuboeaTime, ForkName(MantleEverest), ForkName(MantleEuboea)); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.MantleEuboeaTime, cfg.MantleSkadiTime, ForkName(MantleEuboea), ForkName(MantleSkadi)); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.MantleSkadiTime, cfg.MantleLimbTime, ForkName(MantleSkadi), ForkName(MantleLimb)); err != nil {
-		return err
-	}
-	if err := checkFork(cfg.MantleLimbTime, cfg.MantleArsiaTime, ForkName(MantleLimb), ForkName(MantleArsia)); err != nil {
-		return err
-	}
-
 	return nil
 }
 
