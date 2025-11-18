@@ -22,7 +22,7 @@ require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/ethereum-optimism/go-ethereum-hdwallet v0.1.4-0.20251001155152-4eb15ccedf7e
-	github.com/ethereum-optimism/superchain-registry/validation v0.0.0-20250603144016-9c45ca7d4508
+	github.com/ethereum-optimism/superchain-registry/validation v0.0.0-20251009180028-9b4658b9b7af
 	github.com/ethereum/go-ethereum v1.16.5
 	github.com/ethereum/go-ethereum/superchain v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.18.0
@@ -136,7 +136,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
 	github.com/emicklei/dot v1.6.2 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.3 // indirect
+	github.com/ethereum/c-kzg-4844/v2 v2.1.5 // indirect
 	github.com/ethereum/go-bigmodexpfix v0.0.0-20250911101455-f9e208c548ab // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect

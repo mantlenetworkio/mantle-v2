@@ -26,12 +26,20 @@ func TestArsiaSourcesMatchSpec(t *testing.T) {
 			expectedHash: "0xfe44184ad58b4cb10db4f9b9aa8aeaec19b2e51d8028bb1ee771cbdd4c1cb5da",
 		},
 		{
+			source:       deployArsiaOperatorFeeVaultSource,
+			expectedHash: "0x94ed52865378938e134cc7a90a565d9010f78e08b26363edad62f6da9031ebb8",
+		},
+		{
 			source:       updateArsiaL1BlockProxySource,
 			expectedHash: "0xe353e514c6c2b30b8bba0a78a53aefc37b13a96ea3f21c29d0eed7acc3e17ad2",
 		},
 		{
 			source:       updateArsiaGasPriceOracleProxySource,
 			expectedHash: "0x1384418a52a30b6f0c234383ea19f93f3d18923c09dc1a685add20cde372b287",
+		},
+		{
+			source:       updateArsiaOperatorFeeVaultProxySource,
+			expectedHash: "0x46891cf0872389e54606b9c91fd701d29e6843e13b3f0e03dc15fc687bdac358",
 		},
 		{
 			source:       enableArsiaSource,
@@ -86,7 +94,19 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 	require.Equal(t, gasPriceOracleArsiaDeploymentBytecode, deployGasPriceOracle.Data(),
 		"GasPriceOracle deployment bytecode should match")
 
-	// Test 3: Update L1Block proxy
+	// Test 3: Deploy OperatorFeeVault implementation
+	deployOperatorFeeVaultSender, deployOperatorFeeVault := toDepositTxn(t, upgradeTxns[2])
+	require.Equal(t, deployOperatorFeeVaultSender, OperatorFeeVaultArsiaDeployerAddress,
+		"OperatorFeeVault deployer should be 0x4250...0002")
+	require.Equal(t, common.HexToAddress("0x4250000000000000000000000000000000000002"), deployOperatorFeeVaultSender,
+		"OperatorFeeVault deployer address verification")
+	require.Equal(t, deployArsiaOperatorFeeVaultSource.SourceHash(), deployOperatorFeeVault.SourceHash(),
+		"OperatorFeeVault source hash should match")
+	require.Nil(t, deployOperatorFeeVault.To(), "OperatorFeeVault deployment should have nil To (contract creation)")
+	require.Equal(t, operatorFeeVaultArsiaDeploymentByteCode, deployOperatorFeeVault.Data(),
+		"OperatorFeeVault deployment bytecode should match")
+
+	// Test 4: Update L1Block proxy
 	updateL1BlockProxySender, updateL1BlockProxy := toDepositTxn(t, upgradeTxns[3])
 	require.Equal(t, updateL1BlockProxySender, common.Address{},
 		"L1Block proxy update should be from zero address (proxy admin)")
@@ -110,7 +130,7 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 	require.Equal(t, expectedL1BlockAddr, calldataAddr,
 		"L1Block proxy update should point to new implementation address")
 
-	// Test 4: Update GasPriceOracle proxy
+	// Test 5: Update GasPriceOracle proxy
 	updateGasPriceOracleSender, updateGasPriceOracle := toDepositTxn(t, upgradeTxns[4])
 	require.Equal(t, updateGasPriceOracleSender, common.Address{},
 		"GasPriceOracle proxy update should be from zero address (proxy admin)")
@@ -134,7 +154,32 @@ func TestArsiaNetworkTransactions(t *testing.T) {
 	require.Equal(t, expectedGPOAddr, calldataGPOAddr,
 		"GasPriceOracle proxy update should point to new implementation address")
 
-	// Test 5: Enable Arsia in GasPriceOracle
+	// Test 6: Update OperatorFeeVault proxy
+	updateOperatorFeeVaultSender, updateOperatorFeeVault := toDepositTxn(t, upgradeTxns[5])
+	require.Equal(t, updateOperatorFeeVaultSender, common.Address{},
+		"OperatorFeeVault proxy update should be from zero address (proxy admin)")
+	require.Equal(t, updateArsiaOperatorFeeVaultProxySource.SourceHash(), updateOperatorFeeVault.SourceHash(),
+		"OperatorFeeVault proxy update source hash should match")
+	require.NotNil(t, updateOperatorFeeVault.To(), "OperatorFeeVault proxy update should have non-nil To")
+	require.Equal(t, predeploys.OperatorFeeVaultAddr, *updateOperatorFeeVault.To(),
+		"OperatorFeeVault proxy update should target OperatorFeeVault predeploy address")
+	require.Equal(t, common.HexToAddress("0x420000000000000000000000000000000000001b"), *updateOperatorFeeVault.To(),
+		"OperatorFeeVault predeploy address verification")
+
+	// Verify upgradeTo calldata format
+	require.Equal(t, 4+32, len(updateOperatorFeeVault.Data()),
+		"OperatorFeeVault proxy update calldata should be 36 bytes")
+	require.Equal(t, common.FromHex("0x3659cfe6"), updateOperatorFeeVault.Data()[:4],
+		"OperatorFeeVault proxy update should call upgradeTo(address)")
+
+	// Verify the new implementation address in calldata
+
+	expectedOperatorFeeVaultAddr := arsiaOperatorFeeVaultAddress
+	calldataOperatorFeeVaultAddr := common.BytesToAddress(updateOperatorFeeVault.Data()[4:])
+	require.Equal(t, expectedOperatorFeeVaultAddr, calldataOperatorFeeVaultAddr,
+		"OperatorFeeVault proxy update should point to new implementation address")
+
+	// Test 7: Enable Arsia in GasPriceOracle
 	enableArsiaSender, enableArsia := toDepositTxn(t, upgradeTxns[6])
 	require.Equal(t, enableArsiaSender, L1InfoDepositerAddress,
 		"Enable Arsia should be from L1InfoDepositer address")
@@ -194,31 +239,39 @@ func TestArsiaUpgradeTransactionOrder(t *testing.T) {
 	// Expected order:
 	// 1. Deploy L1Block implementation
 	// 2. Deploy GasPriceOracle implementation
-	// 3. Upgrade L1Block proxy
-	// 4. Upgrade GasPriceOracle proxy
-	// 5. Enable Arsia mode
+	// 3. Deploy OperatorFeeVault implementation
+	// 4. Upgrade L1Block proxy
+	// 5. Upgrade GasPriceOracle proxy
+	// 6. Upgrade OperatorFeeVault proxy
+	// 7. Enable Arsia mode
 
 	// Check deployment transactions come before proxy upgrades
 	deployL1Block := upgradeTxns[0]
 	deployGPO := upgradeTxns[1]
-	upgradeL1BlockProxy := upgradeTxns[2]
-	upgradeGPOProxy := upgradeTxns[3]
-	enableArsiaTx := upgradeTxns[4]
+	deployOperatorFeeVault := upgradeTxns[2]
+	upgradeL1BlockProxy := upgradeTxns[3]
+	upgradeGPOProxy := upgradeTxns[4]
+	upgradeOperatorFeeVaultProxy := upgradeTxns[5]
+	enableArsiaTx := upgradeTxns[6]
 
 	// Deployments should have nil To (contract creation)
-	var deployL1BlockTx, deployGPOTx types.Transaction
+	var deployL1BlockTx, deployGPOTx, deployOperatorFeeVaultTx types.Transaction
 	require.NoError(t, deployL1BlockTx.UnmarshalBinary(deployL1Block))
 	require.NoError(t, deployGPOTx.UnmarshalBinary(deployGPO))
+	require.NoError(t, deployOperatorFeeVaultTx.UnmarshalBinary(deployOperatorFeeVault))
 	require.Nil(t, deployL1BlockTx.To(), "First tx should be L1Block deployment")
 	require.Nil(t, deployGPOTx.To(), "Second tx should be GasPriceOracle deployment")
+	require.Nil(t, deployOperatorFeeVaultTx.To(), "Third tx should be OperatorFeeVault deployment")
 
 	// Proxy upgrades should have non-nil To
-	var upgradeL1BlockProxyTx, upgradeGPOProxyTx, enableArsiaTxParsed types.Transaction
+	var upgradeL1BlockProxyTx, upgradeGPOProxyTx, upgradeOperatorFeeVaultProxyTx, enableArsiaTxParsed types.Transaction
 	require.NoError(t, upgradeL1BlockProxyTx.UnmarshalBinary(upgradeL1BlockProxy))
 	require.NoError(t, upgradeGPOProxyTx.UnmarshalBinary(upgradeGPOProxy))
+	require.NoError(t, upgradeOperatorFeeVaultProxyTx.UnmarshalBinary(upgradeOperatorFeeVaultProxy))
 	require.NoError(t, enableArsiaTxParsed.UnmarshalBinary(enableArsiaTx))
 	require.NotNil(t, upgradeL1BlockProxyTx.To(), "Third tx should be L1Block proxy upgrade")
 	require.NotNil(t, upgradeGPOProxyTx.To(), "Fourth tx should be GasPriceOracle proxy upgrade")
+	require.NotNil(t, upgradeOperatorFeeVaultProxyTx.To(), "Fifth tx should be OperatorFeeVault proxy upgrade")
 	require.NotNil(t, enableArsiaTxParsed.To(), "Fifth tx should be enable Arsia")
 
 	t.Log("✅ Arsia upgrade transaction order is correct")
@@ -239,4 +292,10 @@ func TestArsiaComputedAddresses(t *testing.T) {
 	require.Equal(t, arsiaGasPriceOracleAddress, computedGPOAddr,
 		"Computed GasPriceOracle address should match arsiaGasPriceOracleAddress")
 	t.Logf("GasPriceOracle implementation will be deployed at: %s", computedGPOAddr.Hex())
+
+	// OperatorFeeVault implementation address
+	computedOperatorFeeVaultAddr := crypto.CreateAddress(OperatorFeeVaultArsiaDeployerAddress, 0)
+	require.Equal(t, arsiaOperatorFeeVaultAddress, computedOperatorFeeVaultAddr,
+		"Computed OperatorFeeVault address should match arsiaOperatorFeeVaultAddress")
+	t.Logf("OperatorFeeVault implementation will be deployed at: %s", computedOperatorFeeVaultAddr.Hex())
 }

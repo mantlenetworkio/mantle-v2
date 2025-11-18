@@ -128,6 +128,45 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "clearLivenessModule",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "clearTimelockGuard",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "livenessResponsePeriod",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "fallbackOwner",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct LivenessModule2.ModuleConfig",
+        "name": "_config",
+        "type": "tuple"
+      }
+    ],
+    "name": "configureLivenessModule",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -571,6 +610,25 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "contract GnosisSafe",
+        "name": "safe",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "uncancelledCount",
+        "type": "uint256"
+      }
+    ],
+    "name": "TransactionsNotCancelled",
+    "type": "event"
+  },
+  {
     "inputs": [],
     "name": "SemverComp_InvalidSemverParts",
     "type": "error"
@@ -583,6 +641,11 @@
   {
     "inputs": [],
     "name": "TimelockGuard_GuardNotEnabled",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TimelockGuard_GuardStillEnabled",
     "type": "error"
   },
   {
