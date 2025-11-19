@@ -90,6 +90,9 @@ submodules: ## Updates git submodules
 	git submodule update --init --recursive
 .PHONY: submodules
 
+op-conductor: ## Builds op-conductor binary
+	just $(JUSTFLAGS) ./op-conductor/op-conductor
+.PHONY: op-conductor
 
 op-node: ## Builds op-node binary
 	just $(JUSTFLAGS) ./op-node/op-node
