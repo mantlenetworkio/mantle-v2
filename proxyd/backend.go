@@ -529,6 +529,9 @@ type BackendGroup struct {
 	Name      string
 	Backends  []*Backend
 	Consensus *ConsensusPoller
+	
+	// Height-based routing
+	router *BackendRouter
 }
 
 func (bg *BackendGroup) Forward(ctx context.Context, rpcReqs []*RPCReq, isBatch bool) ([]*RPCRes, error) {
@@ -579,7 +582,13 @@ func (bg *BackendGroup) Forward(ctx context.Context, rpcReqs []*RPCReq, isBatch 
 
 	rpcRequestsTotal.Inc()
 
-	for _, back := range backends {
+	// If height-based routing is enabled, use router to determine backend list
+	if bg.router != nil && len(rpcReqs) > 0 {
+		// Use batch routing method to analyze all requests
+		backends = bg.router.OrderBackends(ctx, rpcReqs)
+	}
+
+	for i, back := range backends {
 		res := make([]*RPCRes, 0)
 		var err error
 
@@ -613,6 +622,24 @@ func (bg *BackendGroup) Forward(ctx context.Context, rpcReqs []*RPCReq, isBatch 
 					"req_id", GetReqID(ctx),
 					"auth", GetAuthCtx(ctx),
 					"err", err,
+				)
+				continue
+			}
+
+			// With height-based routing enabled, continue to next backend on null result
+			// This implements fallback chain semantics: try backends in priority order
+			//
+			// Example: Primary (Reth) returns null → fallback to Archive (Geth)
+			// Key condition `i < len(backends)-1` ensures:
+			//   - Primary (i=0) returns null → tries Fallback
+			//   - Fallback (i=1, last) returns null → returns to client (data truly absent)
+			//
+			// Only applies with height routing enabled, preserves load balancing otherwise
+			if bg.router != nil && i < len(backends)-1 && bg.router.ShouldFallbackOnNull(res) {
+				log.Debug(
+					"got null result, trying next backend",
+					"current_backend", back.Name,
+					"req_id", GetReqID(ctx),
 				)
 				continue
 			}

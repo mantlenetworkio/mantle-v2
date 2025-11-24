@@ -95,6 +95,15 @@ type BackendConfig struct {
 
 type BackendsConfig map[string]*BackendConfig
 
+// HeightBasedRoutingConfig configures height-based routing
+type HeightBasedRoutingConfig struct {
+	Enabled         bool                   `toml:"enabled"`          // whether to enable height-based routing
+	CutoffHeight    uint64                 `toml:"cutoff_height"`    // cutoff block height (e.g. 125000000)
+	PrimaryBackend  string                 `toml:"primary_backend"`  // primary backend name (e.g. "reth")
+	FallbackBackend string                 `toml:"fallback_backend"` // fallback backend name (e.g. "geth")
+	MethodConfig    map[string]int         `toml:"method_config"`    // optional: custom block parameter indices for methods
+}
+
 type BackendGroupConfig struct {
 	Backends []string `toml:"backends"`
 
@@ -105,6 +114,9 @@ type BackendGroupConfig struct {
 	ConsensusMaxUpdateThreshold TOMLDuration `toml:"consensus_max_update_threshold"`
 	ConsensusMaxBlockLag        uint64       `toml:"consensus_max_block_lag"`
 	ConsensusMinPeerCount       int          `toml:"consensus_min_peer_count"`
+
+	// Height-based routing configuration
+	HeightBasedRouting *HeightBasedRoutingConfig `toml:"height_based_routing"`
 }
 
 type BackendGroupsConfig map[string]*BackendGroupConfig

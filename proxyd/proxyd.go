@@ -278,6 +278,43 @@ func Start(config *Config) (*Server, func(), error) {
 
 	for bgName, bg := range backendGroups {
 		bgcfg := config.BackendGroups[bgName]
+		
+		// Configure height-based routing
+		if bgcfg.HeightBasedRouting != nil && bgcfg.HeightBasedRouting.Enabled {
+			primaryBackend := backendsByName[bgcfg.HeightBasedRouting.PrimaryBackend]
+			fallbackBackend := backendsByName[bgcfg.HeightBasedRouting.FallbackBackend]
+
+			if primaryBackend == nil {
+				return nil, nil, fmt.Errorf(
+					"height-based routing: primary backend %s not found for group %s",
+					bgcfg.HeightBasedRouting.PrimaryBackend,
+					bgName,
+				)
+			}
+			if fallbackBackend == nil {
+				return nil, nil, fmt.Errorf(
+					"height-based routing: fallback backend %s not found for group %s",
+					bgcfg.HeightBasedRouting.FallbackBackend,
+					bgName,
+				)
+			}
+
+		bg.router = NewBackendRouter(
+			bgcfg.HeightBasedRouting.CutoffHeight,
+			primaryBackend,
+			fallbackBackend,
+			bgcfg.HeightBasedRouting.MethodConfig,
+		)
+
+		log.Info(
+			"Height-based routing enabled",
+			"group", bgName,
+			"cutoff_height", bgcfg.HeightBasedRouting.CutoffHeight,
+			"primary", bgcfg.HeightBasedRouting.PrimaryBackend,
+				"fallback", bgcfg.HeightBasedRouting.FallbackBackend,
+			)
+		}
+		
 		if bgcfg.ConsensusAware {
 			log.Info("creating poller for consensus aware backend_group", "name", bgName)
 
