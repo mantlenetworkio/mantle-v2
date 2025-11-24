@@ -285,9 +285,10 @@ contract GasPriceOracle is Semver {
         if (!isArsia) {
             return 0;
         }
-        return Arithmetic.saturatingAdd(
-            Arithmetic.saturatingMul(_gasUsed, operatorFeeScalar()) / 1e6, operatorFeeConstant()
-        );
+
+        uint256 operatorScalar = L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).operatorFeeScalar();
+        uint256 operatorConstant = L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).operatorFeeConstant();
+        return _gasUsed * operatorScalar * 100 + operatorConstant;
     }
 
     /**

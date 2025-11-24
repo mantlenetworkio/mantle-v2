@@ -334,6 +334,40 @@ contract SystemConfig_ArsiaSetters_Test is SystemConfig_Init {
         assertEq(sysConf.operatorFeeScalar(), maxScalar);
         assertEq(sysConf.operatorFeeConstant(), maxConstant);
     }
+
+    function test_setDAFootprintGasScalar_succeeds() external {
+        uint16 newDAFootprintGasScalar = 100;
+
+        vm.expectEmit(true, true, true, true);
+        emit ConfigUpdate(0, SystemConfig.UpdateType.DA_FOOTPRINT_GAS_SCALAR, abi.encode(newDAFootprintGasScalar));
+
+        vm.prank(sysConf.owner());
+        sysConf.setDAFootprintGasScalar(newDAFootprintGasScalar);
+    }
+
+    function testFuzz_setDAFootprintGasScalar_succeeds(uint16 newDAFootprintGasScalar) external {
+        vm.expectEmit(true, true, true, true);
+        emit ConfigUpdate(0, SystemConfig.UpdateType.DA_FOOTPRINT_GAS_SCALAR, abi.encode(newDAFootprintGasScalar));
+
+        vm.prank(sysConf.owner());
+        sysConf.setDAFootprintGasScalar(newDAFootprintGasScalar);
+    }
+
+    function test_setDAFootprintGasScalar_zero_succeeds() external {
+        vm.prank(sysConf.owner());
+        sysConf.setDAFootprintGasScalar(0);
+
+        assertEq(sysConf.daFootprintGasScalar(), 0);
+    }
+
+    function test_setDAFootprintGasScalar_maxValues_succeeds() external {
+        uint16 maxScalar = type(uint16).max;
+
+        vm.prank(sysConf.owner());
+        sysConf.setDAFootprintGasScalar(maxScalar);
+
+        assertEq(sysConf.daFootprintGasScalar(), maxScalar);
+    }
 }
 
 contract SystemConfig_EIP1559Params_Test is SystemConfig_Init {

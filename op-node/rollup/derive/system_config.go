@@ -17,17 +17,15 @@ import (
 )
 
 var (
-	SystemConfigUpdateBatcher           = common.Hash{31: 0}
-	SystemConfigUpdateFeeScalars        = common.Hash{31: 1}
-	SystemConfigUpdateGasLimit          = common.Hash{31: 2}
-	SystemConfigUpdateUnsafeBlockSigner = common.Hash{31: 3}
-	SystemConfigUpdateBaseFee           = common.Hash{31: 4}
-	SystemConfigUpdateEIP1559Params     = common.Hash{31: 5}
-	SystemConfigUpdateOperatorFeeParams = common.Hash{31: 6}
-	SystemConfigUpdateMinBaseFee        = common.Hash{31: 7}
-
-	// Updates that are not supported by Mantle
-	SystemConfigUpdateDAFootprintGasScalar = common.Hash{30: 1}
+	SystemConfigUpdateBatcher              = common.Hash{31: 0}
+	SystemConfigUpdateFeeScalars           = common.Hash{31: 1}
+	SystemConfigUpdateGasLimit             = common.Hash{31: 2}
+	SystemConfigUpdateUnsafeBlockSigner    = common.Hash{31: 3}
+	SystemConfigUpdateBaseFee              = common.Hash{31: 4}
+	SystemConfigUpdateEIP1559Params        = common.Hash{31: 5}
+	SystemConfigUpdateOperatorFeeParams    = common.Hash{31: 6}
+	SystemConfigUpdateMinBaseFee           = common.Hash{31: 7}
+	SystemConfigUpdateDAFootprintGasScalar = common.Hash{31: 8}
 )
 
 var (

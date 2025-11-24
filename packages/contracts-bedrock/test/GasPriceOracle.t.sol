@@ -207,11 +207,11 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
     L1Block l1Block;
     address depositor;
 
-    uint32 constant baseFeeScalar = 1000;
-    uint32 constant blobBaseFeeScalar = 2000;
-    uint256 constant l1BaseFee = 1 gwei;
-    uint256 constant l1BlobBaseFee = 2 gwei;
-    uint32 constant operatorFeeScalar_val = 500000; // 0.5 in 1e6
+    uint32 constant baseFeeScalar = 20;
+    uint32 constant blobBaseFeeScalar = 15;
+    uint256 constant l1BaseFee = 2 * (10 ** 6);
+    uint256 constant l1BlobBaseFee = 3 * (10 ** 6);
+    uint32 constant operatorFeeScalar_val = 500000;
     uint64 constant operatorFeeConstant_val = 1000;
 
     function setUp() public virtual override {
@@ -320,8 +320,8 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
         uint256 gasUsed = 1_000_000;
         uint256 fee = gasOracle.getOperatorFee(gasUsed);
 
-        // Expected: (1_000_000 * 500000) / 1e6 + 1000 = 500_000 + 1000 = 501_000
-        uint256 expected = (gasUsed * operatorFeeScalar_val) / 1e6 + operatorFeeConstant_val;
+        // Expected: (1_000_000 * 500000) * 100 + 1000 = 50_000_000_000_000 + 1000 = 50_000_000_001_000
+        uint256 expected = gasUsed * operatorFeeScalar_val * 100 + operatorFeeConstant_val;
         assertEq(fee, expected);
     }
 
@@ -332,10 +332,10 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
 
     function testFuzz_getOperatorFee_succeeds(uint256 gasUsed) external view {
         // Bound to avoid overflow
-        vm.assume(gasUsed < type(uint256).max / operatorFeeScalar_val);
+        vm.assume(gasUsed < type(uint256).max / (operatorFeeScalar_val * 100));
 
         uint256 fee = gasOracle.getOperatorFee(gasUsed);
-        uint256 expected = (gasUsed * operatorFeeScalar_val) / 1e6 + operatorFeeConstant_val;
+        uint256 expected = gasUsed * operatorFeeScalar_val * 100 + operatorFeeConstant_val;
         assertEq(fee, expected);
     }
 

@@ -209,9 +209,6 @@ var Subcommands = cli.Commands{
 			if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
 				rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(config.EIP1559Denominator, config.EIP1559Elasticity))
 			}
-			if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
-				rollupConfig.Genesis.SystemConfig.MinBaseFee = config.MinBaseFee
-			}
 
 			if err := rollupConfig.Check(); err != nil {
 				return fmt.Errorf("generated rollup config does not pass validation: %w", err)
