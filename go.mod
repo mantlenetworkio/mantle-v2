@@ -323,7 +323,7 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0.0.20251124064404-f5b5c7a47f36
+replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.0-rc0.0.20251126040958-5746af89409f
 
 replace github.com/ethereum/go-ethereum/superchain => ./superchain
 
