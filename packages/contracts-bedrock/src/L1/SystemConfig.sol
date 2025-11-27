@@ -24,17 +24,18 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @custom:value EIP_1559_PARAMS      Represents an update to EIP-1559 parameters.
      * @custom:value OPERATOR_FEE_PARAMS  Represents an update to operator fee parameters.
      * @custom:value MIN_BASE_FEE         Represents an update to the minimum base fee.
+     * @custom:value DA_FOOTPRINT_GAS_SCALAR Represents an update to the DA footprint gas scalar.
      */
     enum UpdateType {
-        BATCHER, // Batcher submitter address
-        FEE_SCALARS, // L1 base fee and blob fee scalars
-        GAS_LIMIT, // L2 gas limit
-        UNSAFE_BLOCK_SIGNER, // L2 sequencer signer
-        BASE_FEE, // L2 base fee
-        EIP_1559_PARAMS, // EIP-1559 parameters
-        OPERATOR_FEE_PARAMS, // Operator fee scalar and constant
-        MIN_BASE_FEE // Minimum base fee
-
+        BATCHER,
+        FEE_SCALARS,
+        GAS_LIMIT,
+        UNSAFE_BLOCK_SIGNER,
+        BASE_FEE,
+        EIP_1559_PARAMS,
+        OPERATOR_FEE_PARAMS,
+        MIN_BASE_FEE,
+        DA_FOOTPRINT_GAS_SCALAR
     }
 
     /**
@@ -116,6 +117,11 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      * @notice The minimum base fee, in wei.
      */
     uint64 public minBaseFee;
+
+    /**
+     * @notice The DA footprint gas scalar.
+     */
+    uint16 public daFootprintGasScalar;
 
     /**
      * @notice Emitted when configuration is updated
@@ -322,6 +328,20 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         minBaseFee = _minBaseFee;
         bytes memory data = abi.encode(_minBaseFee);
         emit ConfigUpdate(VERSION, UpdateType.MIN_BASE_FEE, data);
+    }
+
+    /// @notice Updates the DA footprint gas scalar. Can only be called by the owner.
+    /// @param _daFootprintGasScalar New DA footprint gas scalar.
+    function setDAFootprintGasScalar(uint16 _daFootprintGasScalar) external onlyOwner {
+        _setDAFootprintGasScalar(_daFootprintGasScalar);
+    }
+
+    /// @notice Internal function for updating the DA footprint gas scalar.
+    function _setDAFootprintGasScalar(uint16 _dAFootprintGasScalar) internal {
+        daFootprintGasScalar = _dAFootprintGasScalar;
+
+        bytes memory data = abi.encode(_dAFootprintGasScalar);
+        emit ConfigUpdate(VERSION, UpdateType.DA_FOOTPRINT_GAS_SCALAR, data);
     }
 
     /**

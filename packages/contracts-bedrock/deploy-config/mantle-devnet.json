@@ -40,6 +40,7 @@
   "eip1559Denominator": 50,
   "eip1559Elasticity": 10,
   "minBaseFee": 1,
+  "daFootprintGasScalar": 100,
   "l1GenesisBlockTimestamp": "0x638a4554",
   "l2GenesisRegolithTimeOffset": "0x0",
   "l2GenesisMantleBaseFeeTimeOffset": "0x0",

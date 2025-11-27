@@ -91,6 +91,11 @@ contract L1Block is Semver {
     uint32 public operatorFeeScalar;
 
     /**
+     * @notice The DA footprint gas scalar.
+     */
+    uint16 public daFootprintGasScalar;
+
+    /**
      * @custom:semver 1.1.0
      */
     constructor() Semver(1, 1, 0) { }
@@ -134,17 +139,18 @@ contract L1Block is Semver {
     /// @notice Updates the L1 block values for Arsia upgraded chain.
     /// Params are packed and passed in as raw msg.data instead of ABI to reduce calldata size.
     /// Params are expected to be in the following order:
-    ///   1. _baseFeeScalar        L1 base fee scalar (uint32)             - 4 bytes
-    ///   2. _blobBaseFeeScalar    L1 blob base fee scalar (uint32)       - 4 bytes
+    ///   1. _baseFeeScalar        L1 base fee scalar (uint32)              - 4 bytes
+    ///   2. _blobBaseFeeScalar    L1 blob base fee scalar (uint32)         - 4 bytes
     ///   3. _sequenceNumber       Number of L2 blocks since epoch (uint64) - 8 bytes
-    ///   4. _timestamp            L1 timestamp (uint64)                   - 8 bytes
-    ///   5. _number               L1 blocknumber (uint64)                 - 8 bytes
-    ///   6. _basefee              L1 base fee (uint256)                   - 32 bytes
-    ///   7. _blobBaseFee          L1 blob base fee (uint256)              - 32 bytes
-    ///   8. _hash                 L1 blockhash (bytes32)                  - 32 bytes
-    ///   9. _batcherHash          Versioned hash (bytes32)                - 32 bytes
-    ///   10. _operatorFeeScalar   Operator fee scalar (uint32)            - 4 bytes
-    ///   11. _operatorFeeConstant Operator fee constant (uint64)          - 8 bytes
+    ///   4. _timestamp            L1 timestamp (uint64)                    - 8 bytes
+    ///   5. _number               L1 blocknumber (uint64)                  - 8 bytes
+    ///   6. _basefee              L1 base fee (uint256)                    - 32 bytes
+    ///   7. _blobBaseFee          L1 blob base fee (uint256)               - 32 bytes
+    ///   8. _hash                 L1 blockhash (bytes32)                   - 32 bytes
+    ///   9. _batcherHash          Versioned hash (bytes32)                 - 32 bytes
+    ///   10. _operatorFeeScalar   Operator fee scalar (uint32)             - 4 bytes
+    ///   11. _operatorFeeConstant Operator fee constant (uint64)           - 8 bytes
+    ///   12. _daFootprintGasScalar DA footprint gas scalar (uint16)        - 2 bytes
     function setL1BlockValuesArsia() public {
         _setL1BlockValuesArsia();
     }
@@ -168,8 +174,19 @@ contract L1Block is Semver {
             sstore(hash.slot, calldataload(100)) // bytes32
             sstore(batcherHash.slot, calldataload(132)) // bytes32
 
-            // operatorFeeScalar (uint32), operatorFeeConstant (uint64)
-            sstore(operatorFeeConstant.slot, shr(160, calldataload(164)))
+            // Calldata layout: operatorFeeScalar (uint32), operatorFeeConstant (uint64), daFootprintGasScalar (uint16)
+            // Slot layout: daFootprintGasScalar (uint16),  operatorFeeScalar (uint32), operatorFeeConstant (uint64)
+
+            // Load operatorFeeScalar+operatorFeeConstant from calldata
+            let opFeeParams := shr(160, calldataload(164)) // 160 = 256 - (32 + 64)
+
+            // Load daFootprintGasScalar from calldata
+            let daScalar := shr(240, calldataload(176)) // 240 = 256 - 16
+
+            // Combine full slot value, shifting daFootprintGasScalar left of operator fee params
+            let slotVal := or(shl(96, daScalar), opFeeParams) // 96 = 32 + 64
+
+            sstore(operatorFeeConstant.slot, slotVal)
         }
     }
 }
