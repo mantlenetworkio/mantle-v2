@@ -148,11 +148,7 @@ func (c *Config) MantleActivateAt(fork MantleForkName, timestamp uint64) {
 	}
 }
 
-func (c *Config) ApplyMantleOverrides() error {
-	// Since we get the upgrade config from op-geth, configuration in rollup json will not be effective.
-	// Which also means that we cannot customize the devnet upgrades through deploy config. The only way
-	// to make it is to override the upgrade time in op-geth code.
-	upgradeConfig := params.GetUpgradeConfigForMantle(c.L2ChainID)
+func (c *Config) ApplyMantleOverrides(upgradeConfig *params.MantleUpgradeChainConfig) error {
 	if upgradeConfig == nil {
 		c.MantleBaseFeeTime = nil
 	} else {
@@ -163,17 +159,17 @@ func (c *Config) ApplyMantleOverrides() error {
 		c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
 		c.MantleLimbTime = upgradeConfig.MantleLimbTime
 		c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
-
-		// Map Optimism forks to Mantle forks
-		c.CanyonTime = c.MantleArsiaTime
-		c.DeltaTime = c.MantleArsiaTime
-		c.EcotoneTime = c.MantleArsiaTime
-		c.FjordTime = c.MantleArsiaTime
-		c.GraniteTime = c.MantleArsiaTime
-		c.HoloceneTime = c.MantleArsiaTime
-		c.IsthmusTime = c.MantleArsiaTime
-		c.JovianTime = c.MantleArsiaTime
 	}
+
+	// Map Optimism forks to Mantle forks
+	c.CanyonTime = c.MantleArsiaTime
+	c.DeltaTime = c.MantleArsiaTime
+	c.EcotoneTime = c.MantleArsiaTime
+	c.FjordTime = c.MantleArsiaTime
+	c.GraniteTime = c.MantleArsiaTime
+	c.HoloceneTime = c.MantleArsiaTime
+	c.IsthmusTime = c.MantleArsiaTime
+	c.JovianTime = c.MantleArsiaTime
 
 	if c.ChainOpConfig == nil {
 		c.ChainOpConfig = &params.OptimismConfig{
