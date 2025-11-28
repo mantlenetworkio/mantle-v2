@@ -294,11 +294,11 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
 	})
-	t.Run("arsia uses isthmus format with arsia signature", func(t *testing.T) {
+	t.Run("arsia uses jovian format with arsia signature", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
 		info := testutils.MakeBlockInfo(nil)(rng)
 		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
-		rollupCfg.ActivateAtGenesis(forks.Isthmus)
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
 		rollupCfg.MantleActivateAtGenesis(forks.MantleArsia)
 		// Arsia timestamp - one block after genesis to avoid activation block
 		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
@@ -306,11 +306,11 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		// Arsia (via Isthmus) uses same data length as Isthmus
-		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		// Arsia (via Jovian) uses same data length as Jovian
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
 		// Mantle's Arsia fork includes Isthmus features but uses Arsia function signature
 		// Since Isthmus maps to MantleArsia, the signature should be Arsia
-		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4], "Isthmus activation should use Arsia signature for Mantle")
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4], "Jovian activation should use Arsia signature for Mantle")
 
 		// Verify it can be decoded back
 		res, err := L1BlockInfoFromBytes(&rollupCfg, timestamp, depTx.Data)

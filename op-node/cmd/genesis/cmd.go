@@ -17,6 +17,7 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
@@ -199,7 +200,7 @@ var Subcommands = cli.Commands{
 
 			// Mantle features
 			// Apply Mantle overrides to the rollup config
-			if err := rollupConfig.ApplyMantleOverrides(); err != nil {
+			if err := rollupConfig.ApplyMantleOverrides(params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID))); err != nil {
 				return fmt.Errorf("failed to apply mantle overrides: %w", err)
 			}
 			// setup initial 1559 params in rollup system config

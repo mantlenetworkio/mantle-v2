@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 
 	opnode "github.com/ethereum-optimism/optimism/op-node"
 	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
@@ -96,7 +97,7 @@ func RollupNodeMain(ctx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.
 
 	// Mantle features
 	// Apply Mantle overrides to the config
-	if err := cfg.Rollup.ApplyMantleOverrides(); err != nil {
+	if err := cfg.Rollup.ApplyMantleOverrides(params.GetUpgradeConfigForMantle(cfg.Rollup.L2ChainID)); err != nil {
 		return nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
 	}
 
