@@ -1257,6 +1257,18 @@ jobs:
           when: on_fail
       - notify-failures-on-develop
 
+  contracts-bedrock-upload:
+    machine: true
+    resource_class: ethereum-optimism/latitude-1
+    steps:
+      - check-changed:
+          patterns: contracts-bedrock
+      - get-target-branch
+      - run:
+          name: upload selectors
+          command: just update-selectors
+          working_directory: packages/contracts-bedrock
+
   contracts-bedrock-checks:
     docker:
       - image: <<pipeline.parameters.default_docker_image>>
@@ -2595,6 +2607,11 @@ workflows:
           context:
             - circleci-repo-readonly-authenticated-github-token
       - contracts-bedrock-checks:
+          requires:
+            - contracts-bedrock-build
+          context:
+            - circleci-repo-readonly-authenticated-github-token
+      - contracts-bedrock-upload:
           requires:
             - contracts-bedrock-build
           context:
