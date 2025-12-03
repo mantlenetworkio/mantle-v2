@@ -63,11 +63,19 @@ contract DeployImplementations is Script {
 
     function runWithBytes(bytes memory _input, address _deployer) public returns (bytes memory) {
         Input memory input = abi.decode(_input, (Input));
-        Output memory output = run(input, _deployer);
+        Output memory output = _run(input, _deployer);
         return abi.encode(output);
     }
 
-    function run(Input memory _input, address _deployer) public returns (Output memory output_) {
+    function run(Input memory _input) public returns (Output memory output_) {
+        return _run(_input, msg.sender);
+    }
+
+    function runWithDeployer(Input memory _input, address _deployer) public returns (Output memory output_) {
+        return _run(_input, _deployer);
+    }
+
+    function _run(Input memory _input, address _deployer) internal returns (Output memory output_) {
         assertValidInput(_input);
 
         // Deploy the implementations.
