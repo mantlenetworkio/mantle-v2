@@ -4,80 +4,117 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
+	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/contracts"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/generic"
+	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources/batching/rpcblock"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
+var (
+	errNoChallengeRequired  = errors.New("no challenge required")
+	errNoResolutionRequired = errors.New("no resolution required")
+)
+
 type RootProvider interface {
 	OutputAtBlock(ctx context.Context, blockNum uint64) (*eth.OutputResponse, error)
 }
 
+type GameStatusProvider interface {
+	GetGameStatus(ctx context.Context, idx uint64) (gameTypes.GameStatus, error)
+}
+
 type ChallengableContract interface {
-	CanChallenge(ctx context.Context) (bool, error)
+	Addr() common.Address
 	ChallengeTx(ctx context.Context) (txmgr.TxCandidate, error)
 	GetProposal(ctx context.Context) (common.Hash, uint64, error)
+	GetChallengerMetadata(ctx context.Context, block rpcblock.Block) (contracts.ChallengerMetadata, error)
+	ResolveTx() (txmgr.TxCandidate, error)
 }
 
 type Actor struct {
-	logger       log.Logger
-	rootProvider RootProvider
-	contract     ChallengableContract
-	txSender     TxSender
-	l1Head       eth.BlockID
+	logger             log.Logger
+	l1Clock            ClockReader
+	rootProvider       RootProvider
+	gameStatusProvider GameStatusProvider
+	contract           ChallengableContract
+	txSender           TxSender
+	l1Head             eth.BlockID
 }
 
-func ActorCreator(rootProvider RootProvider, contract ChallengableContract, txSender TxSender) generic.ActorCreator {
+func ActorCreator(l1Clock ClockReader, rootProvider RootProvider, gameStatusProvider GameStatusProvider, contract ChallengableContract, txSender TxSender) generic.ActorCreator {
 	return func(ctx context.Context, logger log.Logger, l1Head eth.BlockID) (generic.Actor, error) {
 		return &Actor{
-			logger:       logger,
-			rootProvider: rootProvider,
-			contract:     contract,
-			txSender:     txSender,
-			l1Head:       l1Head,
+			logger:             logger,
+			l1Clock:            l1Clock,
+			rootProvider:       rootProvider,
+			gameStatusProvider: gameStatusProvider,
+			contract:           contract,
+			txSender:           txSender,
+			l1Head:             l1Head,
 		}, nil
 	}
 }
 
 func (a *Actor) Act(ctx context.Context) error {
-	canChallenge, err := a.contract.CanChallenge(ctx)
+	gameState, err := a.contract.GetChallengerMetadata(ctx, rpcblock.Latest)
 	if err != nil {
-		return fmt.Errorf("failed to check if game can be challenged: %w", err)
-	}
-	if !canChallenge {
-		a.logger.Debug("Skipping unchallengeable zk game")
-		return nil
+		return fmt.Errorf("failed to get zk game state: %w", err)
 	}
 
-	// Check if we agree with the proposal
-	proposalHash, proposalSeqNum, err := a.contract.GetProposal(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get zk game proposal: %w", err)
+	var txs []txmgr.TxCandidate
+	if tx, err := a.createChallengeTx(ctx, gameState); errors.Is(err, errNoChallengeRequired) {
+		a.logger.Debug("No challenge required")
+	} else if err != nil {
+		return err
+	} else {
+		txs = append(txs, tx)
 	}
-	if valid, err := a.isValidProposal(ctx, proposalSeqNum, proposalHash); err != nil {
-		return fmt.Errorf("failed to check if proposal is valid: %w", err)
-	} else if valid {
-		a.logger.Debug("Not challenging valid zk game")
-		return nil
+	if tx, err := a.createResolveTx(ctx, gameState); errors.Is(err, errNoResolutionRequired) {
+		a.logger.Debug("No resolution required")
+	} else if err != nil {
+		return err
+	} else {
+		txs = append(txs, tx)
 	}
 
-	a.logger.Info("Challenging game")
-	tx, err := a.contract.ChallengeTx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create challenge tx: %w", err)
+	if len(txs) == 0 {
+		return nil
 	}
-	if err := a.txSender.SendAndWaitSimple("challenge zk game", tx); err != nil {
-		return fmt.Errorf("failed to challenge zk game: %w", err)
+	if err := a.txSender.SendAndWaitSimple(fmt.Sprintf("respond to game %v", a.contract.Addr()), txs...); err != nil {
+		return fmt.Errorf("failed to send transactions for game %v: %w", a.contract.Addr(), err)
 	}
 	return nil
 }
 
-func (a *Actor) isValidProposal(ctx context.Context, proposalSeqNum uint64, proposalHash common.Hash) (bool, error) {
+func (a *Actor) createChallengeTx(ctx context.Context, gameState contracts.ChallengerMetadata) (txmgr.TxCandidate, error) {
+	if gameState.ProposalStatus != contracts.ProposalStatusUnchallenged || gameState.Deadline.Before(a.l1Clock.Now()) {
+		a.logger.Trace("Skipping unchallengeable zk game")
+		return txmgr.TxCandidate{}, errNoChallengeRequired
+	}
+	if valid, err := a.isValidProposal(ctx); err != nil {
+		return txmgr.TxCandidate{}, fmt.Errorf("failed to check if proposal is valid: %w", err)
+	} else if valid {
+		a.logger.Trace("Not challenging valid zk game")
+		return txmgr.TxCandidate{}, errNoChallengeRequired
+	}
+
+	a.logger.Info("Challenging game")
+	return a.contract.ChallengeTx(ctx)
+}
+
+func (a *Actor) isValidProposal(ctx context.Context) (bool, error) {
+	proposalHash, proposalSeqNum, err := a.contract.GetProposal(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get zk game proposal: %w", err)
+	}
 	canonicalOutput, err := a.rootProvider.OutputAtBlock(ctx, proposalSeqNum)
 	if err != nil {
 		var rpcErr rpc.Error
@@ -96,6 +133,40 @@ func (a *Actor) isValidProposal(ctx context.Context, proposalSeqNum uint64, prop
 	return true, nil
 }
 
-func (a *Actor) AdditionalStatus(ctx context.Context) ([]any, error) {
+func (a *Actor) createResolveTx(ctx context.Context, gameState contracts.ChallengerMetadata) (txmgr.TxCandidate, error) {
+	if gameState.ProposalStatus == contracts.ProposalStatusResolved {
+		a.logger.Trace("Skipping resolution of resolved zk game")
+		return txmgr.TxCandidate{}, errNoResolutionRequired
+	}
+	deadlineExpired := gameState.Deadline.Before(a.l1Clock.Now())
+
+	if gameState.ParentIndex != math.MaxUint32 {
+		parentStatus, err := a.gameStatusProvider.GetGameStatus(ctx, uint64(gameState.ParentIndex))
+		if err != nil {
+			return txmgr.TxCandidate{}, fmt.Errorf("failed to get parent game status: %w", err)
+		}
+		if parentStatus == gameTypes.GameStatusInProgress {
+			a.logger.Trace("Skipping resolution of zk game with parent in progress")
+			return txmgr.TxCandidate{}, errNoResolutionRequired
+		}
+		if parentStatus == gameTypes.GameStatusChallengerWon {
+			// Resolve if the parent game is invalid
+			return a.contract.ResolveTx()
+		}
+	}
+
+	if gameState.ProposalStatus == contracts.ProposalStatusChallengedAndValidProofProvided ||
+		gameState.ProposalStatus == contracts.ProposalStatusUnchallengedAndValidProofProvided {
+		// Resolve if a valid proof is provided
+		return a.contract.ResolveTx()
+	}
+	if deadlineExpired {
+		// Resolve if the deadline has expired (either for challenging or proving)
+		return a.contract.ResolveTx()
+	}
+	return txmgr.TxCandidate{}, errNoResolutionRequired
+}
+
+func (a *Actor) AdditionalStatus(_ context.Context) ([]any, error) {
 	return nil, nil
 }
