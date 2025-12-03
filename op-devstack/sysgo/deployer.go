@@ -1,6 +1,7 @@
 package sysgo
 
 import (
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -66,6 +67,7 @@ func WithDAFootprintGasScalar(scalar uint16, l2IDs ...stack.L2NetworkID) Deploye
 
 func WithDeployerPipelineOption(opt DeployerPipelineOption) stack.Option[*Orchestrator] {
 	return stack.BeforeDeploy(func(o *Orchestrator) {
+		fmt.Println("append option", opt)
 		o.deployerPipelineOptions = append(o.deployerPipelineOptions, opt)
 	})
 }
@@ -84,6 +86,7 @@ func WithDeployer() stack.Option[*Orchestrator] {
 		},
 		DeployFn: func(o *Orchestrator) {
 			o.P().Require().NotNil(o.wb, "must have a world builder")
+			fmt.Println("o.deployerPipelineOptions", o.deployerPipelineOptions)
 			o.wb.deployerPipelineOptions = o.deployerPipelineOptions
 			o.wb.Build()
 		},
@@ -450,11 +453,13 @@ func (wb *worldBuilder) Build() {
 		Logger:             wb.logger,
 		StateWriter:        wb, // direct output back here
 	}
+	fmt.Println("wb.deployerPipelineOptions", wb.deployerPipelineOptions)
 	for _, opt := range wb.deployerPipelineOptions {
+		fmt.Println("opt", opt)
 		opt(wb, intent, &pipelineOpts)
 	}
 
-	err = deployer.ApplyPipeline(wb.p.Ctx(), pipelineOpts)
+	err = deployer.MantleApplyPipeline(wb.p.Ctx(), pipelineOpts)
 	wb.require.NoError(err)
 
 	wb.require.NotNil(wb.output, "expected state-write to output")

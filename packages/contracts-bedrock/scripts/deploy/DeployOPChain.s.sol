@@ -52,18 +52,6 @@ contract DeployOPChain is Script {
         uint256 l2OutputOracleStartingTimestamp;
     }
 
-    struct Output {
-        IAddressManager addressManager;
-        IProxyAdmin proxyAdmin;
-        IL1StandardBridge l1StandardBridgeProxy;
-        IL2OutputOracle l2OutputOracleProxy;
-        IL1CrossDomainMessenger l1CrossDomainMessengerProxy;
-        IOptimismPortal optimismPortalProxy;
-        IOptimismMintableERC20Factory optimismMintableERC20FactoryProxy;
-        IL1ERC721Bridge l1ERC721BridgeProxy;
-        ISystemConfig systemConfigProxy;
-    }
-
     function run(Input memory _input) public {
         _run(_input, msg.sender);
     }

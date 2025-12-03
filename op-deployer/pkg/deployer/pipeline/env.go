@@ -30,6 +30,8 @@ type Env struct {
 	Deployer     common.Address
 	Logger       log.Logger
 	Scripts      *opcm.Scripts
+
+	MantleScripts *opcm.MantleScripts
 }
 
 type StateWriter interface {

@@ -21,30 +21,30 @@ import { Solarray } from "scripts/libraries/Solarray.sol";
 
 contract DeployImplementations is Script {
     struct Input {
-        address systemConfig_owner;
-        bytes32 systemConfig_batcherHash;
-        uint64 systemConfig_gasLimit;
-        uint256 systemConfig_baseFee;
-        address systemConfig_unsafeBlockSigner;
-        IResourceMetering.ResourceConfig systemConfig_config;
-        uint32 systemConfig_basefeeScalar;
-        uint32 systemConfig_blobbasefeeScalar;
+        address systemConfigOwner;
+        bytes32 systemConfigBatcherHash;
+        uint64 systemConfigGasLimit;
+        uint256 systemConfigBaseFee;
+        address systemConfigUnsafeBlockSigner;
+        IResourceMetering.ResourceConfig systemConfigConfig;
+        uint32 systemConfigBasefeeScalar;
+        uint32 systemConfigBlobbasefeeScalar;
         IOptimismPortal optimismPortal;
-        address l1mnt;
+        address l1MNT;
         IL1CrossDomainMessenger l1CrossDomainMessenger;
         IL2OutputOracle l2OutputOracle;
         ISystemConfig systemConfig;
         IL1StandardBridge l1StandardBridge;
-        address l1ERC721Bridge_otherBridge;
-        uint256 l2OutputOracle_submissionInterval;
-        uint256 l2OutputOracle_l2BlockTime;
-        uint256 l2OutputOracle_startingBlockNumber;
-        uint256 l2OutputOracle_startingTimestamp;
-        address l2OutputOracle_proposer;
-        address l2OutputOracle_challenger;
-        uint256 l2OutputOracle_finalizationPeriodSeconds;
-        address optimismPortal_guardian;
-        bool optimismPortal_paused;
+        address l1ERC721BridgeOtherBridge;
+        uint256 l2OutputOracleSubmissionInterval;
+        uint256 l2OutputOracleL2BlockTime;
+        uint256 l2OutputOracleStartingBlockNumber;
+        uint256 l2OutputOracleStartingTimestamp;
+        address l2OutputOracleProposer;
+        address l2OutputOracleChallenger;
+        uint256 l2OutputOracleFinalizationPeriodSeconds;
+        address optimismPortalGuardian;
+        bool optimismPortalPaused;
     }
 
     struct Output {
@@ -105,14 +105,14 @@ contract DeployImplementations is Script {
                     abi.encodeCall(
                         ISystemConfig.__constructor__,
                         (
-                            _input.systemConfig_owner,
-                            _input.systemConfig_basefeeScalar,
-                            _input.systemConfig_blobbasefeeScalar,
-                            _input.systemConfig_batcherHash,
-                            _input.systemConfig_gasLimit,
-                            _input.systemConfig_baseFee,
-                            _input.systemConfig_unsafeBlockSigner,
-                            _input.systemConfig_config
+                            _input.systemConfigOwner,
+                            _input.systemConfigBasefeeScalar,
+                            _input.systemConfigBlobbasefeeScalar,
+                            _input.systemConfigBatcherHash,
+                            _input.systemConfigGasLimit,
+                            _input.systemConfigBaseFee,
+                            _input.systemConfigUnsafeBlockSigner,
+                            _input.systemConfigConfig
                         )
                     )
                 )
@@ -127,7 +127,7 @@ contract DeployImplementations is Script {
             DeployUtils.create1({
                 _name: "L1CrossDomainMessenger",
                 _args: DeployUtils.encodeConstructor(
-                    abi.encodeCall(IL1CrossDomainMessenger.__constructor__, (_input.optimismPortal, _input.l1mnt))
+                    abi.encodeCall(IL1CrossDomainMessenger.__constructor__, (_input.optimismPortal, _input.l1MNT))
                 )
             })
         );
@@ -142,7 +142,7 @@ contract DeployImplementations is Script {
                 _args: DeployUtils.encodeConstructor(
                     abi.encodeCall(
                         IL1ERC721Bridge.__constructor__,
-                        (address(_input.l1CrossDomainMessenger), _input.l1ERC721Bridge_otherBridge)
+                        (address(_input.l1CrossDomainMessenger), _input.l1ERC721BridgeOtherBridge)
                     )
                 )
             })
@@ -157,7 +157,7 @@ contract DeployImplementations is Script {
                 _name: "L1StandardBridge",
                 _args: DeployUtils.encodeConstructor(
                     abi.encodeCall(
-                        IL1StandardBridge.__constructor__, (payable(address(_input.l1CrossDomainMessenger)), _input.l1mnt)
+                        IL1StandardBridge.__constructor__, (payable(address(_input.l1CrossDomainMessenger)), _input.l1MNT)
                     )
                 )
             })
@@ -188,10 +188,10 @@ contract DeployImplementations is Script {
                         IOptimismPortal.__constructor__,
                         (
                             _input.l2OutputOracle,
-                            _input.optimismPortal_guardian,
-                            _input.optimismPortal_paused,
+                            _input.optimismPortalGuardian,
+                            _input.optimismPortalPaused,
                             _input.systemConfig,
-                            _input.l1mnt
+                            _input.l1MNT
                         )
                     )
                 )
@@ -209,13 +209,13 @@ contract DeployImplementations is Script {
                     abi.encodeCall(
                         IL2OutputOracle.__constructor__,
                         (
-                            _input.l2OutputOracle_submissionInterval,
-                            _input.l2OutputOracle_l2BlockTime,
-                            _input.l2OutputOracle_startingBlockNumber,
-                            _input.l2OutputOracle_startingTimestamp,
-                            _input.l2OutputOracle_proposer,
-                            _input.l2OutputOracle_challenger,
-                            _input.l2OutputOracle_finalizationPeriodSeconds
+                            _input.l2OutputOracleSubmissionInterval,
+                            _input.l2OutputOracleL2BlockTime,
+                            _input.l2OutputOracleStartingBlockNumber,
+                            _input.l2OutputOracleStartingTimestamp,
+                            _input.l2OutputOracleProposer,
+                            _input.l2OutputOracleChallenger,
+                            _input.l2OutputOracleFinalizationPeriodSeconds
                         )
                     )
                 )
@@ -228,11 +228,11 @@ contract DeployImplementations is Script {
     function assertValidInput(Input memory _input) private pure {
         // TODO:
         // if deployer != controller, check portal guardian
-        require(address(_input.l1mnt) != address(0), "DeployImplementations: l1mnt not set");
+        require(address(_input.l1MNT) != address(0), "DeployImplementations: l1MNT not set");
 
-        require(_input.l2OutputOracle_l2BlockTime > 0, "DeployImplementations: l2BlockTime not set");
+        require(_input.l2OutputOracleL2BlockTime > 0, "DeployImplementations: l2BlockTime not set");
         require(
-            _input.l2OutputOracle_submissionInterval > _input.l2OutputOracle_l2BlockTime,
+            _input.l2OutputOracleSubmissionInterval > _input.l2OutputOracleL2BlockTime,
             "DeployImplementations: submissionInterval must be greater than the l2BlockTime"
         );
     }

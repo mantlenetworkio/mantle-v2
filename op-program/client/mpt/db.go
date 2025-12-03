@@ -123,3 +123,7 @@ func (p *DB) SyncKeyValue() error {
 }
 
 var _ ethdb.Database = (*DB)(nil)
+
+func (p *DB) AncientBytes(kind string, id, offset, length uint64) ([]byte, error) {
+	panic("not supported")
+}

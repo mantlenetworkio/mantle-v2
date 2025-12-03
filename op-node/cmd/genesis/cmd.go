@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
+	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/pipeline"
 	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -155,7 +156,7 @@ var Subcommands = cli.Commands{
 			}
 			config.SetDeployments(deployments)
 
-			l2Allocs, err := GenerateL2Genesis(logger, common.Address{0x01}, config)
+			l2Allocs, err := pipeline.DefaultMantleL2GenesisStates(logger, common.Address{0x01}, config)
 			if err != nil {
 				return fmt.Errorf("failed to generate L2 genesis: %w", err)
 			}
