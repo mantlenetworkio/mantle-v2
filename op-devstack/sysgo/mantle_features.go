@@ -1,8 +1,6 @@
 package sysgo
 
 import (
-	"fmt"
-
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
@@ -21,7 +19,6 @@ func DefaultMantleMinimalSystem(dest *DefaultMinimalSystemIDs) stack.Option[*Orc
 func WithMantleL2() DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
 		cfg.Logger.New("stage", "with-mantle-l2").Info("Setting L1MNT", "L1MNT", DefaultL1MNT)
-		fmt.Println("modify l1 mnt to", DefaultL1MNT)
 		for _, l2 := range intent.Chains {
 			l2.L1MNT = DefaultL1MNT
 		}

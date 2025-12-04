@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/env"
 	op_service "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/ioutil"
+	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -59,7 +60,7 @@ func GenerateMantleL2Genesis(pEnv *Env, intent *state.Intent, bundle ArtifactsBu
 		return fmt.Errorf("failed to create L2Genesis script: %w", err)
 	}
 
-	overrides, schedule, err := calculateL2GenesisOverrides(intent, thisIntent)
+	overrides, schedule, err := calculateMantleL2GenesisOverrides(intent, thisIntent)
 	if err != nil {
 		return fmt.Errorf("failed to calculate L2 genesis overrides: %w", err)
 	}
@@ -94,6 +95,51 @@ func GenerateMantleL2Genesis(pEnv *Env, intent *state.Intent, bundle ArtifactsBu
 		Data: dump,
 	}
 	return nil
+}
+
+func calculateMantleL2GenesisOverrides(intent *state.Intent, thisIntent *state.ChainIntent) (l2GenesisOverrides, *genesis.UpgradeScheduleDeployConfig, error) {
+	schedule := &genesis.UpgradeScheduleDeployConfig{
+		L2GenesisMantleBaseFeeTimeOffset:           op_service.U64UtilPtr(0),
+		L2GenesisMantleBVMETHMintUpgradeTimeOffset: op_service.U64UtilPtr(0),
+		L2GenesisMantleMetaTxV2UpgradeTimeOffset:   op_service.U64UtilPtr(0),
+		L2GenesisMantleMetaTxV3UpgradeTimeOffset:   op_service.U64UtilPtr(0),
+		L2GenesisMantleProxyOwnerUpgradeTimeOffset: op_service.U64UtilPtr(0),
+		L2GenesisMantleEverestTimeOffset:           op_service.U64UtilPtr(0),
+		L2GenesisMantleEuboeaTimeOffset:            op_service.U64UtilPtr(0),
+		L2GenesisMantleSkadiTimeOffset:             op_service.U64UtilPtr(0),
+		L2GenesisMantleLimbTimeOffset:              op_service.U64UtilPtr(0),
+		L2GenesisMantleArsiaTimeOffset:             op_service.U64UtilPtr(0),
+		L2GenesisRegolithTimeOffset:                op_service.U64UtilPtr(0),
+	}
+
+	overrides := defaultOverrides()
+	// Special case for FundDevAccounts since it's both an intent value and an override.
+	overrides.FundDevAccounts = intent.FundDevAccounts
+
+	var err error
+	if len(intent.GlobalDeployOverrides) > 0 {
+		schedule, err = jsonutil.MergeJSON(schedule, intent.GlobalDeployOverrides)
+		if err != nil {
+			return l2GenesisOverrides{}, nil, fmt.Errorf("failed to merge global deploy overrides: %w", err)
+		}
+		overrides, err = jsonutil.MergeJSON(overrides, intent.GlobalDeployOverrides)
+		if err != nil {
+			return l2GenesisOverrides{}, nil, fmt.Errorf("failed to merge global deploy overrides: %w", err)
+		}
+	}
+
+	if len(thisIntent.DeployOverrides) > 0 {
+		schedule, err = jsonutil.MergeJSON(schedule, thisIntent.DeployOverrides)
+		if err != nil {
+			return l2GenesisOverrides{}, nil, fmt.Errorf("failed to merge L2 deploy overrides: %w", err)
+		}
+		overrides, err = jsonutil.MergeJSON(overrides, thisIntent.DeployOverrides)
+		if err != nil {
+			return l2GenesisOverrides{}, nil, fmt.Errorf("failed to merge global deploy overrides: %w", err)
+		}
+	}
+
+	return overrides, schedule, nil
 }
 
 func DefaultMantleL2GenesisStates(logger log.Logger, deployer common.Address, config *genesis.DeployConfig) (*foundry.ForgeAllocs, error) {

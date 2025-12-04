@@ -363,7 +363,7 @@ func CalculateFjordL1Cost(ctx context.Context, client apis.EthClient, rollupCost
 		blobBaseFee,
 		new(big.Int).SetUint64(uint64(baseFeeScalar)),
 		new(big.Int).SetUint64(uint64(blobBaseFeeScalar)),
-		big.NewInt(1)) // set token ratio = 1
+	)
 
 	fee, _ := costFunc(rollupCostData)
 	return fee, nil
