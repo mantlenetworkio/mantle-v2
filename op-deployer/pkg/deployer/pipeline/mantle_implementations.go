@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/addresses"
 	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
 	"github.com/ethereum-optimism/optimism/op-service/predeploys"
 	"github.com/ethereum/go-ethereum/common"
@@ -112,6 +113,9 @@ func DeployMantleImplementations(env *Env, intent *state.Intent, st *state.State
 	thisState.L1StandardBridgeImpl = dio.L1StandardBridgeImpl
 	thisState.OptimismMintableErc20FactoryImpl = dio.OptimismMintableERC20FactoryImpl
 	thisState.L2OutputOracleImpl = dio.L2OutputOracleImpl
+
+	// New an empty instance of implementations deployment to avoid nil pointer dereference
+	st.ImplementationsDeployment = &addresses.ImplementationsContracts{}
 
 	return nil
 }

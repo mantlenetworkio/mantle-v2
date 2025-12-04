@@ -171,9 +171,6 @@ func MantleApplyPipeline(
 		Deployer:      deployer,
 		MantleScripts: mantleScripts,
 	}
-	for _, chain := range intent.Chains {
-		fmt.Println("chain", chain)
-	}
 
 	pline := []pipelineStage{
 		{"init", func() error {
@@ -228,12 +225,13 @@ func MantleApplyPipeline(
 			},
 		})
 
-		pline = append(pline, pipelineStage{
-			"preinstall-l1-dev-genesis",
-			func() error {
-				return pipeline.PreinstallL1DevGenesis(pEnv, intent, st)
-			},
-		})
+		// Those non-protocol are not needed for now.
+		// pline = append(pline, pipelineStage{
+		// 	"preinstall-l1-dev-genesis",
+		// 	func() error {
+		// 		return pipeline.PreinstallL1DevGenesis(pEnv, intent, st)
+		// 	},
+		// })
 
 		pline = append(pline, pipelineStage{
 			"seal-l1-dev-genesis",

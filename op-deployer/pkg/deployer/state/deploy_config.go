@@ -23,7 +23,13 @@ var (
 )
 
 func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State, chainState *ChainState) (genesis.DeployConfig, error) {
-	upgradeSchedule := standard.DefaultHardforkScheduleForTag(standard.CurrentTag)
+	var upgradeSchedule *genesis.UpgradeScheduleDeployConfig
+	// use L1MNT to determine whether the deployed chain is a Mantle chain
+	if chainIntent.L1MNT == (common.Address{}) {
+		upgradeSchedule = standard.DefaultHardforkScheduleForTag(standard.CurrentTag)
+	} else {
+		upgradeSchedule = genesis.DefaultMantleHardforkSchedule()
+	}
 
 	cfg := genesis.DeployConfig{
 		L1DependenciesConfig: genesis.L1DependenciesConfig{
@@ -33,6 +39,7 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 			SystemConfigProxy:           chainState.SystemConfigProxy,
 			OptimismPortalProxy:         chainState.OptimismPortalProxy,
 			ProtocolVersionsProxy:       state.SuperchainDeployment.ProtocolVersionsProxy,
+			L1MantleToken:               chainIntent.L1MNT,
 		},
 		L2InitializationConfig: genesis.L2InitializationConfig{
 			DevDeployConfig: genesis.DevDeployConfig{
@@ -46,12 +53,15 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 				BaseFeeVaultWithdrawalNetwork:            "local",
 				L1FeeVaultWithdrawalNetwork:              "local",
 				SequencerFeeVaultWithdrawalNetwork:       "local",
+				OperatorFeeVaultWithdrawalNetwork:        "local",
 				SequencerFeeVaultMinimumWithdrawalAmount: standard.VaultMinWithdrawalAmount,
 				BaseFeeVaultMinimumWithdrawalAmount:      standard.VaultMinWithdrawalAmount,
 				L1FeeVaultMinimumWithdrawalAmount:        standard.VaultMinWithdrawalAmount,
+				OperatorFeeVaultMinimumWithdrawalAmount:  standard.VaultMinWithdrawalAmount,
 				BaseFeeVaultRecipient:                    chainIntent.BaseFeeVaultRecipient,
 				L1FeeVaultRecipient:                      chainIntent.L1FeeVaultRecipient,
 				SequencerFeeVaultRecipient:               chainIntent.SequencerFeeVaultRecipient,
+				OperatorFeeVaultRecipient:                chainIntent.OperatorFeeVaultRecipient,
 			},
 			GovernanceDeployConfig: genesis.GovernanceDeployConfig{
 				EnableGovernance:      false,

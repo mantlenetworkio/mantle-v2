@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/preconf"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	// Force-load the tracer engines to trigger registration
@@ -47,6 +48,8 @@ func InitL1(blockTime uint64, finalizedDistance uint64, genesis *core.Genesis, c
 			GasPrice:            nil,
 			// enough to build blocks within 1 second, but high enough to avoid unnecessary test CPU cycles.
 			Recommit: time.Millisecond * 400,
+			// Mantle features: preconf
+			PreconfConfig: &preconf.MinerConfig{},
 		},
 	}
 	nodeConfig := &node.Config{
@@ -140,6 +143,8 @@ func InitL2(name string, genesis *core.Genesis, jwtPath string, opts ...GethOpti
 			GasPrice:            nil,
 			// enough to build blocks within 1 second, but high enough to avoid unnecessary test CPU cycles.
 			Recommit: time.Millisecond * 400,
+			// Mantle features: preconf
+			PreconfConfig: &preconf.MinerConfig{},
 		},
 		TxPool: legacypool.Config{
 			NoLocals: true,

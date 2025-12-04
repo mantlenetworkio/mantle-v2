@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/addresses"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/opcm"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/standard"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
@@ -83,6 +84,9 @@ func DeployMantleOPChain(env *Env, intent *state.Intent, st *state.State, chainI
 	}
 
 	thisState.MantleContracts.AllSetUp = true
+
+	// New an empty instance of superchain deployment to avoid nil pointer dereference
+	st.SuperchainDeployment = &addresses.SuperchainContracts{}
 
 	return nil
 }
