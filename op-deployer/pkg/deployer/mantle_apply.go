@@ -249,7 +249,7 @@ func MantleApplyPipeline(
 			fmt.Sprintf("set-start-block-%s", chainID.Hex()),
 			func() error {
 				if opts.DeploymentTarget == DeploymentTargetGenesis {
-					return pipeline.SetStartBlockGenesisStrategy(pEnv, intent, st, chainID)
+					return pipeline.SetMantleStartBlockGenesisStrategy(pEnv, intent, st, chainID)
 				}
 				return pipeline.SetStartBlockLiveStrategy(ctx, intent, pEnv, st, chainID)
 			},

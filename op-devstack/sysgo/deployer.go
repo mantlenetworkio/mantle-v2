@@ -141,6 +141,7 @@ type L2Deployment struct {
 	l1StandardBridgeProxy          common.Address
 	proxyAdmin                     common.Address
 	permissionlessDelayedWETHProxy common.Address
+	l2OOAddress                    common.Address
 }
 
 var _ stack.L2Deployment = &L2Deployment{}
@@ -163,6 +164,10 @@ func (d *L2Deployment) ProxyAdminAddr() common.Address {
 
 func (d *L2Deployment) PermissionlessDelayedWETHProxyAddr() common.Address {
 	return d.permissionlessDelayedWETHProxy
+}
+
+func (d *L2Deployment) L2OOAddress() common.Address {
+	return d.l2OOAddress
 }
 
 type InteropMigration struct {
@@ -406,6 +411,7 @@ func (wb *worldBuilder) buildL2DeploymentOutputs() {
 			l1StandardBridgeProxy:          ch.L1StandardBridgeProxy,
 			proxyAdmin:                     ch.OpChainProxyAdminImpl,
 			permissionlessDelayedWETHProxy: ch.DelayedWethPermissionlessGameProxy,
+			l2OOAddress:                    ch.L2OutputOracleProxy,
 		}
 	}
 	wb.outSuperchainDeployment = &SuperchainDeployment{
@@ -454,8 +460,7 @@ func (wb *worldBuilder) Build() {
 		opt(wb, intent, &pipelineOpts)
 	}
 
-	// TODO-ARSIA add a builder option or new a mantle world builder
-	err = deployer.MantleApplyPipeline(wb.p.Ctx(), pipelineOpts)
+	err = deployer.ApplyPipeline(wb.p.Ctx(), pipelineOpts)
 	wb.require.NoError(err)
 
 	wb.require.NotNil(wb.output, "expected state-write to output")
