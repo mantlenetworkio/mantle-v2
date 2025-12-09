@@ -7,5 +7,5 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithMinimal(), presets.WithJovianAtGenesis())
+	presets.DoMain(m, presets.WithMantleMinimal(), presets.WithJovianAtGenesis())
 }

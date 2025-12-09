@@ -225,13 +225,12 @@ func MantleApplyPipeline(
 			},
 		})
 
-		// Those non-protocol are not needed for now.
-		// pline = append(pline, pipelineStage{
-		// 	"preinstall-l1-dev-genesis",
-		// 	func() error {
-		// 		return pipeline.PreinstallL1DevGenesis(pEnv, intent, st)
-		// 	},
-		// })
+		pline = append(pline, pipelineStage{
+			"preinstall-l1-dev-genesis",
+			func() error {
+				return pipeline.PreinstallMantleL1DevGenesis(pEnv, intent, st)
+			},
+		})
 
 		pline = append(pline, pipelineStage{
 			"seal-l1-dev-genesis",

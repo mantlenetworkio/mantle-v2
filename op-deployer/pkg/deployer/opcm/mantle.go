@@ -205,3 +205,22 @@ func NewMantleScripts(host *script.Host) (*MantleScripts, error) {
 		DeployOPChain:         deployOPChain,
 	}, nil
 }
+
+type MantlePreinstallsScript struct {
+	SetMantlePreinstalls func() error
+}
+
+// InsertMantlePreinstalls inserts mantle preinstalls in the given host.
+// This is part of the L2Genesis already, but is isolated to be reused for L1 dev genesis.
+func InsertMantlePreinstalls(host *script.Host) error {
+	l2GenesisScript, cleanupL2Genesis, err := script.WithScript[MantlePreinstallsScript](host, "SetPreinstalls.s.sol", "SetPreinstalls")
+	if err != nil {
+		return fmt.Errorf("failed to load SetPreinstalls script: %w", err)
+	}
+	defer cleanupL2Genesis()
+
+	if err := l2GenesisScript.SetMantlePreinstalls(); err != nil {
+		return fmt.Errorf("failed to set mantle preinstalls: %w", err)
+	}
+	return nil
+}

@@ -1,17 +1,19 @@
 package sysgo
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer"
+	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/inspect"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/intentbuilder"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	ps "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 )
 
 var DefaultL1MNT = common.HexToAddress("0x8000000000000000000000000000000000000000")
@@ -106,7 +108,7 @@ func WithLegacyProposerOption(orch *Orchestrator, proposerID stack.L2ProposerID)
 		l2Net, ok := orch.l2Nets.Get(proposerID.ChainID())
 		require.True(ok)
 		cfg.L2OOAddress = l2Net.deployment.L2OOAddress().Hex()
-		fmt.Println("dgf address", cfg.DGFAddress)
+		// turn off DGF by setting relating contract address to empty string
 		cfg.DGFAddress = ""
 	})
 }
@@ -210,7 +212,6 @@ func (wb *worldBuilder) BuildMantle() {
 		opt(wb, intent, &pipelineOpts)
 	}
 
-	// TODO-ARSIA add a builder option or new a mantle world builder
 	err = deployer.MantleApplyPipeline(wb.p.Ctx(), pipelineOpts)
 	wb.require.NoError(err)
 
@@ -222,7 +223,19 @@ func (wb *worldBuilder) BuildMantle() {
 	}
 
 	wb.buildL1Genesis()
-	wb.buildL2Genesis()
+	wb.buildMantleL2Genesis()
 	wb.buildL2DeploymentOutputs()
 	wb.buildFullConfigSet()
+}
+
+func (wb *worldBuilder) buildMantleL2Genesis() {
+	wb.outL2Genesis = make(map[eth.ChainID]*core.Genesis)
+	wb.outL2RollupCfg = make(map[eth.ChainID]*rollup.Config)
+	for _, ch := range wb.output.Chains {
+		l2Genesis, l2RollupCfg, err := inspect.MantleGenesisAndRollup(wb.output, ch.ID)
+		wb.require.NoError(err, "need L2 genesis and rollup")
+		id := eth.ChainIDFromBytes32(ch.ID)
+		wb.outL2Genesis[id] = l2Genesis
+		wb.outL2RollupCfg[id] = l2RollupCfg
+	}
 }
