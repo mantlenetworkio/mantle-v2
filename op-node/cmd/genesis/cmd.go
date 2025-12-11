@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/ioutil"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
@@ -187,29 +186,18 @@ var Subcommands = cli.Commands{
 				return err
 			}
 
+			hardCodedOverrides := params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID))
+
 			// Build the L2 genesis block
-			l2Genesis, err := genesis.BuildL2Genesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()))
+			l2Genesis, err := genesis.BuildMantleGenesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()), hardCodedOverrides)
 			if err != nil {
 				return fmt.Errorf("error creating l2 genesis: %w", err)
 			}
 
 			l2GenesisBlock := l2Genesis.ToBlock()
-			rollupConfig, err := config.RollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64())
+			rollupConfig, err := config.MantleRollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64(), hardCodedOverrides)
 			if err != nil {
 				return err
-			}
-
-			// Mantle features
-			// Apply Mantle overrides to the rollup config
-			if err := rollupConfig.ApplyMantleOverrides(params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID))); err != nil {
-				return fmt.Errorf("failed to apply mantle overrides: %w", err)
-			}
-			// setup initial 1559 params in rollup system config
-			if config.L2GenesisMantleArsiaTimeOffset == nil {
-				rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true
-			}
-			if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
-				rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(config.EIP1559Denominator, config.EIP1559Elasticity))
 			}
 
 			if err := rollupConfig.Check(); err != nil {

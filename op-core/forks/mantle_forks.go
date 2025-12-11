@@ -5,15 +5,15 @@ import "fmt"
 type MantleForkName string
 
 const (
-	MantleBaseFee MantleForkName = "mantle_base_fee"
-	MantleEverest MantleForkName = "mantle_everest"
-	MantleEuboea  MantleForkName = "mantle_euboea"
-	MantleSkadi   MantleForkName = "mantle_skadi"
-	MantleLimb    MantleForkName = "mantle_limb"
-	MantleArsia   MantleForkName = "mantle_arsia"
+	MantleBaseFee MantleForkName = "MantleBaseFee"
+	MantleEverest MantleForkName = "MantleEverest"
+	MantleEuboea  MantleForkName = "MantleEuboea"
+	MantleSkadi   MantleForkName = "MantleSkadi"
+	MantleLimb    MantleForkName = "MantleLimb"
+	MantleArsia   MantleForkName = "MantleArsia"
 	MantleNone    MantleForkName = ""
 	// This fork never existed, it is used to indicate that a optimism fork is not active at a given timestamp.
-	MantleNoSupport MantleForkName = "mantle_no_support"
+	MantleNoSupport MantleForkName = "MantleNoSupport"
 )
 
 var AllMantleForks = []MantleForkName{

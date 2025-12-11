@@ -61,7 +61,7 @@ type OpChainContracts struct {
 	OpChainFaultProofsContracts
 	OpChainAltDAContracts
 	OpChainLegacyContracts
-	MantleContracts
+	MantleImplContracts
 }
 
 // OpChainCoreContracts struct contains contracts that all L2s need, regardless of feature set
@@ -94,17 +94,4 @@ type OpChainAltDAContracts struct {
 
 type OpChainLegacyContracts struct {
 	L2OutputOracleProxy common.Address
-}
-
-type MantleContracts struct {
-	AllSetUp bool
-
-	// Mantle uses legacy implementations which could not be shared between chains even if they are also Mantle chains.
-	OptimismPortalImpl               common.Address
-	SystemConfigImpl                 common.Address
-	L1CrossDomainMessengerImpl       common.Address // relies on OptimismPortalProxy
-	L1Erc721BridgeImpl               common.Address
-	L1StandardBridgeImpl             common.Address
-	OptimismMintableErc20FactoryImpl common.Address
-	L2OutputOracleImpl               common.Address
 }

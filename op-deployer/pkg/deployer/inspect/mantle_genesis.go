@@ -2,16 +2,12 @@ package inspect
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 func MantleGenesisAndRollup(globalState *state.State, chainID common.Hash) (*core.Genesis, *rollup.Config, error) {
@@ -30,7 +26,7 @@ func MantleGenesisAndRollup(globalState *state.State, chainID common.Hash) (*cor
 	}
 
 	l2Allocs := chainState.Allocs.Data
-	config, err := state.CombineDeployConfig(
+	config, err := state.CombineMantleDeployConfig(
 		globalState.AppliedIntent,
 		chainIntent,
 		globalState,
@@ -40,32 +36,21 @@ func MantleGenesisAndRollup(globalState *state.State, chainID common.Hash) (*cor
 		return nil, nil, fmt.Errorf("failed to combine L2 init config: %w", err)
 	}
 
-	l2GenesisBuilt, err := genesis.BuildL2Genesis(&config, l2Allocs, chainState.StartBlock.ToBlockRef())
+	// Normally we should use params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID)) to get the upgrade config,
+	// but that upgrade config is hard coded in geth repo. In order to make an in-memory env configurable, we use nil here.
+	l2GenesisBuilt, err := genesis.BuildMantleGenesis(&config, l2Allocs, chainState.StartBlock.ToBlockRef(), nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build L2 genesis: %w", err)
 	}
 	l2GenesisBlock := l2GenesisBuilt.ToBlock()
 
-	rollupConfig, err := config.RollupConfig(
+	// the same for rollup config, we use nil for the mantle upgrade config.
+	rollupConfig, err := config.MantleRollupConfig(
 		chainState.StartBlock.ToBlockRef(),
 		l2GenesisBlock.Hash(),
-		l2GenesisBlock.Number().Uint64(),
-	)
+		l2GenesisBlock.Number().Uint64(), nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build rollup config: %w", err)
-	}
-
-	// Mantle features
-	// Apply Mantle overrides to the rollup config
-	if err := rollupConfig.ApplyMantleOverrides(params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID))); err != nil {
-		return nil, nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
-	}
-	// setup initial 1559 params in rollup system config
-	if config.L2GenesisMantleArsiaTimeOffset == nil {
-		rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true
-	}
-	if config.L2GenesisMantleArsiaTimeOffset != nil && *config.L2GenesisMantleArsiaTimeOffset == 0 {
-		rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(config.EIP1559Denominator, config.EIP1559Elasticity))
 	}
 
 	if err := rollupConfig.Check(); err != nil {

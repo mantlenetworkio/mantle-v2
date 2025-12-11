@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/standard"
 
@@ -11,19 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-var (
-	l2GenesisBlockBaseFeePerGas = hexutil.Big(*(big.NewInt(1000000000)))
-)
-
-func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State, chainState *ChainState) (genesis.DeployConfig, error) {
-	upgradeSchedule := standard.DefaultHardforkScheduleForTag(standard.CurrentTag)
+func CombineMantleDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State, chainState *ChainState) (genesis.DeployConfig, error) {
+	upgradeSchedule := genesis.DefaultMantleHardforkSchedule()
 
 	cfg := genesis.DeployConfig{
 		L1DependenciesConfig: genesis.L1DependenciesConfig{
@@ -33,6 +27,7 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 			SystemConfigProxy:           chainState.SystemConfigProxy,
 			OptimismPortalProxy:         chainState.OptimismPortalProxy,
 			ProtocolVersionsProxy:       state.SuperchainDeployment.ProtocolVersionsProxy,
+			L1MantleToken:               chainIntent.L1MNT,
 		},
 		L2InitializationConfig: genesis.L2InitializationConfig{
 			DevDeployConfig: genesis.DevDeployConfig{
@@ -46,12 +41,15 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 				BaseFeeVaultWithdrawalNetwork:            "local",
 				L1FeeVaultWithdrawalNetwork:              "local",
 				SequencerFeeVaultWithdrawalNetwork:       "local",
+				OperatorFeeVaultWithdrawalNetwork:        "local",
 				SequencerFeeVaultMinimumWithdrawalAmount: standard.VaultMinWithdrawalAmount,
 				BaseFeeVaultMinimumWithdrawalAmount:      standard.VaultMinWithdrawalAmount,
 				L1FeeVaultMinimumWithdrawalAmount:        standard.VaultMinWithdrawalAmount,
+				OperatorFeeVaultMinimumWithdrawalAmount:  standard.VaultMinWithdrawalAmount,
 				BaseFeeVaultRecipient:                    chainIntent.BaseFeeVaultRecipient,
 				L1FeeVaultRecipient:                      chainIntent.L1FeeVaultRecipient,
 				SequencerFeeVaultRecipient:               chainIntent.SequencerFeeVaultRecipient,
+				OperatorFeeVaultRecipient:                chainIntent.OperatorFeeVaultRecipient,
 			},
 			GovernanceDeployConfig: genesis.GovernanceDeployConfig{
 				EnableGovernance:      false,
@@ -66,8 +64,9 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 				GasPriceOracleOperatorFeeConstant: chainIntent.OperatorFeeConstant,
 			},
 			EIP1559DeployConfig: genesis.EIP1559DeployConfig{
-				EIP1559Denominator:       chainIntent.Eip1559Denominator,
-				EIP1559DenominatorCanyon: 250,
+				EIP1559Denominator: chainIntent.Eip1559Denominator,
+				// Mantle features: EIP1559DenominatorCanyon is the same as EIP1559Denominator
+				EIP1559DenominatorCanyon: chainIntent.Eip1559Denominator,
 				EIP1559Elasticity:        chainIntent.Eip1559Elasticity,
 			},
 
@@ -100,14 +99,6 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 				DAFootprintGasScalar: chainIntent.DAFootprintGasScalar,
 			},
 		},
-		FaultProofDeployConfig: genesis.FaultProofDeployConfig{
-			UseFaultProofs:                  true,
-			FaultGameWithdrawalDelay:        604800,
-			PreimageOracleMinProposalSize:   126000,
-			PreimageOracleChallengePeriod:   86400,
-			ProofMaturityDelaySeconds:       604800,
-			DisputeGameFinalityDelaySeconds: 302400,
-		},
 	}
 
 	if chainState.StartBlock == nil {
@@ -121,11 +112,6 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 		cfg.L1StartingBlockTag = &genesis.MarshalableRPCBlockNumberOrHash{
 			BlockHash: &startHash,
 		}
-	}
-
-	if chainIntent.DangerousAltDAConfig.UseAltDA {
-		cfg.AltDADeployConfig = chainIntent.DangerousAltDAConfig
-		cfg.L1DependenciesConfig.DAChallengeProxy = chainState.AltDAChallengeProxy
 	}
 
 	// The below dummy variables are set in order to allow the deploy
@@ -168,10 +154,4 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 	}
 
 	return cfg, nil
-}
-
-func calculateBatchInboxAddr(chainID common.Hash) common.Address {
-	var out common.Address
-	copy(out[1:], crypto.Keccak256(chainID[:])[:19])
-	return out
 }

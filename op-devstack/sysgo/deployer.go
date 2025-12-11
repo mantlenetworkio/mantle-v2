@@ -166,10 +166,6 @@ func (d *L2Deployment) PermissionlessDelayedWETHProxyAddr() common.Address {
 	return d.permissionlessDelayedWETHProxy
 }
 
-func (d *L2Deployment) L2OOAddress() common.Address {
-	return d.l2OOAddress
-}
-
 type InteropMigration struct {
 	DisputeGameFactory common.Address
 }

@@ -143,8 +143,6 @@ func InitL2(name string, genesis *core.Genesis, jwtPath string, opts ...GethOpti
 			GasPrice:            nil,
 			// enough to build blocks within 1 second, but high enough to avoid unnecessary test CPU cycles.
 			Recommit: time.Millisecond * 400,
-			// Mantle features: preconf
-			PreconfConfig: &preconf.MinerConfig{},
 		},
 		TxPool: legacypool.Config{
 			NoLocals: true,

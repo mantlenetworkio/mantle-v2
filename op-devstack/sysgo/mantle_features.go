@@ -1,19 +1,29 @@
 package sysgo
 
 import (
+	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
+	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/inspect"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/geth"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/intentbuilder"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	ps "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/testutils/tcpproxy"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	gn "github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/preconf"
 )
 
 var DefaultL1MNT = common.HexToAddress("0x8000000000000000000000000000000000000000")
@@ -44,7 +54,7 @@ func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultM
 
 	opt.Add(WithL1Nodes(ids.L1EL, ids.L1CL))
 
-	opt.Add(WithL2ELNode(ids.L2EL))
+	opt.Add(WithMantleL2ELNode(ids.L2EL))
 	opt.Add(WithL2CLNode(ids.L2CL, ids.L1CL, ids.L1EL, ids.L2EL, L2CLSequencer()))
 
 	opt.Add(WithBatcher(ids.L2Batcher, ids.L1EL, ids.L2CL, ids.L2EL))
@@ -67,23 +77,34 @@ func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultM
 	return opt
 }
 
+// WithMantleL2ELNode adds the default type of L2 CL node.
+// The default can be configured with DEVSTACK_L2EL_KIND.
+// Tests that depend on specific types can use options like WithKonaNode and WithOpNode directly.
+func WithMantleL2ELNode(id stack.L2ELNodeID, opts ...L2ELOption) stack.Option[*Orchestrator] {
+	switch os.Getenv("DEVSTACK_L2EL_KIND") {
+	case "op-reth":
+		return WithOpReth(id, opts...)
+	default:
+		return WithMantleOpGeth(id, opts...)
+	}
+}
+
 // An alternative way to set the L1MNT and OperatorFeeVaultRecipient is to use the WithDeployerOption.
 // It requires we extend the L2Configurator interface to include WithL1MNT and WithOperatorFeeVaultRecipient.
 // Since MNT token address is a Mantle-only feature, directly modifying deployer pipeline seems cleaner.
+// But if one day we integrate mantle rde-v3 as an orchestrator choice, we should think about which way is better.
 func WithL1MNT(l1MNT common.Address) DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
-		cfg.Logger.New("stage", "set-l1-mnt").Info("L1MNT", l1MNT.Hex())
-		cfg.Logger.New("stage", "with-mantle-l2").Info("Setting OperatorFeeVaultRecipient", "OperatorFeeVaultRecipient", DefaultOperatorFeeVaultRecipient)
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting L1MNT", "l1MNT", l1MNT.Hex())
 		for _, l2 := range intent.Chains {
 			l2.L1MNT = l1MNT
-			l2.OperatorFeeVaultRecipient = DefaultOperatorFeeVaultRecipient
 		}
 	}
 }
 
 func WithOperatorFeeVaultRecipient(recipient common.Address) DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
-		cfg.Logger.New("stage", "set-operator-fee-vault-recipient").Info("OperatorFeeVaultRecipient", recipient.Hex())
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting OperatorFeeVaultRecipient", "recipient", recipient.Hex())
 		for _, l2 := range intent.Chains {
 			l2.OperatorFeeVaultRecipient = recipient
 		}
@@ -111,6 +132,51 @@ func WithLegacyProposerOption(orch *Orchestrator, proposerID stack.L2ProposerID)
 		// turn off DGF by setting relating contract address to empty string
 		cfg.DGFAddress = ""
 	})
+}
+
+func (d *L2Deployment) L2OOAddress() common.Address {
+	return d.l2OOAddress
+}
+
+func WithMantleForkAtGenesis(fork forks.MantleForkName) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		wb.require.True(forks.IsValidMantleFork(fork), "invalid mantle fork: %s", string(fork))
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting MantleFork at genesis", "fork", string(fork))
+		var opts []DeployerPipelineOption
+		var future bool
+		for _, refFork := range forks.AllMantleForks {
+			if future {
+				opts = append(opts, WithMantleForkAtOffset(refFork, nil))
+			} else {
+				opts = append(opts, WithMantleForkAtOffset(refFork, new(uint64)))
+			}
+
+			if refFork == fork {
+				future = true
+			}
+		}
+
+		for _, opt := range opts {
+			opt(wb, intent, cfg)
+		}
+	}
+}
+
+func WithMantleForkAtOffset(fork forks.MantleForkName, offset *uint64) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		wb.require.True(forks.IsValidMantleFork(fork), "invalid mantle fork: %s", string(fork))
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting MantleFork at offset", "fork", string(fork), "offset", offset)
+		for _, l2 := range intent.Chains {
+			key := fmt.Sprintf("l2Genesis%sTimeOffset", string(fork))
+			if offset == nil {
+				delete(l2.DeployOverrides, key)
+			} else {
+				// The typing is important, or op-deployer merge-JSON tricks will fail
+				l2.DeployOverrides[key] = (*hexutil.Uint64)(offset)
+			}
+		}
+
+	}
 }
 
 /////////////////////////////////////////////////////////////
@@ -238,4 +304,85 @@ func (wb *worldBuilder) buildMantleL2Genesis() {
 		wb.outL2Genesis[id] = l2Genesis
 		wb.outL2RollupCfg[id] = l2RollupCfg
 	}
+}
+
+/////////////////////////////////////////////////////////////
+// mantle op geth
+/////////////////////////////////////////////////////////////
+
+func WithMantleOpGeth(id stack.L2ELNodeID, opts ...L2ELOption) stack.Option[*Orchestrator] {
+	return stack.AfterDeploy(func(orch *Orchestrator) {
+		p := orch.P().WithCtx(stack.ContextWithID(orch.P().Ctx(), id))
+		require := p.Require()
+
+		l2Net, ok := orch.l2Nets.Get(id.ChainID())
+		require.True(ok, "L2 network required")
+
+		cfg := DefaultL2ELConfig()
+		orch.l2ELOptions.Apply(p, id, cfg)       // apply global options
+		L2ELOptionBundle(opts).Apply(p, id, cfg) // apply specific options
+
+		jwtPath, jwtSecret := orch.writeDefaultJWT()
+
+		logger := p.Logger()
+
+		l2EL := &OpGeth{
+			id:        id,
+			p:         orch.P(),
+			logger:    logger,
+			l2Net:     l2Net,
+			jwtPath:   jwtPath,
+			jwtSecret: jwtSecret,
+		}
+		l2EL.StartMantle()
+		p.Cleanup(func() {
+			l2EL.Stop()
+		})
+		require.True(orch.l2ELs.SetIfMissing(id, l2EL), "must be unique L2 EL node")
+	})
+}
+
+func (n *OpGeth) StartMantle() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.l2Geth != nil {
+		n.logger.Warn("op-geth already started")
+		return
+	}
+
+	if n.authProxy == nil {
+		n.authProxy = tcpproxy.New(n.logger.New("proxy", "l2el-auth"))
+		n.p.Require().NoError(n.authProxy.Start())
+		n.p.Cleanup(func() {
+			n.authProxy.Close()
+		})
+		n.authRPC = "ws://" + n.authProxy.Addr()
+	}
+	if n.userProxy == nil {
+		n.userProxy = tcpproxy.New(n.logger.New("proxy", "l2el-user"))
+		n.p.Require().NoError(n.userProxy.Start())
+		n.p.Cleanup(func() {
+			n.userProxy.Close()
+		})
+		n.userRPC = "ws://" + n.userProxy.Addr()
+	}
+
+	require := n.p.Require()
+	l2Geth, err := geth.InitL2(n.id.String(), n.l2Net.genesis, n.jwtPath,
+		func(ethCfg *ethconfig.Config, nodeCfg *gn.Config) error {
+			ethCfg.Miner.PreconfConfig = &preconf.MinerConfig{}
+			// disable mantle upgrades so that we can configure mantle forks as we need
+			ethCfg.ApplyMantleUpgrades = false
+			nodeCfg.P2P = p2p.Config{
+				NoDiscovery: true,
+				ListenAddr:  "127.0.0.1:0",
+				MaxPeers:    10,
+			}
+			return nil
+		})
+	require.NoError(err)
+	require.NoError(l2Geth.Node.Start())
+	n.l2Geth = l2Geth
+	n.authProxy.SetUpstream(ProxyAddr(require, l2Geth.AuthRPC().RPC()))
+	n.userProxy.SetUpstream(ProxyAddr(require, l2Geth.UserRPC().RPC()))
 }

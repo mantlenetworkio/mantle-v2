@@ -83,7 +83,7 @@ func DeployMantleOPChain(env *Env, intent *state.Intent, st *state.State, chainI
 		return fmt.Errorf("error deploying Mantle OP chain: %w", err)
 	}
 
-	thisState.MantleContracts.AllSetUp = true
+	thisState.MantleImplContracts.AllSetUp = true
 
 	// New an empty instance of superchain deployment to avoid nil pointer dereference
 	st.SuperchainDeployment = &addresses.SuperchainContracts{}
@@ -94,7 +94,7 @@ func DeployMantleOPChain(env *Env, intent *state.Intent, st *state.State, chainI
 func shouldDeployMantleOPChain(st *state.State, chainID common.Hash) bool {
 	for _, chain := range st.Chains {
 		if chain.ID == chainID {
-			return !chain.MantleContracts.AllSetUp
+			return !chain.MantleImplContracts.AllSetUp
 		}
 	}
 	return true

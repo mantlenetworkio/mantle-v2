@@ -98,19 +98,7 @@ func GenerateMantleL2Genesis(pEnv *Env, intent *state.Intent, bundle ArtifactsBu
 }
 
 func calculateMantleL2GenesisOverrides(intent *state.Intent, thisIntent *state.ChainIntent) (l2GenesisOverrides, *genesis.UpgradeScheduleDeployConfig, error) {
-	schedule := &genesis.UpgradeScheduleDeployConfig{
-		L2GenesisMantleBaseFeeTimeOffset:           op_service.U64UtilPtr(0),
-		L2GenesisMantleBVMETHMintUpgradeTimeOffset: op_service.U64UtilPtr(0),
-		L2GenesisMantleMetaTxV2UpgradeTimeOffset:   op_service.U64UtilPtr(0),
-		L2GenesisMantleMetaTxV3UpgradeTimeOffset:   op_service.U64UtilPtr(0),
-		L2GenesisMantleProxyOwnerUpgradeTimeOffset: op_service.U64UtilPtr(0),
-		L2GenesisMantleEverestTimeOffset:           op_service.U64UtilPtr(0),
-		L2GenesisMantleEuboeaTimeOffset:            op_service.U64UtilPtr(0),
-		L2GenesisMantleSkadiTimeOffset:             op_service.U64UtilPtr(0),
-		L2GenesisMantleLimbTimeOffset:              op_service.U64UtilPtr(0),
-		L2GenesisMantleArsiaTimeOffset:             op_service.U64UtilPtr(0),
-		L2GenesisRegolithTimeOffset:                op_service.U64UtilPtr(0),
-	}
+	schedule := genesis.DefaultMantleHardforkSchedule()
 
 	overrides := defaultOverrides()
 	// Special case for FundDevAccounts since it's both an intent value and an override.
