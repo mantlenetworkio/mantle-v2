@@ -53,12 +53,12 @@ acceptance-test devnet="" gate="base":
         just build-no-tests
         cd {{REPO_ROOT}}
 
-        echo "Checking cannon dependencies..."
-        if [ ! -e {{REPO_ROOT}}/cannon/bin/cannon ] || [ ! -e {{REPO_ROOT}}/op-program/bin/prestate-mt64.bin.gz ]; then
-            echo "Building cannon dependencies..."
-            cd {{REPO_ROOT}}
-            make cannon-prestates
-        fi
+        # echo "Checking cannon dependencies..."
+        # if [ ! -e {{REPO_ROOT}}/cannon/bin/cannon ] || [ ! -e {{REPO_ROOT}}/op-program/bin/prestate-mt64.bin.gz ]; then
+        #     echo "Building cannon dependencies..."
+        #     cd {{REPO_ROOT}}
+        #     make cannon-prestates
+        # fi
     fi
 
     cd {{REPO_ROOT}}/op-acceptance-tests

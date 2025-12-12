@@ -149,9 +149,7 @@ func (c *Config) MantleActivateAt(fork MantleForkName, timestamp uint64) {
 }
 
 func (c *Config) ApplyMantleOverrides(upgradeConfig *params.MantleUpgradeChainConfig) error {
-	if upgradeConfig == nil {
-		c.MantleBaseFeeTime = nil
-	} else {
+	if upgradeConfig != nil {
 		c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
 		c.MantleEverestTime = upgradeConfig.MantleEverestTime
 		// No consensus&execution update for Euboea, just use the same as Everest

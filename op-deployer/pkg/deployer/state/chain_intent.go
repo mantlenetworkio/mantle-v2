@@ -77,6 +77,10 @@ type ChainIntent struct {
 
 	// Optional. For development purposes only. Only enabled if the operation mode targets a genesis-file output.
 	L2DevGenesisParams *L2DevGenesisParams `json:"l2DevGenesisParams,omitempty" toml:"l2DevGenesisParams,omitempty"`
+
+	L1MNT                     common.Address `json:"l1MNT,omitempty" toml:"l1MNT,omitempty"`
+	OperatorFeeVaultRecipient common.Address `json:"operatorFeeVaultRecipient,omitempty" toml:"operatorFeeVaultRecipient,omitempty"`
+	GasPriceOracleOwner       common.Address `json:"gasPriceOracleOwner,omitempty" toml:"gasPriceOracleOwner,omitempty"`
 }
 
 type ChainRoles struct {
