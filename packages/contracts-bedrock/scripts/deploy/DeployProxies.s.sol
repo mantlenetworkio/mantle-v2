@@ -31,7 +31,15 @@ contract DeployProxies is Script {
         ISystemConfig systemConfigProxy;
     }
 
-    function run(address _deployer) public returns (Output memory output_) {
+    function run() public returns (Output memory output_) {
+        return _run(msg.sender);
+    }
+
+    function runWithDeployer(address _deployer) public returns (Output memory output_) {
+        return _run(_deployer);
+    }
+
+    function _run(address _deployer) internal returns (Output memory output_) {
         vm.startBroadcast(_deployer);
         // deploy AddressManager
         output_.addressManager = IAddressManager(deployAddressManager());

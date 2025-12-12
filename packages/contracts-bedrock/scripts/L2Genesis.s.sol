@@ -7,6 +7,7 @@ import { EIP1967Helper } from "test/mocks/EIP1967Helper.sol";
 // Scripts
 import { Script } from "forge-std/Script.sol";
 import { OutputMode, OutputModeUtils, MantleFork, MantleForkUtils } from "scripts/libraries/Config.sol";
+import { SetPreinstalls } from "scripts/SetPreinstalls.s.sol";
 import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
 
 // Libraries
@@ -94,6 +95,7 @@ contract L2Genesis is Script {
         dealEthToPrecompiles();
         setPredeployProxies(_input);
         setPredeployImplementations(_input);
+        setPreinstalls();
 
         if (_input.fundDevAccounts) {
             fundDevAccounts();
@@ -411,6 +413,14 @@ contract L2Genesis is Script {
         /// Reset so its not included state dump
         vm.etch(address(vault), "");
         vm.resetNonce(address(vault));
+    }
+
+    /// @notice Sets all the preinstalls.
+    function setPreinstalls() internal {
+        address tmpSetPreinstalls = address(uint160(uint256(keccak256("SetPreinstalls"))));
+        vm.etch(tmpSetPreinstalls, vm.getDeployedCode("SetPreinstalls.s.sol:SetPreinstalls"));
+        SetPreinstalls(tmpSetPreinstalls).setPreinstalls();
+        vm.etch(tmpSetPreinstalls, "");
     }
 
     /// @notice Sets the bytecode in state

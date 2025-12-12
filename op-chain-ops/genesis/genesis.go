@@ -35,9 +35,10 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 	if eip1559Denom == 0 {
 		eip1559Denom = 50
 	}
-	// Mantle features
-	// use the same denominator since Mantle don't have a canyon fork
-	eip1559DenomCanyon := eip1559Denom
+	eip1559DenomCanyon := config.EIP1559DenominatorCanyon
+	if eip1559DenomCanyon == 0 {
+		eip1559DenomCanyon = 250
+	}
 	eip1559Elasticity := config.EIP1559Elasticity
 	if eip1559Elasticity == 0 {
 		eip1559Elasticity = 10
@@ -67,29 +68,16 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 		BedrockBlock:            new(big.Int).SetUint64(uint64(config.L2GenesisBlockNumber)),
 		RegolithTime:            config.RegolithTime(l1StartTime),
 		CanyonTime:              config.CanyonTime(l1StartTime),
+		ShanghaiTime:            config.CanyonTime(l1StartTime),
+		CancunTime:              config.EcotoneTime(l1StartTime),
 		EcotoneTime:             config.EcotoneTime(l1StartTime),
 		FjordTime:               config.FjordTime(l1StartTime),
 		GraniteTime:             config.GraniteTime(l1StartTime),
 		HoloceneTime:            config.HoloceneTime(l1StartTime),
 		IsthmusTime:             config.IsthmusTime(l1StartTime),
 		JovianTime:              config.JovianTime(l1StartTime),
+		PragueTime:              config.IsthmusTime(l1StartTime),
 		InteropTime:             config.InteropTime(l1StartTime),
-		// Mantle forks
-		BaseFeeTime:           config.MantleBaseFeeTime(l1StartTime),
-		BVMETHMintUpgradeTime: config.MantleBVMETHMintUpgradeTime(l1StartTime),
-		MetaTxV2UpgradeTime:   config.MantleMetaTxV2UpgradeTime(l1StartTime),
-		MetaTxV3UpgradeTime:   config.MantleMetaTxV3UpgradeTime(l1StartTime),
-		ProxyOwnerUpgradeTime: config.MantleProxyOwnerUpgradeTime(l1StartTime),
-		MantleEverestTime:     config.MantleEverestTime(l1StartTime),
-		// TODO-ARSIA: Add MantleEuboeaTime in op-geth
-		// MantleEuboeaTime:        config.MantleEuboeaTime(l1StartTime),
-		MantleSkadiTime: config.MantleSkadiTime(l1StartTime),
-		ShanghaiTime:    config.MantleSkadiTime(l1StartTime),
-		CancunTime:      config.MantleSkadiTime(l1StartTime),
-		PragueTime:      config.MantleSkadiTime(l1StartTime),
-		MantleLimbTime:  config.MantleLimbTime(l1StartTime),
-		MantleArsiaTime: config.MantleArsiaTime(l1StartTime),
-
 		Optimism: &params.OptimismConfig{
 			EIP1559Denominator:       eip1559Denom,
 			EIP1559Elasticity:        eip1559Elasticity,
@@ -125,15 +113,14 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 		Alloc:      map[common.Address]types.Account{},
 	}
 
-	if optimismChainConfig.IsEcotone(genesis.Timestamp) || optimismChainConfig.IsMantleSkadi(genesis.Timestamp) {
+	if optimismChainConfig.IsEcotone(genesis.Timestamp) {
 		genesis.BlobGasUsed = u64ptr(0)
 		genesis.ExcessBlobGas = u64ptr(0)
 	}
 	if optimismChainConfig.IsHolocene(genesis.Timestamp) {
 		genesis.ExtraData = HoloceneExtraData
 	}
-	if optimismChainConfig.IsIsthmus(genesis.Timestamp) || optimismChainConfig.IsMantleSkadi(genesis.Timestamp) {
-		genesis.Alloc[params.BeaconRootsAddress] = types.Account{Nonce: 1, Code: params.BeaconRootsCode, Balance: common.Big0}
+	if optimismChainConfig.IsIsthmus(genesis.Timestamp) {
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 	if optimismChainConfig.IsMinBaseFee(genesis.Timestamp) {
