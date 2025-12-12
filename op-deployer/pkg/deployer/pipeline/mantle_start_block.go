@@ -26,7 +26,7 @@ func SetMantleStartBlockGenesisStrategy(env *Env, intent *state.Intent, st *stat
 
 	thisChainState.StartBlock = state.BlockRefJsonFromHeader(st.L1DevGenesis.ToBlock().Header())
 
-	// Reset the state dump to avoid petential test failures
+	// Reset the state dump to avoid potential test failures
 	st.L1DevGenesis.Alloc = nil
 
 	return nil
