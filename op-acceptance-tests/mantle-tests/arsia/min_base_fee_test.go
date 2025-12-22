@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -14,8 +15,10 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
+	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -58,7 +61,17 @@ func (mbf *minBaseFeeEnv) getSystemConfigOwner(t devtest.T) *dsl.EOA {
 	// priv := mbf.l2Network.Escape().Keys().Secret(devkeys.SystemConfigOwner.Key(mbf.l2Network.ChainID().ToBig()))
 
 	// mantle uses final system owner for system config owner
-	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.L1ProxyAdminOwnerRole.Key(mbf.l1Client.ChainID().ToBig()))
+	// For keyring used by sysgo, we use L1 chain ID. It is generated with chain id and role index.
+	// For keyring used by external devnet, we use L2 chain ID. It is read from a devnet environment file and mapped to a key named by l2 chain id and role index.
+	var chainID *big.Int
+	orch := presets.Orchestrator()
+	if orch.Type() == compat.SysGo {
+		chainID = mbf.l1Client.ChainID().ToBig()
+	} else {
+		// External devnet (sysext)
+		chainID = mbf.l2Network.ChainID().ToBig()
+	}
+	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.L1ProxyAdminOwnerRole.Key(chainID))
 	return dsl.NewKey(t, priv).User(mbf.l1Client)
 }
 
@@ -66,7 +79,15 @@ func (mbf *minBaseFeeEnv) setMinBaseFeeViaSytemConfigOnL1(t devtest.T, minBaseFe
 	owner := mbf.getSystemConfigOwner(t)
 	t.Log("system config owner during test", owner.Address())
 
-	_, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), owner.Plan())
+	// Use a custom plan with more retry attempts for receipt lookup
+	// The default Plan() uses 5 attempts, but sometimes it fails to get the receipt from a rde-v3 env.
+	elClient := mbf.l1Client.Escape().EthClient()
+	customPlan := txplan.Combine(
+		owner.Plan(),
+		txplan.WithRetryInclusion(elClient, 10, retry.Exponential()),
+	)
+
+	_, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), customPlan)
 	t.Require().NoError(err, "SetMinBaseFee transaction failed")
 
 	t.Logf("Set min base fee on L1: minBaseFee=%d", minBaseFee)
@@ -87,7 +108,12 @@ func (mbf *minBaseFeeEnv) verifyMinBaseFee(t devtest.T, minBase *big.Int) {
 // waitForMinBaseFeeConfigChangeOnL2 waits until the L2 latest payload extra-data encodes the expected min base fee.
 func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expected uint64) {
 	client := mbf.l2EL.Escape().L2EthClient()
-	expectedExtraData := eth.BytesMax32(eip1559.EncodeMinBaseFeeExtraData(50, 6, expected))
+	rollupCfg := mbf.l2Network.Escape().RollupConfig()
+	t.Require().NotNil(rollupCfg.ChainOpConfig, "ChainOpConfig must be set in rollup config")
+	denominator := rollupCfg.ChainOpConfig.EIP1559Denominator
+	elasticity := rollupCfg.ChainOpConfig.EIP1559Elasticity
+	t.Logf("denominator: %d, elasticity: %d", denominator, elasticity)
+	expectedExtraData := eth.BytesMax32(eip1559.EncodeMinBaseFeeExtraData(denominator, elasticity, expected))
 
 	// Check extradata in block header (for all clients)
 	var actualBlockExtraData []byte
