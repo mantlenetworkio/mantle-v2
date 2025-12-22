@@ -44,6 +44,15 @@ This document provides a summary of the audit reports conducted for Mantle's maj
 
 ---
 
+## Mantle Euboea Audit Report
+
+| Audit Time    | Reviewer      | Report Link                                                                     | Audited Commit                           |
+|---------------|---------------|---------------------------------------------------------------------------------|------------------------------------------|
+| 2025-03 | Zenith        | [Mantle - Zenith Audit Report](https://github.com/mantlenetworkio/mantle-v2/blob/develop/technical-documents/security-reviews/mantle-euboea/Mantle%20-%20Zenith%20Audit%20Report.pdf) |  |
+| 2025-04   | OpenZeppelin | [Mantle Network Pre-Confirmation Transactions Audit](https://github.com/mantlenetworkio/mantle-v2/blob/develop/technical-documents/security-reviews/mantle-euboea/Mantle%20Network%20Pre-Confirmation%20Transactions%20Audit.pdf) |  |
+
+---
+
 ## Notes
 
 - All audit reports are conducted by reputable third-party auditors to ensure the security and robustness of the Mantle network.
