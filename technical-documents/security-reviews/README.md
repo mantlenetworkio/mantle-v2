@@ -53,6 +53,14 @@ This document provides a summary of the audit reports conducted for Mantle's maj
 
 ---
 
+## Mantle Skadi Audit Report
+
+| Audit Time | Reviewer      | Report Link                                                                                                                                                                                                         | Audited Commit                           |
+|------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| 2025-12    | Sherlock      | [Sherlock - Mantle Collaborative Audit Report](https://github.com/mantlenetworkio/mantle-v2/blob/main/technical-documents/security-reviews/mantle-skadi/Sherlock%20-%20Mantle%20Collaborative%20Audit%20Report.pdf) |  |
+
+---
+
 ## Notes
 
 - All audit reports are conducted by reputable third-party auditors to ensure the security and robustness of the Mantle network.
