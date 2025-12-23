@@ -109,10 +109,18 @@ func (mbf *minBaseFeeEnv) verifyMinBaseFee(t devtest.T, minBase *big.Int) {
 func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expected uint64) {
 	client := mbf.l2EL.Escape().L2EthClient()
 	rollupCfg := mbf.l2Network.Escape().RollupConfig()
-	t.Require().NotNil(rollupCfg.ChainOpConfig, "ChainOpConfig must be set in rollup config")
-	denominator := rollupCfg.ChainOpConfig.EIP1559Denominator
-	elasticity := rollupCfg.ChainOpConfig.EIP1559Elasticity
-	t.Logf("denominator: %d, elasticity: %d", denominator, elasticity)
+	var denominator uint64
+	var elasticity uint64
+	if rollupCfg.ChainOpConfig == nil {
+		// mantle default values
+		denominator = 50
+		elasticity = 4
+		t.Logf("mantle default values: denominator: %d, elasticity: %d", denominator, elasticity)
+	} else {
+		denominator = rollupCfg.ChainOpConfig.EIP1559Denominator
+		elasticity = rollupCfg.ChainOpConfig.EIP1559Elasticity
+		t.Logf("rollup config values: denominator: %d, elasticity: %d", denominator, elasticity)
+	}
 	expectedExtraData := eth.BytesMax32(eip1559.EncodeMinBaseFeeExtraData(denominator, elasticity, expected))
 
 	// Check extradata in block header (for all clients)
