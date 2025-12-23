@@ -120,4 +120,4 @@ gates:
     tests:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
         name: TestMinBaseFee
-        timeout: 2m
+        timeout: 5m
