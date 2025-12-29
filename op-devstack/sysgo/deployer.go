@@ -7,13 +7,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/holiman/uint256"
-
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
-	"github.com/ethereum-optimism/optimism/op-core/forks"
+	opforks "github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/artifacts"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/inspect"
@@ -25,6 +20,12 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testreq"
 	"github.com/ethereum-optimism/optimism/op-supervisor/supervisor/backend/depset"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/params/forks"
+	"github.com/holiman/uint256"
 )
 
 // funderMnemonicIndex the funding account is not one of the 30 standard account, but still derived from a user-key.
@@ -40,6 +41,38 @@ func WithDeployerOptions(opts ...DeployerOption) stack.Option[*Orchestrator] {
 			opt(o.P(), o.keys, o.wb.builder)
 		}
 	})
+}
+
+func WithForkAtL1Genesis(fork forks.Fork) DeployerOption {
+	return func(_ devtest.P, _ devkeys.Keys, builder intentbuilder.Builder) {
+		builder.L1().WithL1ForkAtGenesis(fork)
+	}
+}
+
+func WithForkAtL1Offset(fork forks.Fork, offset uint64) DeployerOption {
+	return func(_ devtest.P, _ devkeys.Keys, builder intentbuilder.Builder) {
+		builder.L1().WithL1ForkAtOffset(fork, &offset)
+	}
+}
+
+func WithDefaultBPOBlobSchedule(_ devtest.P, _ devkeys.Keys, builder intentbuilder.Builder) {
+	// Once we get the latest changes from op-geth we can change this to
+	// params.DefaultBlobSchedule.
+	builder.L1().WithL1BlobSchedule(&params.BlobScheduleConfig{
+		Cancun: params.DefaultCancunBlobConfig,
+		Osaka:  params.DefaultOsakaBlobConfig,
+		Prague: params.DefaultPragueBlobConfig,
+		BPO1:   params.DefaultBPO1BlobConfig,
+		BPO2:   params.DefaultBPO2BlobConfig,
+		BPO3:   params.DefaultBPO3BlobConfig,
+		BPO4:   params.DefaultBPO4BlobConfig,
+	})
+}
+
+func WithJovianAtGenesis(p devtest.P, _ devkeys.Keys, builder intentbuilder.Builder) {
+	for _, l2Cfg := range builder.L2s() {
+		l2Cfg.WithForkAtGenesis(opforks.Jovian)
+	}
 }
 
 type DeployerPipelineOption func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts)
@@ -230,7 +263,7 @@ func WithCommons(l1ChainID eth.ChainID) DeployerOption {
 		l1StartTimestamp := uint64(time.Now().Unix()) + 1
 		l1Config.WithTimestamp(l1StartTimestamp)
 
-		l1Config.WithPragueOffset(0) // activate pectra on L1
+		l1Config.WithL1ForkAtGenesis(forks.Prague) // activate pectra on L1
 
 		faucetFunderAddr, err := keys.Address(devkeys.UserKey(funderMnemonicIndex))
 		p.Require().NoError(err, "need funder addr")
@@ -293,23 +326,23 @@ func WithDevFeatureEnabled(flag common.Hash) DeployerOption {
 func WithInteropAtGenesis() DeployerOption {
 	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
 		for _, l2Cfg := range builder.L2s() {
-			l2Cfg.WithForkAtGenesis(forks.Interop)
+			l2Cfg.WithForkAtGenesis(opforks.Interop)
 		}
 	}
 }
 
 // WithHardforkSequentialActivation configures a deployment such that L2 chains
 // activate hardforks sequentially, starting from startFork and continuing
-// until (but not including) endFork. Each successive fork is scheduled at
+// until (including) endFork. Each successive fork is scheduled at
 // an increasing offset.
-func WithHardforkSequentialActivation(startFork, endFork forks.Name, delta *uint64) DeployerOption {
+func WithHardforkSequentialActivation(startFork, endFork opforks.Name, delta *uint64) DeployerOption {
 	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
 		for _, l2Cfg := range builder.L2s() {
 			l2Cfg.WithForkAtGenesis(startFork)
 			activateWithOffset := false
 			deactivate := false
-			for idx, refFork := range forks.All {
-				if deactivate || refFork == endFork {
+			for idx, refFork := range opforks.All {
+				if deactivate {
 					l2Cfg.WithForkAtOffset(refFork, nil)
 					deactivate = true
 					continue
@@ -321,6 +354,9 @@ func WithHardforkSequentialActivation(startFork, endFork forks.Name, delta *uint
 				if startFork == refFork {
 					activateWithOffset = true
 				}
+				if endFork == refFork {
+					deactivate = true
+				}
 			}
 		}
 	}
@@ -330,15 +366,6 @@ func WithHardforkSequentialActivation(startFork, endFork forks.Name, delta *uint
 func WithSequencingWindow(n uint64) DeployerOption {
 	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
 		builder.WithGlobalOverride("sequencerWindowSize", uint64(n))
-	}
-}
-
-// WithAdditionalDisputeGames adds additional dispute games to all L2s.
-func WithAdditionalDisputeGames(games []state.AdditionalDisputeGame) DeployerOption {
-	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
-		for _, l2Cfg := range builder.L2s() {
-			l2Cfg.WithAdditionalDisputeGames(games)
-		}
 	}
 }
 
@@ -369,6 +396,14 @@ func WithProofMaturityDelaySeconds(n uint64) DeployerOption {
 func WithDisputeGameFinalityDelaySeconds(seconds uint64) DeployerOption {
 	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
 		builder.WithGlobalOverride("disputeGameFinalityDelaySeconds", seconds)
+	}
+}
+
+func WithCustomGasToken(name, symbol string, initialLiquidity *big.Int, liquidityControllerOwner common.Address) DeployerOption {
+	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
+		for _, l2Cfg := range builder.L2s() {
+			l2Cfg.WithCustomGasToken(name, symbol, initialLiquidity, liquidityControllerOwner)
+		}
 	}
 }
 
@@ -413,6 +448,14 @@ func (wb *worldBuilder) buildL2DeploymentOutputs() {
 	wb.outSuperchainDeployment = &SuperchainDeployment{
 		protocolVersionsAddr: wb.output.SuperchainDeployment.ProtocolVersionsProxy,
 		superchainConfigAddr: wb.output.SuperchainDeployment.SuperchainConfigProxy,
+	}
+}
+
+func WithRevenueShare(enabled bool, chainFeesRecipient common.Address) DeployerOption {
+	return func(p devtest.P, keys devkeys.Keys, builder intentbuilder.Builder) {
+		for _, l2Cfg := range builder.L2s() {
+			l2Cfg.WithRevenueShare(enabled, chainFeesRecipient)
+		}
 	}
 }
 

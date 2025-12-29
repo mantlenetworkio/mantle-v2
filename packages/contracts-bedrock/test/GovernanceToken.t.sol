@@ -15,7 +15,7 @@ contract GovernanceToken_Test is CommonTest {
         gov = new GovernanceToken();
     }
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(gov.owner(), owner);
         assertEq(gov.name(), "Optimism");
         assertEq(gov.symbol(), "OP");

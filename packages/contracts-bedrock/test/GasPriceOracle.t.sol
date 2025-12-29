@@ -51,15 +51,15 @@ contract GasPriceOracle_Test is CommonTest {
         });
     }
 
-    function test_l1BaseFee_succeeds() external {
+    function test_l1BaseFee_succeeds() external view {
         assertEq(gasOracle.l1BaseFee(), basefee);
     }
 
-    function test_getL1GasUsed_succeeds() external {
+    function test_getL1GasUsed_succeeds() external view {
         assertEq(gasOracle.getL1GasUsed("dead"), 1462);
     }
 
-    function test_getL1Fee_succeeds() external {
+    function test_getL1Fee_succeeds() external view {
         assertEq(gasOracle.getL1Fee("dead"), 1);
     }
 
@@ -75,15 +75,15 @@ contract GasPriceOracle_Test is CommonTest {
         assertEq(gasPrice, 64);
     }
 
-    function test_scalar_succeeds() external {
+    function test_scalar_succeeds() external view {
         assertEq(gasOracle.scalar(), l1FeeScalar);
     }
 
-    function test_overhead_succeeds() external {
+    function test_overhead_succeeds() external view {
         assertEq(gasOracle.overhead(), l1FeeOverhead);
     }
 
-    function test_decimals_succeeds() external {
+    function test_decimals_succeeds() external view {
         assertEq(gasOracle.decimals(), 6);
         assertEq(gasOracle.DECIMALS(), 6);
     }
@@ -295,8 +295,7 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
 
     function test_getL1FeeRegression_succeeds() external view {
         // fastlzSize: 235, inc signature
-        bytes memory data =
-            hex"1d2c3ec4f5a9b3f3cd2c024e455c1143a74bbd637c324adcbd4f74e346786ac44e23e78f47d932abedd8d1"
+        bytes memory data = hex"1d2c3ec4f5a9b3f3cd2c024e455c1143a74bbd637c324adcbd4f74e346786ac44e23e78f47d932abedd8d1"
             hex"06daadcea350be16478461046273101034601364012364701331dfad43729dc486abd134bcad61b34d6ca1"
             hex"f2eb31655b7d61ca33ba6d172cdf7d8b5b0ef389a314ca7a9a831c09fc2ca9090d059b4dd25194f3de297b"
             hex"dba6d6d796e4f80be94f8a9151d685607826e7ba25177b40cb127ea9f1438470";

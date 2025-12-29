@@ -43,19 +43,19 @@ library ChainAssertions {
         ResourceMetering.ResourceConfig memory dflt = Constants.DEFAULT_RESOURCE_CONFIG();
         require(keccak256(abi.encode(rcfg)) == keccak256(abi.encode(dflt)), "CHECK-RCFG-10");
 
-        checkProxyAdmin({ _contracts: _prox, _cfg: _cfg });
-        checkAddressManager({ _contracts: _prox, _cfg: _cfg });
+        checkProxyAdmin(_prox, _cfg);
+        checkAddressManager(_prox, _cfg);
         checkSystemConfig({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
         checkL1CrossDomainMessenger({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
         checkL1StandardBridge({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
-        checkOptimismMintableERC20Factory({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
-        checkL1ERC721Bridge({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
+        checkOptimismMintableERC20Factory(_prox, _cfg, true);
+        checkL1ERC721Bridge(_prox, _cfg, true);
         checkOptimismPortal({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
         checkL2OutputOracle({ _contracts: _prox, _cfg: _cfg, _isProxy: true });
     }
 
     /// @notice Asserts that the ProxyAdmin is setup correctly
-    function checkProxyAdmin(Types.ContractSet memory _contracts, DeployConfig _cfg) internal view {
+    function checkProxyAdmin(Types.ContractSet memory _contracts, DeployConfig) internal view {
         IProxyAdmin admin = IProxyAdmin(_contracts.ProxyAdmin);
         console.log("Running chain assertions on the ProxyAdmin %s", address(admin));
 
@@ -71,7 +71,7 @@ library ChainAssertions {
     }
 
     /// @notice Asserts that the AddressManager is setup correctly
-    function checkAddressManager(Types.ContractSet memory _contracts, DeployConfig _cfg) internal view {
+    function checkAddressManager(Types.ContractSet memory _contracts, DeployConfig) internal pure {
         IAddressManager manager = IAddressManager(_contracts.AddressManager);
         console.log("Running chain assertions on the AddressManager %s", address(manager));
 
@@ -211,7 +211,7 @@ library ChainAssertions {
     /// @notice Asserts that the OptimismMintableERC20Factory is setup correctly
     function checkOptimismMintableERC20Factory(
         Types.ContractSet memory _contracts,
-        DeployConfig _cfg,
+        DeployConfig,
         bool _isProxy
     )
         internal
@@ -235,7 +235,7 @@ library ChainAssertions {
     }
 
     /// @notice Asserts that the L1ERC721Bridge is setup correctly
-    function checkL1ERC721Bridge(Types.ContractSet memory _contracts, DeployConfig _cfg, bool _isProxy) internal view {
+    function checkL1ERC721Bridge(Types.ContractSet memory _contracts, DeployConfig, bool _isProxy) internal view {
         IL1ERC721Bridge bridge = IL1ERC721Bridge(_isProxy ? _contracts.L1ERC721Bridge : _contracts.L1ERC721BridgeImpl);
         console.log(
             "Running chain assertions on the L1ERC721Bridge %s at %s",

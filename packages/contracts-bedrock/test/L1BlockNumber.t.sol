@@ -30,7 +30,7 @@ contract L1BlockNumberTest is Test {
         });
     }
 
-    function test_getL1BlockNumber_succeeds() external {
+    function test_getL1BlockNumber_succeeds() external view {
         assertEq(bn.getL1BlockNumber(), number);
     }
 

@@ -17,12 +17,12 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
     // Receiver address for testing
     address recipient = address(0xabbaacdc);
 
-    function test_messageVersion_succeeds() external {
+    function test_messageVersion_succeeds() external view {
         (, uint16 version) = Encoding.decodeVersionedNonce(L2Messenger.messageNonce());
         assertEq(version, L2Messenger.MESSAGE_VERSION());
     }
 
-    function test_l1CrossDomainMessenger_succeeds() external {
+    function test_l1CrossDomainMessenger_succeeds() external view {
         assertEq(address(L1Messenger), L2Messenger.l1CrossDomainMessenger());
     }
 

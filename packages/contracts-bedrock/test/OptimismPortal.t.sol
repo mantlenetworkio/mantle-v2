@@ -16,7 +16,7 @@ contract OptimismPortal_Test is Portal_Initializer {
     event Paused(address);
     event Unpaused(address);
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(address(op.L2_ORACLE()), address(oracle));
         assertEq(op.l2Sender(), 0x000000000000000000000000000000000000dEaD);
         assertEq(op.paused(), false);
@@ -174,7 +174,7 @@ contract OptimismPortal_Test is Portal_Initializer {
      * @notice Ensure that the 0 calldata case is covered and there is a linearly
      *         increasing gas limit for larger calldata sizes.
      */
-    function test_minimumGasLimit_succeeds() external {
+    function test_minimumGasLimit_succeeds() external view {
         assertEq(op.minimumGasLimit(0), 21_000);
         assertTrue(op.minimumGasLimit(2) > op.minimumGasLimit(1));
         assertTrue(op.minimumGasLimit(3) > op.minimumGasLimit(2));
@@ -409,13 +409,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
     constructor() {
         super.setUp();
         _defaultTx = Types.WithdrawalTransaction({
-            nonce: 0,
-            sender: alice,
-            target: bob,
-            mntValue: 0,
-            ethValue: 100,
-            gasLimit: 100_000,
-            data: hex""
+            nonce: 0, sender: alice, target: bob, mntValue: 0, ethValue: 100, gasLimit: 100_000, data: hex""
         });
         // Get withdrawal proof data we can use for testing.
         (_stateRoot, _storageRoot, _outputRoot, _withdrawalHash, _withdrawalProof) =
@@ -566,9 +560,10 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         // Propose the same output root again, creating the same output at a different index + l2BlockNumber.
         vm.startPrank(op.L2_ORACLE().PROPOSER());
-        op.L2_ORACLE().proposeL2Output(
-            proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
-        );
+        op.L2_ORACLE()
+            .proposeL2Output(
+                proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
+            );
         vm.stopPrank();
 
         // Warp ahead 1 second
@@ -791,13 +786,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // This number was identified through trial and error.
         uint256 gasLimit = 150_000;
         Types.WithdrawalTransaction memory insufficientGasTx = Types.WithdrawalTransaction({
-            nonce: 0,
-            sender: alice,
-            target: bob,
-            mntValue: 100,
-            ethValue: 0,
-            gasLimit: gasLimit,
-            data: hex""
+            nonce: 0, sender: alice, target: bob, mntValue: 100, ethValue: 0, gasLimit: gasLimit, data: hex""
         });
 
         // Get updated proof inputs.
@@ -968,7 +957,7 @@ contract OptimismPortalUpgradeable_Test is Portal_Initializer {
         proxy = Proxy(payable(address(op)));
     }
 
-    function test_params_initValuesOnProxy_succeeds() external {
+    function test_params_initValuesOnProxy_succeeds() external view {
         OptimismPortal p = OptimismPortal(payable(address(proxy)));
 
         (uint128 prevBaseFee, uint64 prevBoughtGas, uint64 prevBlockNum) = p.params();

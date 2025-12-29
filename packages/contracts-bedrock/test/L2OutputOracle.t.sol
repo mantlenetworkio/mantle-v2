@@ -10,7 +10,7 @@ import { Types } from "src/libraries/Types.sol";
 contract L2OutputOracleTest is L2OutputOracle_Initializer {
     bytes32 proposedOutput1 = keccak256(abi.encode(1));
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(oracle.PROPOSER(), proposer);
         assertEq(oracle.CHALLENGER(), owner);
         assertEq(oracle.SUBMISSION_INTERVAL(), submissionInterval);
@@ -166,7 +166,7 @@ contract L2OutputOracleTest is L2OutputOracle_Initializer {
     }
 
     // Test: nextBlockNumber() should return the correct value
-    function test_nextBlockNumber_succeeds() external {
+    function test_nextBlockNumber_succeeds() external view {
         assertEq(
             oracle.nextBlockNumber(),
             // The return value should match this arithmetic
@@ -421,7 +421,7 @@ contract L2OutputOracleUpgradeable_Test is L2OutputOracle_Initializer {
         proxy = Proxy(payable(address(oracle)));
     }
 
-    function test_initValuesOnProxy_succeeds() external {
+    function test_initValuesOnProxy_succeeds() external view {
         assertEq(submissionInterval, oracleImpl.SUBMISSION_INTERVAL());
         assertEq(l2BlockTime, oracleImpl.L2_BLOCK_TIME());
         assertEq(startingBlockNumber, oracleImpl.startingBlockNumber());

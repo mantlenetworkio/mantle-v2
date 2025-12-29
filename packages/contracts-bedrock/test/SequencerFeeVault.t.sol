@@ -19,11 +19,11 @@ contract SequencerFeeVault_Test is Bridge_Initializer {
         vm.label(Predeploys.SEQUENCER_FEE_WALLET, "SequencerFeeVault");
     }
 
-    function test_minWithdrawalAmount_succeeds() external {
+    function test_minWithdrawalAmount_succeeds() external view {
         assertEq(vault.MIN_WITHDRAWAL_AMOUNT(), 10 ether);
     }
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(vault.l1FeeWallet(), recipient);
     }
 

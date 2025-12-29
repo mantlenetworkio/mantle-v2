@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
-	"github.com/ethereum-optimism/optimism/op-service/predeploys"
 	txib "github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 )
 
@@ -19,8 +19,7 @@ func TestFees(gt *testing.T) {
 	require := t.Require()
 	ctx := t.Ctx()
 
-	err := dsl.RequiresL2Fork(ctx, sys, 0, forks.Fjord)
-	require.NoError(err)
+	require.True(sys.L2Chain.IsForkActive(forks.Fjord))
 	operatorFee := dsl.NewOperatorFee(t, sys.L2Chain, sys.L1EL)
 	operatorFee.SetOperatorFee(100000000, 500)
 	operatorFee.WaitForL2SyncWithCurrentL1State()
