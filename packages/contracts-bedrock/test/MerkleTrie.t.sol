@@ -5,7 +5,7 @@ import { CommonTest } from "./CommonTest.t.sol";
 import { MerkleTrie } from "src/libraries/trie/MerkleTrie.sol";
 
 contract MerkleTrie_get_Test is CommonTest {
-    function test_get_validProof1_succeeds() external {
+    function test_get_validProof1_succeeds() external pure {
         bytes32 root = 0xd582f99275e227a1cf4284899e5ff06ee56da8859be71b553397c69151bc942f;
         bytes memory key = hex"6b6579326262";
         bytes memory val = hex"6176616c32";
@@ -18,7 +18,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof2_succeeds() external {
+    function test_get_validProof2_succeeds() external pure {
         bytes32 root = 0xd582f99275e227a1cf4284899e5ff06ee56da8859be71b553397c69151bc942f;
         bytes memory key = hex"6b6579316161";
         bytes memory val = hex"303132333435363738393031323334353637383930313233343536373839303132333435363738397878";
@@ -31,7 +31,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof3_succeeds() external {
+    function test_get_validProof3_succeeds() external pure {
         bytes32 root = 0xf838216fa749aefa91e0b672a9c06d3e6e983f913d7107b5dab4af60b5f5abed;
         bytes memory key = hex"6b6579316161";
         bytes memory val = hex"303132333435363738393031323334353637383930313233343536373839303132333435363738397878";
@@ -42,7 +42,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof4_succeeds() external {
+    function test_get_validProof4_succeeds() external pure {
         bytes32 root = 0x37956bab6bba472308146808d5311ac19cb4a7daae5df7efcc0f32badc97f55e;
         bytes memory key = hex"6b6579316161";
         bytes memory val = hex"3031323334";
@@ -52,7 +52,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof5_succeeds() external {
+    function test_get_validProof5_succeeds() external pure {
         bytes32 root = 0xcb65032e2f76c48b82b5c24b3db8f670ce73982869d38cd39a624f23d62a9e89;
         bytes memory key = hex"6b657931";
         bytes memory val =
@@ -67,7 +67,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof6_succeeds() external {
+    function test_get_validProof6_succeeds() external pure {
         bytes32 root = 0xcb65032e2f76c48b82b5c24b3db8f670ce73982869d38cd39a624f23d62a9e89;
         bytes memory key = hex"6b657932";
         bytes memory val = hex"73686f7274";
@@ -80,7 +80,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof7_succeeds() external {
+    function test_get_validProof7_succeeds() external pure {
         bytes32 root = 0xcb65032e2f76c48b82b5c24b3db8f670ce73982869d38cd39a624f23d62a9e89;
         bytes memory key = hex"6b657933";
         bytes memory val = hex"31323334353637383930313233343536373839303132333435363738393031";
@@ -94,7 +94,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof8_succeeds() external {
+    function test_get_validProof8_succeeds() external pure {
         bytes32 root = 0x72e6c01ad0c9a7b517d4bc68a5b323287fe80f0e68f5415b4b95ecbc8ad83978;
         bytes memory key = hex"61";
         bytes memory val = hex"61";
@@ -106,7 +106,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof9_succeeds() external {
+    function test_get_validProof9_succeeds() external pure {
         bytes32 root = 0x72e6c01ad0c9a7b517d4bc68a5b323287fe80f0e68f5415b4b95ecbc8ad83978;
         bytes memory key = hex"62";
         bytes memory val = hex"62";
@@ -118,7 +118,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
-    function test_get_validProof10_succeeds() external {
+    function test_get_validProof10_succeeds() external pure {
         bytes32 root = 0x72e6c01ad0c9a7b517d4bc68a5b323287fe80f0e68f5415b4b95ecbc8ad83978;
         bytes memory key = hex"63";
         bytes memory val = hex"63";

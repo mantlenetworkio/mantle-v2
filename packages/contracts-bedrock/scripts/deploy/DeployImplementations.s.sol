@@ -157,7 +157,8 @@ contract DeployImplementations is Script {
                 _name: "L1StandardBridge",
                 _args: DeployUtils.encodeConstructor(
                     abi.encodeCall(
-                        IL1StandardBridge.__constructor__, (payable(address(_input.l1CrossDomainMessenger)), _input.l1MNT)
+                        IL1StandardBridge.__constructor__,
+                        (payable(address(_input.l1CrossDomainMessenger)), _input.l1MNT)
                     )
                 )
             })
@@ -237,7 +238,7 @@ contract DeployImplementations is Script {
         );
     }
 
-    function assertValidOutput(Input memory _input, Output memory _output) private {
+    function assertValidOutput(Input memory, Output memory _output) private view {
         address[] memory addrs = Solarray.addresses(
             // address(_output.opcm),
             address(_output.systemConfigImpl),

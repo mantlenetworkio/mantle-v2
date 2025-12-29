@@ -17,10 +17,7 @@ contract TestERC721 is ERC721 {
 }
 
 contract TestMintableERC721 is OptimismMintableERC721 {
-    constructor(
-        address _bridge,
-        address _remoteToken
-    )
+    constructor(address _bridge, address _remoteToken)
         OptimismMintableERC721(_bridge, 1, _remoteToken, "Test", "TST")
     { }
 
@@ -73,7 +70,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         localToken.approve(address(bridge), tokenId);
     }
 
-    function test_constructor_succeeds() public {
+    function test_constructor_succeeds() public view {
         assertEq(address(bridge.MESSENGER()), address(L2Messenger));
         assertEq(address(bridge.OTHER_BRIDGE()), otherBridge);
         assertEq(address(bridge.messenger()), address(L2Messenger));

@@ -26,7 +26,7 @@ contract Semver_Test is CommonTest {
     /**
      * @notice Test the version getter
      */
-    function test_version_succeeds() external {
+    function test_version_succeeds() external view {
         assertEq(semver.version(), "7.8.0");
     }
 

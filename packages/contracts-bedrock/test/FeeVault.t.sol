@@ -24,12 +24,12 @@ contract FeeVault_Test is Bridge_Initializer {
         vm.label(Predeploys.L1_FEE_VAULT, "L1FeeVault");
     }
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(baseFeeVault.RECIPIENT(), recipient);
         assertEq(l1FeeVault.RECIPIENT(), recipient);
     }
 
-    function test_minWithdrawalAmount_succeeds() external {
+    function test_minWithdrawalAmount_succeeds() external view {
         assertEq(baseFeeVault.MIN_WITHDRAWAL_AMOUNT(), 10 ether);
         assertEq(l1FeeVault.MIN_WITHDRAWAL_AMOUNT(), 10 ether);
     }

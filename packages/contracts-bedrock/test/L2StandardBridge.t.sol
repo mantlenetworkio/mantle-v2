@@ -22,7 +22,7 @@ import { OptimismMintableERC20 } from "src/universal/OptimismMintableERC20.sol";
 contract L2StandardBridge_Test is Bridge_Initializer {
     using stdStorage for StdStorage;
 
-    function test_initialize_succeeds() external {
+    function test_initialize_succeeds() external view {
         assertEq(address(L2Bridge.messenger()), address(L2Messenger));
         assertEq(L1Bridge.l2TokenBridge(), address(L2Bridge));
         assertEq(address(L2Bridge.OTHER_BRIDGE()), address(L1Bridge));
@@ -130,12 +130,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit WithdrawalInitiated({
-            l1Token: address(0),
-            l2Token: Predeploys.BVM_ETH,
-            from: alice,
-            to: alice,
-            amount: 100,
-            data: hex""
+            l1Token: address(0), l2Token: Predeploys.BVM_ETH, from: alice, to: alice, amount: 100, data: hex""
         });
 
         vm.expectEmit(true, true, true, true, address(L2Bridge));
@@ -143,10 +138,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.prank(alice, alice);
         L2Bridge.withdraw{ value: 0 }({
-            _l2Token: Predeploys.BVM_ETH,
-            _amount: 100,
-            _minGasLimit: 1000,
-            _extraData: hex""
+            _l2Token: Predeploys.BVM_ETH, _amount: 100, _minGasLimit: 1000, _extraData: hex""
         });
 
         assertEq(l2ETH.balanceOf(Predeploys.L2_TO_L1_MESSAGE_PASSER), 0);
@@ -163,12 +155,7 @@ contract L2StandardBridge_Test is Bridge_Initializer {
 
         vm.expectEmit(true, true, true, true, address(L2Bridge));
         emit WithdrawalInitiated({
-            l1Token: address(l1MNT),
-            l2Token: address(0),
-            from: alice,
-            to: alice,
-            amount: 100,
-            data: hex""
+            l1Token: address(l1MNT), l2Token: address(0), from: alice, to: alice, amount: 100, data: hex""
         });
 
         vm.expectEmit(true, true, true, true, address(L2Bridge));

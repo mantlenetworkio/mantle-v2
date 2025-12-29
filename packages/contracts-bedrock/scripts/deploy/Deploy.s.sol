@@ -186,7 +186,9 @@ contract Deploy is Deployer {
                 systemConfigConfig: defaultResourceConfig(),
                 optimismPortal: IOptimismPortal(payable(artifacts.mustGetAddress("OptimismPortalProxy"))),
                 l1MNT: cfg.l1MantleToken(),
-                l1CrossDomainMessenger: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessengerProxy")),
+                l1CrossDomainMessenger: IL1CrossDomainMessenger(
+                    artifacts.mustGetAddress("L1CrossDomainMessengerProxy")
+                ),
                 l2OutputOracle: IL2OutputOracle(artifacts.mustGetAddress("L2OutputOracleProxy")),
                 systemConfig: ISystemConfig(artifacts.mustGetAddress("SystemConfigProxy")),
                 l1StandardBridge: IL1StandardBridge(artifacts.mustGetAddress("L1StandardBridgeProxy")),
@@ -219,10 +221,10 @@ contract Deploy is Deployer {
 
         ChainAssertions.checkL1CrossDomainMessenger({ _contracts: proxies, _cfg: cfg, _isProxy: false });
         ChainAssertions.checkL1StandardBridge({ _contracts: proxies, _cfg: cfg, _isProxy: false });
-        ChainAssertions.checkL1ERC721Bridge({ _contracts: proxies, _cfg: cfg, _isProxy: false });
+        ChainAssertions.checkL1ERC721Bridge(proxies, cfg, false);
         ChainAssertions.checkOptimismPortal({ _contracts: proxies, _cfg: cfg, _isProxy: false });
         ChainAssertions.checkL2OutputOracle({ _contracts: proxies, _cfg: cfg, _isProxy: false });
-        ChainAssertions.checkOptimismMintableERC20Factory({ _contracts: proxies, _cfg: cfg, _isProxy: false });
+        ChainAssertions.checkOptimismMintableERC20Factory(proxies, cfg, false);
         ChainAssertions.checkSystemConfig({ _contracts: proxies, _cfg: cfg, _isProxy: false });
     }
 
@@ -239,7 +241,9 @@ contract Deploy is Deployer {
             systemConfigImpl: ISystemConfig(artifacts.mustGetAddress("SystemConfig")),
             systemConfigProxy: ISystemConfig(artifacts.mustGetAddress("SystemConfigProxy")),
             l1CrossDomainMessengerImpl: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessenger")),
-            l1CrossDomainMessengerProxy: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessengerProxy")),
+            l1CrossDomainMessengerProxy: IL1CrossDomainMessenger(
+                artifacts.mustGetAddress("L1CrossDomainMessengerProxy")
+            ),
             l1ERC721BridgeImpl: IL1ERC721Bridge(artifacts.mustGetAddress("L1ERC721Bridge")),
             l1ERC721BridgeProxy: IL1ERC721Bridge(artifacts.mustGetAddress("L1ERC721BridgeProxy")),
             l1StandardBridgeImpl: IL1StandardBridge(artifacts.mustGetAddress("L1StandardBridge")),
@@ -272,7 +276,7 @@ contract Deploy is Deployer {
     }
 
     /// @notice Returns the default resource config. We encourage using interface instead of the original contract.
-    function defaultResourceConfig() public view returns (IResourceMetering.ResourceConfig memory) {
+    function defaultResourceConfig() public pure returns (IResourceMetering.ResourceConfig memory) {
         return abi.decode(abi.encode(Constants.DEFAULT_RESOURCE_CONFIG()), (IResourceMetering.ResourceConfig));
     }
 

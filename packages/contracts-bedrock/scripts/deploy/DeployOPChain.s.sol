@@ -88,7 +88,7 @@ contract DeployOPChain is Script {
     }
 
     /// @notice Returns the default resource config. We encourage using interface instead of the original contract.
-    function defaultResourceConfig() public view returns (IResourceMetering.ResourceConfig memory) {
+    function defaultResourceConfig() public pure returns (IResourceMetering.ResourceConfig memory) {
         return abi.decode(abi.encode(Constants.DEFAULT_RESOURCE_CONFIG()), (IResourceMetering.ResourceConfig));
     }
 

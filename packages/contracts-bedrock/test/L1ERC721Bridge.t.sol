@@ -58,7 +58,7 @@ contract L1ERC721Bridge_Test is Messenger_Initializer {
         localToken.approve(address(bridge), tokenId);
     }
 
-    function test_constructor_succeeds() public {
+    function test_constructor_succeeds() public view {
         assertEq(address(bridge.MESSENGER()), address(L1Messenger));
         assertEq(address(bridge.OTHER_BRIDGE()), otherBridge);
         assertEq(address(bridge.messenger()), address(L1Messenger));

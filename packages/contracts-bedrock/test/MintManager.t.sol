@@ -29,7 +29,7 @@ contract MintManager_constructor_Test is MintManager_Initializer {
     /**
      * @notice Tests that the constructor properly configures the contract.
      */
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(manager.owner(), owner);
         assertEq(address(manager.governanceToken()), address(gov));
     }

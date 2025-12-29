@@ -30,9 +30,7 @@ contract MeterUser is ResourceMetering {
 
     function set(uint128 _prevBaseFee, uint64 _prevBoughtGas, uint64 _prevBlockNum) public {
         params = ResourceMetering.ResourceParams({
-            prevBaseFee: _prevBaseFee,
-            prevBoughtGas: _prevBoughtGas,
-            prevBlockNum: _prevBlockNum
+            prevBaseFee: _prevBaseFee, prevBoughtGas: _prevBoughtGas, prevBlockNum: _prevBlockNum
         });
     }
 
@@ -55,7 +53,7 @@ contract ResourceMetering_Test is Test {
         initialBlockNum = uint64(block.number);
     }
 
-    function test_meter_initialResourceParams_succeeds() external {
+    function test_meter_initialResourceParams_succeeds() external view {
         (uint128 prevBaseFee, uint64 prevBoughtGas, uint64 prevBlockNum) = meter.params();
         ResourceMetering.ResourceConfig memory rcfg = meter.resourceConfig();
 
@@ -195,9 +193,7 @@ contract CustomMeterUser is ResourceMetering {
 
     constructor(uint128 _prevBaseFee, uint64 _prevBoughtGas, uint64 _prevBlockNum) {
         params = ResourceMetering.ResourceParams({
-            prevBaseFee: _prevBaseFee,
-            prevBoughtGas: _prevBoughtGas,
-            prevBlockNum: _prevBlockNum
+            prevBaseFee: _prevBaseFee, prevBoughtGas: _prevBoughtGas, prevBlockNum: _prevBlockNum
         });
     }
 
