@@ -120,18 +120,9 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 		destSysCfg.GasLimit = gasLimit
 		return nil
 	case SystemConfigUpdateBaseFee:
-		if pointer, err := solabi.ReadUint64(reader); err != nil || pointer != 32 {
-			return NewCriticalError(errors.New("invalid pointer field"))
-		}
-		if length, err := solabi.ReadUint64(reader); err != nil || length != 32 {
-			return NewCriticalError(errors.New("invalid length field"))
-		}
-		baseFee, err := solabi.ReadUint256(reader)
+		baseFee, err := parseSystemConfigUpdateBaseFee(ev.Data)
 		if err != nil {
-			return NewCriticalError(errors.New("could not read base fee"))
-		}
-		if !solabi.EmptyReader(reader) {
-			return NewCriticalError(errors.New("too many bytes"))
+			return err
 		}
 		destSysCfg.BaseFee = baseFee
 		return nil
