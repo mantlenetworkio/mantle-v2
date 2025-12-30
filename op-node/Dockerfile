@@ -30,21 +30,17 @@ RUN <<-EOF
     tar -xzf "${DOWNLOAD_PATH}" -C /usr/local/bin forge
 EOF
 
-FROM --platform=$BUILDPLATFORM golang:1.24.10-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.10-bookworm AS builder
 
 ARG VERSION=v0.0.0
 
-RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash just curl
+# Install dependencies (Debian-based, similar to CircleCI's cimg/base:2024.01)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    make gcc g++ git jq bash curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install mise to manage svm-rs (like CircleCI does)
-# Copy mise installation script and mise.toml first
-COPY ./ops/scripts/install_mise.sh /tmp/install_mise.sh
-COPY ./mise.toml /tmp/mise.toml
-
-RUN chmod +x /tmp/install_mise.sh && \
-    /tmp/install_mise.sh && \
-    export PATH="$HOME/.local/bin:$PATH" && \
-    mise --version
+# Install just
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
 # Copy forge from builder_foundry stage
 COPY --from=builder_foundry /usr/local/bin/forge /usr/local/bin/forge
@@ -54,27 +50,60 @@ COPY . /app
 
 WORKDIR /app
 
-RUN go mod download
+# Manually download and install solc binaries from GitHub releases (svm structure: ~/.svm/<version>/solc-<version>)
+# Using Debian-based image (like CircleCI's cimg/base) ensures glibc compatibility for solc binaries
+ARG TARGETARCH
+RUN <<-EOF
+    #!/bin/bash
+    set -e
 
-# Install svm-rs via mise and pre-install solc versions (like CircleCI install-solc-compilers does)
-# mise.toml is needed for the svm-rs alias, and we need to trust it
-RUN export PATH="$HOME/.local/bin:$PATH" && \
-    mise trust && \
-    mise install svm-rs@0.5.19 && \
-    ln -sf ~/.local/share/mise/installs/svm-rs/0.5.19/bin/svm /usr/local/bin/svm && \
-    for version in 0.8.15 0.8.30 0.5.17; do \
-      svm which $version || svm install $version; \
+    # Create svm directory structure
+    mkdir -p /root/.svm
+
+    # Download and install each solc version from GitHub releases
+    for version in 0.8.15 0.8.30 0.5.17; do
+        VERSION_DIR="/root/.svm/${version}"
+        mkdir -p "${VERSION_DIR}"
+        SOLC_BINARY="${VERSION_DIR}/solc-${version}"
+
+        # Determine the GitHub release asset name based on architecture
+        if [ "${TARGETARCH}" = "amd64" ]; then
+            ASSET_NAME="solc-static-linux"
+        else
+            echo "Unsupported architecture: ${TARGETARCH}"
+            exit 1
+        fi
+
+        # Download from GitHub releases
+        SOLC_URL="https://github.com/ethereum/solidity/releases/download/v${version}/${ASSET_NAME}"
+
+        echo "Downloading solc ${version} from ${SOLC_URL}"
+        if ! curl -fL -o "${SOLC_BINARY}" "${SOLC_URL}"; then
+            echo "Failed to download solc ${version} from ${SOLC_URL}"
+            exit 1
+        fi
+
+        chmod +x "${SOLC_BINARY}"
+        echo "Installed solc ${version} to ${SOLC_BINARY}"
+
+        # Verify the binary works
+        if ! "${SOLC_BINARY}" --version > /dev/null 2>&1; then
+            echo "Warning: solc ${version} binary may not be executable or compatible"
+        fi
     done
+EOF
 
 # Build contracts before generating artifacts
 WORKDIR /app/packages/contracts-bedrock
 RUN just build-no-tests
 
+RUN go mod download
+
 # Generate forge-artifacts for op-deployer (required for embedded.go)
 WORKDIR /app/op-deployer
 RUN just copy-contract-artifacts
 
-ARG TARGETOS TARGETARCH
+ARG TARGETOS
 
 WORKDIR /app/op-node
 
