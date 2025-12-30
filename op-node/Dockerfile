@@ -34,7 +34,17 @@ FROM --platform=$BUILDPLATFORM golang:1.24.10-alpine3.21 AS builder
 
 ARG VERSION=v0.0.0
 
-RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash just
+RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash just curl
+
+# Install mise to manage svm-rs (like CircleCI does)
+# Copy mise installation script and mise.toml first
+COPY ./ops/scripts/install_mise.sh /tmp/install_mise.sh
+COPY ./mise.toml /tmp/mise.toml
+
+RUN chmod +x /tmp/install_mise.sh && \
+    /tmp/install_mise.sh && \
+    export PATH="$HOME/.local/bin:$PATH" && \
+    mise --version
 
 # Copy forge from builder_foundry stage
 COPY --from=builder_foundry /usr/local/bin/forge /usr/local/bin/forge
@@ -45,6 +55,16 @@ COPY . /app
 WORKDIR /app
 
 RUN go mod download
+
+# Install svm-rs via mise and pre-install solc versions (like CircleCI install-solc-compilers does)
+# mise.toml is needed for the svm-rs alias, and we need to trust it
+RUN export PATH="$HOME/.local/bin:$PATH" && \
+    mise trust && \
+    mise install svm-rs@0.5.19 && \
+    ln -sf ~/.local/share/mise/installs/svm-rs/0.5.19/bin/svm /usr/local/bin/svm && \
+    for version in 0.8.15 0.8.30 0.5.17; do \
+      svm which $version || svm install $version; \
+    done
 
 # Build contracts before generating artifacts
 WORKDIR /app/packages/contracts-bedrock
