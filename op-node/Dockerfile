@@ -1,7 +1,7 @@
 # Install forge (foundry) for building contracts
 FROM --platform=$BUILDPLATFORM alpine:3.21 AS builder_foundry
 
-ARG TARGETARCH
+ARG BUILDPLATFORM
 
 RUN apk add --no-cache curl bash git jq
 
@@ -12,8 +12,11 @@ RUN <<-EOF
     #!/bin/bash
     set -e
 
+    # Extract architecture from BUILDPLATFORM (format: "linux/amd64" or "linux/arm64")
+    BUILDARCH=$(echo "${BUILDPLATFORM}" | cut -d'/' -f2)
+
     FOUNDRY_VERSION="$(jq -r '.forge' /tmp/op-deployer-versions.json)"
-    FOUNDRY_PLATFORM=alpine_${TARGETARCH}
+    FOUNDRY_PLATFORM=alpine_${BUILDARCH}
     FOUNDRY_URL="https://github.com/foundry-rs/foundry/releases/download/${FOUNDRY_VERSION}/foundry_${FOUNDRY_VERSION}_${FOUNDRY_PLATFORM}.tar.gz"
     DOWNLOAD_PATH="/tmp/forge.tar.gz"
 
@@ -52,20 +55,24 @@ WORKDIR /app
 
 # Manually download and install solc binaries from binaries.soliditylang.org (amd64) or hardhat mirror (arm64)
 # Using Debian-based image (like CircleCI's cimg/base) ensures glibc compatibility for solc binaries
-ARG TARGETARCH
+# solc binaries must match BUILDPLATFORM (where build happens), not TARGETARCH (where binary runs)
+ARG BUILDPLATFORM
 RUN <<-EOF
     #!/bin/bash
     set -e
 
-    # Determine the list.json URL and base download URL based on architecture
-    if [ "${TARGETARCH}" = "amd64" ]; then
+    # Extract architecture from BUILDPLATFORM (format: "linux/amd64" or "linux/arm64")
+    BUILDARCH=$(echo "${BUILDPLATFORM}" | cut -d'/' -f2)
+
+    # Determine the list.json URL and base download URL based on build architecture
+    if [ "${BUILDARCH}" = "amd64" ]; then
         LIST_URL="https://binaries.soliditylang.org/linux-amd64/list.json"
         BASE_URL="https://binaries.soliditylang.org/linux-amd64"
-    elif [ "${TARGETARCH}" = "arm64" ]; then
+    elif [ "${BUILDARCH}" = "arm64" ]; then
         LIST_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64/list.json"
         BASE_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64"
     else
-        echo "Unsupported architecture: ${TARGETARCH}"
+        echo "Unsupported build architecture: ${BUILDARCH} (from BUILDPLATFORM: ${BUILDPLATFORM})"
         exit 1
     fi
 
@@ -128,11 +135,9 @@ RUN go mod download
 WORKDIR /app/op-deployer
 RUN just copy-contract-artifacts
 
-ARG TARGETOS
-
 WORKDIR /app/op-node
 
-RUN make op-node VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH
+RUN make op-node VERSION="$VERSION"
 
 FROM alpine:3.21
 
