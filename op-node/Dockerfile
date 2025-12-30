@@ -1,7 +1,7 @@
 # Install forge (foundry) for building contracts
 FROM --platform=$BUILDPLATFORM alpine:3.21 AS builder_foundry
 
-ARG TARGETARCH
+ARG BUILDPLATFORM
 
 RUN apk add --no-cache curl bash git jq
 
@@ -12,8 +12,11 @@ RUN <<-EOF
     #!/bin/bash
     set -e
 
+    # Extract architecture from BUILDPLATFORM (format: "linux/amd64" or "linux/arm64")
+    BUILDARCH=$(echo "${BUILDPLATFORM}" | cut -d'/' -f2)
+
     FOUNDRY_VERSION="$(jq -r '.forge' /tmp/op-deployer-versions.json)"
-    FOUNDRY_PLATFORM=alpine_${TARGETARCH}
+    FOUNDRY_PLATFORM=alpine_${BUILDARCH}
     FOUNDRY_URL="https://github.com/foundry-rs/foundry/releases/download/${FOUNDRY_VERSION}/foundry_${FOUNDRY_VERSION}_${FOUNDRY_PLATFORM}.tar.gz"
     DOWNLOAD_PATH="/tmp/forge.tar.gz"
 
@@ -30,11 +33,17 @@ RUN <<-EOF
     tar -xzf "${DOWNLOAD_PATH}" -C /usr/local/bin forge
 EOF
 
-FROM --platform=$BUILDPLATFORM golang:1.24.10-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.10-bookworm AS builder
 
 ARG VERSION=v0.0.0
 
-RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash just
+# Install dependencies (Debian-based, similar to CircleCI's cimg/base:2024.01)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    make gcc g++ git jq bash curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install just
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
 # Copy forge from builder_foundry stage
 COPY --from=builder_foundry /usr/local/bin/forge /usr/local/bin/forge
@@ -44,21 +53,91 @@ COPY . /app
 
 WORKDIR /app
 
-RUN go mod download
+# Manually download and install solc binaries from binaries.soliditylang.org (amd64) or hardhat mirror (arm64)
+# Using Debian-based image (like CircleCI's cimg/base) ensures glibc compatibility for solc binaries
+# solc binaries must match BUILDPLATFORM (where build happens), not TARGETARCH (where binary runs)
+ARG BUILDPLATFORM
+RUN <<-EOF
+    #!/bin/bash
+    set -e
+
+    # Extract architecture from BUILDPLATFORM (format: "linux/amd64" or "linux/arm64")
+    BUILDARCH=$(echo "${BUILDPLATFORM}" | cut -d'/' -f2)
+
+    # Determine the list.json URL and base download URL based on build architecture
+    if [ "${BUILDARCH}" = "amd64" ]; then
+        LIST_URL="https://binaries.soliditylang.org/linux-amd64/list.json"
+        BASE_URL="https://binaries.soliditylang.org/linux-amd64"
+    elif [ "${BUILDARCH}" = "arm64" ]; then
+        LIST_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64/list.json"
+        BASE_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64"
+    else
+        echo "Unsupported build architecture: ${BUILDARCH} (from BUILDPLATFORM: ${BUILDPLATFORM})"
+        exit 1
+    fi
+
+    echo "Fetching solc version list from ${LIST_URL}"
+
+    # Download the list.json
+    curl -fL -o /tmp/solc-list.json "${LIST_URL}" || {
+        echo "Failed to download solc version list from ${LIST_URL}"
+        exit 1
+    }
+
+    # Create svm directory structure
+    mkdir -p /root/.svm
+
+    # Download and install each solc version
+    for version in 0.8.15 0.8.30 0.5.17; do
+        VERSION_DIR="/root/.svm/${version}"
+        mkdir -p "${VERSION_DIR}"
+        SOLC_BINARY="${VERSION_DIR}/solc-${version}"
+
+        # Get the path from list.json
+        # For amd64: "solc-linux-amd64-v0.8.15+commit.e87f0b89"
+        # For arm64: "solc-v0.8.15"
+        SOLC_PATH=$(jq -r --arg v "${version}" '.releases[$v] // empty' /tmp/solc-list.json)
+
+        if [ -z "${SOLC_PATH}" ]; then
+            echo "Failed to find solc ${version} in list.json"
+            exit 1
+        fi
+
+        # Download from the appropriate base URL
+        SOLC_URL="${BASE_URL}/${SOLC_PATH}"
+
+        echo "Downloading solc ${version} from ${SOLC_URL}"
+        if ! curl -fL -o "${SOLC_BINARY}" "${SOLC_URL}"; then
+            echo "Failed to download solc ${version} from ${SOLC_URL}"
+            exit 1
+        fi
+
+        chmod +x "${SOLC_BINARY}"
+        echo "Installed solc ${version} to ${SOLC_BINARY}"
+
+        # Verify the binary works
+        if ! "${SOLC_BINARY}" --version > /dev/null 2>&1; then
+            echo "Warning: solc ${version} binary may not be executable or compatible"
+        fi
+    done
+
+    # Clean up
+    rm -f /tmp/solc-list.json
+EOF
 
 # Build contracts before generating artifacts
 WORKDIR /app/packages/contracts-bedrock
 RUN just build-no-tests
 
+RUN go mod download
+
 # Generate forge-artifacts for op-deployer (required for embedded.go)
 WORKDIR /app/op-deployer
 RUN just copy-contract-artifacts
 
-ARG TARGETOS TARGETARCH
-
 WORKDIR /app/op-node
 
-RUN make op-node VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH
+RUN make op-node VERSION="$VERSION"
 
 FROM alpine:3.21
 
