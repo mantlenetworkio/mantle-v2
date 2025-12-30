@@ -50,32 +50,54 @@ COPY . /app
 
 WORKDIR /app
 
-# Manually download and install solc binaries from GitHub releases (svm structure: ~/.svm/<version>/solc-<version>)
+# Manually download and install solc binaries from binaries.soliditylang.org (amd64) or hardhat mirror (arm64)
 # Using Debian-based image (like CircleCI's cimg/base) ensures glibc compatibility for solc binaries
 ARG TARGETARCH
 RUN <<-EOF
     #!/bin/bash
     set -e
 
+    # Determine the list.json URL and base download URL based on architecture
+    if [ "${TARGETARCH}" = "amd64" ]; then
+        LIST_URL="https://binaries.soliditylang.org/linux-amd64/list.json"
+        BASE_URL="https://binaries.soliditylang.org/linux-amd64"
+    elif [ "${TARGETARCH}" = "arm64" ]; then
+        LIST_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64/list.json"
+        BASE_URL="https://solc-linux-arm64-mirror.hardhat.org/linux/aarch64"
+    else
+        echo "Unsupported architecture: ${TARGETARCH}"
+        exit 1
+    fi
+
+    echo "Fetching solc version list from ${LIST_URL}"
+
+    # Download the list.json
+    curl -fL -o /tmp/solc-list.json "${LIST_URL}" || {
+        echo "Failed to download solc version list from ${LIST_URL}"
+        exit 1
+    }
+
     # Create svm directory structure
     mkdir -p /root/.svm
 
-    # Download and install each solc version from GitHub releases
+    # Download and install each solc version
     for version in 0.8.15 0.8.30 0.5.17; do
         VERSION_DIR="/root/.svm/${version}"
         mkdir -p "${VERSION_DIR}"
         SOLC_BINARY="${VERSION_DIR}/solc-${version}"
 
-        # Determine the GitHub release asset name based on architecture
-        if [ "${TARGETARCH}" = "amd64" ]; then
-            ASSET_NAME="solc-static-linux"
-        else
-            echo "Unsupported architecture: ${TARGETARCH}"
+        # Get the path from list.json
+        # For amd64: "solc-linux-amd64-v0.8.15+commit.e87f0b89"
+        # For arm64: "solc-v0.8.15"
+        SOLC_PATH=$(jq -r --arg v "${version}" '.releases[$v] // empty' /tmp/solc-list.json)
+
+        if [ -z "${SOLC_PATH}" ]; then
+            echo "Failed to find solc ${version} in list.json"
             exit 1
         fi
 
-        # Download from GitHub releases
-        SOLC_URL="https://github.com/ethereum/solidity/releases/download/v${version}/${ASSET_NAME}"
+        # Download from the appropriate base URL
+        SOLC_URL="${BASE_URL}/${SOLC_PATH}"
 
         echo "Downloading solc ${version} from ${SOLC_URL}"
         if ! curl -fL -o "${SOLC_BINARY}" "${SOLC_URL}"; then
@@ -91,6 +113,9 @@ RUN <<-EOF
             echo "Warning: solc ${version} binary may not be executable or compatible"
         fi
     done
+
+    # Clean up
+    rm -f /tmp/solc-list.json
 EOF
 
 # Build contracts before generating artifacts
