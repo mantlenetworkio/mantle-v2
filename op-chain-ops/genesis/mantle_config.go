@@ -164,7 +164,7 @@ func applyMantleGethOverrides(config *DeployConfig, genesis *core.Genesis, l1Sta
 	chainConfig.IsthmusTime = chainConfig.MantleArsiaTime
 	chainConfig.JovianTime = chainConfig.MantleArsiaTime
 
-	if chainConfig.MantleArsiaTime != nil {
+	if chainConfig.Optimism == nil {
 		chainConfig.Optimism = &params.OptimismConfig{
 			EIP1559Elasticity:  4,
 			EIP1559Denominator: 50,
