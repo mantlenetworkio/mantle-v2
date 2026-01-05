@@ -114,7 +114,8 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 			},
 		},
 		FaultProofDeployConfig: genesis.FaultProofDeployConfig{
-			UseFaultProofs:                  true,
+			//mantle not use
+			UseFaultProofs:                  false,
 			FaultGameWithdrawalDelay:        604800,
 			PreimageOracleMinProposalSize:   126000,
 			PreimageOracleChallengePeriod:   86400,

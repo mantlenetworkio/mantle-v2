@@ -256,6 +256,12 @@ func (s *L2Sequencer) ActBuildL2ToHolocene(t Testing) {
 	}
 }
 
+func (s *L2Sequencer) ActBuildL2ToArsia(t Testing) {
+	require.NotNil(t, s.RollupCfg.MantleArsiaTime, "cannot activate ArsiaTime when it is not scheduled")
+	for s.L2Unsafe().Time < *s.RollupCfg.MantleArsiaTime {
+		s.ActL2EmptyBlock(t)
+	}
+}
 func (s *L2Sequencer) ActBuildL2ToIsthmus(t Testing) {
 	require.NotNil(t, s.RollupCfg.IsthmusTime, "cannot activate IsthmusTime when it is not scheduled")
 	for s.L2Unsafe().Time < *s.RollupCfg.IsthmusTime {

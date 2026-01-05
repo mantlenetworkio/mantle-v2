@@ -1,11 +1,15 @@
 package genesis
 
 import (
+	"fmt"
+
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
+	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	op_service "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -197,4 +201,35 @@ func (d *DeployConfig) MantleRollupConfig(l1StartBlock *eth.BlockRef, l2GenesisB
 	}
 
 	return rollupConfig, nil
+}
+
+/////////////////////////////////////////////////////////////
+// Mantle fork activation helpers
+/////////////////////////////////////////////////////////////
+
+// ActivateMantleForkAtOffset activates the given Mantle fork at the given offset.
+// This is similar to ActivateForkAtOffset but for Mantle-specific forks.
+func (d *UpgradeScheduleDeployConfig) ActivateMantleForkAtOffset(fork rollup.MantleForkName, offset uint64) {
+	offsetPtr := (*hexutil.Uint64)(&offset)
+	switch fork {
+	case forks.MantleArsia:
+		d.L2GenesisMantleArsiaTimeOffset = offsetPtr
+	case forks.MantleLimb:
+		d.L2GenesisMantleLimbTimeOffset = offsetPtr
+	case forks.MantleSkadi:
+		d.L2GenesisMantleSkadiTimeOffset = offsetPtr
+	case forks.MantleEuboea:
+		d.L2GenesisMantleEuboeaTimeOffset = offsetPtr
+	case forks.MantleEverest:
+		d.L2GenesisMantleEverestTimeOffset = offsetPtr
+	case forks.MantleBaseFee:
+		d.L2GenesisMantleBaseFeeTimeOffset = offsetPtr
+	default:
+		panic(fmt.Sprintf("unsupported mantle fork: %s", fork))
+	}
+}
+
+// ActivateMantleForkAtGenesis activates the given Mantle fork at genesis.
+func (d *UpgradeScheduleDeployConfig) ActivateMantleForkAtGenesis(fork rollup.MantleForkName) {
+	d.ActivateMantleForkAtOffset(fork, 0)
 }

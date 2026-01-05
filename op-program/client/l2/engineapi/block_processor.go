@@ -116,12 +116,14 @@ func NewBlockProcessorFromHeader(provider BlockDataProvider, h *types.Header) (*
 	if provider.Config().IsPrague(header.Number, header.Time) {
 		core.ProcessParentBlockHash(header.ParentHash, vmenv)
 	}
-	if provider.Config().IsIsthmus(header.Time) {
-		// set the header withdrawals root for Isthmus blocks
+	// Mantle: Set withdrawals and requests hash for both Isthmus (OP Stack) and MantleSkadi (LIMB)
+	// In Mantle LIMB version, MantleSkadi provides similar functionality to Isthmus
+	if provider.Config().IsIsthmus(header.Time) || provider.Config().IsOptimismWithSkadi(header.Time) {
+		// set the header withdrawals root for Isthmus/Skadi blocks
 		mpHash := statedb.GetStorageRoot(predeploys.L2ToL1MessagePasserAddr)
 		header.WithdrawalsHash = &mpHash
 
-		// set the header requests root to empty hash for Isthmus blocks
+		// set the header requests root to empty hash for Isthmus/Skadi blocks
 		header.RequestsHash = &types.EmptyRequestsHash
 	}
 

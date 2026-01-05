@@ -78,6 +78,39 @@ func DefaultBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
 	}
 }
 
+func MantleDefaultBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		ForceSubmitSingularBatch: false,
+		BatcherKey:               dp.Secrets.Batcher,
+		DataAvailabilityType:     batcherFlags.CalldataType,
+		EnableCellProofs:         true,
+	}
+}
+
+func MantleSpanBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:          0,
+		MaxL1TxSize:          128_000,
+		ForceSubmitSpanBatch: true,
+		BatcherKey:           dp.Secrets.Batcher,
+		DataAvailabilityType: batcherFlags.CalldataType,
+		EnableCellProofs:     true,
+	}
+}
+
+func MantleSingularBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		ForceSubmitSingularBatch: true,
+		BatcherKey:               dp.Secrets.Batcher,
+		DataAvailabilityType:     batcherFlags.CalldataType,
+		EnableCellProofs:         true,
+	}
+}
+
 func AltDABatcherCfg(dp *e2eutils.DeployParams, altDA AltDAInputSetter) *BatcherCfg {
 	return &BatcherCfg{
 		MinL1TxSize:          0,
@@ -270,7 +303,28 @@ func (s *L2Batcher) Buffer(t Testing, bufferOpts ...BufferOption) error {
 		}
 	}
 
-	s.ActCreateChannel(t, s.rollupCfg.IsDelta(block.Time()), options.channelModifiers...)
+	// Determine batch type based on configuration flags.
+	// This mimics the real op-batcher behavior where batch type is determined by static configuration,
+	// not by dynamic fork activation status.
+	//
+	// Mantle Arsia fork note:
+	// In Mantle, Arsia fork activates Delta (SpanBatch support) along with other OP Stack forks.
+	// However, the batcher should still respect ForceSubmitSingularBatch flag to allow testing
+	// SingularBatch behavior even after Arsia activation, which is critical for batch equivalence tests.
+	//
+	// Priority:
+	// 1. If ForceSubmitSingularBatch is true, always use SingularBatch (even if Delta is active)
+	// 2. If ForceSubmitSpanBatch is true, always use SpanBatch
+	// 3. Otherwise, auto-select based on Delta activation status
+	useSpanChannelOut := false
+	if s.l2BatcherCfg.ForceSubmitSpanBatch {
+		useSpanChannelOut = true
+	} else if !s.l2BatcherCfg.ForceSubmitSingularBatch {
+		// Only auto-select based on Delta activation when no force flag is set
+		useSpanChannelOut = s.rollupCfg.IsDelta(block.Time())
+	}
+
+	s.ActCreateChannel(t, useSpanChannelOut, options.channelModifiers...)
 
 	if _, err := s.L2ChannelOut.AddBlock(s.rollupCfg, block); err != nil {
 		return err
@@ -540,9 +594,11 @@ func (s *L2Batcher) ActL2BatchSubmitGarbageRaw(t Testing, outputFrame []byte, ki
 func (s *L2Batcher) ActBufferAll(t Testing) {
 	stat, err := s.syncStatusAPI.SyncStatus(t.Ctx())
 	require.NoError(t, err)
+	s.log.Debug("ActBufferAll starting", "buffered", s.L2BufferedBlock.Number, "unsafe", stat.UnsafeL2.Number)
 	for s.L2BufferedBlock.Number < stat.UnsafeL2.Number {
 		s.ActL2BatchBuffer(t)
 	}
+	s.log.Debug("ActBufferAll finished", "buffered", s.L2BufferedBlock.Number, "channel_nil", s.L2ChannelOut == nil)
 }
 
 func (s *L2Batcher) ActSubmitAll(t Testing) {
