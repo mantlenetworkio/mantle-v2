@@ -79,11 +79,14 @@ func NewL2Genesis(config *DeployConfig, block *types.Block) (*core.Genesis, erro
 		optimismChainConfig.ProxyOwnerUpgradeTime = mantleUpgradeChainConfig.ProxyOwnerUpgradeTime
 		optimismChainConfig.MantleEverestTime = mantleUpgradeChainConfig.MantleEverestTime
 		optimismChainConfig.MantleSkadiTime = mantleUpgradeChainConfig.MantleSkadiTime
+		optimismChainConfig.MantleLimbTime = mantleUpgradeChainConfig.MantleLimbTime
 
 		// active standard EVM version (shanghai/cancun/prague)  in mantle skadi time
 		optimismChainConfig.ShanghaiTime = mantleUpgradeChainConfig.MantleSkadiTime
 		optimismChainConfig.CancunTime = mantleUpgradeChainConfig.MantleSkadiTime
 		optimismChainConfig.PragueTime = mantleUpgradeChainConfig.MantleSkadiTime
+		// active standard EVM version (osaka)  in mantle limb time
+		optimismChainConfig.OsakaTime = mantleUpgradeChainConfig.MantleLimbTime
 	}
 
 	gasLimit := config.L2GenesisBlockGasLimit
