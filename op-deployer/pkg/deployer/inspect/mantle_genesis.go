@@ -36,19 +36,16 @@ func MantleGenesisAndRollup(globalState *state.State, chainID common.Hash) (*cor
 		return nil, nil, fmt.Errorf("failed to combine L2 init config: %w", err)
 	}
 
-	// Normally we should use params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID)) to get the upgrade config,
-	// but that upgrade config is hard coded in geth repo. In order to make an in-memory env configurable, we use nil here.
-	l2GenesisBuilt, err := genesis.BuildMantleGenesis(&config, l2Allocs, chainState.StartBlock.ToBlockRef(), nil)
+	l2GenesisBuilt, err := genesis.BuildMantleGenesis(&config, l2Allocs, chainState.StartBlock.ToBlockRef())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build L2 genesis: %w", err)
 	}
 	l2GenesisBlock := l2GenesisBuilt.ToBlock()
 
-	// the same for rollup config, we use nil for the mantle upgrade config.
 	rollupConfig, err := config.MantleRollupConfig(
 		chainState.StartBlock.ToBlockRef(),
 		l2GenesisBlock.Hash(),
-		l2GenesisBlock.Number().Uint64(), nil)
+		l2GenesisBlock.Number().Uint64())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build rollup config: %w", err)
 	}

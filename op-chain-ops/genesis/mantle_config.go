@@ -98,14 +98,16 @@ func DefaultMantleHardforkSchedule() *UpgradeScheduleDeployConfig {
 /////////////////////////////////////////////////////////////
 
 // BuildMantleGenesis will build the mantle genesis block.
-func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1StartBlock *eth.BlockRef, overrides *params.MantleUpgradeChainConfig) (*core.Genesis, error) {
+func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1StartBlock *eth.BlockRef) (*core.Genesis, error) {
 	genesis, err := BuildL2Genesis(config, dump, l1StartBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply mantle geth overrides
-	applyMantleGethOverrides(config, genesis, l1StartBlock.Time, overrides)
+	fillInMantleForksIntoGenesis(config, genesis, l1StartBlock.Time)
+
+	// align the Ethereum forks with the Mantle forks
+	alignEthWithMantle(genesis)
 
 	if genesis.Config.IsMantleSkadi(genesis.Timestamp) {
 		genesis.BlobGasUsed = u64ptr(0)
@@ -121,41 +123,34 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 	return genesis, nil
 }
 
-// applyMantleGethOverrides applies the mantle geth overrides to the genesis config.
-// Ref: https://github.com/mantlenetworkio/op-geth/blob/13f718f59d4d523ea4edf4c5a0174423946e97db/core/genesis.go#L329-L352
-// Key differences:
-// - allow a non hard coded mantle upgradeconfig, to support custom mantle upgrade schedules
-func applyMantleGethOverrides(config *DeployConfig, genesis *core.Genesis, l1StartBlockTimestamp uint64, overrides *params.MantleUpgradeChainConfig) {
+// Avoid modifying BuildL2Genesis function directly
+func fillInMantleForksIntoGenesis(config *DeployConfig, genesis *core.Genesis, l1StartBlockTimestamp uint64) {
+	chainConfig := genesis.Config
+	chainConfig.BaseFeeTime = config.MantleBaseFeeTime(l1StartBlockTimestamp)
+	chainConfig.BVMETHMintUpgradeTime = config.MantleBVMETHMintUpgradeTime(l1StartBlockTimestamp)
+	chainConfig.MetaTxV2UpgradeTime = config.MantleMetaTxV2UpgradeTime(l1StartBlockTimestamp)
+	chainConfig.MetaTxV3UpgradeTime = config.MantleMetaTxV3UpgradeTime(l1StartBlockTimestamp)
+	chainConfig.ProxyOwnerUpgradeTime = config.MantleProxyOwnerUpgradeTime(l1StartBlockTimestamp)
+	chainConfig.MantleEverestTime = config.MantleEverestTime(l1StartBlockTimestamp)
+	chainConfig.MantleSkadiTime = config.MantleSkadiTime(l1StartBlockTimestamp)
+	chainConfig.MantleLimbTime = config.MantleLimbTime(l1StartBlockTimestamp)
+	chainConfig.MantleArsiaTime = config.MantleArsiaTime(l1StartBlockTimestamp)
+}
+
+// alignEthWithMantle aligns the Ethereum forks with the Mantle forks.
+// Optimism forks are aligned as well to avoid potential errors.
+func alignEthWithMantle(genesis *core.Genesis) {
 	chainConfig := genesis.Config
 
-	if overrides != nil {
-		chainConfig.BaseFeeTime = overrides.BaseFeeTime
-		chainConfig.BVMETHMintUpgradeTime = overrides.BVMETHMintUpgradeTime
-		chainConfig.MetaTxV2UpgradeTime = overrides.MetaTxV2UpgradeTime
-		chainConfig.MetaTxV3UpgradeTime = overrides.MetaTxV3UpgradeTime
-		chainConfig.ProxyOwnerUpgradeTime = overrides.ProxyOwnerUpgradeTime
-		chainConfig.MantleEverestTime = overrides.MantleEverestTime
-		chainConfig.MantleSkadiTime = overrides.MantleSkadiTime
-		chainConfig.MantleLimbTime = overrides.MantleLimbTime
-		chainConfig.MantleArsiaTime = overrides.MantleArsiaTime
-	} else {
-		chainConfig.BaseFeeTime = config.MantleBaseFeeTime(l1StartBlockTimestamp)
-		chainConfig.BVMETHMintUpgradeTime = config.MantleBVMETHMintUpgradeTime(l1StartBlockTimestamp)
-		chainConfig.MetaTxV2UpgradeTime = config.MantleMetaTxV2UpgradeTime(l1StartBlockTimestamp)
-		chainConfig.MetaTxV3UpgradeTime = config.MantleMetaTxV3UpgradeTime(l1StartBlockTimestamp)
-		chainConfig.ProxyOwnerUpgradeTime = config.MantleProxyOwnerUpgradeTime(l1StartBlockTimestamp)
-		chainConfig.MantleEverestTime = config.MantleEverestTime(l1StartBlockTimestamp)
-		chainConfig.MantleSkadiTime = config.MantleSkadiTime(l1StartBlockTimestamp)
-		chainConfig.MantleLimbTime = config.MantleLimbTime(l1StartBlockTimestamp)
-		chainConfig.MantleArsiaTime = config.MantleArsiaTime(l1StartBlockTimestamp)
-	}
-
+	// Skadi
 	chainConfig.ShanghaiTime = chainConfig.MantleSkadiTime
 	chainConfig.CancunTime = chainConfig.MantleSkadiTime
 	chainConfig.PragueTime = chainConfig.MantleSkadiTime
 
+	// Limb
 	chainConfig.OsakaTime = chainConfig.MantleLimbTime
 
+	// Arsia
 	chainConfig.CanyonTime = chainConfig.MantleArsiaTime
 	chainConfig.EcotoneTime = chainConfig.MantleArsiaTime
 	chainConfig.FjordTime = chainConfig.MantleArsiaTime
@@ -178,13 +173,15 @@ func applyMantleGethOverrides(config *DeployConfig, genesis *core.Genesis, l1Sta
 
 // MantleRollupConfig converts a DeployConfig to a rollup.Config. If Ecotone is active at genesis, the
 // Overhead value is considered a noop.
-func (d *DeployConfig) MantleRollupConfig(l1StartBlock *eth.BlockRef, l2GenesisBlockHash common.Hash, l2GenesisBlockNumber uint64, overrides *params.MantleUpgradeChainConfig) (*rollup.Config, error) {
+func (d *DeployConfig) MantleRollupConfig(l1StartBlock *eth.BlockRef, l2GenesisBlockHash common.Hash, l2GenesisBlockNumber uint64) (*rollup.Config, error) {
 	rollupConfig, err := d.RollupConfig(l1StartBlock, l2GenesisBlockHash, l2GenesisBlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := rollupConfig.ApplyMantleOverrides(overrides); err != nil {
+	fillInMantleForksIntoRollupConfig(d, rollupConfig, l1StartBlock.Time)
+
+	if err := rollupConfig.AlignOpWithMantle(); err != nil {
 		return nil, err
 	}
 
@@ -197,4 +194,14 @@ func (d *DeployConfig) MantleRollupConfig(l1StartBlock *eth.BlockRef, l2GenesisB
 	}
 
 	return rollupConfig, nil
+}
+
+// Avoid modifying RollupConfig function directly
+func fillInMantleForksIntoRollupConfig(config *DeployConfig, rollupConfig *rollup.Config, l1StartTime uint64) {
+	rollupConfig.MantleBaseFeeTime = config.MantleBaseFeeTime(l1StartTime)
+	rollupConfig.MantleEverestTime = config.MantleEverestTime(l1StartTime)
+	rollupConfig.MantleEuboeaTime = config.MantleEuboeaTime(l1StartTime)
+	rollupConfig.MantleSkadiTime = config.MantleSkadiTime(l1StartTime)
+	rollupConfig.MantleLimbTime = config.MantleLimbTime(l1StartTime)
+	rollupConfig.MantleArsiaTime = config.MantleArsiaTime(l1StartTime)
 }
