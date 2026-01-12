@@ -6,7 +6,6 @@ import (
 	op_service "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -185,12 +184,8 @@ func (d *DeployConfig) MantleRollupConfig(l1StartBlock *eth.BlockRef, l2GenesisB
 		return nil, err
 	}
 
-	// setup initial 1559 params in rollup system config
 	if d.L2GenesisMantleArsiaTimeOffset == nil {
 		rollupConfig.Genesis.SystemConfig.MarshalPreHolocene = true
-	}
-	if d.L2GenesisMantleArsiaTimeOffset != nil && *d.L2GenesisMantleArsiaTimeOffset == 0 {
-		rollupConfig.Genesis.SystemConfig.EIP1559Params = eth.Bytes8(eip1559.EncodeHolocene1559Params(d.EIP1559Denominator, d.EIP1559Elasticity))
 	}
 
 	return rollupConfig, nil
