@@ -442,8 +442,8 @@ func TestAlignOpWithMantle(t *testing.T) {
 		require.Nil(t, cfg.JovianTime)
 		// ChainOpConfig should be set with default values
 		require.NotNil(t, cfg.ChainOpConfig)
-		require.Equal(t, uint64(4), cfg.ChainOpConfig.EIP1559Elasticity)
-		require.Equal(t, uint64(50), cfg.ChainOpConfig.EIP1559Denominator)
+		require.Equal(t, uint64(2), cfg.ChainOpConfig.EIP1559Elasticity)
+		require.Equal(t, uint64(8), cfg.ChainOpConfig.EIP1559Denominator)
 		require.NotNil(t, cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 		require.Equal(t, cfg.ChainOpConfig.EIP1559Denominator, *cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 	})
@@ -527,8 +527,8 @@ func TestAlignOpWithMantle(t *testing.T) {
 
 		// Verify ChainOpConfig is set with default values
 		require.NotNil(t, cfg.ChainOpConfig)
-		require.Equal(t, uint64(4), cfg.ChainOpConfig.EIP1559Elasticity)
-		require.Equal(t, uint64(50), cfg.ChainOpConfig.EIP1559Denominator)
+		require.Equal(t, uint64(2), cfg.ChainOpConfig.EIP1559Elasticity)
+		require.Equal(t, uint64(8), cfg.ChainOpConfig.EIP1559Denominator)
 		require.NotNil(t, cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 		require.Equal(t, cfg.ChainOpConfig.EIP1559Denominator, *cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 	})
