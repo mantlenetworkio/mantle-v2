@@ -157,13 +157,6 @@ func alignEthWithMantle(genesis *core.Genesis) {
 	chainConfig.HoloceneTime = chainConfig.MantleArsiaTime
 	chainConfig.IsthmusTime = chainConfig.MantleArsiaTime
 	chainConfig.JovianTime = chainConfig.MantleArsiaTime
-
-	if chainConfig.Optimism == nil {
-		chainConfig.Optimism = &params.OptimismConfig{
-			EIP1559Elasticity:  4,
-			EIP1559Denominator: 50,
-		}
-	}
 }
 
 /////////////////////////////////////////////////////////////
