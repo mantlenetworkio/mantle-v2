@@ -164,10 +164,11 @@ func (c *Config) AlignOpWithMantle() error {
 	c.JovianTime = c.MantleArsiaTime
 
 	if c.ChainOpConfig == nil {
-		dCanyon := uint64(50)
+		dCanyon := uint64(8)
 		c.ChainOpConfig = &params.OptimismConfig{
-			EIP1559Elasticity:        4,
-			EIP1559Denominator:       50,
+			EIP1559Elasticity:  2,
+			EIP1559Denominator: 8,
+			// EIP1559DenominatorCanyon is used to translate a zero post-arsia 1559 param
 			EIP1559DenominatorCanyon: &dCanyon,
 		}
 	} else {
