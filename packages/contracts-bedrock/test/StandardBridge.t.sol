@@ -93,10 +93,7 @@ contract StandardBridge_Stateless_Test is CommonTest {
         bridge = new StandardBridgeTester({ _messenger: payable(address(0)), _otherBridge: payable(address(0)) });
 
         mintable = new OptimismMintableERC20({
-            _bridge: address(0),
-            _remoteToken: address(0),
-            _name: "Stonks",
-            _symbol: "STONK"
+            _bridge: address(0), _remoteToken: address(0), _name: "Stonks", _symbol: "STONK"
         });
 
         erc20 = new ERC20("Altcoin", "ALT");
@@ -109,7 +106,7 @@ contract StandardBridge_Stateless_Test is CommonTest {
      *         OptimismMintableERC20 tokens and false for any accounts that
      *         do not implement the interface.
      */
-    function test_isOptimismMintableERC20_succeeds() external {
+    function test_isOptimismMintableERC20_succeeds() external view {
         // Both the modern and legacy mintable tokens should return true
         assertTrue(bridge.isOptimismMintableERC20(address(mintable)));
         assertTrue(bridge.isOptimismMintableERC20(address(legacy)));

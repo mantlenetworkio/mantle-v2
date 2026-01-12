@@ -14,14 +14,14 @@ contract LegacyERC20MNT_Test is CommonTest {
         mnt = new LegacyERC20MNT(LocalConstants.L1_MNT);
     }
 
-    function test_metadata_succeeds() external {
+    function test_metadata_succeeds() external view {
         assertEq(mnt.name(), "Mantle Token");
         assertEq(mnt.symbol(), "MNT");
         assertEq(mnt.decimals(), 18);
     }
     //TODO : add the L1 MNT address for test. For now, it only support for local dev network constants.
 
-    function test_crossDomain_succeeds() external {
+    function test_crossDomain_succeeds() external view {
         assertEq(mnt.l2Bridge(), Predeploys.L2_STANDARD_BRIDGE);
         assertEq(mnt.l1Token(), LocalConstants.L1_MNT);
     }

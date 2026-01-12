@@ -12,7 +12,7 @@ contract DeployerWhitelist_Test is CommonTest {
     }
 
     // The owner should be address(0)
-    function test_owner_succeeds() external {
+    function test_owner_succeeds() external view {
         assertEq(list.owner(), address(0));
     }
 

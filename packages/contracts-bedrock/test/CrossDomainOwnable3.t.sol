@@ -35,7 +35,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
         setter = new XDomainSetter3();
     }
 
-    function test_constructor_succeeds() public {
+    function test_constructor_succeeds() public view {
         assertEq(setter.owner(), alice);
         assertEq(setter.isLocal(), true);
     }

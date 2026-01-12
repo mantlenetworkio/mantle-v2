@@ -7,11 +7,7 @@ variable "REPOSITORY" {
 }
 
 variable "KONA_VERSION" {
-  default = "1.2.0"
-}
-
-variable "ASTERISC_VERSION" {
-  default = "v1.3.0"
+  default = "none"
 }
 
 variable "GIT_COMMIT" {
@@ -149,7 +145,6 @@ target "op-challenger" {
     GIT_DATE = "${GIT_DATE}"
     OP_CHALLENGER_VERSION = "${OP_CHALLENGER_VERSION}"
     KONA_VERSION="${KONA_VERSION}"
-    ASTERISC_VERSION="${ASTERISC_VERSION}"
   }
   target = "op-challenger-target"
   platforms = split(",", PLATFORMS)

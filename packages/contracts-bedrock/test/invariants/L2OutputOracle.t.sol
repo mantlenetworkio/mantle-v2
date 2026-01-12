@@ -58,7 +58,7 @@ contract L2OutputOracle_MonotonicBlockNumIncrease_Invariant is L2OutputOracle_In
      * When a new output is submitted, it should never be allowed to correspond to a block
      * number that is less than the current output.
      */
-    function invariant_monotonicBlockNumIncrease() external {
+    function invariant_monotonicBlockNumIncrease() external view {
         // Assert that the block number of proposals must monotonically increase.
         assertTrue(oracle.nextBlockNumber() >= oracle.latestBlockNumber());
     }

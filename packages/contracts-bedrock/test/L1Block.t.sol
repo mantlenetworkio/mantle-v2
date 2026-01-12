@@ -50,23 +50,23 @@ contract L1BlockTest is CommonTest {
         assertEq(lb.l1FeeScalar(), fs);
     }
 
-    function test_number_succeeds() external {
+    function test_number_succeeds() external view {
         assertEq(lb.number(), uint64(1));
     }
 
-    function test_timestamp_succeeds() external {
+    function test_timestamp_succeeds() external view {
         assertEq(lb.timestamp(), uint64(2));
     }
 
-    function test_basefee_succeeds() external {
+    function test_basefee_succeeds() external view {
         assertEq(lb.basefee(), 3);
     }
 
-    function test_hash_succeeds() external {
+    function test_hash_succeeds() external view {
         assertEq(lb.hash(), NON_ZERO_HASH);
     }
 
-    function test_sequenceNumber_succeeds() external {
+    function test_sequenceNumber_succeeds() external view {
         assertEq(lb.sequenceNumber(), uint64(4));
     }
 

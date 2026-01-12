@@ -15,7 +15,7 @@ import { L1CrossDomainMessenger } from "src/L1/L1CrossDomainMessenger.sol";
 import { L1MantleToken } from "./mocks/TestMantleToken.sol";
 
 contract L1StandardBridge_Getter_Test is Bridge_Initializer {
-    function test_getters_succeeds() external {
+    function test_getters_succeeds() external view {
         assert(L1Bridge.l2TokenBridge() == address(L2Bridge));
         assert(L1Bridge.OTHER_BRIDGE() == L2Bridge);
         assert(L1Bridge.messenger() == L1Messenger);
@@ -25,7 +25,7 @@ contract L1StandardBridge_Getter_Test is Bridge_Initializer {
 }
 
 contract L1StandardBridge_Initialize_Test is Bridge_Initializer {
-    function test_initialize_succeeds() external {
+    function test_initialize_succeeds() external view {
         assertEq(address(L1Bridge.messenger()), address(L1Messenger));
 
         assertEq(address(L1Bridge.OTHER_BRIDGE()), Predeploys.L2_STANDARD_BRIDGE);

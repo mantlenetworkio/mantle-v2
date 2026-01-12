@@ -26,7 +26,7 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
     uint256 constant senderSlotIndex = 50;
 
     // the version is encoded in the nonce
-    function test_messageVersion_succeeds() external {
+    function test_messageVersion_succeeds() external view {
         (, uint16 version) = Encoding.decodeVersionedNonce(L1Messenger.messageNonce());
         assertEq(version, L1Messenger.MESSAGE_VERSION());
     }

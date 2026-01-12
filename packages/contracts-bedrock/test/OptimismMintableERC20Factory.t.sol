@@ -6,17 +6,13 @@ import { LibRLP } from "./RLP.t.sol";
 
 contract OptimismMintableTokenFactory_Test is Bridge_Initializer {
     event StandardL2TokenCreated(address indexed remoteToken, address indexed localToken);
-    event OptimismMintableERC20Created(
-        address indexed localToken,
-        address indexed remoteToken,
-        address deployer
-    );
+    event OptimismMintableERC20Created(address indexed localToken, address indexed remoteToken, address deployer);
 
     function setUp() public override {
         super.setUp();
     }
 
-    function test_bridge_succeeds() external {
+    function test_bridge_succeeds() external view {
         assertEq(address(L2TokenFactory.BRIDGE()), address(L2Bridge));
     }
 

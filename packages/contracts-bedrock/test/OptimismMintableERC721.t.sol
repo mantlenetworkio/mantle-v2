@@ -30,7 +30,7 @@ contract OptimismMintableERC721_Test is ERC721Bridge_Initializer {
         vm.label(address(L2Token), "L2ERC721Token");
     }
 
-    function test_constructor_succeeds() external {
+    function test_constructor_succeeds() external view {
         assertEq(L2Token.name(), "L2Token");
         assertEq(L2Token.symbol(), "L2T");
         assertEq(L2Token.remoteToken(), address(L1Token));
@@ -45,7 +45,7 @@ contract OptimismMintableERC721_Test is ERC721Bridge_Initializer {
     /**
      * @notice Ensure that the contract supports the expected interfaces.
      */
-    function test_supportsInterfaces_succeeds() external {
+    function test_supportsInterfaces_succeeds() external view {
         // Checks if the contract supports the IOptimismMintableERC721 interface.
         assertTrue(L2Token.supportsInterface(type(IOptimismMintableERC721).interfaceId));
         // Checks if the contract supports the IERC721Enumerable interface.
