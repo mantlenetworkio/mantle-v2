@@ -238,6 +238,7 @@ func NewRollupConfigFromCLI(log log.Logger, ctx cliiface.Context) (*rollup.Confi
 		return nil, err
 	}
 	applyOverrides(ctx, rollupConfig)
+	applyMantleOverrides(ctx, rollupConfig)
 	return rollupConfig, nil
 }
 

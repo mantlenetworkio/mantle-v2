@@ -418,11 +418,12 @@ func TestConfig_IsMantleForkActive(t *testing.T) {
 	}
 }
 
-// TestApplyMantleOverrides tests the ApplyMantleOverrides function.
-func TestApplyMantleOverrides(t *testing.T) {
-	t.Run("NoUpgradeConfig", func(t *testing.T) {
+// TestAlignOpWithMantle tests the AlignOpWithMantle function.
+func TestAlignOpWithMantle(t *testing.T) {
+	t.Run("NoMantleForks", func(t *testing.T) {
 		cfg := randConfig()
-		err := cfg.ApplyMantleOverrides(nil)
+		// All Mantle fork times are nil by default
+		err := cfg.AlignOpWithMantle()
 		require.NoError(t, err)
 		require.Nil(t, cfg.MantleBaseFeeTime)
 		require.Nil(t, cfg.MantleEverestTime)
@@ -439,40 +440,41 @@ func TestApplyMantleOverrides(t *testing.T) {
 		require.Nil(t, cfg.HoloceneTime)
 		require.Nil(t, cfg.IsthmusTime)
 		require.Nil(t, cfg.JovianTime)
-		// ChainOpConfig should still be set
+		// ChainOpConfig should be set with default values
 		require.NotNil(t, cfg.ChainOpConfig)
-		require.Equal(t, uint64(4), cfg.ChainOpConfig.EIP1559Elasticity)
-		require.Equal(t, uint64(50), cfg.ChainOpConfig.EIP1559Denominator)
+		require.Equal(t, uint64(2), cfg.ChainOpConfig.EIP1559Elasticity)
+		require.Equal(t, uint64(8), cfg.ChainOpConfig.EIP1559Denominator)
 		require.NotNil(t, cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 		require.Equal(t, cfg.ChainOpConfig.EIP1559Denominator, *cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 	})
 
-	t.Run("WithUpgradeConfig", func(t *testing.T) {
+	t.Run("WithMantleForks", func(t *testing.T) {
 		cfg := randConfig()
 		baseFeeTime := uint64(100)
 		everestTime := uint64(200)
+		euboeaTime := uint64(200) // Euboea uses Everest time
 		skadiTime := uint64(300)
 		limbTime := uint64(400)
 		arsiaTime := uint64(500)
 
-		upgradeConfig := &params.MantleUpgradeChainConfig{
-			BaseFeeTime:       &baseFeeTime,
-			MantleEverestTime: &everestTime,
-			MantleSkadiTime:   &skadiTime,
-			MantleLimbTime:    &limbTime,
-			MantleArsiaTime:   &arsiaTime,
-		}
+		// Set Mantle fork times directly on the config
+		cfg.MantleBaseFeeTime = &baseFeeTime
+		cfg.MantleEverestTime = &everestTime
+		cfg.MantleEuboeaTime = &euboeaTime
+		cfg.MantleSkadiTime = &skadiTime
+		cfg.MantleLimbTime = &limbTime
+		cfg.MantleArsiaTime = &arsiaTime
 
-		err := cfg.ApplyMantleOverrides(upgradeConfig)
+		err := cfg.AlignOpWithMantle()
 		require.NoError(t, err)
 
-		// Verify Mantle fork times are set correctly
+		// Verify Mantle fork times are unchanged
 		require.NotNil(t, cfg.MantleBaseFeeTime)
 		require.Equal(t, baseFeeTime, *cfg.MantleBaseFeeTime)
 		require.NotNil(t, cfg.MantleEverestTime)
 		require.Equal(t, everestTime, *cfg.MantleEverestTime)
 		require.NotNil(t, cfg.MantleEuboeaTime)
-		require.Equal(t, everestTime, *cfg.MantleEuboeaTime) // Euboea uses Everest time
+		require.Equal(t, euboeaTime, *cfg.MantleEuboeaTime)
 		require.NotNil(t, cfg.MantleSkadiTime)
 		require.Equal(t, skadiTime, *cfg.MantleSkadiTime)
 		require.NotNil(t, cfg.MantleLimbTime)
@@ -523,10 +525,10 @@ func TestApplyMantleOverrides(t *testing.T) {
 			require.False(t, cfg.IsMantleArsia(beforeTime), "MantleArsia should not be active before its activation time")
 		}
 
-		// Verify ChainOpConfig is set
+		// Verify ChainOpConfig is set with default values
 		require.NotNil(t, cfg.ChainOpConfig)
-		require.Equal(t, uint64(4), cfg.ChainOpConfig.EIP1559Elasticity)
-		require.Equal(t, uint64(50), cfg.ChainOpConfig.EIP1559Denominator)
+		require.Equal(t, uint64(2), cfg.ChainOpConfig.EIP1559Elasticity)
+		require.Equal(t, uint64(8), cfg.ChainOpConfig.EIP1559Denominator)
 		require.NotNil(t, cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 		require.Equal(t, cfg.ChainOpConfig.EIP1559Denominator, *cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 	})
@@ -538,21 +540,40 @@ func TestApplyMantleOverrides(t *testing.T) {
 			EIP1559Denominator: 100,
 		}
 
-		upgradeConfig := &params.MantleUpgradeChainConfig{
-			BaseFeeTime:       u64Ptr(0),
-			MantleEverestTime: u64Ptr(0),
-			MantleSkadiTime:   u64Ptr(0),
-			MantleLimbTime:    u64Ptr(0),
-			MantleArsiaTime:   u64Ptr(0),
-		}
+		// Set Mantle fork times
+		baseFeeTime := uint64(0)
+		everestTime := uint64(0)
+		euboeaTime := uint64(0)
+		skadiTime := uint64(0)
+		limbTime := uint64(0)
+		arsiaTime := uint64(0)
+		cfg.MantleBaseFeeTime = &baseFeeTime
+		cfg.MantleEverestTime = &everestTime
+		cfg.MantleEuboeaTime = &euboeaTime
+		cfg.MantleSkadiTime = &skadiTime
+		cfg.MantleLimbTime = &limbTime
+		cfg.MantleArsiaTime = &arsiaTime
 
-		err := cfg.ApplyMantleOverrides(upgradeConfig)
+		err := cfg.AlignOpWithMantle()
 		require.NoError(t, err)
 		// Should preserve existing config
 		require.Equal(t, uint64(8), cfg.ChainOpConfig.EIP1559Elasticity)
 		require.Equal(t, uint64(100), cfg.ChainOpConfig.EIP1559Denominator)
 		require.NotNil(t, cfg.ChainOpConfig.EIP1559DenominatorCanyon)
 		require.Equal(t, cfg.ChainOpConfig.EIP1559Denominator, *cfg.ChainOpConfig.EIP1559DenominatorCanyon)
+	})
+
+	t.Run("InvalidForkOrdering", func(t *testing.T) {
+		cfg := randConfig()
+		// Set forks in wrong order (Everest before BaseFee)
+		everestTime := uint64(100)
+		baseFeeTime := uint64(200)
+		cfg.MantleEverestTime = &everestTime
+		cfg.MantleBaseFeeTime = &baseFeeTime
+
+		err := cfg.AlignOpWithMantle()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "mantle fork MantleEverest set to 100, but prior fork MantleBaseFee has higher offset 200")
 	})
 
 }
