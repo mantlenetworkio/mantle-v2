@@ -118,9 +118,8 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 
-	if genesis.Config.IsMantleArsia(genesis.Timestamp) {
-		genesis.ExtraData = MinBaseFeeExtraData
-	}
+	// ExtraData is already set by NewL2Genesis based on config values
+	// Do not override it here with hardcoded MinBaseFeeExtraData
 
 	return genesis, nil
 }
@@ -214,6 +213,14 @@ func (d *UpgradeScheduleDeployConfig) ActivateMantleForkAtOffset(fork rollup.Man
 	switch fork {
 	case forks.MantleArsia:
 		d.L2GenesisMantleArsiaTimeOffset = offsetPtr
+		d.L2GenesisJovianTimeOffset = offsetPtr
+		d.L2GenesisIsthmusTimeOffset = offsetPtr
+		d.L2GenesisHoloceneTimeOffset = offsetPtr
+		d.L2GenesisGraniteTimeOffset = offsetPtr
+		d.L2GenesisFjordTimeOffset = offsetPtr
+		d.L2GenesisEcotoneTimeOffset = offsetPtr
+		d.L2GenesisDeltaTimeOffset = offsetPtr
+		d.L2GenesisCanyonTimeOffset = offsetPtr
 	case forks.MantleLimb:
 		d.L2GenesisMantleLimbTimeOffset = offsetPtr
 	case forks.MantleSkadi:

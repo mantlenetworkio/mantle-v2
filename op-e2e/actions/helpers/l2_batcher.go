@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"io"
 	"math/big"
+	"time"
 
 	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
@@ -17,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-batcher/batcher"
@@ -464,6 +466,211 @@ func (s *L2Batcher) ActL2BatchSubmitRaw(t Testing, payload []byte, txOpts ...fun
 	s.LastSubmitted = tx
 }
 
+// ActL2BatchSubmitMantleRaw submits a batch transaction to L1 using Mantle's blob encoding format.
+// For Mantle (before Arsia activation), it wraps the payload in an RLP-encoded frame array.
+// For Arsia and later, it uses the standard OP Stack format (single frame per blob).
+func (s *L2Batcher) ActL2BatchSubmitMantleRaw(t Testing, payload []byte, txOpts ...func(tx *types.DynamicFeeTx)) {
+	// Handle AltDA if enabled
+	if s.l2BatcherCfg.UseAltDA {
+		comm, err := s.l2BatcherCfg.AltDA.SetInput(t.Ctx(), payload)
+		require.NoError(t, err, "failed to set input for altda")
+		payload = comm.TxData()
+	}
+
+	// Get nonce and gas prices
+	nonce, err := s.l1.PendingNonceAt(t.Ctx(), s.BatcherAddr)
+	require.NoError(t, err, "need batcher nonce")
+
+	gasTipCap := big.NewInt(2 * params.GWei)
+	pendingHeader, err := s.l1.HeaderByNumber(t.Ctx(), big.NewInt(-1))
+	require.NoError(t, err, "need l1 pending header for gas price estimation")
+	gasFeeCap := new(big.Int).Add(gasTipCap, new(big.Int).Mul(pendingHeader.BaseFee, big.NewInt(2)))
+
+	var txData types.TxData
+	if s.l2BatcherCfg.DataAvailabilityType == batcherFlags.CalldataType {
+		// Calldata path
+		rawTx := &types.DynamicFeeTx{
+			ChainID:   s.rollupCfg.L1ChainID,
+			Nonce:     nonce,
+			To:        &s.rollupCfg.BatchInboxAddress,
+			GasTipCap: gasTipCap,
+			GasFeeCap: gasFeeCap,
+			Data:      payload,
+		}
+		for _, opt := range txOpts {
+			opt(rawTx)
+		}
+		gas, err := core.FloorDataGas(rawTx.Data)
+		require.NoError(t, err, "need to compute floor data gas")
+		rawTx.Gas = gas
+		txData = rawTx
+	} else if s.l2BatcherCfg.DataAvailabilityType == batcherFlags.BlobsType {
+		var blobs []*eth.Blob
+
+		// Check if we need RLP encoding (before Arsia activation)
+		// Use time.Now() to match the real batcher's behavior
+		if !s.rollupCfg.IsMantleArsia(uint64(time.Now().Unix())) {
+			// Before Arsia: Use Mantle's RLP-encoded frame array format
+			// payload is already [version_byte][frame_data]
+			// Wrap it in an array and RLP encode: RLP([[version_byte][frame_data]])
+			frameDataArray := []eth.Data{payload}
+			wholeBlobData, err := rlp.EncodeToBytes(frameDataArray)
+			require.NoError(t, err, "failed to RLP encode frame array for Mantle blob format")
+
+			// Convert RLP-encoded data to blob
+			var blob eth.Blob
+			require.NoError(t, blob.FromData(wholeBlobData), "must turn RLP-encoded data into blob")
+			blobs = []*eth.Blob{&blob}
+		} else {
+			// After Arsia: Use standard OP Stack format (single frame per blob)
+			var blob eth.Blob
+			require.NoError(t, blob.FromData(payload), "must turn data into blob")
+			blobs = []*eth.Blob{&blob}
+		}
+
+		// Create blob transaction
+		sidecar, blobHashes, err := txmgr.MakeSidecar(blobs, s.l2BatcherCfg.EnableCellProofs)
+		require.NoError(t, err)
+		require.NotNil(t, pendingHeader.ExcessBlobGas, "need L1 header with 4844 properties")
+		blobBaseFee, err := s.l1.BlobBaseFee(t.Ctx())
+		require.NoError(t, err, "need blob base fee")
+		blobFeeCap := new(uint256.Int).Mul(uint256.NewInt(2), uint256.MustFromBig(blobBaseFee))
+		if blobFeeCap.Lt(uint256.NewInt(params.GWei)) {
+			blobFeeCap = uint256.NewInt(params.GWei)
+		}
+		txData = &types.BlobTx{
+			To:         s.rollupCfg.BatchInboxAddress,
+			Data:       nil,
+			Gas:        params.TxGas,
+			BlobHashes: blobHashes,
+			Sidecar:    sidecar,
+			ChainID:    uint256.MustFromBig(s.rollupCfg.L1ChainID),
+			GasTipCap:  uint256.MustFromBig(gasTipCap),
+			GasFeeCap:  uint256.MustFromBig(gasFeeCap),
+			BlobFeeCap: blobFeeCap,
+			Value:      uint256.NewInt(0),
+			Nonce:      nonce,
+		}
+	} else {
+		t.Fatalf("unrecognized DA type: %q", string(s.l2BatcherCfg.DataAvailabilityType))
+	}
+
+	// Sign and send transaction
+	tx, err := types.SignNewTx(s.l2BatcherCfg.BatcherKey, s.l1Signer, txData)
+	require.NoError(t, err, "need to sign tx")
+
+	err = s.l1.SendTransaction(t.Ctx(), tx)
+	require.NoError(t, err, "need to send tx")
+	s.LastSubmitted = tx
+}
+
+// ActL2BatchSubmitMantle is a convenience wrapper that reads the next frame and submits it using Mantle encoding.
+func (s *L2Batcher) ActL2BatchSubmitMantle(t Testing, txOpts ...func(tx *types.DynamicFeeTx)) {
+	s.ActL2BatchSubmitMantleRaw(t, s.ReadNextOutputFrame(t), txOpts...)
+}
+
+// ActL2BatchSubmitMantleRawAtTime submits a batch transaction to L1 using Mantle's blob encoding format.
+// Unlike ActL2BatchSubmitMantleRaw which uses time.Now(), this method uses the provided l1BlockTime
+// to determine the correct format:
+// - Before Arsia activation: RLP-encoded frame array format (MantleBlobs)
+// - After Arsia activation: Standard OP Stack format (Blobs)
+//
+// This is essential for testing Arsia activation boundaries where the format must match
+// the data source selection logic which is based on L1 block time.
+func (s *L2Batcher) ActL2BatchSubmitMantleRawAtTime(t Testing, payload []byte, l1BlockTime uint64, txOpts ...func(tx *types.DynamicFeeTx)) {
+	// Handle AltDA if enabled
+	if s.l2BatcherCfg.UseAltDA {
+		comm, err := s.l2BatcherCfg.AltDA.SetInput(t.Ctx(), payload)
+		require.NoError(t, err, "failed to set input for altda")
+		payload = comm.TxData()
+	}
+
+	// Get nonce and gas prices
+	nonce, err := s.l1.PendingNonceAt(t.Ctx(), s.BatcherAddr)
+	require.NoError(t, err, "need batcher nonce")
+
+	gasTipCap := big.NewInt(2 * params.GWei)
+	pendingHeader, err := s.l1.HeaderByNumber(t.Ctx(), big.NewInt(-1))
+	require.NoError(t, err, "need l1 pending header for gas price estimation")
+	gasFeeCap := new(big.Int).Add(gasTipCap, new(big.Int).Mul(pendingHeader.BaseFee, big.NewInt(2)))
+
+	var txData types.TxData
+	if s.l2BatcherCfg.DataAvailabilityType == batcherFlags.CalldataType {
+		// Calldata path
+		rawTx := &types.DynamicFeeTx{
+			ChainID:   s.rollupCfg.L1ChainID,
+			Nonce:     nonce,
+			To:        &s.rollupCfg.BatchInboxAddress,
+			GasTipCap: gasTipCap,
+			GasFeeCap: gasFeeCap,
+			Data:      payload,
+		}
+		for _, opt := range txOpts {
+			opt(rawTx)
+		}
+		gas, err := core.FloorDataGas(rawTx.Data)
+		require.NoError(t, err, "need to compute floor data gas")
+		rawTx.Gas = gas
+		txData = rawTx
+	} else if s.l2BatcherCfg.DataAvailabilityType == batcherFlags.BlobsType {
+		var blobs []*eth.Blob
+
+		// Use the provided l1BlockTime to determine format (not time.Now())
+		// This ensures the batcher format matches the data source selection in derivation
+		if !s.rollupCfg.IsMantleArsia(l1BlockTime) {
+			// Before Arsia: Use Mantle's RLP-encoded frame array format
+			// payload is already [version_byte][frame_data]
+			// Wrap it in an array and RLP encode: RLP([[version_byte][frame_data]])
+			frameDataArray := []eth.Data{payload}
+			wholeBlobData, err := rlp.EncodeToBytes(frameDataArray)
+			require.NoError(t, err, "failed to RLP encode frame array for Mantle blob format")
+
+			// Convert RLP-encoded data to blob
+			var blob eth.Blob
+			require.NoError(t, blob.FromData(wholeBlobData), "must turn RLP-encoded data into blob")
+			blobs = []*eth.Blob{&blob}
+		} else {
+			// After Arsia: Use standard OP Stack format (single frame per blob)
+			var blob eth.Blob
+			require.NoError(t, blob.FromData(payload), "must turn data into blob")
+			blobs = []*eth.Blob{&blob}
+		}
+
+		// Create blob transaction
+		sidecar, blobHashes, err := txmgr.MakeSidecar(blobs, s.l2BatcherCfg.EnableCellProofs)
+		require.NoError(t, err)
+		require.NotNil(t, pendingHeader.ExcessBlobGas, "need L1 header with 4844 properties")
+		blobBaseFee, err := s.l1.BlobBaseFee(t.Ctx())
+		require.NoError(t, err, "need blob base fee")
+		blobFeeCap := new(uint256.Int).Mul(uint256.NewInt(2), uint256.MustFromBig(blobBaseFee))
+		if blobFeeCap.Lt(uint256.NewInt(params.GWei)) {
+			blobFeeCap = uint256.NewInt(params.GWei)
+		}
+		txData = &types.BlobTx{
+			To:         s.rollupCfg.BatchInboxAddress,
+			Data:       nil,
+			Gas:        params.TxGas,
+			BlobHashes: blobHashes,
+			Sidecar:    sidecar,
+			ChainID:    uint256.MustFromBig(s.rollupCfg.L1ChainID),
+			GasTipCap:  uint256.MustFromBig(gasTipCap),
+			GasFeeCap:  uint256.MustFromBig(gasFeeCap),
+			BlobFeeCap: blobFeeCap,
+			Value:      uint256.NewInt(0),
+			Nonce:      nonce,
+		}
+	} else {
+		t.Fatalf("unrecognized DA type: %q", string(s.l2BatcherCfg.DataAvailabilityType))
+	}
+
+	// Sign and send transaction
+	tx, err := types.SignNewTx(s.l2BatcherCfg.BatcherKey, s.l1Signer, txData)
+	require.NoError(t, err, "need to sign tx")
+
+	err = s.l1.SendTransaction(t.Ctx(), tx)
+	require.NoError(t, err, "need to send tx")
+	s.LastSubmitted = tx
+}
 func (s *L2Batcher) ActL2BatchSubmitMultiBlob(t Testing, numBlobs int) {
 	// Update to Prague if L1 changes to Prague and we need more blobs in multi-blob tests.
 	maxBlobsPerBlock := params.DefaultCancunBlobConfig.Max

@@ -278,3 +278,13 @@ func (s *L2Sequencer) ActBuildL2ToInterop(t Testing) {
 		s.ActL2EmptyBlock(t)
 	}
 }
+
+func (s *L2Sequencer) ActBuildL2ToMantleFork(t Testing, fork forks.MantleForkName) eth.L2BlockRef {
+	activationTime := s.RollupCfg.MantleActivationTime(fork)
+	require.NotNil(t, activationTime, "cannot activate %s when it is not scheduled", fork)
+
+	for !s.RollupCfg.IsMantleForkActive(fork, s.L2Unsafe().Time) {
+		s.ActL2EmptyBlock(t)
+	}
+	return s.L2Unsafe()
+}

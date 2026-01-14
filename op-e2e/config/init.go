@@ -732,11 +732,11 @@ func defaultMantleIntent(root string, loc *artifacts.Locator, deployer common.Ad
 							DisputeClockExtension:   0,
 							DisputeMaxClockDuration: 0,
 						},
-						VMType:                       state.VMTypeAlphabet,
-						UseCustomOracle:              true,
-						OracleMinProposalSize:        10000,
-						OracleChallengePeriodSeconds: 0,
-						MakeRespected:                true,
+						VMType: state.VMTypeAlphabet,
+						//UseCustomOracle:              true,
+						//OracleMinProposalSize:        10000,
+						//OracleChallengePeriodSeconds: 0,
+						MakeRespected: true,
 					},
 					{
 						ChainProofParams: state.ChainProofParams{
