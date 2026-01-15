@@ -2,71 +2,96 @@ package proofs
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ProgramAction_HoloceneFrames(gt *testing.T) {
+func Test_ProgramAction_ArsiaFrames(gt *testing.T) {
 	type testCase struct {
 		name   string
 		frames []uint
-		holoceneExpectations
+		arsiaExpectations
 	}
 
 	// An ordered list of frames to read from the channel and submit
-	// on L1. We expect a different progression of the safe head under Holocene
-	// derivation rules, compared with pre Holocene.
+	// on L1. We expect a different progression of the safe head under Arsia
+	// derivation rules, compared with pre Arsia.
 	testCases := []testCase{
 		// Standard frame submission,
 		{
 			name: "ordered", frames: []uint{0, 1, 2},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 3},
-				holocene:    expectations{safeHead: 3},
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 3},
+				arsia:    expectations{safeHead: 3},
 			},
 		},
 
 		// Non-standard frame submission
 		{
 			name: "disordered-a", frames: []uint{2, 1, 0},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
-				holocene:    expectations{safeHead: 0}, // non-first frames will be dropped b/c it is the first seen with that channel Id. The safe head won't move until the channel is closed/completed.
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
+				arsia:    expectations{safeHead: 0}, // non-first frames will be dropped b/c it is the first seen with that channel Id. The safe head won't move until the channel is closed/completed.
 			},
 		},
 		{
 			name: "disordered-b", frames: []uint{0, 1, 0, 2},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
-				holocene:    expectations{safeHead: 0}, // non-first frames will be dropped b/c it is the first seen with that channel Id. The safe head won't move until the channel is closed/completed.
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
+				arsia:    expectations{safeHead: 0}, // non-first frames will be dropped b/c it is the first seen with that channel Id. The safe head won't move until the channel is closed/completed.
 			},
 		},
 		{
 			name: "duplicates", frames: []uint{0, 1, 1, 2},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
-				holocene:    expectations{safeHead: 3}, // non-contiguous frames are dropped. So this reduces to case-0.
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 3}, // frames are buffered, so ordering does not matter
+				arsia:    expectations{safeHead: 3}, // non-contiguous frames are dropped. So this reduces to case-0.
 			},
 		},
 	}
 
-	runHoloceneDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
+	runArsiaDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
 		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg())
 
 		blocks := []uint{1, 2, 3}
 		targetHeadNumber := 3
+		nonce := uint64(0)
 		for env.Engine.L2Chain().CurrentBlock().Number.Uint64() < uint64(targetHeadNumber) {
+			// Get gas price parameters
+			latestHeader, err := env.Engine.EthClient().HeaderByNumber(t.Ctx(), nil)
+			require.NoError(t, err)
+			gasTipCap := big.NewInt(2 * params.GWei)
+			gasFeeCap := new(big.Int).Add(gasTipCap, new(big.Int).Mul(latestHeader.BaseFee, big.NewInt(2)))
+
+			// Send an L2 tx with fixed gas limit of 50000
+			toAddr := env.Dp.Addresses.Bob
+			tx := types.MustSignNewTx(env.Alice.L2.Secret(), env.Alice.L2.Signer(), &types.DynamicFeeTx{
+				ChainID:   env.Alice.L2.Signer().ChainID(),
+				Nonce:     nonce,
+				GasTipCap: gasTipCap,
+				GasFeeCap: gasFeeCap,
+				Gas:       50_000, // Manually set gas limit to avoid estimation
+				To:        &toAddr,
+				Value:     big.NewInt(0),
+				Data:      []byte{},
+			})
+
+			// Send transaction to tx pool
+			err = env.Engine.EthClient().SendTransaction(t.Ctx(), tx)
+			require.NoError(t, err, "must send tx")
+
+			// Include transaction in block
 			env.Sequencer.ActL2StartBlock(t)
-			// Send an L2 tx
-			env.Alice.L2.ActResetTxOpts(t)
-			env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)
-			env.Alice.L2.ActMakeTx(t)
 			env.Engine.ActL2IncludeTx(env.Alice.Address())(t)
 			env.Sequencer.ActL2EndBlock(t)
+			nonce++
 		}
 
 		// Build up a local list of frames
@@ -96,7 +121,7 @@ func Test_ProgramAction_HoloceneFrames(gt *testing.T) {
 
 		// Submit frames in specified order order
 		for _, j := range testCfg.Custom.frames {
-			env.Batcher.ActL2BatchSubmitRaw(t, orderedFrames[j])
+			env.Batcher.ActL2BatchSubmitMantleRaw(t, orderedFrames[j])
 			includeBatchTx()
 		}
 
@@ -106,8 +131,8 @@ func Test_ProgramAction_HoloceneFrames(gt *testing.T) {
 
 		l2SafeHead := env.Sequencer.L2Safe()
 
-		isHolocene := testCfg.Hardfork.Precedence >= helpers.Holocene.Precedence
-		testCfg.Custom.RequireExpectedProgressAndLogs(t, l2SafeHead, isHolocene, env.Engine, env.Logs)
+		isArsia := testCfg.Hardfork.Precedence >= helpers.MantleArsia.Precedence
+		testCfg.Custom.RequireExpectedProgressAndLogs(t, l2SafeHead, isArsia, env.Engine, env.Logs)
 		t.Log("Safe head progressed as expected", "l2SafeHeadNumber", l2SafeHead.Number)
 
 		//env.RunFaultProofProgramFromGenesis(t, l2SafeHead.Number, testCfg.CheckResult, testCfg.InputParams...)
@@ -120,19 +145,9 @@ func Test_ProgramAction_HoloceneFrames(gt *testing.T) {
 		matrix.AddTestCase(
 			fmt.Sprintf("HonestClaim-%s", ordering.name),
 			ordering,
-			helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLatestFork),
-			runHoloceneDerivationTest,
+			helpers.NewForkMatrix(helpers.MantleLimb, helpers.MantleArsia, helpers.MantleLatestFork),
+			runArsiaDerivationTest,
 			helpers.ExpectNoError(),
 		)
-		/*
-			matrix.AddTestCase(
-				fmt.Sprintf("JunkClaim-%s", ordering.name),
-				ordering,
-				helpers.NewForkMatrix(helpers.MantleArsia),
-				runHoloceneDerivationTest,
-				helpers.ExpectError(claim.ErrClaimNotValid),
-				helpers.WithL2Claim(common.HexToHash("0xdeadbeef")),
-			)
-		*/
 	}
 }

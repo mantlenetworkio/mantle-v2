@@ -39,23 +39,22 @@ var (
 
 var zeroHex64 = hexutil.Uint64(0)
 
-// Test_ProgramAction_IsthmusActivationAtGenesis tests the Isthmus activation at genesis.
-// It verifies that the Isthmus is active at genesis and that the genesis block
-// has the correct withdrawals root and requests hash. It runs the fault proof
-// program.
-func Test_ProgramAction_IsthmusActivationAtGenesis(gt *testing.T) {
+// Test_ProgramAction_ArsiaOrLimbActivationAtGenesis tests the ArsiaOrLimb activation at genesis.
+// It verifies that the ArsiaOrLimb is active at genesis and that the genesis block
+// has the correct withdrawals root and requests hash.
+func Test_ProgramAction_ArsiaOrLimbActivationAtGenesis(gt *testing.T) {
 	matrix := helpers.NewMatrix[any]()
 
 	matrix.AddDefaultTestCases(
 		nil,
-		helpers.MantleArsiaOnly(),
-		testIsthmusActivationAtGenesis,
+		helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLimb),
+		testArsiaOrLimbActivationAtGenesis,
 	)
 
 	matrix.Run(gt)
 }
 
-func testIsthmusActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]) {
+func testArsiaOrLimbActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {})
 	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
@@ -63,10 +62,15 @@ func testIsthmusActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]
 	// Start op-nodes
 	env.Sequencer.ActL2PipelineFull(t)
 
-	// Verify Isthmus is active at genesis
+	// Verify Arsia or Limb is active at genesis
 	l2Head := env.Sequencer.L2Unsafe()
 	require.NotZero(t, l2Head.Hash)
-	require.True(t, env.Sd.RollupCfg.IsMantleArsia(l2Head.Time), "MantleArsia should be active at genesis")
+	if testCfg.Hardfork.Name == helpers.MantleLimb.Name {
+		require.True(t, env.Sd.RollupCfg.IsMantleLimb(l2Head.Time), "MantleLimb should be active at genesis")
+
+	} else {
+		require.True(t, env.Sd.RollupCfg.IsMantleArsia(l2Head.Time), "MantleArsia should be active at genesis")
+	}
 
 	// build empty L1 block
 	env.Miner.ActEmptyBlock(t)
@@ -77,8 +81,8 @@ func testIsthmusActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]
 
 	// Make verifier (=sequencer) sync, then check the block
 	block := env.Engine.L2Chain().CurrentBlock()
-	verifyMantleArsiaHeaderWithdrawalsRoot(gt, env.Engine.RPCClient(), block, true)
-	require.Equal(t, types.EmptyRequestsHash, *block.RequestsHash, "isthmus block must have requests hash")
+	verifyMantleLimbHeaderWithdrawalsRoot(gt, env.Engine.RPCClient(), block, true)
+	require.Equal(t, types.EmptyRequestsHash, *block.RequestsHash, "Arsia Or Limb block must have requests hash")
 
 	// Check genesis config type can convert to a valid block
 	genesisBlock, err := env.Engine.EthClient().BlockByNumber(t.Ctx(), big.NewInt(0))
@@ -87,8 +91,8 @@ func testIsthmusActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]
 	require.Equal(t, genesisBlock.WithdrawalsRoot(), reproduced.WithdrawalsRoot(), "genesis.ToBlock withdrawals-hash must match as expected")
 	require.Equal(t, genesisBlock.Hash(), reproduced.Hash(), "genesis.ToBlock block hash must match")
 
-	require.Equal(t, types.EmptyRequestsHash, *genesisBlock.RequestsHash(), "isthmus retrieved genesis block must have a requests-hash")
-	require.Equal(t, types.EmptyRequestsHash, *reproduced.RequestsHash(), "isthmus generated genesis block have a requests-hash")
+	require.Equal(t, types.EmptyRequestsHash, *genesisBlock.RequestsHash(), "arsia or limb retrieved genesis block must have a requests-hash")
+	require.Equal(t, types.EmptyRequestsHash, *reproduced.RequestsHash(), "arsia or limb generated genesis block have a requests-hash")
 
 	// Check that the RPC client can handle block-hash verification of the genesis block
 	cfg := sources.EngineClientDefaultConfig(env.Sd.RollupCfg)
@@ -109,18 +113,18 @@ func testIsthmusActivationAtGenesis(gt *testing.T, testCfg *helpers.TestCfg[any]
 	//env.RunFaultProofProgramFromGenesis(t, safeBlock.Number, testCfg.CheckResult, testCfg.InputParams...)
 }
 
-// Test_ProgramAction_IsthmusWithdrawalsRoot tests the withdrawals root in the header:
-// - post canyon but pre Isthmus
-// - post Isthmus
+// Test_ProgramAction_ArsiaOrLimbWithdrawalsRoot tests the withdrawals root in the header:
+// - post canyon but pre Arsia or Limb
+// - post Arsia Or Limb
 // We do not include pre canyon behaviour (nil withdrawals root) since Canyon does not support Cancun L1.
 // It does this by activating the relevant forks at genesis.
 // It runs the fault proof program.
-func Test_ProgramAction_IsthmusWithdrawalsRoot(gt *testing.T) {
+func Test_ProgramAction_ArsiaOrLimbWithdrawalsRoot(gt *testing.T) {
 	matrix := helpers.NewMatrix[any]()
 
 	matrix.AddDefaultTestCases(
 		nil,
-		helpers.NewForkMatrix(helpers.MantleArsia),
+		helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLimb),
 		testWithdrawalsRoot,
 	)
 
@@ -146,6 +150,7 @@ func testWithdrawalsRoot(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	l2opts, err := bind.NewKeyedTransactorWithChainID(env.Alice.L2.Secret(), new(big.Int).SetUint64(env.Dp.DeployConfig.L2ChainID))
 	require.Nil(t, err)
 	l2opts.Value = big.NewInt(500)
+	l2opts.GasLimit = 100000
 
 	_, err = l2withdrawer.Receive(l2opts)
 	require.Nil(t, err)
@@ -154,25 +159,22 @@ func testWithdrawalsRoot(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	sequencer.ActL2EmptyBlock(t)
 	sequencer.ActL2EmptyBlock(t)
 
-	if sequencer.RollupCfg.IsIsthmus(engine.L2Chain().CurrentBlock().Time) {
-		verifyMantleArsiaHeaderWithdrawalsRoot(gt, engine.RPCClient(), engine.L2Chain().CurrentBlock(), true)
+	if sequencer.RollupCfg.IsMantleLimb(engine.L2Chain().CurrentBlock().Time) {
+		verifyMantleLimbHeaderWithdrawalsRoot(gt, engine.RPCClient(), engine.L2Chain().CurrentBlock(), true)
 	} else {
-		verifyPreMantleArsiaHeaderWithdrawalsRoot(gt, engine.L2Chain().CurrentBlock())
+		verifyPreMantleLimbHeaderWithdrawalsRoot(gt, engine.L2Chain().CurrentBlock())
 	}
-
-	//l2Safe := env.BatchMineAndSync(t)
-	//env.RunFaultProofProgramFromGenesis(t, l2Safe.Number, testCfg.CheckResult, testCfg.InputParams...)
 }
 
-// Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus tests the withdrawals root
-// - before isthmus
-// - at isthmus
-// - after isthmus
+// Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterArsia tests the withdrawals root
+// - before Arsia
+// - at Arsia
+// - after Arsia
 // each time with and without a withdrawal transaction.
 // It verifies that the withdrawals root is set correctly in the header
 // and that the withdrawal transaction is included in the block.
 // It runs the fault proof program.
-func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
+func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterArsiaOrLimb(gt *testing.T) {
 
 	type testCase struct {
 		name              string
@@ -181,17 +183,22 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
 		totalBlocks       int
 	}
 
-	isthmusOffset := 2
+	timeOffset := 2
 
-	testWithdrawalsRootIsthmus := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
+	testWithdrawalsRootArsia := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
 		tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {})
-		var setIsthmusTime = func(dc *genesis.DeployConfig) {
-			two := hexutil.Uint64(isthmusOffset)
-			dc.L2GenesisMantleArsiaTimeOffset = &two
+
+		var setTime = func(dc *genesis.DeployConfig) {
+			two := hexutil.Uint64(timeOffset)
+			if testCfg.Hardfork.Name == helpers.MantleLimb.Name {
+				dc.L2GenesisMantleLimbTimeOffset = &two
+			} else {
+				dc.L2GenesisMantleArsiaTimeOffset = &two
+			}
 			dc.L1PragueTimeOffset = &zeroHex64
 		}
-		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), setIsthmusTime)
+		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), setTime)
 		withdrawalTx, withdrawalTxBlock, totalBlocks := testCfg.Custom.withdrawalTx, testCfg.Custom.withdrawalTxBlock, testCfg.Custom.totalBlocks
 		log := testlog.Logger(t, log.LvlDebug)
 		require.NoError(t, env.Dp.DeployConfig.Check(log), "must have valid config")
@@ -203,7 +210,7 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
 
 		// Genesis block inherits Skadi's withdrawals root behavior
 		// So we need to verify it uses L2ToL1MessagePasser storage root
-		verifyMantleArsiaHeaderWithdrawalsRoot(gt, engine.RPCClient(), engine.L2Chain().CurrentBlock(), true)
+		verifyMantleLimbHeaderWithdrawalsRoot(gt, engine.RPCClient(), engine.L2Chain().CurrentBlock(), true)
 
 		ethCl := engine.EthClient()
 		for i := 1; i <= totalBlocks; i++ {
@@ -239,9 +246,9 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
 		}
 		rpcCl := engine.RPCClient()
 
-		// we set withdrawals root only at or after isthmus
-		if totalBlocks >= isthmusOffset {
-			verifyMantleArsiaHeaderWithdrawalsRoot(gt, rpcCl, engine.L2Chain().CurrentBlock(), true)
+		// we set withdrawals root only at or after Arsia
+		if totalBlocks >= timeOffset {
+			verifyMantleLimbHeaderWithdrawalsRoot(gt, rpcCl, engine.L2Chain().CurrentBlock(), true)
 		}
 
 		//l2Safe := env.BatchMineAndSync(t)
@@ -249,13 +256,13 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
 	}
 
 	tests := []testCase{
-		{"BeforeIsthmusWithoutWithdrawalTx", false, 0, 1},
-		{"BeforeIsthmusWithWithdrawalTx", true, 1, 1},
-		{"AtIsthmusWithoutWithdrawalTx", false, 0, 2},
+		{"BeforeArsiaWithoutWithdrawalTx", false, 0, 1},
+		{"BeforeArsiaWithWithdrawalTx", true, 1, 1},
+		{"AtArsiaWithoutWithdrawalTx", false, 0, 2},
 		//Jovian activation blocks cannot contain user transactions; Arsia contains Jovian.
 		//{"AtIsthmusWithWithdrawalTx", true, 2, 2},
-		{"AfterIsthmusWithoutWithdrawalTx", false, 0, 3},
-		{"AfterIsthmusWithWithdrawalTx", true, 3, 3},
+		{"AfterArsiaWithoutWithdrawalTx", false, 0, 3},
+		{"AfterArsiaWithWithdrawalTx", true, 3, 3},
 	}
 
 	matrix := helpers.NewMatrix[testCase]()
@@ -264,19 +271,19 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterIsthmus(gt *testing.T) {
 		matrix.AddDefaultTestCasesWithName(
 			test.name,
 			test,
-			helpers.NewForkMatrix(helpers.MantleArsia),
-			testWithdrawalsRootIsthmus,
+			helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLimb),
+			testWithdrawalsRootArsia,
 		)
 	}
 	matrix.Run(gt)
 }
 
 // Post-Canyon, the withdrawals root field in the header should be EmptyWithdrawalsHash
-func verifyPreMantleArsiaHeaderWithdrawalsRoot(gt *testing.T, header *types.Header) {
+func verifyPreMantleLimbHeaderWithdrawalsRoot(gt *testing.T, header *types.Header) {
 	require.Equal(gt, types.EmptyWithdrawalsHash, *header.WithdrawalsHash)
 }
 
-func verifyMantleArsiaHeaderWithdrawalsRoot(gt *testing.T, rpcCl client.RPC, header *types.Header, l2toL1MPPresent bool) {
+func verifyMantleLimbHeaderWithdrawalsRoot(gt *testing.T, rpcCl client.RPC, header *types.Header, l2toL1MPPresent bool) {
 	getStorageRoot := func(rpcCl client.RPC, ctx context.Context, address common.Address, blockTag string) common.Hash {
 		var getProofResponse *eth.AccountResult
 		err := rpcCl.CallContext(ctx, &getProofResponse, "eth_getProof", address, []common.Hash{}, blockTag)
@@ -303,33 +310,32 @@ func checkContractVersion(gt *testing.T, client *ethclient.Client, addr common.A
 	require.Equal(gt, expectedVersion, version)
 }
 
-func Test_ProgramAction_IsthmusNetworkUpgradeTransactions(gt *testing.T) {
+func Test_ProgramAction_ArsiaNetworkUpgradeTransactions(gt *testing.T) {
 	matrix := helpers.NewMatrix[any]()
 
 	matrix.AddDefaultTestCases(
 		nil,
 		helpers.ForkMatrix{helpers.MantleArsia},
-		testIsthmusNetworkUpgradeTransactions,
+		testArsiaNetworkUpgradeTransactions,
 	)
 
 	matrix.Run(gt)
 }
 
-// TestIsthmusNetworkUpgradeTransactions tests the Isthmus network upgrade transactions.
-// It verifies that the Isthmus upgrade transactions are created correctly
+// TestArsiaNetworkUpgradeTransactions tests the Arsia network upgrade transactions.
+// It verifies that the Arsia upgrade transactions are created correctly
 // and that the L1Block and GasPriceOracle contracts are updated with the correct code hashes.
-// It also checks that the Isthmus upgrade transactions are successful and
-// that the Isthmus network upgrade is activated.
-// It runs the fault proof program.
-func testIsthmusNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestCfg[any]) {
+// It also checks that the Arsia upgrade transactions are successful and
+// that the Arsia network upgrade is activated.
+func testArsiaNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
-	var setIsthmusTime = func(dc *genesis.DeployConfig) {
+	var setArsiaTime = func(dc *genesis.DeployConfig) {
 		two := hexutil.Uint64(2)
 		dc.L2GenesisMantleArsiaTimeOffset = &two
 		dc.L1PragueTimeOffset = &zeroHex64
 	}
 	tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {})
-	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), setIsthmusTime)
+	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), setArsiaTime)
 
 	log := testlog.Logger(t, log.LvlDebug)
 
@@ -355,7 +361,7 @@ func testIsthmusNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestC
 	initialGasPriceOracleAddress, err := ethCl.StorageAt(context.Background(), predeploys.GasPriceOracleAddr, genesis.ImplementationSlot, nil)
 	require.NoError(t, err)
 
-	// Build to the isthmus block
+	// Build to the Arsia block
 	sequencer.ActBuildL2ToArsia(t)
 
 	// get latest block
@@ -366,7 +372,7 @@ func testIsthmusNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestC
 	transactions := latestBlock.Transactions()
 
 	// L1Block: 1 set-L1-info + 1 deploy
-	// See [derive.IsthmusNetworkUpgradeTransactions]
+	// See [derive.ArsiaNetworkUpgradeTransactions]
 	require.Equal(t, 8, len(transactions))
 
 	// All transactions are successful
@@ -396,7 +402,7 @@ func testIsthmusNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestC
 	require.NotEqualf(t, initialGasPriceOracleAddress, updatedGasPriceOracleAddress, "Gas Price Oracle Proxy address should have changed")
 	verifyCodeHashMatches(t, ethCl, expectedGasPriceOracleAddress, arsiaGasPriceOracleCodeHash)
 
-	// Check that Isthmus was activated
+	// Check that Arsia was activated
 	isArsia, err := gasPriceOracle.IsArsia(nil)
 	require.NoError(t, err)
 	require.True(t, isArsia)
@@ -432,12 +438,12 @@ func testIsthmusNetworkUpgradeTransactions(gt *testing.T, testCfg *helpers.TestC
 
 	// Legacy check:
 	// > The first block is an exception in upgrade-networks,
-	// > since the recent-block-hash contract isn't there at Isthmus activation,
+	// > since the recent-block-hash contract isn't there at Arsia activation,
 	// > and the recent-block-hash insertion is processed at the start of the block before deposit txs.
 	// > If the contract was permissionlessly deployed before, the contract storage will be updated (but not in this test).
-	checkRecentBlockHash(latestBlock.NumberU64(), common.Hash{}, "isthmus activation block has no data yet (since contract wasn't there)")
+	checkRecentBlockHash(latestBlock.NumberU64(), common.Hash{}, "Arsia activation block has no data yet (since contract wasn't there)")
 
-	// Build empty L2 block, to pass Isthmus activation
+	// Build empty L2 block, to pass Arsia activation
 	sequencer.ActL2StartBlock(t)
 	sequencer.ActL2EndBlock(t)
 

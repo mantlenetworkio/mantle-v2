@@ -49,7 +49,6 @@ func NewL2ProofEnv[c any](t helpers.Testing, testCfg *TestCfg[c], tp *e2eutils.T
 			t.Fatalf("HF not set")
 		}
 		dp.DeployConfig.ActivateMantleForkAtOffset(rollup.MantleForkName(testCfg.Hardfork.Name), 0)
-
 		for _, override := range deployConfigOverrides {
 			override(dp.DeployConfig)
 		}

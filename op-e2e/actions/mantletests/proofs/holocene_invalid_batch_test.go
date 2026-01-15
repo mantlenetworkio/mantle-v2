@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
+func Test_ProgramAction_ArsiaInvalidBatch(gt *testing.T) {
 	type testCase struct {
 		name                    string
 		blocks                  []uint // An ordered list of blocks (by number) to add to a single channel.
@@ -21,7 +21,7 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 		blockModifiers          []actionsHelpers.BlockModifier
 		breachMaxSequencerDrift bool
 		overAdvanceL1Origin     int // block number at which to over-advance
-		holoceneExpectations
+		arsiaExpectations
 	}
 
 	// invalidPayload invalidates the signature for the second transaction in the block.
@@ -54,26 +54,26 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 
 	// Depending on the blocks list, whether the channel is built as
 	// as span batch channel, and whether the blocks are modified / invalidated
-	// we expect a different progression of the safe head under Holocene
-	// derivation rules, compared with pre Holocene.
+	// we expect a different progression of the safe head under Arsia
+	// derivation rules, compared with pre Arsia.
 	testCases := []testCase{
 		// Standard frame submission, standard channel composition
 		{
 			name: "valid", blocks: []uint{1, 2, 3},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 3}, holocene: expectations{safeHead: 3},
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 3}, arsia: expectations{safeHead: 3},
 			},
 		},
 
 		{
-			name: "invalid-payload", blocks: []uint{1, 2, 3}, blockModifiers: []actionsHelpers.BlockModifier{nil, invalidPayload, nil},
+			name: "invalid-payload-singular", blocks: []uint{1, 2, 3}, blockModifiers: []actionsHelpers.BlockModifier{nil, invalidPayload, nil},
 			useSpanBatch: false,
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
 					safeHead: 1, // Invalid signature in block 2 causes an invalid _payload_ in the engine queue. Entire span batch is invalidated.
 					logs:     sequencerOnce("could not process payload attributes"),
 				},
-				holocene: expectations{
+				arsia: expectations{
 					safeHead: 2, // We expect the safe head to move to 2 due to creation of a deposit-only block.
 					logs: append(
 						sequencerOnce("Holocene active, requesting deposits-only attributes"),
@@ -85,13 +85,13 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 		{
 			name: "invalid-payload-span", blocks: []uint{1, 2, 3}, blockModifiers: []actionsHelpers.BlockModifier{nil, invalidPayload, nil},
 			useSpanBatch: true,
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
 					safeHead: 0, // Invalid signature in block 2 causes an invalid _payload_ in the engine queue. Entire span batch is invalidated.
 					logs:     sequencerOnce("could not process payload attributes"),
 				},
 
-				holocene: expectations{
+				arsia: expectations{
 					safeHead: 2, // We expect the safe head to move to 2 due to creation of an deposit-only block.
 					logs:     sequencerOnce("could not process payload attributes"),
 				},
@@ -100,10 +100,10 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 
 		{
 			name: "invalid-parent-hash", blocks: []uint{1, 2, 3}, blockModifiers: []actionsHelpers.BlockModifier{nil, invalidParentHash, nil},
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{safeHead: 1, // Invalid parentHash in block 2 causes an invalid batch to be dropped.
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{safeHead: 1, // Invalid parentHash in block 2 causes an invalid batch to be dropped.
 					logs: sequencerOnce("ignoring batch with mismatching parent hash")},
-				holocene: expectations{safeHead: 1, // Same with Holocene.
+				arsia: expectations{safeHead: 1, // Same with Holocene.
 					logs: sequencerOnce("Dropping invalid singular batch, flushing channel")},
 			},
 		},
@@ -111,12 +111,26 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 			name: "seq-drift-span", blocks: twoThousandBlocks, // if we artificially stall the l1 origin, this should be enough to trigger violation of the max sequencer drift
 			useSpanBatch:            true,
 			breachMaxSequencerDrift: true,
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
 					safeHead: 0, // Entire span batch invalidated.
 					logs:     sequencerOnce("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again"),
 				},
-				holocene: expectations{
+				arsia: expectations{
+					safeHead: 1800, // We expect partial validity until we hit sequencer drift.
+					logs:     sequencerOnce("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again"),
+				},
+			},
+		},
+		{
+			name: "seq-drift-singular", blocks: twoThousandBlocks, // if we artificially stall the l1 origin, this should be enough to trigger violation of the max sequencer drift
+			breachMaxSequencerDrift: true,
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
+					safeHead: 40, // Entire singular batch invalidated.
+					logs:     sequencerOnce("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again"),
+				},
+				arsia: expectations{
 					safeHead: 1800, // We expect partial validity until we hit sequencer drift.
 					logs:     sequencerOnce("batch exceeded sequencer time drift, sequencer must adopt new L1 origin to include transactions again"),
 				},
@@ -127,20 +141,35 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 			blocks:              []uint{1, 2, 3, 4},
 			useSpanBatch:        true,
 			overAdvanceL1Origin: 3, // this will over-advance the L1 origin of block 3
-			holoceneExpectations: holoceneExpectations{
-				preHolocene: expectations{
-					safeHead: 0, // Entire span batch invalidated.
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
+					safeHead: 0, // Entire singular batch invalidated.
 					logs:     sequencerOnce("block timestamp is less than L1 origin timestamp"),
 				},
-				holocene: expectations{
+				arsia: expectations{
 					safeHead: 2, // We expect partial validity, safe head should move to block 2, dropping invalid block 3 and remaining channel.
+					logs:     sequencerOnce("batch timestamp is less than L1 origin timestamp"),
+				},
+			},
+		},
+		{
+			name:                "future-l1-origin-singular",
+			blocks:              []uint{1, 2, 3, 4},
+			overAdvanceL1Origin: 3, // this will over-advance the L1 origin of block 3
+			arsiaExpectations: arsiaExpectations{
+				preArsia: expectations{
+					safeHead: 2, // Entire singular batch invalidated.
+					logs:     sequencerOnce("batch timestamp is less than L1 origin timestamp"),
+				},
+				arsia: expectations{
+					safeHead: 2,
 					logs:     sequencerOnce("batch timestamp is less than L1 origin timestamp"),
 				},
 			},
 		},
 	}
 
-	runHoloceneDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
+	runArsiaDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
 		tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {
 			// Set the channel timeout to 10 blocks, 12x lower than the sequencing window.
@@ -148,7 +177,10 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 		})
 
 		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
-
+		t.Logf("Test: %s, SpanBatch: %v, BreachDrift: %v",
+			testCfg.Custom.name,
+			testCfg.Custom.useSpanBatch,
+			testCfg.Custom.breachMaxSequencerDrift)
 		includeBatchTx := func() {
 			// Include the last transaction submitted by the batcher.
 			env.Miner.ActL1StartBlock(12)(t)
@@ -200,7 +232,10 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 			if testCfg.Custom.breachMaxSequencerDrift &&
 				parentNum == 1799 ||
 				parentNum == 1800 ||
-				parentNum == 1801 {
+				parentNum == 1801 ||
+				parentNum == 39 ||
+				parentNum == 40 ||
+				parentNum == 41 {
 				// Send an L2 tx and force sequencer to include it
 				env.Alice.L2.ActResetTxOpts(t)
 				env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)(t)
@@ -224,7 +259,7 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 		env.Batcher.ActL2ChannelClose(t)
 		frame := env.Batcher.ReadNextOutputFrame(t)
 		require.NotEmpty(t, frame)
-		env.Batcher.ActL2BatchSubmitRaw(t, frame)
+		env.Batcher.ActL2BatchSubmitMantleRaw(t, frame)
 		includeBatchTx()
 
 		// Instruct the sequencer to derive the L2 chain from the data on L1 that the batcher just posted.
@@ -233,8 +268,8 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 
 		l2SafeHead := env.Sequencer.L2Safe()
 
-		isHolocene := testCfg.Hardfork.Precedence >= helpers.Holocene.Precedence
-		testCfg.Custom.RequireExpectedProgressAndLogs(t, l2SafeHead, isHolocene, env.Engine, env.Logs)
+		isArsia := testCfg.Hardfork.Precedence >= helpers.MantleArsia.Precedence
+		testCfg.Custom.RequireExpectedProgressAndLogs(t, l2SafeHead, isArsia, env.Engine, env.Logs)
 		t.Log("Safe head progressed as expected", "l2SafeHeadNumber", l2SafeHead.Number)
 
 		// if safeHeadNumber := l2SafeHead.Number; safeHeadNumber > 0 {
@@ -246,22 +281,25 @@ func Test_ProgramAction_HoloceneInvalidBatch(gt *testing.T) {
 	defer matrix.Run(gt)
 
 	for _, ordering := range testCases {
-		matrix.AddTestCase(
-			fmt.Sprintf("HonestClaim-%s", ordering.name),
-			ordering,
-			helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLatestFork),
-			runHoloceneDerivationTest,
-			helpers.ExpectNoError(),
-		)
-		/*
+
+		if ordering.useSpanBatch {
+			// Span Batch after Arsia
 			matrix.AddTestCase(
-				fmt.Sprintf("JunkClaim-%s", ordering.name),
+				fmt.Sprintf("HonestClaim-%s", ordering.name),
 				ordering,
-				helpers.NewForkMatrix(helpers.MantleArsia),
-				runHoloceneDerivationTest,
-				helpers.ExpectError(claim.ErrClaimNotValid),
-				helpers.WithL2Claim(common.HexToHash("0xdeadbeef")),
+				helpers.NewForkMatrix(helpers.MantleArsia, helpers.MantleLatestFork),
+				runArsiaDerivationTest,
+				helpers.ExpectNoError(),
 			)
-		*/
+		} else {
+			// Singular Batch can be tested on Limb and Arsia
+			matrix.AddTestCase(
+				fmt.Sprintf("HonestClaim-%s", ordering.name),
+				ordering,
+				helpers.NewForkMatrix(helpers.MantleLimb, helpers.MantleArsia, helpers.MantleLatestFork),
+				runArsiaDerivationTest,
+				helpers.ExpectNoError(),
+			)
+		}
 	}
 }

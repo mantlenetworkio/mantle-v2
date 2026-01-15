@@ -140,10 +140,6 @@ func runSetCodeTxTypeTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	env.Sequencer.ActL1HeadSignal(t)
 	env.Sequencer.ActL2PipelineFull(t)
 
-	// latestBlock, err := cl.BlockByNumber(t.Ctx(), nil)
-	// require.NoError(t, err, "error fetching latest block")
-
-	//env.RunFaultProofProgramFromGenesis(t, latestBlock.NumberU64(), testCfg.CheckResult, testCfg.InputParams...)
 }
 
 // TestSetCodeTxSupportedBeforeArsia tests that SetCode transactions are already supported
@@ -436,6 +432,4 @@ func runSetCodeTxTypeWithContractCreationBitSetTest(gt *testing.T, testCfg *help
 	// find a log with the error message as an attr
 	recs := env.Logs.FindLogs(testlog.NewErrContainsFilter("to address is required for SetCodeTx"))
 	require.GreaterOrEqual(t, len(recs), 1)
-
-	//env.RunFaultProofProgramFromGenesis(t, l2safe.Number, testCfg.CheckResult, testCfg.InputParams...)
 }

@@ -59,7 +59,7 @@ func runGarbageChannelTest(gt *testing.T, testCfg *helpers.TestCfg[actionsHelper
 	for i := 0; i < NumL2Blocks/2; i++ {
 		env.Batcher.ActL2BatchBuffer(t)
 	}
-	env.Batcher.ActL2BatchSubmit(t)
+	env.Batcher.ActL2BatchSubmitMantle(t)
 
 	// Include the batcher transaction.
 	includeBatchTx(env)
@@ -74,18 +74,21 @@ func runGarbageChannelTest(gt *testing.T, testCfg *helpers.TestCfg[actionsHelper
 	}
 	env.Batcher.ActL2ChannelClose(t)
 	expectedSecondFrame := env.Batcher.ReadNextOutputFrame(t)
-
+	// l1Head := env.Miner.L1Chain().CurrentBlock()
+	// l1BlockTime := l1Head.Time
 	// Submit a garbage frame, modified from the expected second frame.
-	env.Batcher.ActL2BatchSubmitGarbageRaw(t, expectedSecondFrame, testCfg.Custom)
+	env.Batcher.ActL2BatchSubmitMantleGarbageRaw(t, expectedSecondFrame, testCfg.Custom)
 	// Include the garbage second frame tx
 	includeBatchTx(env)
 
 	// Ensure that the safe head has not advanced - the channel is incomplete.
 	l2SafeHead = env.Engine.L2Chain().CurrentSafeBlock()
 	require.Equal(t, uint64(0), l2SafeHead.Number.Uint64())
+	l1Head := env.Miner.L1Chain().CurrentBlock()
+	l1BlockTime := l1Head.Time
 
 	// Submit the correct second frame.
-	env.Batcher.ActL2BatchSubmitRaw(t, expectedSecondFrame)
+	env.Batcher.ActL2BatchSubmitMantleRawAtTime(t, expectedSecondFrame, l1BlockTime)
 	// Include the corract second frame tx.
 	includeBatchTx(env)
 

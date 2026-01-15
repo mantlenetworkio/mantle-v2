@@ -173,6 +173,10 @@ func GetMantleL2AllocsMode(dc *genesis.DeployConfig, t uint64) genesis.L2AllocsM
 	if arsiaTime := dc.MantleArsiaTime(t); arsiaTime != nil && *arsiaTime <= 0 {
 		return genesis.L2AllocsArsia
 	}
+	// Check if Limb is activated at genesis
+	if limbTime := dc.MantleLimbTime(t); limbTime != nil && *limbTime <= 0 {
+		return genesis.L2AllocsLimb
+	}
 	// Otherwise use Limb mode
 	return genesis.L2AllocsLimb
 }
@@ -465,7 +469,7 @@ func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *Al
 	l2Allocs := config.L2Allocs(deployParams.AllocType, allocsMode)
 	// Use BuildMantleGenesis instead of BuildL2Genesis to apply Mantle-specific overrides
 	// This ensures ShanghaiTime and CancunTime are correctly mapped to MantleSkadiTime
-	l2Genesis, err := genesis.BuildMantleGenesis(deployConf, l2Allocs, eth.BlockRefFromHeader(l1Block.Header()), nil)
+	l2Genesis, err := genesis.BuildMantleGenesis(deployConf, l2Allocs, eth.BlockRefFromHeader(l1Block.Header()))
 	require.NoError(t, err, "failed to create l2 genesis")
 	if alloc.PrefundTestUsers {
 		for _, addr := range deployParams.Addresses.All() {
@@ -541,7 +545,7 @@ func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *Al
 
 	// Apply Mantle overrides to map OP Stack forks to Mantle forks
 	// This ensures that when MantleArsia is activated, all required OP forks are also activated
-	if err := rollupCfg.ApplyMantleOverrides(nil); err != nil {
+	if err := rollupCfg.AlignOpWithMantle(); err != nil {
 		require.NoError(t, err, "failed to apply Mantle overrides")
 	}
 

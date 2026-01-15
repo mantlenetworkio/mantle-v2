@@ -121,7 +121,4 @@ func Test_ProgramAction_IsthmusExcludedPredeploys(gt *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status, "transaction must pass")
 
-	// env.RunFaultProofProgramFromGenesis(t, latestBlock.NumberU64()-1, func(t actionsHelpers.Testing, err error) {
-	// 	require.NoError(t, err, "no error expected running FP program")
-	// })
 }

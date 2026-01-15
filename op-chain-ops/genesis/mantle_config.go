@@ -202,30 +202,63 @@ func fillInMantleForksIntoRollupConfig(config *DeployConfig, rollupConfig *rollu
 /////////////////////////////////////////////////////////////
 
 // ActivateMantleForkAtOffset activates the given Mantle fork at the given offset.
-// This is similar to ActivateForkAtOffset but for Mantle-specific forks.
+// This method follows the same pattern as ActivateForkAtOffset:
+// - Activates all previous forks (dependencies) at genesis (offset 0)
+// - Activates the target fork at the specified offset
+// - Deactivates all later forks (sets them to nil)
 func (d *UpgradeScheduleDeployConfig) ActivateMantleForkAtOffset(fork rollup.MantleForkName, offset uint64) {
-	offsetPtr := (*hexutil.Uint64)(&offset)
+	if !forks.IsValidMantleFork(fork) {
+		panic(fmt.Sprintf("invalid mantle fork: %s", fork))
+	}
+
+	ts := new(uint64) // 0 for previous forks
+	for i, f := range forks.AllMantleForks {
+		if f == fork {
+			d.SetMantleForkTimeOffset(fork, &offset) // Set target fork
+			ts = nil                                 // Later forks will be set to nil
+		} else {
+			d.SetMantleForkTimeOffset(forks.AllMantleForks[i], ts)
+		}
+	}
+
+	// Special handling for Arsia: activate OP Stack forks
+	if fork == forks.MantleArsia {
+		d.L2GenesisCanyonTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisDeltaTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisEcotoneTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisFjordTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisGraniteTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisHoloceneTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisIsthmusTimeOffset = (*hexutil.Uint64)(&offset)
+		d.L2GenesisJovianTimeOffset = (*hexutil.Uint64)(&offset)
+	} else {
+		// Non-Arsia forks: clear all OP Stack forks
+		d.L2GenesisCanyonTimeOffset = nil
+		d.L2GenesisDeltaTimeOffset = nil
+		d.L2GenesisEcotoneTimeOffset = nil
+		d.L2GenesisFjordTimeOffset = nil
+		d.L2GenesisGraniteTimeOffset = nil
+		d.L2GenesisHoloceneTimeOffset = nil
+		d.L2GenesisIsthmusTimeOffset = nil
+		d.L2GenesisJovianTimeOffset = nil
+	}
+}
+
+// SetMantleForkTimeOffset sets the time offset for a Mantle fork
+func (d *UpgradeScheduleDeployConfig) SetMantleForkTimeOffset(fork rollup.MantleForkName, offset *uint64) {
 	switch fork {
-	case forks.MantleArsia:
-		d.L2GenesisMantleArsiaTimeOffset = offsetPtr
-		d.L2GenesisJovianTimeOffset = offsetPtr
-		d.L2GenesisIsthmusTimeOffset = offsetPtr
-		d.L2GenesisHoloceneTimeOffset = offsetPtr
-		d.L2GenesisGraniteTimeOffset = offsetPtr
-		d.L2GenesisFjordTimeOffset = offsetPtr
-		d.L2GenesisEcotoneTimeOffset = offsetPtr
-		d.L2GenesisDeltaTimeOffset = offsetPtr
-		d.L2GenesisCanyonTimeOffset = offsetPtr
-	case forks.MantleLimb:
-		d.L2GenesisMantleLimbTimeOffset = offsetPtr
-	case forks.MantleSkadi:
-		d.L2GenesisMantleSkadiTimeOffset = offsetPtr
-	case forks.MantleEuboea:
-		d.L2GenesisMantleEuboeaTimeOffset = offsetPtr
-	case forks.MantleEverest:
-		d.L2GenesisMantleEverestTimeOffset = offsetPtr
 	case forks.MantleBaseFee:
-		d.L2GenesisMantleBaseFeeTimeOffset = offsetPtr
+		d.L2GenesisMantleBaseFeeTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleEverest:
+		d.L2GenesisMantleEverestTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleEuboea:
+		d.L2GenesisMantleEuboeaTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleSkadi:
+		d.L2GenesisMantleSkadiTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleLimb:
+		d.L2GenesisMantleLimbTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleArsia:
+		d.L2GenesisMantleArsiaTimeOffset = (*hexutil.Uint64)(offset)
 	default:
 		panic(fmt.Sprintf("unsupported mantle fork: %s", fork))
 	}

@@ -157,7 +157,7 @@ func runSequenceWindowExpire_ChannelCloseAfterWindowExpiry_Test(gt *testing.T, t
 	}
 
 	// Instruct the batcher to closethe channel on L1, after the sequence window + channel timeout has elapsed.
-	env.Batcher.ActL2BatchSubmitRaw(t, finalFrame)
+	env.Batcher.ActL2BatchSubmitMantleRaw(t, finalFrame)
 	env.Miner.ActL1StartBlock(12)(t)
 	env.Miner.ActL1IncludeTxByHash(env.Batcher.LastSubmitted.Hash())(t)
 	env.Miner.ActL1EndBlock(t)

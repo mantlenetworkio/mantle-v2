@@ -33,7 +33,7 @@ func runChannelTimeoutTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 		env.Batcher.ActL2BatchBuffer(t)
 	}
 	firstFrame := env.Batcher.ReadNextOutputFrame(t)
-	env.Batcher.ActL2BatchSubmitRaw(t, firstFrame)
+	env.Batcher.ActL2BatchSubmitMantleRaw(t, firstFrame)
 
 	// Include the batcher transaction.
 	env.Miner.ActL1StartBlock(12)(t)
@@ -73,7 +73,7 @@ func runChannelTimeoutTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	for i := 0; i < 2; i++ {
 		if i == 0 {
 			// Re-submit the first frame
-			env.Batcher.ActL2BatchSubmitRaw(t, firstFrame)
+			env.Batcher.ActL2BatchSubmitMantleRaw(t, firstFrame)
 		} else {
 			// Buffer half of the L2 chain's blocks.
 			for j := 0; j < NumL2Blocks/2; j++ {
@@ -127,7 +127,7 @@ func runChannelTimeoutTest_CloseChannelLate(gt *testing.T, testCfg *helpers.Test
 		env.Batcher.ActL2BatchBuffer(t)
 	}
 	firstFrame := env.Batcher.ReadNextOutputFrame(t)
-	env.Batcher.ActL2BatchSubmitRaw(t, firstFrame)
+	env.Batcher.ActL2BatchSubmitMantleRaw(t, firstFrame)
 
 	// Instruct the batcher to submit the first channel frame to L1, and include the transaction.
 	env.Miner.ActL1StartBlock(12)(t)
@@ -170,7 +170,7 @@ func runChannelTimeoutTest_CloseChannelLate(gt *testing.T, testCfg *helpers.Test
 	finalFrame := env.Batcher.ReadNextOutputFrame(t)
 
 	// Submit the final frame of the timed out channel, now that the channel has timed out.
-	env.Batcher.ActL2BatchSubmitRaw(t, finalFrame)
+	env.Batcher.ActL2BatchSubmitMantleRaw(t, finalFrame)
 
 	// Instruct the batcher to submit the second channel frame to L1, and include the transaction.
 	env.Miner.ActL1StartBlock(12)(t)
@@ -190,7 +190,7 @@ func runChannelTimeoutTest_CloseChannelLate(gt *testing.T, testCfg *helpers.Test
 
 	// Instruct the batcher to submit the blocks to L1 in a new channel.
 	for _, frame := range [][]byte{firstFrame, finalFrame} {
-		env.Batcher.ActL2BatchSubmitRaw(t, frame)
+		env.Batcher.ActL2BatchSubmitMantleRaw(t, frame)
 		env.Miner.ActL1StartBlock(12)(t)
 		env.Miner.ActL1IncludeTxByHash(env.Batcher.LastSubmitted.Hash())(t)
 		env.Miner.ActL1EndBlock(t)
