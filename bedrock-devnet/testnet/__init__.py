@@ -40,12 +40,12 @@ def main():
     os.makedirs(testnet_dir, exist_ok=True)
 
     # Fetch chain ID from localhost:8545 AFTER L1 is up
-    log.info(f'Fetching chain ID from {rpc_url}...')
+    log.info(f'Fetching chain ID from l1 endpoint: {rpc_url}...')
     chain_id = get_chain_id_from_rpc(rpc_url)
     if chain_id is None:
-        log.error(f'Failed to fetch chain ID from {rpc_url} after L1 startup')
+        log.error(f'Failed to fetch chain ID from l1 endpoint: {rpc_url} after L1 startup')
         raise Exception('Cannot determine L1 chain ID')
-    log.info(f'Using chain ID {chain_id} from {rpc_url}')
+    log.info(f'Using chain ID {chain_id} from l1 endpoint: {rpc_url}')
 
     # Update deployment_json_path with actual chain_id
     deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
@@ -57,6 +57,7 @@ def main():
     deploy_config = read_json(testnet_cfg_orig)
     deploy_config['l1GenesisBlockTimestamp'] = GENESIS_TMPL['timestamp']
     deploy_config['l1StartingBlockTag'] = 'earliest'
+    log_print(deploy_config)
     write_json(testnet_cfg_orig, deploy_config)
 
     if os.path.exists(addresses_json_path):
@@ -67,7 +68,7 @@ def main():
         run_command(
           [
             'forge', 'script', 'scripts/deploy/Deploy.s.sol',
-            '--rpc-url', 'http://localhost:8545',
+            '--rpc-url', rpc_url,
             '--private-key', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
             '--broadcast'
           ],
@@ -95,32 +96,32 @@ def main():
         log.info('Generating L2 genesis and rollup configs.')
         run_command([
             'go', 'run', 'cmd/main.go', 'genesis', 'l2',
-            '--l1-rpc', 'http://localhost:8545',
+            '--l1-rpc', rpc_url,
             '--deploy-config', testnet_cfg_orig,
             '--l1-deployments', deployment_json_path,
             '--outfile.l2', pjoin(testnet_dir, 'genesis-l2.json'),
             '--outfile.rollup', pjoin(testnet_dir, 'rollup.json')
         ], cwd=op_node_dir)
 
-    rollup_config = read_json(rollup_config_path)
+    # rollup_config = read_json(rollup_config_path)
 
-    if os.path.exists(testnet_cfg_backup):
-        shutil.move(testnet_cfg_backup, testnet_cfg_orig)
+    # if os.path.exists(testnet_cfg_backup):
+    #     shutil.move(testnet_cfg_backup, testnet_cfg_orig)
 
-    log.info('Bringing up L2.')
-    run_command(['mockdockercompose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
-        'PWD': ops_bedrock_dir
-    })
-    wait_up(9545)
+    # log.info('Bringing up L2.')
+    # run_command(['mockdockercompose', 'up', '-d', 'l2'], cwd=ops_bedrock_dir, env={
+    #     'PWD': ops_bedrock_dir
+    # })
+    # wait_up(9545)
 
-    log.info('Bringing up everything else.')
-    run_command(['mockdockercompose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
-        'PWD': ops_bedrock_dir,
-        'L2OO_ADDRESS': addresses['L2OutputOracleProxy'],
-        'SEQUENCER_BATCH_INBOX_ADDRESS': rollup_config['batch_inbox_address']
-    })
+    # log.info('Bringing up everything else.')
+    # run_command(['mockdockercompose', 'up', '-d', 'op-node', 'op-proposer', 'op-batcher'], cwd=ops_bedrock_dir, env={
+    #     'PWD': ops_bedrock_dir,
+    #     'L2OO_ADDRESS': addresses['L2OutputOracleProxy'],
+    #     'SEQUENCER_BATCH_INBOX_ADDRESS': rollup_config['batch_inbox_address']
+    # })
 
-    log.info('Testnet ready.')
+    # log.info('Testnet ready.')
 
 
 def get_chain_id_from_rpc(rpc_url='http://localhost:8545'):
@@ -180,6 +181,10 @@ def write_json(path, data):
     with open(path, 'w+') as f:
         json.dump(data, f, indent='  ')
 
+def log_print(msg):
+    print('=' * 20)
+    print(msg)
+    print('=' * 20)
 
 def read_json(path):
     with open(path, 'r') as f:
