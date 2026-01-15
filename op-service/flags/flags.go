@@ -28,10 +28,10 @@ func OverrideEnvVar(envPrefix string, fork forks.Name) []string {
 }
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
-	return append(CLIOverrideFlags(envPrefix, category),
-		CLINetworkFlag(envPrefix, category),
-		CLIRollupConfigFlag(envPrefix, category),
-	)
+	flags := append(CLIOverrideFlags(envPrefix, category), CLIMantleOverrideFlags(envPrefix, category)...)
+	flags = append(flags, CLINetworkFlag(envPrefix, category),
+		CLIRollupConfigFlag(envPrefix, category))
+	return flags
 }
 
 func CLIOverrideFlags(envPrefix string, category string) []cli.Flag {

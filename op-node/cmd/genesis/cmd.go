@@ -17,7 +17,6 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
@@ -186,16 +185,14 @@ var Subcommands = cli.Commands{
 				return err
 			}
 
-			hardCodedOverrides := params.GetUpgradeConfigForMantle(new(big.Int).SetUint64(config.L2ChainID))
-
 			// Build the L2 genesis block
-			l2Genesis, err := genesis.BuildMantleGenesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()), hardCodedOverrides)
+			l2Genesis, err := genesis.BuildMantleGenesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()))
 			if err != nil {
 				return fmt.Errorf("error creating l2 genesis: %w", err)
 			}
 
 			l2GenesisBlock := l2Genesis.ToBlock()
-			rollupConfig, err := config.MantleRollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64(), hardCodedOverrides)
+			rollupConfig, err := config.MantleRollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64())
 			if err != nil {
 				return err
 			}

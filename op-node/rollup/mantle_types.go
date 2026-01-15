@@ -148,17 +148,11 @@ func (c *Config) MantleActivateAt(fork MantleForkName, timestamp uint64) {
 	}
 }
 
-func (c *Config) ApplyMantleOverrides(upgradeConfig *params.MantleUpgradeChainConfig) error {
-	if upgradeConfig != nil {
-		c.MantleBaseFeeTime = upgradeConfig.BaseFeeTime
-		c.MantleEverestTime = upgradeConfig.MantleEverestTime
-		// No consensus&execution update for Euboea, just use the same as Everest
-		c.MantleEuboeaTime = upgradeConfig.MantleEverestTime
-		c.MantleSkadiTime = upgradeConfig.MantleSkadiTime
-		c.MantleLimbTime = upgradeConfig.MantleLimbTime
-		c.MantleArsiaTime = upgradeConfig.MantleArsiaTime
-	}
-
+// AlignOpWithMantle checks mantle forks and aligns Optimism forks with them.
+// It means Optimism forks activation times will be set to the corresponding Mantle forks activation times.
+// It also sets the default EIP1559 parameters if not set. That parameters are required by mantle arsia.
+// Note: EIP1559DenominatorCanyon is forced to be the same as EIP1559Denominator.
+func (c *Config) AlignOpWithMantle() error {
 	// Map Optimism forks to Mantle forks
 	c.CanyonTime = c.MantleArsiaTime
 	c.DeltaTime = c.MantleArsiaTime
@@ -170,13 +164,18 @@ func (c *Config) ApplyMantleOverrides(upgradeConfig *params.MantleUpgradeChainCo
 	c.JovianTime = c.MantleArsiaTime
 
 	if c.ChainOpConfig == nil {
+		dCanyon := uint64(8)
 		c.ChainOpConfig = &params.OptimismConfig{
-			EIP1559Elasticity:  4,
-			EIP1559Denominator: 50,
+			EIP1559Elasticity:  2,
+			EIP1559Denominator: 8,
+			// EIP1559DenominatorCanyon is used to translate a zero post-arsia 1559 param
+			EIP1559DenominatorCanyon: &dCanyon,
 		}
+	} else {
+		// Mantle don't have a historical change of the denominator, so we use the same as the denominator
+		dCanyon := c.ChainOpConfig.EIP1559Denominator
+		c.ChainOpConfig.EIP1559DenominatorCanyon = &dCanyon
 	}
-	// Mantle don't have a historical change of the denominator, so we use the same as the denominator
-	c.ChainOpConfig.EIP1559DenominatorCanyon = &c.ChainOpConfig.EIP1559Denominator
 
 	return c.CheckMantleForks()
 }
