@@ -56,7 +56,7 @@ func (ds *MantleBlobDataSource) Next(ctx context.Context) (eth.Data, error) {
 	return next, nil
 }
 
-// open fetches all blobs from valid batcher transactions, joins them together, and decodes them as an RLP-encoded frame array.
+// open fetches blobs from valid batcher transactions, joins blobs per-transaction, and decodes each as an RLP-encoded frame array.
 func (ds *MantleBlobDataSource) open(ctx context.Context) ([]eth.Data, error) {
 	_, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.ref.Hash)
 	if err != nil {
