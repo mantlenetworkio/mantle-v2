@@ -428,4 +428,81 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		mockFetcher.AssertExpectations(t)
 		mockBlobsFetcher.AssertExpectations(t)
 	})
+
+	t.Run("rlp decode error ignored and continues to next tx", func(t *testing.T) {
+		mockFetcher := &testutils.MockL1Source{}
+		mockBlobsFetcher := &testutils.MockBlobsFetcher{}
+
+		// Create two blob transactions
+		// TX1 will have invalid RLP data (should be ignored)
+		// TX2 will have valid RLP data (should be processed)
+		blobHash1 := testutils.RandomHash(rng)
+		blobHash2 := testutils.RandomHash(rng)
+		blobTxData1 := &types.BlobTx{
+			ChainID:    uint256.NewInt(chainId.Uint64()),
+			Nonce:      rng.Uint64(),
+			Gas:        2_000_000,
+			To:         batchInboxAddr,
+			Data:       []byte{},
+			BlobHashes: []common.Hash{blobHash1},
+		}
+		blobTxData2 := &types.BlobTx{
+			ChainID:    uint256.NewInt(chainId.Uint64()),
+			Nonce:      rng.Uint64() + 1,
+			Gas:        2_000_000,
+			To:         batchInboxAddr,
+			Data:       []byte{},
+			BlobHashes: []common.Hash{blobHash2},
+		}
+		blobTx1, _ := types.SignNewTx(privateKey, signer, blobTxData1)
+		blobTx2, _ := types.SignNewTx(privateKey, signer, blobTxData2)
+		txs := types.Transactions{blobTx1, blobTx2}
+
+		blockInfo := testutils.RandomBlockInfo(rng)
+		mockFetcher.ExpectInfoAndTxsByHash(ref.Hash, blockInfo, txs, nil)
+
+		// TX1: Create blob with invalid RLP data (just random bytes that won't decode as RLP list)
+		invalidRLPData := []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB}
+		var ethBlob1 eth.Blob
+		err := ethBlob1.FromData(invalidRLPData)
+		require.NoError(t, err)
+
+		// TX2: Create valid RLP-encoded frame data
+		frameData2 := []eth.Data{
+			eth.Data{0xAA, 0xBB},
+			eth.Data{0xCC, 0xDD},
+		}
+		encodedFrameData2, err := rlp.EncodeToBytes(frameData2)
+		require.NoError(t, err)
+		var ethBlob2 eth.Blob
+		err = ethBlob2.FromData(encodedFrameData2)
+		require.NoError(t, err)
+
+		indexedBlobHash1 := eth.IndexedBlobHash{Index: 0, Hash: blobHash1}
+		indexedBlobHash2 := eth.IndexedBlobHash{Index: 1, Hash: blobHash2}
+
+		mockBlobsFetcher.ExpectOnGetBlobs(ctx, ref,
+			[]eth.IndexedBlobHash{indexedBlobHash1, indexedBlobHash2},
+			[]*eth.Blob{&ethBlob1, &ethBlob2}, nil)
+
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+
+		// TX1 should be ignored due to RLP decode error
+		// TX2 should be processed successfully
+		data, err := ds.Next(ctx)
+		require.NoError(t, err)
+		require.Equal(t, frameData2[0], data)
+
+		data, err = ds.Next(ctx)
+		require.NoError(t, err)
+		require.Equal(t, frameData2[1], data)
+
+		// Should return EOF after TX2's frames
+		data, err = ds.Next(ctx)
+		require.Equal(t, io.EOF, err)
+		require.Nil(t, data)
+
+		mockFetcher.AssertExpectations(t)
+		mockBlobsFetcher.AssertExpectations(t)
+	})
 }
