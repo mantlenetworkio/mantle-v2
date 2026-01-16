@@ -16,6 +16,7 @@ from testnet.genesis import GENESIS_TMPL
 parser = argparse.ArgumentParser(description='Bedrock testnet launcher')
 parser.add_argument('--monorepo-dir', help='Directory of the monorepo', default=os.getcwd())
 parser.add_argument('--rpc-url', help='RPC URL of the L1 network', default='http://localhost:8545')
+parser.add_argument('--private-key', help='Private key of the deployer account', default='0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
 
 
 
@@ -25,6 +26,7 @@ log = logging.getLogger()
 def main():
     args = parser.parse_args()
     rpc_url = args.rpc_url
+    private_key = args.private_key
 
     pjoin = os.path.join
     monorepo_dir = os.path.abspath(args.monorepo_dir)
@@ -51,8 +53,8 @@ def main():
     deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
 
     log.info('Generating network config.')
-    testnet_cfg_orig = pjoin(contracts_bedrock_dir, 'deploy-config', 'mantle-testnet.json')
-    testnet_cfg_backup = pjoin(testnet_dir, 'mantle-testnet.json.bak')
+    testnet_cfg_orig = pjoin(contracts_bedrock_dir, 'deploy-config', 'mantle-sepolia.json')
+    testnet_cfg_backup = pjoin(testnet_dir, 'mantle-sepolia.json.bak')
     shutil.copy(testnet_cfg_orig, testnet_cfg_backup)
     deploy_config = read_json(testnet_cfg_orig)
     deploy_config['l1GenesisBlockTimestamp'] = GENESIS_TMPL['timestamp']
@@ -69,7 +71,7 @@ def main():
           [
             'forge', 'script', 'scripts/deploy/Deploy.s.sol',
             '--rpc-url', rpc_url,
-            '--private-key', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+            '--private-key', private_key,
             '--broadcast'
           ],
           env={'DEPLOY_CONFIG_PATH': testnet_cfg_orig},
