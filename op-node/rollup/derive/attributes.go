@@ -2,11 +2,13 @@ package derive
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
@@ -183,5 +185,18 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 	if ba.rollupCfg.IsMantleBaseFee(nextL2Time) && !ba.rollupCfg.IsMantleArsia(nextL2Time) {
 		r.BaseFee = sysConfig.BaseFee
 	}
+
+	// Pretty print sysConfig
+	sysConfigJSON, _ := json.MarshalIndent(sysConfig, "", "  ")
+	log.Info("sysConfig", "sysConfig", string(sysConfigJSON))
+
+	// Pretty print PayloadAttributes
+	payloadAttrsJSON, _ := json.MarshalIndent(r, "", "  ")
+	log.Info("PayloadAttributes", "payloadAttributes", string(payloadAttrsJSON))
+
+	// Log whether nextL2Time is Mantle Arsia
+	isMantleArsia := ba.rollupCfg.IsMantleArsia(nextL2Time)
+	log.Info("MantleArsiaCheck", "nextL2Time", nextL2Time, "isMantleArsia", isMantleArsia)
+
 	return r, nil
 }
