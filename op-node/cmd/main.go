@@ -99,6 +99,7 @@ func RollupNodeMain(ctx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.
 	if err := cfg.Rollup.AlignOpWithMantle(); err != nil {
 		return nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
 	}
+	cfg.Rollup.LogMantleForks(log)
 
 	n, err := node.New(ctx.Context, cfg, log, VersionWithMeta, m, nil)
 	if err != nil {

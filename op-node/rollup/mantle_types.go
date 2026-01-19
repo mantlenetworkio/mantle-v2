@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -215,4 +216,40 @@ func checkMantleFork(a, b *uint64, aName, bName MantleForkName) error {
 		return fmt.Errorf("mantle fork %s set to %d, but prior fork %s has higher offset %d", bName, *b, aName, *a)
 	}
 	return nil
+}
+
+// fmtMantleForkTime formats a fork activation time for logging
+func fmtMantleForkTime(t *uint64) string {
+	if t == nil {
+		return "(not configured)"
+	}
+	if *t == 0 {
+		return "@ genesis"
+	}
+	return fmt.Sprintf("@ %d", *t)
+}
+
+// LogMantleForks logs all Mantle fork activation times
+func (c *Config) LogMantleForks(logger log.Logger) {
+	logger.Info("Mantle Forks Config",
+		"mantle_base_fee_time", fmtMantleForkTime(c.MantleBaseFeeTime),
+		"mantle_everest_time", fmtMantleForkTime(c.MantleEverestTime),
+		"mantle_euboea_time", fmtMantleForkTime(c.MantleEuboeaTime),
+		"mantle_skadi_time", fmtMantleForkTime(c.MantleSkadiTime),
+		"mantle_limb_time", fmtMantleForkTime(c.MantleLimbTime),
+		"mantle_arsia_time", fmtMantleForkTime(c.MantleArsiaTime),
+	)
+}
+
+// LogMantleForkStatus logs the status of Mantle forks at a given timestamp
+func (c *Config) LogMantleForkStatus(logger log.Logger, timestamp uint64) {
+	logger.Info("Mantle Fork Status",
+		"timestamp", timestamp,
+		"isMantleBaseFee", c.IsMantleBaseFee(timestamp),
+		"isMantleEverest", c.IsMantleEverest(timestamp),
+		"isMantleEuboea", c.IsMantleEuboea(timestamp),
+		"isMantleSkadi", c.IsMantleSkadi(timestamp),
+		"isMantleLimb", c.IsMantleLimb(timestamp),
+		"isMantleArsia", c.IsMantleArsia(timestamp),
+	)
 }
