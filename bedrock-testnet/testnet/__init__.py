@@ -57,10 +57,10 @@ def main():
     testnet_cfg_backup = pjoin(testnet_dir, 'mantle-sepolia.json.bak')
     shutil.copy(testnet_cfg_orig, testnet_cfg_backup)
     deploy_config = read_json(testnet_cfg_orig)
-    deploy_config['l1GenesisBlockTimestamp'] = GENESIS_TMPL['timestamp']
-    deploy_config['l1StartingBlockTag'] = 'earliest'
+    # deploy_config['l1GenesisBlockTimestamp'] = GENESIS_TMPL['timestamp']
+    # deploy_config['l1StartingBlockTag'] = 'earliest'
     log_print(deploy_config)
-    write_json(testnet_cfg_orig, deploy_config)
+    # write_json(testnet_cfg_orig, deploy_config)
 
     if os.path.exists(addresses_json_path):
         log.info('Contracts already deployed.')
@@ -101,8 +101,8 @@ def main():
             '--l1-rpc', rpc_url,
             '--deploy-config', testnet_cfg_orig,
             '--l1-deployments', deployment_json_path,
-            '--outfile.l2', pjoin(testnet_dir, 'genesis-l2.json'),
-            '--outfile.rollup', pjoin(testnet_dir, 'rollup.json')
+            '--outfile.l2', genesis_l2_path,
+            '--outfile.rollup', rollup_config_path
         ], cwd=op_node_dir)
 
     # rollup_config = read_json(rollup_config_path)
