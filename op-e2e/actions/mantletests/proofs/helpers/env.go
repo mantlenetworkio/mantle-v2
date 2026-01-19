@@ -237,6 +237,23 @@ func (env *L2ProofEnv) BatchAndMine(t helpers.Testing) {
 	env.Miner.ActL1EndBlock(t)
 }
 
+func (env *L2ProofEnv) BatchAndMineMantle(t helpers.Testing) {
+	t.Helper()
+	env.Batcher.ActBufferAll(t)
+	env.Batcher.ActL2ChannelClose(t)
+
+	// Get next L1 block time to ensure format selection matches derivation logic
+	// This is critical for Arsia activation boundary tests
+	env.Miner.ActL1StartBlock(12)(t)
+	nextL1BlockTime := env.Miner.L1Chain().CurrentHeader().Time
+
+	// Use time-based submission to ensure format matches L1 block time
+	env.Batcher.ActL2BatchSubmitMantleAtTime(t, nextL1BlockTime)
+
+	env.Miner.ActL1IncludeTxByHash(env.Batcher.LastSubmitted.Hash())(t)
+	env.Miner.ActL1EndBlock(t)
+}
+
 // BatchMineAndSync calls env.BatchAndMine and then has the sequencer derive up to the l1 head.
 // Returns the L2 Safe Block Reference
 func (env *L2ProofEnv) BatchMineAndSync(t helpers.Testing) eth.L2BlockRef {

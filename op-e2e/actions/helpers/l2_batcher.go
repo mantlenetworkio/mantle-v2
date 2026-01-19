@@ -569,6 +569,10 @@ func (s *L2Batcher) ActL2BatchSubmitMantle(t Testing, txOpts ...func(tx *types.D
 	s.ActL2BatchSubmitMantleRaw(t, s.ReadNextOutputFrame(t), txOpts...)
 }
 
+func (s *L2Batcher) ActL2BatchSubmitMantleAtTime(t Testing, l1BlockTime uint64, txOpts ...func(tx *types.DynamicFeeTx)) {
+	s.ActL2BatchSubmitMantleRawAtTime(t, s.ReadNextOutputFrame(t), l1BlockTime, txOpts...)
+}
+
 // ActL2BatchSubmitMantleRawAtTime submits a batch transaction to L1 using Mantle's blob encoding format.
 // Unlike ActL2BatchSubmitMantleRaw which uses time.Now(), this method uses the provided l1BlockTime
 // to determine the correct format:

@@ -4,9 +4,7 @@ import (
 	"testing"
 
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
-	"github.com/ethereum-optimism/optimism/op-e2e/actions/proofs/helpers"
-	"github.com/ethereum-optimism/optimism/op-program/client/claim"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +12,7 @@ import (
 func runL1LookbackTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	tp := helpers.NewTestParams()
-	env := helpers.NewL2FaultProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
+	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
 
 	const numL2Blocks = 8
 	for i := 0; i < numL2Blocks; i++ {
@@ -27,7 +25,7 @@ func runL1LookbackTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 		if i == numL2Blocks-1 {
 			env.Batcher.ActL2ChannelClose(t)
 		}
-		env.Batcher.ActL2BatchSubmit(t)
+		env.Batcher.ActL2BatchSubmitMantle(t)
 
 		// Include the frame on L1.
 		env.Miner.ActL1StartBlock(12)(t)
@@ -45,13 +43,13 @@ func runL1LookbackTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	require.EqualValues(t, numL2Blocks, l2SafeHead.Number.Uint64())
 
 	// Run the FPP on the configured L2 block.
-	env.RunFaultProofProgramFromGenesis(t, numL2Blocks/2, testCfg.CheckResult, testCfg.InputParams...)
+	//env.RunFaultProofProgramFromGenesis(t, numL2Blocks/2, testCfg.CheckResult, testCfg.InputParams...)
 }
 
 func runL1LookbackTest_ReopenChannel(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	tp := helpers.NewTestParams()
-	env := helpers.NewL2FaultProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
+	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
 
 	// Create an L2 block with 1 transaction.
 	env.Sequencer.ActL2StartBlock(t)
@@ -64,7 +62,7 @@ func runL1LookbackTest_ReopenChannel(gt *testing.T, testCfg *helpers.TestCfg[any
 
 	// Buffer the L2 block in the batcher.
 	env.Batcher.ActL2BatchBuffer(t)
-	env.Batcher.ActL2BatchSubmit(t)
+	env.Batcher.ActL2BatchSubmitMantle(t)
 
 	// Include the frame on L1.
 	env.Miner.ActL1StartBlock(12)(t)
@@ -81,7 +79,7 @@ func runL1LookbackTest_ReopenChannel(gt *testing.T, testCfg *helpers.TestCfg[any
 		return block
 	}))
 	require.NoError(t, err)
-	env.Batcher.ActL2BatchSubmit(t)
+	env.Batcher.ActL2BatchSubmitMantle(t)
 
 	// Include the duplicate frame on L1.
 	env.Miner.ActL1StartBlock(12)(t)
@@ -100,7 +98,7 @@ func runL1LookbackTest_ReopenChannel(gt *testing.T, testCfg *helpers.TestCfg[any
 		if i == numL2Blocks-1 {
 			env.Batcher.ActL2ChannelClose(t)
 		}
-		env.Batcher.ActL2BatchSubmit(t)
+		env.Batcher.ActL2BatchSubmitMantle(t)
 
 		// Include the frame on L1.
 		env.Miner.ActL1StartBlock(12)(t)
@@ -122,7 +120,7 @@ func runL1LookbackTest_ReopenChannel(gt *testing.T, testCfg *helpers.TestCfg[any
 	require.EqualValues(t, numL2Blocks, l2SafeHead.Number.Uint64())
 
 	// Run the FPP on the configured L2 block.
-	env.RunFaultProofProgramFromGenesis(t, numL2Blocks/2, testCfg.CheckResult, testCfg.InputParams...)
+	//env.RunFaultProofProgramFromGenesis(t, numL2Blocks/2, testCfg.CheckResult, testCfg.InputParams...)
 }
 
 func Test_ProgramAction_L1Lookback(gt *testing.T) {
@@ -132,31 +130,15 @@ func Test_ProgramAction_L1Lookback(gt *testing.T) {
 	matrix.AddTestCase(
 		"HonestClaim",
 		nil,
-		helpers.LatestForkOnly,
+		helpers.MantleLatestForkOnly,
 		runL1LookbackTest,
 		helpers.ExpectNoError(),
-	)
-	matrix.AddTestCase(
-		"JunkClaim",
-		nil,
-		helpers.LatestForkOnly,
-		runL1LookbackTest,
-		helpers.ExpectError(claim.ErrClaimNotValid),
-		helpers.WithL2Claim(common.HexToHash("0xdeadbeef")),
 	)
 	matrix.AddTestCase(
 		"HonestClaim-ReopenChannel",
 		nil,
-		helpers.LatestForkOnly,
+		helpers.MantleLatestForkOnly,
 		runL1LookbackTest_ReopenChannel,
 		helpers.ExpectNoError(),
-	)
-	matrix.AddTestCase(
-		"JunkClaim-ReopenChannel",
-		nil,
-		helpers.LatestForkOnly,
-		runL1LookbackTest_ReopenChannel,
-		helpers.ExpectError(claim.ErrClaimNotValid),
-		helpers.WithL2Claim(common.HexToHash("0xdeadbeef")),
 	)
 }

@@ -44,7 +44,12 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 
 	runJovianDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
-		deployConfigOverrides := func(dp *genesis.DeployConfig) {}
+		deployConfigOverrides := func(dp *genesis.DeployConfig) {
+			dp.UseCustomGasToken = true
+			dp.GasPayingTokenName = "MNT"
+			dp.GasPayingTokenSymbol = "MNT"
+			dp.NativeAssetLiquidityAmount = (*hexutil.Big)(new(big.Int).Mul(big.NewInt(2000), big.NewInt(1e18)))
+		}
 
 		var testOperatorFeeScalar uint32
 		var testOperatorFeeConstant uint64
@@ -68,12 +73,23 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 
 		if testCfg.Custom == IsthmusTransitionBlock {
 			deployConfigOverrides = func(dp *genesis.DeployConfig) {
+				// Include common Mantle config
+				dp.UseCustomGasToken = true
+				dp.GasPayingTokenName = "MNT"
+				dp.GasPayingTokenSymbol = "MNT"
+				dp.NativeAssetLiquidityAmount = (*hexutil.Big)(new(big.Int).Mul(big.NewInt(2000), big.NewInt(1e18)))
+				// IsthmusTransitionBlock specific: Arsia activates at offset 13
 				dp.L1PragueTimeOffset = ptr(hexutil.Uint64(0))
 				dp.L2GenesisMantleArsiaTimeOffset = ptr(hexutil.Uint64(13))
+
 			}
 		}
 
-		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg(), deployConfigOverrides)
+		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg(
+			func(c *actionsHelpers.BatcherCfg) {
+				c.ForceSubmitSingularBatch = true
+			},
+		), deployConfigOverrides)
 
 		balanceAt := func(a common.Address) *big.Int {
 			t.Helper()
@@ -107,27 +123,31 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			require.Equal(t, types.ReceiptStatusSuccessful, r.Status, "tx unsuccessful")
 		}
 
-		sysCfgContract, err := mantlebindings.NewSystemConfig(env.Sd.RollupCfg.L1SystemConfigAddress, env.Miner.EthClient())
-		require.NoError(t, err)
+		// For IsthmusTransitionBlock, we set operator fee AFTER MantleArsia activation
+		// For other cases, set operator fee at the beginning
+		if testCfg.Custom != IsthmusTransitionBlock {
+			sysCfgContract, err := mantlebindings.NewSystemConfig(env.Sd.RollupCfg.L1SystemConfigAddress, env.Miner.EthClient())
+			require.NoError(t, err)
 
-		sysCfgOwner, err := bind.NewKeyedTransactorWithChainID(env.Dp.Secrets.Deployer, env.Sd.RollupCfg.L1ChainID)
-		require.NoError(t, err)
+			sysCfgOwner, err := bind.NewKeyedTransactorWithChainID(env.Dp.Secrets.Deployer, env.Sd.RollupCfg.L1ChainID)
+			require.NoError(t, err)
 
-		// Update the operator fee parameters
-		_, err = sysCfgContract.SetOperatorFeeScalars(sysCfgOwner, testOperatorFeeScalar, testOperatorFeeConstant)
-		require.NoError(t, err)
+			// Update the operator fee parameters
+			_, err = sysCfgContract.SetOperatorFeeScalars(sysCfgOwner, testOperatorFeeScalar, testOperatorFeeConstant)
+			require.NoError(t, err)
 
-		env.Miner.ActL1StartBlock(12)(t)
-		env.Miner.ActL1IncludeTx(env.Dp.Addresses.Deployer)(t)
-		l1BlockWithOpFee := env.Miner.ActL1EndBlock(t)
-		t.Logf("Set operator fee in L1 block: number=%d, hash=%s", l1BlockWithOpFee.Number(), l1BlockWithOpFee.Hash().Hex())
+			env.Miner.ActL1StartBlock(12)(t)
+			env.Miner.ActL1IncludeTx(env.Dp.Addresses.Deployer)(t)
+			l1BlockWithOpFee := env.Miner.ActL1EndBlock(t)
+			t.Logf("Set operator fee in L1 block: number=%d, hash=%s", l1BlockWithOpFee.Number(), l1BlockWithOpFee.Hash().Hex())
 
-		// sequence L2 blocks, and submit with new batcher
-		env.Sequencer.ActL1HeadSignal(t)
-		env.Sequencer.ActBuildToL1Head(t)
-		env.BatchAndMine(t)
+			// sequence L2 blocks, and submit with new batcher
+			env.Sequencer.ActL1HeadSignal(t)
+			env.Sequencer.ActBuildToL1Head(t)
+			env.BatchAndMineMantle(t)
 
-		env.Sequencer.ActL1HeadSignal(t)
+			env.Sequencer.ActL1HeadSignal(t)
+		}
 
 		var aliceInitialBalance *big.Int
 		var baseFeeVaultInitialBalance *big.Int
@@ -151,66 +171,48 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 				// 2. Build next block with user transaction (which should have operator fee)
 
 				// Get Isthmus activation time
-				isthmusTime := *env.Sd.RollupCfg.IsthmusTime
-				isJovianActivation := env.Sd.RollupCfg.IsJovianActivationBlock(isthmusTime)
+				isArsiaTime := *env.Sd.RollupCfg.MantleArsiaTime
+				isArsiaActivation := env.Sd.RollupCfg.IsMantleArsiaActivationBlock(isArsiaTime)
 
-				if isJovianActivation {
-					// Build empty blocks until we reach Jovian/Isthmus activation block
-					for env.Sequencer.L2Unsafe().Time < isthmusTime {
+				if isArsiaActivation {
+					// Build empty blocks until we reach Arsia activation block
+					for env.Sequencer.L2Unsafe().Time < isArsiaTime {
 						env.Sequencer.ActL2EmptyBlock(t)
 					}
 
 					// Verify we're at the activation block
-					require.Equal(t, isthmusTime, env.Sequencer.L2Unsafe().Time)
-					require.True(t, env.Sd.RollupCfg.IsIsthmusActivationBlock(env.Sequencer.L2Unsafe().Time))
-					require.True(t, env.Sd.RollupCfg.IsJovianActivationBlock(env.Sequencer.L2Unsafe().Time))
+					require.Equal(t, isArsiaTime, env.Sequencer.L2Unsafe().Time)
+					require.True(t, env.Sd.RollupCfg.IsMantleArsiaActivationBlock(env.Sequencer.L2Unsafe().Time))
+					t.Logf("Reached MantleArsia activation block: L2 time=%d", env.Sequencer.L2Unsafe().Time)
 
-					// Batch and mine the activation block to L1
-					env.BatchAndMine(t)
+					// Batch and mine the activation block to L1 first
+					env.BatchAndMineMantle(t)
 
-					// Build a new L1 block to ensure L2 can reference the latest L1 config
-					env.Miner.ActEmptyBlock(t)
+					sysCfgContract, err := mantlebindings.NewSystemConfig(env.Sd.RollupCfg.L1SystemConfigAddress, env.Miner.EthClient())
+					require.NoError(t, err)
 
-					// Sync L1 head signal to ensure L2 gets latest L1 config
+					sysCfgOwner, err := bind.NewKeyedTransactorWithChainID(env.Dp.Secrets.Deployer, env.Sd.RollupCfg.L1ChainID)
+					require.NoError(t, err)
+
+					// Update the operator fee parameters
+					_, err = sysCfgContract.SetOperatorFeeScalars(sysCfgOwner, testOperatorFeeScalar, testOperatorFeeConstant)
+					require.NoError(t, err)
+
+					env.Miner.ActL1StartBlock(12)(t)
+					env.Miner.ActL1IncludeTx(env.Dp.Addresses.Deployer)(t)
+					l1BlockWithOpFee := env.Miner.ActL1EndBlock(t)
+					t.Logf("Set operator fee in L1 block: number=%d, hash=%s", l1BlockWithOpFee.Number(), l1BlockWithOpFee.Hash().Hex())
+
+					// Sync L2 to the new L1 head so it picks up the operator fee config
 					env.Sequencer.ActL1HeadSignal(t)
 					env.Sequencer.ActBuildToL1Head(t)
 
+					// Update initial balances after operator fee is set
+					aliceInitialBalance, l1FeeVaultInitialBalance, baseFeeVaultInitialBalance, sequencerFeeVaultInitialBalance, operatorFeeVaultInitialBalance = getCurrentBalances()
+
 					// Now build the next block with a user transaction
 					// This block should have operator fee applied
-
-					// Check L1 SystemConfig to see if operator fee is set
-					sysCfgContract, err := mantlebindings.NewSystemConfig(env.Sd.RollupCfg.L1SystemConfigAddress, env.Miner.EthClient())
-					require.NoError(t, err)
-					OperatorFeeConstant, err := sysCfgContract.OperatorFeeConstant(nil)
-					require.NoError(t, err)
-					OperatorFeeScalar, err := sysCfgContract.OperatorFeeScalar(nil)
-					require.NoError(t, err)
-					t.Logf("L1 SystemConfig OperatorFeeScalar before building block 14: %d", OperatorFeeScalar)
-					t.Logf("L1 SystemConfig OperatorFeeConstant before building block 14: %d", OperatorFeeConstant)
-
-					// Check current L1 head
-					l1Head := env.Miner.L1Chain().CurrentBlock()
-					t.Logf("Current L1 head: number=%d, hash=%s", l1Head.Number, l1Head.Hash().Hex())
-
-					// Check what L1 origin the next L2 block will use
-					t.Logf("Current L2 unsafe head: number=%d, time=%d, L1Origin=%s (number=%d)",
-						env.Sequencer.L2Unsafe().Number,
-						env.Sequencer.L2Unsafe().Time,
-						env.Sequencer.L2Unsafe().L1Origin.Hash.Hex(),
-						env.Sequencer.L2Unsafe().L1Origin.Number)
-
-					// Check SystemConfig at different L1 blocks
-					for i := uint64(0); i <= l1Head.Number.Uint64(); i++ {
-						l1Block := env.Miner.L1Chain().GetBlockByNumber(i)
-						if l1Block != nil {
-							opFeeScalar, err := sysCfgContract.OperatorFeeScalar(&bind.CallOpts{BlockNumber: big.NewInt(int64(i))})
-							require.NoError(t, err)
-							opFeeConstant, err := sysCfgContract.OperatorFeeConstant(&bind.CallOpts{BlockNumber: big.NewInt(int64(i))})
-							require.NoError(t, err)
-							t.Logf("L1 block %d: OperatorFeeScalar=%d, OperatorFeeConstant=%d", i, opFeeScalar, opFeeConstant)
-						}
-					}
-
+					env.Sequencer.ActL2PipelineFull(t) // Ensure pipeline is idle before building
 					env.Sequencer.ActL2StartBlock(t)
 					env.Alice.L2.ActResetTxOpts(t)
 					env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)(t)
@@ -220,7 +222,7 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 				} else {
 					// Not a Jovian activation block, can include user tx in activation block
 					// Build empty blocks until we're one block before activation
-					for env.Sequencer.L2Unsafe().Time+2 < isthmusTime {
+					for env.Sequencer.L2Unsafe().Time+2 < isArsiaTime {
 						env.Sequencer.ActL2EmptyBlock(t)
 					}
 
@@ -231,7 +233,8 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 					env.Alice.L2.ActMakeTx(t)
 					env.Engine.ActL2IncludeTxIgnoreForcedEmpty(env.Alice.Address())(t)
 					env.Sequencer.ActL2EndBlock(t)
-					require.True(t, env.Sd.RollupCfg.IsIsthmusActivationBlock(env.Sequencer.L2Unsafe().Time))
+
+					require.True(t, env.Sd.RollupCfg.IsMantleArsiaActivationBlock(env.Sequencer.L2Unsafe().Time))
 				}
 			} else {
 				// Normal tx case
@@ -431,13 +434,16 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			require.NoError(t, err)
 
 			daCost := fjordL1Cost(l1BlockInfo, types.NewRollupCostData(rlp))
-			expectedFeePreIsthmus := nextBaseFee.Mul(nextBaseFee, big.NewInt(int64(params.TxGas)))
-			expectedFeePreIsthmus.Add(expectedFeePreIsthmus, daCost)
+			// Calculate gas fee only (baseFee * gasLimit), excluding L1 data fee
+			// Note: L1Fee is 0 in Mantle after certain upgrades, so we only need gas fee
+			// to test that the address has enough for gas but not for gas + operator fee
+			gasFeeOnly := new(big.Int).Mul(nextBaseFee, big.NewInt(int64(params.TxGas)))
 
 			// Include an L2 tx, from Bob -> mock signer
+			// Send only enough to cover gas fee, not operator fee
 			env.Bob.L2.ActResetTxOpts(t)
 			env.Bob.L2.ActSetTxToAddr(&address)(t)
-			env.Bob.L2.ActSetTxValue(expectedFeePreIsthmus)(t)
+			env.Bob.L2.ActSetTxValue(gasFeeOnly)(t)
 			env.Bob.L2.ActMakeTx(t)
 
 			env.Sequencer.ActL2StartBlock(t)
@@ -446,7 +452,30 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			env.Bob.L2.ActCheckReceiptStatusOfLastTx(true)(t)
 
 			// Ensure the mock signer received the funds
-			require.Equal(t, expectedFeePreIsthmus, balanceAt(address))
+			require.Equal(t, gasFeeOnly, balanceAt(address))
+
+			// DEBUG: Log the expected fee and address balance
+			t.Logf("DEBUG: nextBaseFee = %v", nextBaseFee)
+			t.Logf("DEBUG: daCost (L1 data fee from fjordL1Cost, without tokenRatio) = %v", daCost)
+			t.Logf("DEBUG: l1BlockInfo.BaseFee = %v", l1BlockInfo.BaseFee)
+			t.Logf("DEBUG: l1BlockInfo.BlobBaseFee = %v", l1BlockInfo.BlobBaseFee)
+			t.Logf("DEBUG: l1BlockInfo.BaseFeeScalar = %v", l1BlockInfo.BaseFeeScalar)
+			t.Logf("DEBUG: l1BlockInfo.BlobBaseFeeScalar = %v", l1BlockInfo.BlobBaseFeeScalar)
+			// Check tokenRatio from state - this is the key for L1Fee calculation
+			tokenRatioFromState := env.Engine.L2Chain().CurrentBlock().BaseFee
+			statedb, _ := env.Engine.L2Chain().StateAt(env.Engine.L2Chain().CurrentBlock().Root)
+			if statedb != nil {
+				tokenRatioSlot := statedb.GetState(common.HexToAddress("0x420000000000000000000000000000000000000F"), common.Hash{})
+				t.Logf("DEBUG: tokenRatio from GasPriceOracle state (slot 0) = %v", tokenRatioSlot.Big())
+			}
+			_ = tokenRatioFromState
+			t.Logf("DEBUG: gas fee only (nextBaseFee * TxGas) = %v", gasFeeOnly)
+			t.Logf("DEBUG: address = %v", address)
+			t.Logf("DEBUG: address balance after Bob's transfer = %v", balanceAt(address))
+			t.Logf("DEBUG: testOperatorFeeConstant = %v", testOperatorFeeConstant)
+			t.Logf("DEBUG: testOperatorFeeScalar = %v", testOperatorFeeScalar)
+			expectedTotalCost := new(big.Int).Add(gasFeeOnly, new(big.Int).SetUint64(testOperatorFeeConstant))
+			t.Logf("DEBUG: expected total cost with operator fee = %v", expectedTotalCost)
 
 			// Buffer the L2 block we just included
 			env.Batcher.ActL2BatchBuffer(t)
@@ -454,11 +483,14 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			aliceInitialBalance, l1FeeVaultInitialBalance, baseFeeVaultInitialBalance, sequencerFeeVaultInitialBalance, operatorFeeVaultInitialBalance = getCurrentBalances()
 
 			// Craft a transaction from Alice -> Bob
+			// Use the same gas price as used in expectedFeePreIsthmus calculation,
+			// so that when re-signed by `address`, the total cost (gas + operator fee)
+			// exceeds the balance that `address` received.
 			env.Alice.L2.ActResetTxOpts(t)
 			env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)(t)
 			env.Alice.L2.ActSetTxGasLimit(params.TxGas)(t)
-			env.Alice.L2.ActSetGasFeeCap(big.NewInt(1))(t)
-			env.Alice.L2.ActSetGasTipCap(big.NewInt(1))(t)
+			env.Alice.L2.ActSetGasFeeCap(nextBaseFee)(t)
+			env.Alice.L2.ActSetGasTipCap(nextBaseFee)(t)
 			env.Alice.L2.ActMakeTx(t)
 
 			// Include an L2 tx, from Alice -> Bob
@@ -488,7 +520,7 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 				return block
 			}))
 			env.Batcher.ActL2ChannelClose(t)
-			env.Batcher.ActL2BatchSubmit(t)
+			env.Batcher.ActL2BatchSubmitMantle(t)
 
 			// Include the batcher transaction.
 			env.Miner.ActL1StartBlock(12)(t)
@@ -514,8 +546,8 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			// Check if Isthmus activation was also Jovian activation
 			// If so, the user tx is in the block AFTER activation and should have operator fee
 			isMantleArsia := *env.Sd.RollupCfg.MantleArsiaTime
-			isJovianActivation := env.Sd.RollupCfg.IsJovianActivationBlock(isMantleArsia)
-			shouldHaveOperatorFee = isJovianActivation
+			isArsiaActivation := env.Sd.RollupCfg.IsMantleArsiaActivationBlock(isMantleArsia)
+			shouldHaveOperatorFee = isArsiaActivation
 		}
 
 		if !shouldHaveOperatorFee {
@@ -591,7 +623,7 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 
 		// The NotEnoughFundsInBatchMissingOpFee case is special, as it submits its own invalid batch.
 		if testCfg.Custom != NotEnoughFundsInBatchMissingOpFee {
-			env.BatchAndMine(t)
+			env.BatchAndMineMantle(t)
 		}
 		env.Sequencer.ActL1HeadSignal(t)
 		env.Sequencer.ActL2PipelineFull(t)
@@ -599,6 +631,41 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 		l2SafeHead := env.Engine.L2Chain().CurrentSafeBlock()
 
 		if testCfg.Custom == NotEnoughFundsInBatchMissingOpFee {
+			// DEBUG: Log derivation results
+			t.Logf("DEBUG: l2UnsafeHead = %v (number: %v)", eth.HeaderBlockID(l2UnsafeHead), l2UnsafeHead.Number)
+			t.Logf("DEBUG: l2SafeHead = %v (number: %v)", eth.HeaderBlockID(l2SafeHead), l2SafeHead.Number)
+
+			safeHeadBlock := env.Engine.L2Chain().GetBlockByHash(l2SafeHead.Hash())
+			t.Logf("DEBUG: safeHeadBlock tx count = %d", len(safeHeadBlock.Transactions()))
+			signer := types.LatestSigner(env.Sd.L2Cfg.Config)
+			for i, tx := range safeHeadBlock.Transactions() {
+				sender, _ := types.Sender(signer, tx)
+				t.Logf("DEBUG: safeHeadBlock tx[%d] hash=%v, type=%v, sender=%v, gasPrice=%v, gasLimit=%v, value=%v",
+					i, tx.Hash(), tx.Type(), sender, tx.GasPrice(), tx.Gas(), tx.Value())
+			}
+			t.Logf("DEBUG: Alice address = %v", env.Alice.Address())
+
+			// Check the receipt of the second transaction
+			if len(safeHeadBlock.Transactions()) > 1 {
+				tx := safeHeadBlock.Transactions()[1]
+				receipts := env.Engine.L2Chain().GetReceiptsByHash(safeHeadBlock.Hash())
+				if len(receipts) > 1 {
+					r := receipts[1]
+					t.Logf("DEBUG: tx[1] receipt gasUsed=%v, effectiveGasPrice=%v, status=%v",
+						r.GasUsed, r.EffectiveGasPrice, r.Status)
+					t.Logf("DEBUG: tx[1] receipt L1GasUsed=%v, L1GasPrice=%v, L1Fee=%v",
+						r.L1GasUsed, r.L1GasPrice, r.L1Fee)
+					t.Logf("DEBUG: tx[1] receipt operatorFeeScalar=%v, operatorFeeConstant=%v",
+						r.OperatorFeeScalar, r.OperatorFeeConstant)
+				}
+				// Check sender balance in safe block state
+				statedb, _ := env.Engine.L2Chain().StateAt(safeHeadBlock.Root())
+				if statedb != nil {
+					sender, _ := types.Sender(signer, tx)
+					t.Logf("DEBUG: sender %v balance after tx = %v", sender, statedb.GetBalance(sender))
+				}
+			}
+
 			// The unsafe block prior to derivation should be different from the safe block after derivation. The
 			// batcher posted the block but with a different transaction, signed by a key that has no balance. This
 			// should cause a reorg in the unsafe chain, and the original block should be reduced to deposits only
@@ -608,16 +675,16 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			reorgedUnsafe := env.Engine.L2Chain().CurrentHeader()
 			require.Equal(t, eth.HeaderBlockID(l2SafeHead), eth.HeaderBlockID(reorgedUnsafe), "reorged unsafe block is the same")
 
-			safeHeadBlock := env.Engine.L2Chain().GetBlockByHash(l2SafeHead.Hash())
 			if env.Sd.RollupCfg.IsMantleArsia(l2SafeHead.Time) {
-				require.Equal(t, len(safeHeadBlock.Transactions()), 1)
+				require.Equal(t, 1, len(safeHeadBlock.Transactions()))
 
 				// Ensure that the logs contain a mention of the block being replaced _due to the signer not having enough
-				// balance_.
+				// balance_. The address has 21000 wei (gas fee for TxGas only), but needs more for gasLimit + operator fee.
+				// Note: Balance check uses gasLimit (25200) not gasUsed (21000), so want = 25200 * 1 + 65535 = 90735
 				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "insufficient funds for gas * price + value")))
-				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "have 1400000021000 want 1400000086535")))
+				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "have 21000 want 90735")))
 			} else {
-				require.Equal(t, len(safeHeadBlock.Transactions()), 2)
+				require.Equal(t, 2, len(safeHeadBlock.Transactions()))
 			}
 		} else {
 			require.Equal(t, eth.HeaderBlockID(l2SafeHead), eth.HeaderBlockID(l2UnsafeHead), "derivation leads to the same block")
