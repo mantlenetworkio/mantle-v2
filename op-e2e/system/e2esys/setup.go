@@ -804,6 +804,11 @@ func (cfg SystemConfig) Start(t *testing.T, startOpts ...StartOption) (*System, 
 	for name, nodeCfg := range cfg.Nodes {
 		ConfigureL1(nodeCfg, sys.EthInstances[RoleL1], sys.L1BeaconEndpoint())
 		ConfigureL2(nodeCfg, sys.EthInstances[name], cfg.JWTSecret)
+
+		nodeCfg.L2Sync = &config2.PreparedL2SyncEndpoint{
+			Client:   nil,
+			TrustRPC: false,
+		}
 	}
 
 	l1Client := sys.NodeClient(RoleL1)

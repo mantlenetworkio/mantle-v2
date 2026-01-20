@@ -365,6 +365,12 @@ var (
 		EnvVars: prefixEnvVars("BETA_EXTRA_NETWORKS"),
 		Hidden:  true, // hidden, this is deprecated, the flag is not used anymore.
 	}
+	EnableBackupSync = &cli.BoolFlag{
+		Name:    "syncmode.backup",
+		Usage:   "Enable backup L2 unsafe sync.",
+		EnvVars: prefixEnvVars("SYNCMODE_BACKUP"),
+		Hidden:  true,
+	}
 	BackupL2UnsafeSyncRPC = &cli.StringFlag{
 		Name:    "l2.backup-unsafe-sync-rpc",
 		Usage:   "Set the backup L2 unsafe sync RPC endpoint.",
@@ -514,6 +520,7 @@ var DeprecatedFlags = []cli.Flag{
 	L2EngineSyncEnabled,
 	SkipSyncStartCheck,
 	BetaExtraNetworks,
+	EnableBackupSync,
 	BackupL2UnsafeSyncRPC,
 	BackupL2UnsafeSyncRPCTrustRPC,
 	// Deprecated P2P Flags are added at the init step

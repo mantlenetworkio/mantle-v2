@@ -118,6 +118,7 @@ type OpNode struct {
 	l1Source  L1Source              // L1 Client to fetch data from
 	l2Driver  *driver.Driver        // L2 Engine to Sync
 	l2Source  *sources.EngineClient // L2 Execution Engine RPC bindings
+	rpcSync   *sources.SyncClient   // Alt-sync RPC client, optional (may be nil)
 	server    *oprpc.Server         // RPC server hosting the rollup-node API
 	p2pNode   *p2p.NodeP2P          // P2P node functionality
 	p2pMu     gosync.Mutex          // protects p2pNode
@@ -255,6 +256,10 @@ func (n *OpNode) init(ctx context.Context, cfg *config.Config, overrides Initial
 	// initRuntimeConfig relies on side effects to set the runCfg, node.halted and call node.cancel if needed
 	if err := initRuntimeConfig(ctx, cfg, n); err != nil {
 		return fmt.Errorf("failed to init the runtime config: %w", err)
+	}
+
+	if err := n.initRPCSync(ctx, cfg); err != nil {
+		return fmt.Errorf("failed to init RPC sync: %w", err)
 	}
 
 	n.p2pSigner, err = initP2PSigner(ctx, cfg, n)
@@ -807,6 +812,9 @@ func (n *OpNode) RequestL2Range(ctx context.Context, start, end eth.L2BlockRef) 
 		}
 		return p2pNode.RequestL2Range(ctx, start, end)
 	}
+	if n.rpcSync != nil {
+		return n.rpcSync.RequestL2Range(ctx, start, end)
+	}
 	n.log.Debug("ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
 	return nil
 }
@@ -890,6 +898,12 @@ func (n *OpNode) Stop(ctx context.Context) error {
 	if n.l2Driver != nil {
 		if err := n.l2Driver.Close(); err != nil {
 			result = multierror.Append(result, fmt.Errorf("failed to close L2 engine driver cleanly: %w", err))
+		}
+		// If the L2 sync client is present & running, close it.
+		if n.rpcSync != nil {
+			if err := n.rpcSync.Close(); err != nil {
+				result = multierror.Append(result, fmt.Errorf("failed to close L2 engine backup sync client cleanly: %w", err))
+			}
 		}
 	}
 
