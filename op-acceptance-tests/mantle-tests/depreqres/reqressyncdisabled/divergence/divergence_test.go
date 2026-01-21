@@ -16,7 +16,7 @@ import (
 
 func TestMain(m *testing.M) {
 	// No ELP2P, CLP2P to control the supply of unsafe payload to the CL
-	presets.DoMain(m, presets.WithSingleChainMultiNodeWithoutP2P(),
+	presets.DoMain(m, presets.WithMantleSingleChainMultiNodeWithoutP2P(),
 		presets.WithCompatibleTypes(compat.SysGo),
 		presets.WithExecutionLayerSyncOnVerifiers(),
 		presets.WithReqRespSyncDisabled(),

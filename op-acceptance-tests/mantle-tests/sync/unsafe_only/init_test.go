@@ -8,7 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithSingleChainTwoVerifiers(),
+	presets.DoMain(m, presets.WithMantleSingleChainTwoVerifiers(),
 		presets.WithExecutionLayerSyncOnVerifiers(),
 		presets.WithReqRespSyncDisabled(),
 		presets.WithNoDiscovery(),

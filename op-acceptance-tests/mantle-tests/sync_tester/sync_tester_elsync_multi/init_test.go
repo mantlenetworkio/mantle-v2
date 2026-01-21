@@ -13,7 +13,7 @@ import (
 func TestMain(m *testing.M) {
 	presets.DoMain(m,
 		presets.WithExecutionLayerSyncOnVerifiers(),
-		presets.WithSimpleWithSyncTester(),
+		presets.WithMantleSimpleWithSyncTester(),
 		presets.WithELSyncActive(),
 		presets.WithCompatibleTypes(compat.SysGo),
 		stack.MakeCommon(sysgo.WithBatcherOption(func(id stack.L2BatcherID, cfg *bss.CLIConfig) {
