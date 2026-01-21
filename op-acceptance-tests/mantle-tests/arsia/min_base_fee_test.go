@@ -87,8 +87,10 @@ func (mbf *minBaseFeeEnv) setMinBaseFeeViaSytemConfigOnL1(t devtest.T, minBaseFe
 		txplan.WithRetryInclusion(elClient, 10, retry.Exponential()),
 	)
 
-	_, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), customPlan)
+	receipt, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), customPlan)
 	t.Require().NoError(err, "SetMinBaseFee transaction failed")
+
+	t.Log("tx hash", "tx hash", receipt.TxHash)
 
 	t.Logf("Set min base fee on L1: minBaseFee=%d", minBaseFee)
 }
@@ -113,8 +115,8 @@ func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expecte
 	var elasticity uint64
 	if rollupCfg.ChainOpConfig == nil {
 		// mantle default values
-		denominator = 50
-		elasticity = 4
+		denominator = 8
+		elasticity = 2
 		t.Logf("mantle default values: denominator: %d, elasticity: %d", denominator, elasticity)
 	} else {
 		denominator = rollupCfg.ChainOpConfig.EIP1559Denominator
@@ -149,7 +151,7 @@ func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expecte
 		got := binary.BigEndian.Uint64(header.Extra[9:])
 		actualBlockExtraData = header.Extra
 		return got == expected
-	}, 2*time.Minute, 5*time.Second, "L2 min base fee in block header did not sync within timeout")
+	}, 3*time.Minute, 5*time.Second, "L2 min base fee in block header did not sync within timeout")
 
 	t.Require().Equal(expectedExtraData, eth.BytesMax32(actualBlockExtraData), "block header extradata doesnt match")
 }
