@@ -2,14 +2,17 @@ package genesis
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	op_service "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -117,6 +120,27 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 		genesis.ExcessBlobGas = u64ptr(0)
 
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
+	}
+
+	if genesis.Config.IsHolocene(genesis.Timestamp) && genesis.Config.Optimism != nil {
+		denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
+		elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
+		genesis.ExtraData = eip1559.EncodeHoloceneExtraData(denom, elasticity)
+	}
+	if genesis.Config.IsMinBaseFee(genesis.Timestamp) && genesis.Config.Optimism != nil {
+		denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
+		elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
+		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(denom, elasticity, 0)
+	}
+
+	if config.GasPriceOracleTokenRatio != 0 {
+		tokenRatioSlot := common.BigToHash(big.NewInt(0))
+		gpoAccount := genesis.Alloc[predeploys.GasPriceOracleAddr]
+		if gpoAccount.Storage == nil {
+			gpoAccount.Storage = map[common.Hash]common.Hash{}
+		}
+		gpoAccount.Storage[tokenRatioSlot] = common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleTokenRatio))
+		genesis.Alloc[predeploys.GasPriceOracleAddr] = gpoAccount
 	}
 
 	// ExtraData is already set by NewL2Genesis based on config values

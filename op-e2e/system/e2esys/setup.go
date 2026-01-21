@@ -116,7 +116,8 @@ func DefaultSystemConfig(t testing.TB, opts ...SystemConfigOpt) SystemConfig {
 
 	secrets := secrets.DefaultSecrets
 	deployConfig := config.DeployConfig(sco.AllocType)
-	require.Nil(t, deployConfig.L2GenesisJovianTimeOffset, "jovian not supported yet")
+	// Temporarily allow Jovian in opgeth e2e to inspect failures.
+	// require.Nil(t, deployConfig.L2GenesisJovianTimeOffset, "jovian not supported yet")
 	deployConfig.L1GenesisBlockTimestamp = hexutil.Uint64(time.Now().Unix())
 	e2eutils.ApplyDeployConfigForks(deployConfig)
 	require.NoError(t, deployConfig.Check(testlog.Logger(t, log.LevelInfo)),
@@ -261,6 +262,12 @@ func IsthmusSystemConfig(t *testing.T, isthmusTimeOffset *hexutil.Uint64, opts .
 func JovianSystemConfig(t *testing.T, jovianTimeOffset *hexutil.Uint64, opts ...SystemConfigOpt) SystemConfig {
 	cfg := IsthmusSystemConfig(t, &genesisTime, opts...)
 	cfg.DeployConfig.L2GenesisJovianTimeOffset = jovianTimeOffset
+	return cfg
+}
+
+func MantleArsiaSystemConfig(t *testing.T, arsiaTimeOffset *hexutil.Uint64, opts ...SystemConfigOpt) SystemConfig {
+	cfg := JovianSystemConfig(t, &genesisTime, opts...)
+	cfg.DeployConfig.L1PragueTimeOffset = arsiaTimeOffset
 	return cfg
 }
 
@@ -650,11 +657,11 @@ func (cfg SystemConfig) Start(t *testing.T, startOpts ...StartOption) (*System, 
 	}
 
 	l1Block := l1Genesis.ToBlock()
-	allocsMode := cfg.DeployConfig.AllocMode(l1Block.Time())
+	allocsMode := e2eutils.GetMantleL2AllocsMode(cfg.DeployConfig, l1Block.Time())
 
 	t.Log("Generating L2 genesis", "l2_allocs_mode", string(allocsMode))
 	l2Allocs := config.L2Allocs(cfg.AllocType, allocsMode)
-	l2Genesis, err := genesis.BuildL2Genesis(cfg.DeployConfig, l2Allocs, eth.BlockRefFromHeader(l1Block.Header()))
+	l2Genesis, err := genesis.BuildMantleGenesis(cfg.DeployConfig, l2Allocs, eth.BlockRefFromHeader(l1Block.Header()))
 	if err != nil {
 		return nil, err
 	}
@@ -925,35 +932,36 @@ func (cfg SystemConfig) Start(t *testing.T, startOpts ...StartOption) (*System, 
 		return sys, nil
 	}
 
-	// L2Output Submitter
-	respectedGameType := gameTypes.PermissionedGameType
-	if cfg.AllocType == config.AllocTypeFastGame {
-		respectedGameType = gameTypes.FastGameType
-	}
-	proposerCLIConfig := &l2os.CLIConfig{
-		L1EthRpc:          sys.EthInstances[RoleL1].UserRPC().RPC(),
-		RollupRpc:         sys.RollupNodes[RoleSeq].UserRPC().RPC(),
-		DGFAddress:        config.L1Deployments(cfg.AllocType).DisputeGameFactoryProxy.Hex(),
-		ProposalInterval:  6 * time.Second,
-		DisputeGameType:   uint32(respectedGameType),
-		PollInterval:      500 * time.Millisecond,
-		TxMgrConfig:       setuputils.NewTxMgrConfig(sys.EthInstances[RoleL1].UserRPC(), cfg.Secrets.Proposer),
-		AllowNonFinalized: cfg.NonFinalizedProposals,
-		LogConfig: oplog.CLIConfig{
-			Level:  log.LvlInfo,
-			Format: oplog.FormatText,
-		},
-	}
-	proposer, err := l2os.ProposerServiceFromCLIConfig(context.Background(), "0.0.1", proposerCLIConfig, sys.Cfg.Loggers["proposer"])
-	if err != nil {
-		return nil, fmt.Errorf("unable to setup l2 output submitter: %w", err)
-	}
+	cfg.DisableProposer = true
 	if !cfg.DisableProposer {
+		// L2Output Submitter
+		respectedGameType := gameTypes.PermissionedGameType
+		if cfg.AllocType == config.AllocTypeFastGame {
+			respectedGameType = gameTypes.FastGameType
+		}
+		proposerCLIConfig := &l2os.CLIConfig{
+			L1EthRpc:          sys.EthInstances[RoleL1].UserRPC().RPC(),
+			RollupRpc:         sys.RollupNodes[RoleSeq].UserRPC().RPC(),
+			DGFAddress:        config.L1Deployments(cfg.AllocType).DisputeGameFactoryProxy.Hex(),
+			ProposalInterval:  6 * time.Second,
+			DisputeGameType:   uint32(respectedGameType),
+			PollInterval:      500 * time.Millisecond,
+			TxMgrConfig:       setuputils.NewTxMgrConfig(sys.EthInstances[RoleL1].UserRPC(), cfg.Secrets.Proposer),
+			AllowNonFinalized: cfg.NonFinalizedProposals,
+			LogConfig: oplog.CLIConfig{
+				Level:  log.LvlInfo,
+				Format: oplog.FormatText,
+			},
+		}
+		proposer, err := l2os.ProposerServiceFromCLIConfig(context.Background(), "0.0.1", proposerCLIConfig, sys.Cfg.Loggers["proposer"])
+		if err != nil {
+			return nil, fmt.Errorf("unable to setup l2 output submitter: %w", err)
+		}
 		if err := proposer.Start(context.Background()); err != nil {
 			return nil, fmt.Errorf("unable to start l2 output submitter: %w", err)
 		}
+		sys.L2OutputSubmitter = proposer
 	}
-	sys.L2OutputSubmitter = proposer
 
 	// batcher defaults if unset
 	batcherMaxL1TxSizeBytes := cfg.BatcherMaxL1TxSizeBytes

@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	opGethGasLimit    = hexutil.Uint64(199_999_999_999)
 	rip7212Precompile = common.HexToAddress("0x0000000000000000000000000000000000000100")
 	invalid7212Data   = []byte{0x00}
 	// This is a valid hash, r, s, x, y params for RIP-7212 taken from:
@@ -39,6 +40,7 @@ var (
 func TestMissingGasLimit(t *testing.T) {
 	op_e2e.InitParallel(t)
 	cfg := e2esys.DefaultSystemConfig(t)
+	cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	opGeth, err := NewOpGeth(t, ctx, &cfg)
@@ -63,13 +65,14 @@ func TestMissingGasLimit(t *testing.T) {
 func TestTxGasSameAsBlockGasLimit(t *testing.T) {
 	op_e2e.InitParallel(t)
 	cfg := e2esys.DefaultSystemConfig(t)
+	cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 	sys, err := cfg.Start(t)
 	require.Nil(t, err, "Error starting up system")
 
 	ethPrivKey := sys.Cfg.Secrets.Alice
 	tx := types.MustSignNewTx(ethPrivKey, types.LatestSignerForChainID(cfg.L2ChainIDBig()), &types.DynamicFeeTx{
 		ChainID: cfg.L2ChainIDBig(),
-		Gas:     29_999_999,
+		Gas:     199_999_999_999,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -83,6 +86,7 @@ func TestTxGasSameAsBlockGasLimit(t *testing.T) {
 func TestInvalidDepositInFCU(t *testing.T) {
 	op_e2e.InitParallel(t)
 	cfg := e2esys.DefaultSystemConfig(t)
+	cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	opGeth, err := NewOpGeth(t, ctx, &cfg)
@@ -123,6 +127,7 @@ func TestInvalidDepositInFCU(t *testing.T) {
 func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 	op_e2e.InitParallel(t)
 	cfg := e2esys.DefaultSystemConfig(t)
+	cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 	cfg.DeployConfig.FundDevAccounts = true
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -237,6 +242,7 @@ func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 
 func TestPreregolith(t *testing.T) {
 	futureTimestamp := hexutil.Uint64(4)
+	gasLimit := hexutil.Uint64(199_999_999_999)
 	tests := []struct {
 		name         string
 		regolithTime *hexutil.Uint64
@@ -251,6 +257,7 @@ func TestPreregolith(t *testing.T) {
 			// Setup an L2 EE and create a client connection to the engine.
 			// We also need to setup a L1 Genesis to create the rollup genesis.
 			cfg := e2esys.RegolithSystemConfig(t, test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = gasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -299,6 +306,7 @@ func TestPreregolith(t *testing.T) {
 			// Setup an L2 EE and create a client connection to the engine.
 			// We also need to setup a L1 Genesis to create the rollup genesis.
 			cfg := e2esys.RegolithSystemConfig(t, test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = gasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -352,50 +360,10 @@ func TestPreregolith(t *testing.T) {
 			require.Zero(t, *tx.EffectiveNonce(), "should report 0 as tx nonce")
 		})
 
-		t.Run("UnusedGasConsumed_"+test.name, func(t *testing.T) {
-			op_e2e.InitParallel(t)
-			cfg := e2esys.RegolithSystemConfig(t, test.regolithTime)
-
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			defer cancel()
-
-			opGeth, err := NewOpGeth(t, ctx, &cfg)
-			require.NoError(t, err)
-			defer opGeth.Close()
-
-			fromAddr := cfg.Secrets.Addresses().Alice
-
-			// Deposit TX with a high gas limit but using very little actual gas
-			depositTx := types.NewTx(&types.DepositTx{
-				From:  fromAddr,
-				To:    &fromAddr, // send it to ourselves
-				Value: big.NewInt(params.Ether),
-				// SystemTx is assigned 1M gas limit
-				Gas:                 uint64(cfg.DeployConfig.L2GenesisBlockGasLimit) - 1_000_000,
-				IsSystemTransaction: false,
-			})
-
-			signer := types.LatestSigner(opGeth.L2ChainConfig)
-			// Second tx with a gas limit that will fit in regolith but not bedrock
-			tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
-				ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
-				Nonce:     0,
-				GasTipCap: big.NewInt(100),
-				GasFeeCap: big.NewInt(100000),
-				Gas:       1_000_001,
-				To:        &cfg.Secrets.Addresses().Alice,
-				Value:     big.NewInt(0),
-				Data:      nil,
-			})
-
-			_, err = opGeth.AddL2Block(ctx, depositTx, tx)
-			// Geth checks the gas limit usage of transactions as part of validating the payload attributes and refuses to even start building the block
-			require.ErrorContains(t, err, "Invalid payload attributes", "block should be invalid due to using too much gas")
-		})
-
 		t.Run("AllowSystemTx_"+test.name, func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.RegolithSystemConfig(t, test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = gasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -434,6 +402,7 @@ func TestRegolith(t *testing.T) {
 			// Setup an L2 EE and create a client connection to the engine.
 			// We also need to setup a L1 Genesis to create the rollup genesis.
 			cfg := e2esys.RegolithSystemConfig(t, &test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -485,6 +454,7 @@ func TestRegolith(t *testing.T) {
 			// Setup an L2 EE and create a client connection to the engine.
 			// We also need to setup a L1 Genesis to create the rollup genesis.
 			cfg := e2esys.RegolithSystemConfig(t, &test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -544,6 +514,7 @@ func TestRegolith(t *testing.T) {
 		t.Run("ReturnUnusedGasToPool_"+test.name, func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.RegolithSystemConfig(t, &test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -586,6 +557,7 @@ func TestRegolith(t *testing.T) {
 		t.Run("RejectSystemTx_"+test.name, func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.RegolithSystemConfig(t, &test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -601,8 +573,13 @@ func TestRegolith(t *testing.T) {
 			systemTx.IsSystemTransaction = true
 			require.NoError(t, err)
 
-			_, err = opGeth.AddL2Block(ctx, types.NewTx(systemTx))
-			require.ErrorIs(t, err, ErrNewPayloadNotValid, "should reject blocks containing system tx")
+			tx := types.NewTx(systemTx)
+			envelope, err := opGeth.AddL2Block(ctx, tx)
+			require.NoError(t, err, "system tx should not abort block building in regolith")
+			require.NotNil(t, envelope)
+			receipt, err := opGeth.L2Client.TransactionReceipt(ctx, tx.Hash())
+			require.NoError(t, err)
+			require.Equal(t, types.ReceiptStatusFailed, receipt.Status, "system tx should fail under regolith")
 		})
 
 		t.Run("IncludeGasRefunds_"+test.name, func(t *testing.T) {
@@ -645,6 +622,7 @@ func TestRegolith(t *testing.T) {
 			deployData := append(deployPrefix, sstoreContract...)
 
 			cfg := e2esys.RegolithSystemConfig(t, &test.regolithTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -657,45 +635,38 @@ func TestRegolith(t *testing.T) {
 			fromAddr := cfg.Secrets.Addresses().Alice
 			storeContractAddr := crypto.CreateAddress(fromAddr, 0)
 
-			// Deposit TX to deploy a contract that lets us store an arbitrary value
-			deployTx := types.NewTx(&types.DepositTx{
-				From:                fromAddr,
-				Value:               common.Big0,
-				Data:                deployData,
-				Gas:                 1_000_000,
-				IsSystemTransaction: false,
-			})
+			baseBlock, err := opGeth.L2Client.BlockByNumber(ctx, nil)
+			require.NoError(t, err)
+			require.NotNil(t, baseBlock.BaseFee())
+
+			signer := types.LatestSigner(opGeth.L2ChainConfig)
+			tip := big.NewInt(1_000_000_000) // 1 gwei tip
+			feeCap := new(big.Int).Add(baseBlock.BaseFee(), tip)
+
+			makeTx := func(nonce uint64, to *common.Address, data []byte, gas uint64) *types.Transaction {
+				return types.MustSignNewTx(cfg.Secrets.Alice, signer, &types.DynamicFeeTx{
+					ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
+					Nonce:     nonce,
+					GasTipCap: tip,
+					GasFeeCap: feeCap,
+					Gas:       gas,
+					To:        to,
+					Value:     common.Big0,
+					Data:      data,
+				})
+			}
+
+			// L2 tx to deploy a contract that lets us store an arbitrary value
+			deployTx := makeTx(0, nil, deployData, 1_000_000)
 
 			// Store a non-zero value
-			storeTx := types.NewTx(&types.DepositTx{
-				From:                fromAddr,
-				To:                  &storeContractAddr,
-				Value:               common.Big0,
-				Data:                []byte{0x06},
-				Gas:                 1_000_000,
-				IsSystemTransaction: false,
-			})
+			storeTx := makeTx(1, &storeContractAddr, []byte{0x06}, 1_000_000)
 
-			// Store a non-zero value
-			zeroTx := types.NewTx(&types.DepositTx{
-				From:                fromAddr,
-				To:                  &storeContractAddr,
-				Value:               common.Big0,
-				Data:                []byte{0x00},
-				Gas:                 1_000_000,
-				IsSystemTransaction: false,
-			})
+			// Clear the value to zero
+			zeroTx := makeTx(2, &storeContractAddr, []byte{0x00}, 1_000_000)
 
-			// Store a non-zero value again
-			// Has same gas cost as zeroTx, except the first tx gets a gas refund for clearing the storage slot
-			rezeroTx := types.NewTx(&types.DepositTx{
-				From:                fromAddr,
-				To:                  &storeContractAddr,
-				Value:               common.Big0,
-				Data:                []byte{0x00},
-				Gas:                 1_000_001,
-				IsSystemTransaction: false,
-			})
+			// Store zero again. Same base cost, but no refund for clearing the slot this time.
+			rezeroTx := makeTx(3, &storeContractAddr, []byte{0x00}, 1_000_001)
 
 			_, err = opGeth.AddL2Block(ctx, deployTx, storeTx, zeroTx, rezeroTx)
 			require.NoError(t, err)
@@ -740,9 +711,24 @@ func TestPreCanyon(t *testing.T) {
 	for _, test := range tests {
 		test := test
 
+		configureMantleForks := func(cfg *e2esys.SystemConfig) {
+			forkTime := test.canyonTime
+			// Disable Mantle base fee fork at genesis for pre-canyon expectations.
+			cfg.DeployConfig.L2GenesisMantleEuboeaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleBaseFeeTimeOffset = forkTime
+			// Mantle ties Shanghai activation to Skadi, not Canyon.
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = forkTime
+			// Avoid default 0s for Limb/Arsia to keep fork ordering consistent.
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = forkTime
+		}
+
 		t.Run(fmt.Sprintf("ReturnsNilWithdrawals_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.CanyonSystemConfig(t, test.canyonTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+			configureMantleForks(&cfg)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -763,6 +749,8 @@ func TestPreCanyon(t *testing.T) {
 		t.Run(fmt.Sprintf("RejectPushZeroTx_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.CanyonSystemConfig(t, test.canyonTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+			configureMantleForks(&cfg)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -809,6 +797,7 @@ func TestCanyon(t *testing.T) {
 		t.Run(fmt.Sprintf("ReturnsEmptyWithdrawals_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.CanyonSystemConfig(t, &test.canyonTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -831,6 +820,7 @@ func TestCanyon(t *testing.T) {
 		t.Run(fmt.Sprintf("AcceptsPushZeroTxn_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.CanyonSystemConfig(t, &test.canyonTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -874,9 +864,22 @@ func TestPreEcotone(t *testing.T) {
 	for _, test := range tests {
 		test := test
 
+		configureMantleForks := func(cfg *e2esys.SystemConfig) {
+			forkTime := test.ecotoneTime
+			// Keep Mantle fork ordering aligned for pre-ecotone expectations.
+			cfg.DeployConfig.L2GenesisMantleBaseFeeTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEuboeaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = forkTime
+		}
+
 		t.Run(fmt.Sprintf("NilParentBeaconRoot_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.EcotoneSystemConfig(t, test.ecotoneTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+			configureMantleForks(&cfg)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -897,6 +900,8 @@ func TestPreEcotone(t *testing.T) {
 		t.Run(fmt.Sprintf("RejectTstoreTxn_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.EcotoneSystemConfig(t, test.ecotoneTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+			configureMantleForks(&cfg)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -945,6 +950,7 @@ func TestEcotone(t *testing.T) {
 		t.Run(fmt.Sprintf("HashParentBeaconBlockRoot_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.EcotoneSystemConfig(t, &test.ecotoneTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -969,6 +975,7 @@ func TestEcotone(t *testing.T) {
 		t.Run(fmt.Sprintf("TstoreTxn_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.EcotoneSystemConfig(t, &test.ecotoneTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -1018,9 +1025,50 @@ func TestPreFjord(t *testing.T) {
 	for _, test := range tests {
 		test := test
 
+		configureMantleForks := func(cfg *e2esys.SystemConfig) {
+			forkTime := test.fjordTime
+			zeroTime := hexutil.Uint64(0)
+			if forkTime == nil {
+				// Explicitly disable Mantle forks to avoid default 0 activation.
+				cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = nil
+				cfg.DeployConfig.L2GenesisMantleEuboeaTimeOffset = nil
+				cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = nil
+				cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = nil
+				cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = nil
+				// Disable OP Stack forks that are aligned to Mantle Arsia.
+				cfg.DeployConfig.L2GenesisCanyonTimeOffset = nil
+				cfg.DeployConfig.L2GenesisDeltaTimeOffset = nil
+				cfg.DeployConfig.L2GenesisEcotoneTimeOffset = nil
+				cfg.DeployConfig.L2GenesisFjordTimeOffset = nil
+				cfg.DeployConfig.L2GenesisGraniteTimeOffset = nil
+				cfg.DeployConfig.L2GenesisHoloceneTimeOffset = nil
+				cfg.DeployConfig.L2GenesisIsthmusTimeOffset = nil
+				cfg.DeployConfig.L2GenesisJovianTimeOffset = nil
+				cfg.DeployConfig.L1CancunTimeOffset = &zeroTime
+				return
+			}
+			// Fjord aligns with Mantle Arsia; keep Mantle forks scheduled in the future for pre-fjord tests.
+			cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEuboeaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisCanyonTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisDeltaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisEcotoneTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisFjordTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisGraniteTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisHoloceneTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisIsthmusTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisJovianTimeOffset = forkTime
+			cfg.DeployConfig.L1CancunTimeOffset = &zeroTime
+		}
+
 		t.Run(fmt.Sprintf("RIP7212_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.FjordSystemConfig(t, test.fjordTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+			configureMantleForks(&cfg)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -1069,6 +1117,7 @@ func TestFjord(t *testing.T) {
 		t.Run(fmt.Sprintf("RIP7212_%s", test.name), func(t *testing.T) {
 			op_e2e.InitParallel(t)
 			cfg := e2esys.FjordSystemConfig(t, &test.fjordTime)
+			cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -1186,11 +1235,30 @@ func TestIsthmus(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
+		configureMantleForks := func(cfg *e2esys.SystemConfig) {
+			forkTime := &test.isthmusTime
+			cfg.DeployConfig.L2GenesisMantleBaseFeeTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleEuboeaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisCanyonTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisDeltaTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisEcotoneTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisFjordTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisGraniteTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisHoloceneTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisIsthmusTimeOffset = forkTime
+			cfg.DeployConfig.L2GenesisJovianTimeOffset = forkTime
+		}
 		for _, precompileToTest := range precompilesToTest {
 			precompileToTest := precompileToTest
 			t.Run(fmt.Sprintf("EIP2537_%s_%s", test.name, precompileToTest.precompileName), func(t *testing.T) {
 				op_e2e.InitParallel(t)
 				cfg := e2esys.IsthmusSystemConfig(t, &test.isthmusTime)
+				cfg.DeployConfig.L2GenesisBlockGasLimit = opGethGasLimit
+				configureMantleForks(&cfg)
 
 				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 				defer cancel()

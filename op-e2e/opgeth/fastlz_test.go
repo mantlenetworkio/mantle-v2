@@ -49,8 +49,8 @@ var (
 )
 
 type testStateGetter struct {
-	baseFee, blobBaseFee, overhead, scalar *big.Int
-	baseFeeScalar, blobBaseFeeScalar       uint32
+	baseFee, blobBaseFee, overhead, scalar, tokenRatio *big.Int
+	baseFeeScalar, blobBaseFeeScalar                   uint32
 }
 
 func (sg *testStateGetter) GetState(addr common.Address, slot common.Hash) common.Hash {
@@ -69,6 +69,8 @@ func (sg *testStateGetter) GetState(addr common.Address, slot common.Hash) commo
 		offset := 32 - types.BaseFeeScalarSlotOffset - 4 // todo maybe make scalarSelectSTartPublic
 		binary.BigEndian.PutUint32(buf[offset:offset+4], sg.baseFeeScalar)
 		binary.BigEndian.PutUint32(buf[offset+4:offset+8], sg.blobBaseFeeScalar)
+	case types.TokenRatioSlot:
+		sg.tokenRatio.FillBytes(buf[:])
 	default:
 		panic("unknown slot")
 	}
@@ -81,11 +83,22 @@ func FuzzFjordCostFunction(f *testing.F) {
 	}
 
 	cfg := e2esys.DefaultSystemConfig(f)
+	cfg.DeployConfig.GasPriceOracleTokenRatio = uint64(4000)
 	s := hexutil.Uint64(0)
+	cfg.DeployConfig.L2GenesisRegolithTimeOffset = &s
 	cfg.DeployConfig.L2GenesisCanyonTimeOffset = &s
 	cfg.DeployConfig.L2GenesisDeltaTimeOffset = &s
 	cfg.DeployConfig.L2GenesisEcotoneTimeOffset = &s
 	cfg.DeployConfig.L2GenesisFjordTimeOffset = &s
+	cfg.DeployConfig.L2GenesisGraniteTimeOffset = &s
+	cfg.DeployConfig.L2GenesisHoloceneTimeOffset = &s
+	cfg.DeployConfig.L2GenesisIsthmusTimeOffset = &s
+	cfg.DeployConfig.L2GenesisJovianTimeOffset = &s
+	cfg.DeployConfig.L2GenesisMantleBaseFeeTimeOffset = &s
+	cfg.DeployConfig.L2GenesisMantleEverestTimeOffset = &s
+	cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &s
+	cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &s
+	cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &s
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -97,12 +110,12 @@ func FuzzFjordCostFunction(f *testing.F) {
 	gpoCaller, err := bindings.NewGasPriceOracleCaller(predeploys.GasPriceOracleAddr, opGeth.L2Client)
 	require.NoError(f, err)
 
-	isFjord, err := gpoCaller.IsFjord(&bind.CallOpts{})
+	isArsia, err := gpoCaller.IsArsia(&bind.CallOpts{})
 	require.NoError(f, err)
-	require.True(f, isFjord)
+	require.True(f, isArsia)
 
 	_, err = opGeth.AddL2Block(context.Background())
-	require.NoError(f, err)
+	require.NoErrorf(f, err, "AddL2Block err: %v", err)
 
 	baseFee, err := gpoCaller.L1BaseFee(&bind.CallOpts{})
 	require.NoError(f, err)
@@ -120,6 +133,10 @@ func FuzzFjordCostFunction(f *testing.F) {
 	require.NoError(f, err)
 	require.Equal(f, blobBaseFeeScalar, uint32(0))
 
+	tokenRatio, err := gpoCaller.TokenRatio(&bind.CallOpts{})
+	require.NoError(f, err)
+	require.Greater(f, tokenRatio.Uint64(), uint64(0))
+
 	// we can ignore the blobbasefee, as the scalar is set to zero.
 	feeScaled := big.NewInt(16)
 	feeScaled.Mul(feeScaled, baseFee)
@@ -132,18 +149,19 @@ func FuzzFjordCostFunction(f *testing.F) {
 		scalar:            big.NewInt(0), // not used for fjord
 		baseFeeScalar:     baseFeeScalar,
 		blobBaseFeeScalar: blobBaseFeeScalar,
+		tokenRatio:        tokenRatio,
 	}
 
 	zeroTime := uint64(0)
 	// create a config where ecotone/fjord upgrades are active
 	config := &params.ChainConfig{
-		Optimism:     params.OptimismTestConfig.Optimism,
-		RegolithTime: &zeroTime,
-		EcotoneTime:  &zeroTime,
-		FjordTime:    &zeroTime,
+		Optimism:        params.OptimismTestConfig.Optimism,
+		RegolithTime:    &zeroTime,
+		EcotoneTime:     &zeroTime,
+		FjordTime:       &zeroTime,
+		MantleArsiaTime: &zeroTime,
 	}
-	require.True(f, config.IsOptimismEcotone(zeroTime))
-	require.True(f, config.IsOptimismFjord(zeroTime))
+	require.True(f, config.IsMantleArsia(zeroTime))
 	costFunc := types.NewL1CostFunc(config, db)
 
 	f.Fuzz(func(t *testing.T, fuzzedData []byte) {
@@ -172,6 +190,8 @@ func FuzzFjordCostFunction(f *testing.F) {
 
 		l1FeeSolidity.Mul(l1FeeSolidity, feeScaled)
 		l1FeeSolidity.Div(l1FeeSolidity, big.NewInt(1e12))
+
+		l1FeeSolidity.Mul(l1FeeSolidity, tokenRatio)
 
 		costData := types.NewRollupCostData(fuzzedData)
 
