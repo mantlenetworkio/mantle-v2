@@ -82,6 +82,8 @@ func NewConfig(ctx cliiface.Context, log log.Logger) (*config.Config, error) {
 		return nil, fmt.Errorf("failed to load l2 endpoints info: %w", err)
 	}
 
+	l2SyncEndpoint := NewL2SyncEndpointConfig(ctx)
+
 	syncConfig, err := NewSyncConfig(ctx, log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the sync config: %w", err)
@@ -101,6 +103,7 @@ func NewConfig(ctx cliiface.Context, log log.Logger) (*config.Config, error) {
 	cfg := &config.Config{
 		L1:                          l1Endpoint,
 		L2:                          l2Endpoint,
+		L2Sync:                      l2SyncEndpoint,
 		L1ChainConfig:               l1ChainConfig,
 		Rollup:                      *rollupConfig,
 		DependencySet:               depSet,
