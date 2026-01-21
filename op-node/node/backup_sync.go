@@ -10,6 +10,9 @@ import (
 )
 
 func (n *OpNode) initRPCSync(ctx context.Context, cfg *config.Config) error {
+	if cfg.L2Sync == nil {
+		return nil
+	}
 	rpcSyncClient, rpcCfg, err := cfg.L2Sync.Setup(ctx, n.log, &cfg.Rollup)
 	if err != nil {
 		return fmt.Errorf("failed to setup L2 execution-engine RPC client for backup sync: %w", err)

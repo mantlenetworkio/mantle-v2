@@ -79,6 +79,10 @@ func LoadDevnetFromURL(devnetURL string) (*DevnetEnv, error) {
 		return nil, fmt.Errorf("error fixing up devnet config: %w", err)
 	}
 
+	if err := fixupMantleDevnetConfig(env); err != nil {
+		return nil, fmt.Errorf("error fixing up Mantle devnet config: %w", err)
+	}
+
 	var ctrl surfaceGetter
 	scheme := parsedURL.Scheme
 	if val, ok := os.LookupEnv(EnvCtrlVar); ok {
