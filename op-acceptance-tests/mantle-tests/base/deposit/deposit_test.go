@@ -2,6 +2,7 @@ package deposit
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	supervisorTypes "github.com/ethereum-optimism/optimism/op-supervisor/supervisor/types"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/lmittmann/w3"
 )
@@ -246,6 +250,165 @@ func TestL1ToL2DepositMNT(gt *testing.T) {
 		syncStatus.LocalSafeL2,
 		syncStatus.LocalSafeL2.L1Origin,
 	)
+
+	const l1XDMABIJSON = `[
+		{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"target","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"},{"indexed":false,"internalType":"bytes","name":"message","type":"bytes"},{"indexed":false,"internalType":"uint256","name":"messageNonce","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"gasLimit","type":"uint256"}],"name":"SentMessage","type":"event"},
+		{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"sender","type":"address"},{"indexed":false,"internalType":"uint256","name":"mntValue","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"ethValue","type":"uint256"}],"name":"SentMessageExtension1","type":"event"}
+	]`
+	l1XDMABI, err := abi.JSON(strings.NewReader(l1XDMABIJSON))
+	t.Require().NoError(err)
+
+	const portalABIJSON = `[
+		{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":true,"internalType":"uint256","name":"version","type":"uint256"},{"indexed":false,"internalType":"bytes","name":"opaqueData","type":"bytes"}],"name":"TransactionDeposited","type":"event"}
+	]`
+	portalABI, err := abi.JSON(strings.NewReader(portalABIJSON))
+	t.Require().NoError(err)
+
+	var (
+		sentTarget common.Address
+		sentSender common.Address
+		sentMsg    []byte
+		sentNonce  *big.Int
+		sentGas    *big.Int
+		sentMNT    *big.Int
+		sentETH    *big.Int
+		haveSent   bool
+		haveExt    bool
+	)
+
+	sentSig := crypto.Keccak256Hash([]byte("SentMessage(address,address,bytes,uint256,uint256)"))
+	sentExtSig := crypto.Keccak256Hash([]byte("SentMessageExtension1(address,uint256,uint256)"))
+	depositSig := crypto.Keccak256Hash([]byte("TransactionDeposited(address,address,uint256,bytes)"))
+
+	for _, lg := range receipt.Logs {
+		if lg == nil || len(lg.Topics) == 0 {
+			continue
+		}
+		if lg.Address == bridgeMessenger {
+			switch lg.Topics[0] {
+			case sentSig:
+				if len(lg.Topics) < 3 {
+					t.Log("L1 XDM SentMessage missing topics")
+					continue
+				}
+				vals, err := l1XDMABI.Events["SentMessage"].Inputs.NonIndexed().Unpack(lg.Data)
+				if err != nil {
+					t.Log("L1 XDM SentMessage unpack err", err)
+					continue
+				}
+				if len(vals) == 3 {
+					sentTarget = common.BytesToAddress(lg.Topics[1].Bytes())
+					sentSender = common.BytesToAddress(lg.Topics[2].Bytes())
+					sentMsg, _ = vals[0].([]byte)
+					sentNonce, _ = vals[1].(*big.Int)
+					sentGas, _ = vals[2].(*big.Int)
+					haveSent = true
+				}
+			case sentExtSig:
+				if len(lg.Topics) < 2 {
+					t.Log("L1 XDM SentMessageExtension1 missing topics")
+					continue
+				}
+				vals, err := l1XDMABI.Events["SentMessageExtension1"].Inputs.NonIndexed().Unpack(lg.Data)
+				if err != nil {
+					t.Log("L1 XDM SentMessageExtension1 unpack err", err)
+					continue
+				}
+				if len(vals) == 2 {
+					sentMNT, _ = vals[0].(*big.Int)
+					sentETH, _ = vals[1].(*big.Int)
+					haveExt = true
+				}
+			}
+		}
+		if lg.Address == portalAddr && lg.Topics[0] == depositSig {
+			vals, err := portalABI.Events["TransactionDeposited"].Inputs.NonIndexed().Unpack(lg.Data)
+			if err != nil {
+				t.Log("L1 portal TransactionDeposited unpack err", err)
+				continue
+			}
+			if len(vals) == 1 {
+				opaque, _ := vals[0].([]byte)
+				t.Log("L1 portal deposit opaqueData len", len(opaque))
+				if len(opaque) >= 32+32+32+32+8+1 {
+					offset := 0
+					mntValue := new(big.Int).SetBytes(opaque[offset : offset+32])
+					offset += 32
+					mntTxValue := new(big.Int).SetBytes(opaque[offset : offset+32])
+					offset += 32
+					ethValue := new(big.Int).SetBytes(opaque[offset : offset+32])
+					offset += 32
+					ethTxValue := new(big.Int).SetBytes(opaque[offset : offset+32])
+					offset += 32
+					gasLimit := new(big.Int).SetBytes(opaque[offset : offset+8])
+					offset += 8
+					isCreation := opaque[offset] != 0
+					t.Log("L1 portal deposit mntValue", eth.WeiBig(mntValue), "mntTxValue", eth.WeiBig(mntTxValue))
+					t.Log("L1 portal deposit ethValue", eth.WeiBig(ethValue), "ethTxValue", eth.WeiBig(ethTxValue))
+					t.Log("L1 portal deposit gasLimit", gasLimit, "isCreation", isCreation)
+				}
+			}
+		}
+	}
+
+	if haveSent {
+		t.Log("L1 XDM SentMessage target", sentTarget, "sender", sentSender, "nonce", sentNonce, "gasLimit", sentGas, "msgLen", len(sentMsg))
+	} else {
+		t.Log("L1 XDM SentMessage not found in receipt logs")
+	}
+	if haveExt {
+		t.Log("L1 XDM SentMessageExtension1 mntValue", eth.WeiBig(sentMNT), "ethValue", eth.WeiBig(sentETH))
+	} else {
+		t.Log("L1 XDM SentMessageExtension1 not found in receipt logs")
+	}
+
+	var expectedMsgHash common.Hash
+	if haveSent && haveExt {
+		relayFn := w3.MustNewFunc("relayMessage(uint256,address,address,uint256,uint256,uint256,bytes)", "")
+		relayData, err := relayFn.EncodeArgs(sentNonce, sentSender, sentTarget, sentMNT, sentETH, sentGas, sentMsg)
+		if err != nil {
+			t.Log("L1 XDM relayMessage encode err", err)
+		} else {
+			expectedMsgHash = crypto.Keccak256Hash(relayData)
+			t.Log("L1 XDM expected msgHash", expectedMsgHash)
+		}
+	}
+
+	l2XDMAddr := common.HexToAddress("0x4200000000000000000000000000000000000007")
+	relayedSig := crypto.Keccak256Hash([]byte("RelayedMessage(bytes32)"))
+	failedSig := crypto.Keccak256Hash([]byte("FailedRelayedMessage(bytes32)"))
+	l2Head, err := sys.L2EL.Escape().EthClient().BlockRefByLabel(t.Ctx(), eth.Unsafe)
+	t.Require().NoError(err)
+	l2Query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(0),
+		ToBlock:   new(big.Int).SetUint64(l2Head.Number),
+		Addresses: []common.Address{l2XDMAddr},
+		Topics:    [][]common.Hash{{relayedSig, failedSig}},
+	}
+	var l2Logs []types.Log
+	if err := sys.L2EL.Escape().EthClient().RPC().CallContext(t.Ctx(), &l2Logs, "eth_getLogs", l2Query); err != nil {
+		t.Log("L2 XDM eth_getLogs err", err)
+	} else {
+		relayed := make(map[common.Hash]struct{})
+		failed := make(map[common.Hash]struct{})
+		for _, lg := range l2Logs {
+			if len(lg.Topics) < 2 {
+				continue
+			}
+			switch lg.Topics[0] {
+			case relayedSig:
+				relayed[lg.Topics[1]] = struct{}{}
+			case failedSig:
+				failed[lg.Topics[1]] = struct{}{}
+			}
+		}
+		t.Logf("L2 XDM relayed=%d failed=%d (scanned to L2 block %d)", len(relayed), len(failed), l2Head.Number)
+		if expectedMsgHash != (common.Hash{}) {
+			_, relayedOK := relayed[expectedMsgHash]
+			_, failedOK := failed[expectedMsgHash]
+			t.Log("L2 XDM expected msgHash relayed", relayedOK, "failed", failedOK)
+		}
+	}
 
 	gasPrice := receipt.EffectiveGasPrice
 	gasCost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), gasPrice)

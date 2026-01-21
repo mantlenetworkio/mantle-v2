@@ -8,7 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithSimpleWithSyncTester(),
+	presets.DoMain(m, presets.WithMantleSimpleWithSyncTester(),
 		presets.WithCompatibleTypes(compat.SysGo),
 	)
 }

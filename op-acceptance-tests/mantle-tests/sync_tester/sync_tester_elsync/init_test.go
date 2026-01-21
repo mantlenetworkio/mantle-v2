@@ -10,7 +10,7 @@ import (
 func TestMain(m *testing.M) {
 	presets.DoMain(m,
 		presets.WithExecutionLayerSyncOnVerifiers(),
-		presets.WithSimpleWithSyncTester(),
+		presets.WithMantleSimpleWithSyncTester(),
 		presets.WithELSyncActive(),
 		presets.WithCompatibleTypes(compat.SysGo),
 	)

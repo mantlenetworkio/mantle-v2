@@ -8,7 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithSingleChainMultiNode(),
+	presets.DoMain(m, presets.WithMantleSingleChainMultiNode(),
 		presets.WithConsensusLayerSync(),
 		presets.WithSafeDBEnabled(),
 		// Destructive test that requiring an in-memory only geth database

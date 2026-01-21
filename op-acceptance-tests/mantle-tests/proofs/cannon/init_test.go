@@ -11,7 +11,7 @@ import (
 
 func TestMain(m *testing.M) {
 	presets.DoMain(m,
-		presets.WithProofs(),
+		presets.WithMantleProofs(),
 		stack.MakeCommon(sysgo.WithDeployerOptions(sysgo.WithJovianAtGenesis)),
 		presets.WithSafeDBEnabled(),
 		presets.WithCannonKona(),

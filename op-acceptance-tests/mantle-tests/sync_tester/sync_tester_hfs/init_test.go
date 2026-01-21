@@ -13,7 +13,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithSimpleWithSyncTester(),
+	presets.DoMain(m, presets.WithMantleSimpleWithSyncTester(),
 		presets.WithCompatibleTypes(compat.SysGo),
 		presets.WithHardforkSequentialActivation(forks.Bedrock, forks.Jovian, 6),
 		presets.WithNoDiscovery(),

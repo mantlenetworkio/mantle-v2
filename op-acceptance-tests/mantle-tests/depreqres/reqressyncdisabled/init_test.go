@@ -11,7 +11,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithSingleChainMultiNode(),
+	presets.DoMain(m, presets.WithMantleSingleChainMultiNode(),
 		presets.WithExecutionLayerSyncOnVerifiers(),
 		presets.WithCompatibleTypes(compat.SysGo),
 		presets.WithReqRespSyncDisabled(),
