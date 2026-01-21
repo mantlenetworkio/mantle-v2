@@ -122,3 +122,9 @@ gates:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
         name: TestMinBaseFee
         timeout: 5m
+  - id: mantle-temp
+    description: "Mantle network tests."
+    tests:
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
+        name: TestChainFork
+        timeout: 5m
