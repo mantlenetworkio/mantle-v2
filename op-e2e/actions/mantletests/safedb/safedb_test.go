@@ -46,17 +46,23 @@ func RecordSafeHeadUpdates(gt *testing.T, forksname rollup.MantleForkName) {
 	// build empty L1 block
 	miner.ActEmptyBlock(t)
 
+	// finalize it, so the L1 geth blob pool doesn't log errors about missing finality
+	miner.ActL1SafeNext(t)
+	miner.ActL1FinalizeNext(t)
 	// Create L2 blocks, and reference the L1 head as origin
 	sequencer.ActL1HeadSignal(t)
 	sequencer.ActBuildToL1Head(t)
 
 	// submit all new L2 blocks
-	batcher.ActSubmitAll(t)
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+	batchTx := batcher.LastSubmitted
 
 	// new L1 block with L2 batch
 	miner.ActL1StartBlock(12)(t)
-	miner.ActL1IncludeTx(sd.RollupCfg.Genesis.SystemConfig.BatcherAddr)(t)
-	batchTx := miner.L1Transactions[0]
+	miner.ActL1IncludeTxByHash(batchTx.Hash())(t)
+	//batchTx = miner.L1Transactions[0]
 	miner.ActL1EndBlock(t)
 
 	// verifier picks up the L2 chain that was submitted
@@ -113,7 +119,7 @@ func RecordSafeHeadUpdates(gt *testing.T, forksname rollup.MantleForkName) {
 	// and there's no way to manually trigger runReorg, so we re-insert it ourselves.
 	require.NoError(t, miner.Eth.TxPool().Add([]*types.Transaction{batchTx}, true)[0])
 	// need to re-insert previously included tx into the block
-	miner.ActL1IncludeTx(sd.RollupCfg.Genesis.SystemConfig.BatcherAddr)(t)
+	miner.ActL1IncludeTxByHash(batchTx.Hash())(t)
 	miner.ActL1EndBlock(t)
 
 	// sync the verifier again: now it should be safe again

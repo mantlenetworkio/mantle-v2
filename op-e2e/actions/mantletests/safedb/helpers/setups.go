@@ -33,7 +33,7 @@ func SetupSafeDBTestActors(t helpers.Testing, dp *e2eutils.DeployParams, sd *e2e
 	sequencer.ActL2PipelineFull(t)
 	verifEngine, verifier := helpers.SetupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &sync.Config{}, helpers.WithSafeHeadListener(db))
 	rollupSeqCl := sequencer.RollupClient()
-	batcher := helpers.NewL2Batcher(log, sd.RollupCfg, helpers.DefaultBatcherCfg(dp),
+	batcher := helpers.NewL2Batcher(log, sd.RollupCfg, helpers.DefaultBatcherCfgSafeDb(dp),
 		rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
 	return sd, miner, sequencer, verifier, verifEngine, batcher
 }

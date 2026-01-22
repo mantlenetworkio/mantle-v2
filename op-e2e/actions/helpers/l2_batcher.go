@@ -80,6 +80,17 @@ func DefaultBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
 	}
 }
 
+func DefaultBatcherCfgSafeDb(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		BatcherKey:               dp.Secrets.Batcher,
+		DataAvailabilityType:     batcherFlags.BlobsType,
+		ForceSubmitSingularBatch: true,
+		EnableCellProofs:         true, // TODO change to true when Osaka activates on L1
+	}
+}
+
 func MantleDefaultBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
 	return &BatcherCfg{
 		MinL1TxSize:              0,

@@ -10,6 +10,7 @@ import (
 
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	upgradesHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/mantleupgrades/helpers"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/blobstore"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum/go-ethereum"
@@ -21,10 +22,12 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	batcherFlags "github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	engine2 "github.com/ethereum-optimism/optimism/op-node/rollup/engine"
+	syncConfig "github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/event"
 	"github.com/ethereum-optimism/optimism/op-service/sources"
@@ -1056,6 +1059,137 @@ func TestForcedELSyncCLAfterNodeRestart(gt *testing.T) {
 	require.NotNil(t, record, "The verifier should start EL Sync when l2.engineKind is not geth")
 }
 */
+// TestDerivationWithMissingBlobData tests that when L1 cannot provide blob data,
+// the verifier's derivation pipeline stalls and the safe head does not advance.
+// This simulates scenarios like:
+// - Blob data expired after 18-day retention period
+// - Beacon node unavailable
+// - Network errors preventing blob retrieval
+func TestDerivationWithMissingBlobData(gt *testing.T) {
+	t := actionsHelpers.NewDefaultTesting(gt)
+	dp := e2eutils.MakeMantleDeployParams(t, actionsHelpers.DefaultRollupTestParams())
+	arsiaTimeOffset := hexutil.Uint64(0)
+	// Activate Arsia hardfork (Mantle starts using standard blobs after Arsia)
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, &arsiaTimeOffset)
+
+	sd := e2eutils.SetupMantleNormal(t, dp, actionsHelpers.DefaultAlloc)
+
+	// Use a log handler to capture errors
+	captureLog, captureLogHandler := testlog.CaptureLogger(t, log.LevelDebug)
+
+	miner, seqEngine, sequencer := actionsHelpers.SetupSequencerTest(t, sd, captureLog)
+	rollupSeqCl := sequencer.RollupClient()
+
+	// Use blob batching
+	batcher := actionsHelpers.NewL2Batcher(captureLog, sd.RollupCfg, &actionsHelpers.BatcherCfg{
+		MinL1TxSize:          0,
+		MaxL1TxSize:          128_000,
+		BatcherKey:           dp.Secrets.Batcher,
+		DataAvailabilityType: batcherFlags.BlobsType,
+	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Setup verifier with the same blob store (normal scenario)
+	_, verifier := actionsHelpers.SetupVerifier(t, sd, captureLog, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &syncConfig.Config{})
+
+	sequencer.ActL2PipelineFull(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Build and finalize an empty L1 block first (required for blob pool)
+	miner.ActEmptyBlock(t)
+	miner.ActL1SafeNext(t)
+	miner.ActL1FinalizeNext(t)
+
+	// Create L2 blocks with transactions
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	// Record the L2 unsafe head
+	l2UnsafeHead := sequencer.L2Unsafe()
+	require.Greater(t, l2UnsafeHead.Number, uint64(0), "should have built L2 blocks")
+
+	// Submit all L2 blocks as blob batches
+	batcher.ActSubmitAll(t)
+	batchTx := batcher.LastSubmitted
+	require.Equal(t, uint8(types.BlobTxType), batchTx.Type(), "batch tx must be blob-tx")
+
+	// Include batch in L1 block
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batchTx.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	batchL1BlockNum := miner.L1Chain().CurrentBlock().Number.Uint64()
+
+	// Verifier processes the L1 block with blobs - should succeed normally
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+	require.Equal(t, l2UnsafeHead, verifier.L2Safe(), "verifier should derive all blocks when blobs are available")
+
+	// ========================================
+	// Now simulate blob data becoming unavailable
+	// ========================================
+
+	// Create a new verifier with an EMPTY blob store
+	// This simulates a scenario where:
+	// 1. A new node joins the network after blobs expired (18+ days)
+	// 2. The beacon node cannot provide blob data
+	// 3. Blob data is lost/unavailable
+	emptyBlobStore := blobstore.New()
+	_, verifier2 := actionsHelpers.SetupVerifier(t, sd, captureLog, miner.L1Client(t, sd.RollupCfg), emptyBlobStore, &syncConfig.Config{})
+
+	safeHeadBefore := verifier2.L2Safe().Number
+	require.Equal(t, uint64(0), safeHeadBefore, "verifier2 should start at genesis")
+
+	// Signal the L1 head to verifier2
+	verifier2.ActL1HeadSignal(t)
+
+	// Try to derive - this will attempt to fetch blobs and fail
+	// We use ActL2EventsUntil with a limited number of iterations to avoid infinite loop
+	// The pipeline will reset repeatedly due to missing blob data
+	resetCount := 0
+	for i := 0; i < 10; i++ {
+		verifier2.ActL2EventsUntil(t, func(ev event.Event) bool {
+			// Check if pipeline is resetting due to blob fetch error
+			if _, ok := ev.(rollup.ResetEvent); ok {
+				resetCount++
+				return true // Stop on reset event
+			}
+			return false
+		}, 20, false)
+	}
+
+	// Check logs for the specific blob fetch error
+	blobFetchErrorLogs := captureLogHandler.FindLogs(
+		testlog.NewErrContainsFilter("failed to fetch blobs"),
+	)
+	t.Logf("Found %d 'failed to fetch blobs' error logs", len(blobFetchErrorLogs))
+
+	// Also check for generic "not found" errors related to blobs
+	blobNotFoundLogs := captureLogHandler.FindLogs(
+		testlog.NewErrContainsFilter("no blobs known with given time"),
+	)
+	t.Logf("Found %d 'no blobs known' error logs", len(blobNotFoundLogs))
+
+	// Verify that blob errors occurred
+	require.True(t, len(blobFetchErrorLogs) > 0 || len(blobNotFoundLogs) > 0,
+		"should have blob fetch errors when blob data is unavailable")
+
+	// Verify safe head does NOT advance
+	safeHeadAfter := verifier2.L2Safe().Number
+	require.Equal(t, safeHeadBefore, safeHeadAfter,
+		"safe head should not advance when blob data is unavailable")
+
+	// The safe head should still be at genesis
+	require.Equal(t, uint64(0), safeHeadAfter,
+		"safe head should remain at genesis when blob data is unavailable")
+
+	t.Logf("Blob data unavailable scenario verified:")
+	t.Logf("  - L1 block with batch: %d", batchL1BlockNum)
+	t.Logf("  - L2 unsafe head: %d", l2UnsafeHead.Number)
+	t.Logf("  - Verifier safe head (with blobs): %d", verifier.L2Safe().Number)
+	t.Logf("  - Verifier2 safe head (without blobs): %d", safeHeadAfter)
+	t.Logf("  - Pipeline reset count: %d", resetCount)
+}
+
 func TestInvalidPayloadInSpanBatch(gt *testing.T) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	dp := e2eutils.MakeDeployParams(t, actionsHelpers.DefaultRollupTestParams())

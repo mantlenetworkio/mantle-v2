@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
 	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
@@ -16,7 +18,13 @@ import (
 func runSequenceWindowExpireTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	tp := helpers.NewTestParams()
-	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
+	deployConfigOverrides := func(dp *genesis.DeployConfig) {
+		dp.UseCustomGasToken = true
+		dp.GasPayingTokenName = "MNT"
+		dp.GasPayingTokenSymbol = "MNT"
+		dp.NativeAssetLiquidityAmount = (*hexutil.Big)(new(big.Int).Mul(big.NewInt(2000), big.NewInt(1e18)))
+	}
+	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), deployConfigOverrides)
 
 	// Mine an empty block for gas estimation purposes.
 	env.Miner.ActEmptyBlock(t)
@@ -34,12 +42,12 @@ func runSequenceWindowExpireTest(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 		// Solidity: function depositTransaction(uint256 _ethTxValue, uint256 _mntValue, address _to, uint256 _mntTxValue, uint64 _gasLimit, bool _isCreation, bytes _data) payable returns()
 		aliceTxOpts, err := bind.NewKeyedTransactorWithChainID(env.Dp.Secrets.Alice, env.Sd.RollupCfg.L1ChainID)
 		require.NoError(t, err)
-		aliceTxOpts.Value = big.NewInt(0)
+		aliceTxOpts.Value = big.NewInt(2)
 		aliceTxOpts.NoSend = true
 
 		tx, err := mantlePortal.DepositTransaction(
 			aliceTxOpts,
-			big.NewInt(0),        // _ethTxValue: ETH value in L2 transaction
+			big.NewInt(2),        // _ethTxValue: ETH value in L2 transaction
 			big.NewInt(0),        // _mntValue: MNT to transfer from L1 to portal
 			env.Dp.Addresses.Bob, // _to: target address on L2
 			big.NewInt(0),        // _mntTxValue: MNT value to send in L2 transaction
@@ -196,7 +204,7 @@ func Test_ProgramAction_SequenceWindowExpired(gt *testing.T) {
 	)
 
 	matrix.AddTestCase(
-		"ChannelCloseAfterWindowExpiry-HonestClaim",
+		"ChannelCloseAfterWindowExpiry",
 		nil,
 		forks,
 		runSequenceWindowExpire_ChannelCloseAfterWindowExpiry_Test,

@@ -53,14 +53,21 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 	verifEngine, verifier := actionsHelpers.SetupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &sync.Config{})
 	rollupSeqCl := sequencer.RollupClient()
 
-	// Force batcher to submit SpanBatches to L1.
+	// Force batcher to submit SpanBatches to L1 using blob transactions.
+	// MantleLimb uses MantleBlobDataSource which only processes blob transactions.
 	batcher := actionsHelpers.NewL2Batcher(log, sd.RollupCfg, &actionsHelpers.BatcherCfg{
 		MinL1TxSize:          0,
 		MaxL1TxSize:          128_000,
 		BatcherKey:           dp.Secrets.Batcher,
 		ForceSubmitSpanBatch: true,
-		DataAvailabilityType: batcherFlags.CalldataType,
+		DataAvailabilityType: batcherFlags.BlobsType,
 	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Build and finalize an empty L1 block first
+	// This is required for blob transactions to work properly with the blob pool
+	miner.ActEmptyBlock(t)
+	miner.ActL1SafeNext(t)
+	miner.ActL1FinalizeNext(t)
 
 	// Alice makes a L2 tx
 	cl := seqEngine.EthClient()
@@ -78,7 +85,9 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 	})
 	require.NoError(gt, cl.SendTransaction(t.Ctx(), tx))
 
+	sequencer.ActL1HeadSignal(t)
 	sequencer.ActL2PipelineFull(t)
+	verifier.ActL1HeadSignal(t)
 	verifier.ActL2PipelineFull(t)
 
 	// Make L2 block
@@ -86,14 +95,15 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 	seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(t)
 	sequencer.ActL2EndBlock(t)
 
-	// batch submit to L1. batcher should submit span batches.
+	// batch submit to L1. batcher should submit span batches using Mantle blob format.
 	batcher.ActL2BatchBuffer(t)
 	batcher.ActL2ChannelClose(t)
-	batcher.ActL2BatchSubmit(t)
+	batcher.ActL2BatchSubmitMantle(t)
+	batchTx := batcher.LastSubmitted
 
-	// confirm batch on L1
+	// confirm batch on L1 using tx hash (required for blob transactions)
 	miner.ActL1StartBlock(12)(t)
-	miner.ActL1IncludeTx(dp.Addresses.Batcher)(t)
+	miner.ActL1IncludeTxByHash(batchTx.Hash())(t)
 	miner.ActL1EndBlock(t)
 	bl := miner.L1Chain().CurrentBlock()
 	log.Info("bl", "txs", len(miner.L1Chain().GetBlockByHash(bl.Hash()).Transactions()))
@@ -108,7 +118,8 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 	// try to sync verifier from L1 batch. but verifier should drop every span batch.
 	verifier.ActL1HeadSignal(t)
 	verifier.ActL2PipelineFull(t)
-	require.Equal(t, uint64(1), verifier.SyncStatus().SafeL2.L1Origin.Number)
+	// L1Origin is 2 because: genesis(0) + finalized block(1) + batch block(2)
+	require.Equal(t, uint64(2), verifier.SyncStatus().SafeL2.L1Origin.Number)
 
 	verifCl := verifEngine.EthClient()
 	for i := int64(1); i < int64(verifier.L2Safe().Number); i++ {
@@ -830,4 +841,137 @@ func TestSpanBatchSingularBatchEquivalence(gt *testing.T) {
 
 	// Both verifiers should still be synced and have the same state
 	require.Equal(t, spanVerifier.L2Safe(), singularVerifier.L2Safe())
+}
+
+func TestDropSpanBatchBeforeArsia(gt *testing.T) {
+	t := actionsHelpers.NewDefaultTesting(gt)
+	p := &e2eutils.TestParams{
+		MaxSequencerDrift:   20, // larger than L1 block time we simulate in this test (12)
+		SequencerWindowSize: 24,
+		ChannelTimeout:      20,
+		L1BlockTime:         12,
+		AllocType:           config.DefaultAllocType,
+	}
+	dp := e2eutils.MakeMantleDeployParams(t, p)
+
+	// Do not activate Arsia hardfork for verifier
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, nil)
+	sd := e2eutils.SetupMantleNormal(t, dp, actionsHelpers.DefaultAlloc)
+	log := testlog.Logger(t, log.LevelError)
+	miner, seqEngine, sequencer := actionsHelpers.SetupSequencerTest(t, sd, log)
+	verifEngine, verifier := actionsHelpers.SetupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &sync.Config{})
+	rollupSeqCl := sequencer.RollupClient()
+
+	// Force batcher to submit SpanBatches to L1.
+	batcher := actionsHelpers.NewL2Batcher(log, sd.RollupCfg, &actionsHelpers.BatcherCfg{
+		MinL1TxSize:          0,
+		MaxL1TxSize:          128_000,
+		BatcherKey:           dp.Secrets.Batcher,
+		ForceSubmitSpanBatch: true,
+		DataAvailabilityType: batcherFlags.BlobsType,
+	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Build and finalize an empty L1 block first
+	// This is required for blob transactions to work properly with the blob pool
+	miner.ActEmptyBlock(t)
+	miner.ActL1SafeNext(t)
+	miner.ActL1FinalizeNext(t)
+
+	// Alice makes a L2 tx
+	cl := seqEngine.EthClient()
+	n, err := cl.PendingNonceAt(t.Ctx(), dp.Addresses.Alice)
+	require.NoError(t, err)
+	signer := types.LatestSigner(sd.L2Cfg.Config)
+	tx := types.MustSignNewTx(dp.Secrets.Alice, signer, &types.DynamicFeeTx{
+		ChainID:   sd.L2Cfg.Config.ChainID,
+		Nonce:     n,
+		GasTipCap: big.NewInt(2 * params.GWei),
+		GasFeeCap: new(big.Int).Add(miner.L1Chain().CurrentBlock().BaseFee, big.NewInt(2*params.GWei)),
+		Gas:       params.TxGas,
+		To:        &dp.Addresses.Bob,
+		Value:     e2eutils.Ether(2),
+	})
+	require.NoError(gt, cl.SendTransaction(t.Ctx(), tx))
+
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActL2PipelineFull(t)
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Make L2 block
+	sequencer.ActL2StartBlock(t)
+	seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(t)
+	sequencer.ActL2EndBlock(t)
+
+	// Batch submit to L1. batcher should submit span batches.
+	batcher.ActL2BatchBuffer(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+	batchTX := batcher.LastSubmitted
+
+	// Confirm batch on L1
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batchTX.Hash())(t)
+	miner.ActL1EndBlock(t)
+	bl := miner.L1Chain().CurrentBlock()
+	log.Info("bl", "txs", len(miner.L1Chain().GetBlockByHash(bl.Hash()).Transactions()))
+
+	// Now make enough L1 blocks that the verifier will have to derive a L2 block
+	// It will also eagerly derive the block from the batcher
+	// for i := uint64(0); i < sd.RollupCfg.SeqWindowSize; i++ {
+	// 	miner.ActL1StartBlock(12)(t)
+	// 	miner.ActL1EndBlock(t)
+	// }
+
+	// Try to sync verifier from L1 batch. but verifier should drop every span batch.
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+	// Span batch should be dropped because Arsia is not activated (Delta not active)
+	// L2 safe head should remain at genesis (block 0)
+	require.Equal(t, uint64(0), verifier.SyncStatus().SafeL2.Number, "span batch should be dropped, safe head should remain at genesis")
+
+	t.Log("Switching batcher to SingularBatch mode")
+	singularBatcher := actionsHelpers.NewL2Batcher(log, sd.RollupCfg, &actionsHelpers.BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		BatcherKey:               dp.Secrets.Batcher,
+		ForceSubmitSingularBatch: true, // Force SingularBatch
+		DataAvailabilityType:     batcherFlags.BlobsType,
+	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Manually add the block containing Alice's transaction (block 1)
+	// This is necessary because the previous SpanBatcher already buffered this block,
+	// so we need to explicitly specify which block to include in the SingularBatch
+	singularBatcher.ActCreateChannel(t, false)
+	singularBatcher.ActAddBlockByNumber(t, 1, actionsHelpers.BlockLogger(t))
+	singularBatcher.ActL2ChannelClose(t)
+	singularBatcher.ActL2BatchSubmitMantle(t)
+	singularBatchTx := singularBatcher.LastSubmitted
+
+	// Confirm batch on L1
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(singularBatchTx.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	// Generate enough L1 blocks for verifier to derive
+	// for i := uint64(0); i < sd.RollupCfg.SeqWindowSize; i++ {
+	// 	miner.ActL1StartBlock(12)(t)
+	// 	miner.ActL1EndBlock(t)
+	// }
+
+	// Sync verifier from L1
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+	// Singular batch should be processed successfully
+	// L2 safe head should advance to block 1 (containing Alice's transaction)
+	require.Equal(t, uint64(1), verifier.SyncStatus().SafeL2.Number, "singular batch should be processed, safe head should advance to block 1")
+
+	// Verify that Alice's transaction is now included after switching to SingularBatch
+	verifCl := verifEngine.EthClient()
+	vTx, isPending, err := verifCl.TransactionByHash(t.Ctx(), tx.Hash())
+	require.NoError(t, err)
+	require.False(t, isPending)
+	require.NotNil(t, vTx, "Alice's transaction should be included after switching to SingularBatch")
+
+	t.Log("Safe head recovered after switching to SingularBatch")
 }
