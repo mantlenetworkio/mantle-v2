@@ -3,6 +3,8 @@ package opnode
 import (
 	"github.com/ethereum/go-ethereum/params"
 
+	"github.com/ethereum-optimism/optimism/op-node/config"
+	"github.com/ethereum-optimism/optimism/op-node/flags"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/cliiface"
 	opflags "github.com/ethereum-optimism/optimism/op-service/flags"
@@ -28,5 +30,14 @@ func applyMantleOverrides(ctx cliiface.Context, rollupConfig *rollup.Config) {
 			timestamp := ctx.Uint64(flagName)
 			rollupConfig.SetMantleActivationTime(fork, &timestamp)
 		}
+	}
+}
+
+// NewL2SyncEndpointConfig returns a pointer to a L2SyncEndpointConfig.
+func NewL2SyncEndpointConfig(ctx cliiface.Context) *config.L2SyncEndpointConfig {
+	return &config.L2SyncEndpointConfig{
+		Enabled:    ctx.Bool(flags.EnableBackupSync.Name),
+		L2NodeAddr: ctx.String(flags.BackupL2UnsafeSyncRPC.Name),
+		TrustRPC:   ctx.Bool(flags.BackupL2UnsafeSyncRPCTrustRPC.Name),
 	}
 }
