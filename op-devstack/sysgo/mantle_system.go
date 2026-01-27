@@ -45,10 +45,6 @@ func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultM
 
 	opt.Add(WithTestSequencer(ids.TestSequencer, ids.L1CL, ids.L2CL, ids.L1EL, ids.L2EL))
 
-	// opt.Add(WithL2Challenger(ids.L2Challenger, ids.L1EL, ids.L1CL, nil, nil, &ids.L2CL, []stack.L2ELNodeID{
-	// 	ids.L2EL,
-	// }))
-
 	opt.Add(WithL2MetricsDashboard())
 
 	opt.Add(stack.Finally(func(orch *Orchestrator) {
