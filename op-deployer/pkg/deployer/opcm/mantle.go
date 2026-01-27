@@ -135,6 +135,7 @@ type MantleDeployOPChainInput struct {
 	L2OutputOracleImpl                common.Address
 	L2OutputOracleProxy               common.Address
 	FinalSystemOwner                  common.Address
+	SystemConfigOwner                 common.Address
 	BasefeeScalar                     uint32
 	BlobbasefeeScalar                 uint32
 	BatchSenderAddress                common.Address
