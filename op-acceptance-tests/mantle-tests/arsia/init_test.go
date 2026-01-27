@@ -1,4 +1,4 @@
-package jovian
+package arsia
 
 import (
 	"testing"
