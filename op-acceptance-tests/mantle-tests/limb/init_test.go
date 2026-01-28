@@ -1,4 +1,4 @@
-package arsia
+package limb
 
 import (
 	"testing"
@@ -7,5 +7,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithMantleMinimal(), presets.WithMantleArsiaAtGenesis())
+	presets.DoMain(m,
+		presets.WithMantleMinimal(),
+		presets.WithMantleLimbAtGenesis(),
+	)
 }

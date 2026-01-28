@@ -21,10 +21,9 @@ import (
 var DefaultL1MNT = common.HexToAddress("0x8000000000000000000000000000000000000000")
 var DefaultOperatorFeeVaultRecipient = common.HexToAddress("0x976EA74026E726554dB657fA54763abd0C3a0aa9")
 
-// WithL1MNT An alternative way to set the L1MNT and OperatorFeeVaultRecipient is to use the WithDeployerOption.
-// It requires we extend the L2Configurator interface to include WithL1MNT and WithOperatorFeeVaultRecipient.
+// WithL1MNT An alternative way to set the L1MNT. The other way is to use the WithDeployerOption.
+// It requires we extend the L2Configurator interface to include WithL1MNT.
 // Since MNT token address is a Mantle-only feature, directly modifying deployer pipeline seems cleaner.
-// But if one day we integrate mantle rde-v3 as an orchestrator choice, we should think about which way is better.
 func WithL1MNT(l1MNT common.Address) DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
 		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting L1MNT", "l1MNT", l1MNT.Hex())
@@ -51,6 +50,26 @@ func WithMantlePortalPaused(paused bool) DeployerPipelineOption {
 			intent.GlobalDeployOverrides = make(map[string]any)
 		}
 		intent.GlobalDeployOverrides["OptimismPortalPaused"] = paused
+	}
+}
+
+func WithScalarAndOverhead(scalar uint32, overhead uint64) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting Scalar and Overhead", "scalar", scalar, "overhead", overhead)
+		if intent.GlobalDeployOverrides == nil {
+			intent.GlobalDeployOverrides = make(map[string]any)
+		}
+		intent.GlobalDeployOverrides["gasPriceOracleScalar"] = scalar
+		intent.GlobalDeployOverrides["gasPriceOracleOverhead"] = overhead
+	}
+}
+
+func WithGasLimit(gasLimit uint64) DeployerPipelineOption {
+	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting GasLimit", "gasLimit", gasLimit)
+		for _, l2 := range intent.Chains {
+			l2.GasLimit = gasLimit
+		}
 	}
 }
 

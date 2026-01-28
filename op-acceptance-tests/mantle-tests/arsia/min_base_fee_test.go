@@ -1,11 +1,10 @@
-package jovian
+package arsia
 
 import (
 	"math/big"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
-	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -58,20 +57,7 @@ func (mbf *minBaseFeeEnv) checkCompatibility(t devtest.T) {
 }
 
 func (mbf *minBaseFeeEnv) getSystemConfigOwner(t devtest.T) *dsl.EOA {
-	// priv := mbf.l2Network.Escape().Keys().Secret(devkeys.SystemConfigOwner.Key(mbf.l2Network.ChainID().ToBig()))
-
-	// mantle uses final system owner for system config owner
-	// For keyring used by sysgo, we use L1 chain ID. It is generated with chain id and role index.
-	// For keyring used by external devnet, we use L2 chain ID. It is read from a devnet environment file and mapped to a key named by l2 chain id and role index.
-	var chainID *big.Int
-	orch := presets.Orchestrator()
-	if orch.Type() == compat.SysGo {
-		chainID = mbf.l1Client.ChainID().ToBig()
-	} else {
-		// External devnet (sysext)
-		chainID = mbf.l2Network.ChainID().ToBig()
-	}
-	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.L1ProxyAdminOwnerRole.Key(chainID))
+	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.SystemConfigOwner.Key(mbf.l2Network.ChainID().ToBig()))
 	return dsl.NewKey(t, priv).User(mbf.l1Client)
 }
 

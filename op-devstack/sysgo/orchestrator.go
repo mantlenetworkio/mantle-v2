@@ -52,6 +52,7 @@ type Orchestrator struct {
 	proposers       locks.RWMap[stack.L2ProposerID, *L2Proposer]
 	rollupBoosts    locks.RWMap[stack.RollupBoostNodeID, *RollupBoostNode]
 	oprbuilderNodes locks.RWMap[stack.OPRBuilderNodeID, *OPRBuilderNode]
+	gasOracles      locks.RWMap[stack.GasOracleID, *GasOracleService]
 
 	// service name => prometheus endpoints to scrape
 	l2MetricsEndpoints locks.RWMap[string, []PrometheusMetricsTarget]
