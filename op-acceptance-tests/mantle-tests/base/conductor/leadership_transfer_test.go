@@ -22,7 +22,7 @@ type conductorWithInfo struct {
 	info consensus.ServerInfo
 }
 
-// TestConductorLeadershipTransfer checks if the leadership transfer works correctly on the conductors
+// Conductor: verify leadership transfer rotates across voters and keeps sequencers healthy.
 func TestConductorLeadershipTransfer(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	logger := testlog.Logger(t, log.LevelInfo).With("Test", "TestConductorLeadershipTransfer")

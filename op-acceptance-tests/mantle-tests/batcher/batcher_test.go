@@ -19,6 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Batcher backlog: stop the sequencer, build lots of L2 blocks, then restart and assert the batcher
+// fills multiple channels to near capacity when flushing the backlog.
 func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleSingleChainMultiNodeWithTestSeq(t)

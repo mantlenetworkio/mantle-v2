@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
+// Smoke: verify the devnet faucets can fund L1/L2 EOAs.
 func TestFaucetFund(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)

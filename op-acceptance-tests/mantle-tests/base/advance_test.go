@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Smoke: ensure the L2 CL head advances over time in a fresh Mantle minimal devnet.
 func TestCLAdvance(gt *testing.T) {
 	t := devtest.ParallelT(gt)
 	sys := presets.NewMantleMinimal(t)

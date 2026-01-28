@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	defer resetEnvVars()
 
 	presets.DoMain(m, stack.MakeCommon(stack.Combine[*sysgo.Orchestrator](
-		sysgo.DefaultMinimalSystem(&sysgo.DefaultMinimalSystemIDs{}),
+		sysgo.DefaultMantleMinimalSystem(&sysgo.DefaultMinimalSystemIDs{}),
 		sysgo.WithDeployerOptions(
 			sysgo.WithDefaultBPOBlobSchedule,
 			// Make the BPO fork happen after Osaka so we can easily use geth's eip4844.CalcBlobFee

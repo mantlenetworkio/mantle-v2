@@ -27,7 +27,7 @@ import (
 
 func TestSafeHeadAdvancesAfterOsaka(gt *testing.T) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewMinimal(t)
+	sys := presets.NewMantleMinimal(t)
 	l1Config := sys.L1Network.Escape().ChainConfig()
 	t.Log("Waiting for Osaka to activate")
 	t.Require().NotNil(l1Config.OsakaTime)
@@ -51,7 +51,7 @@ func TestSafeHeadAdvancesAfterOsaka(gt *testing.T) {
 
 func TestBlobBaseFeeIsCorrectAfterBPOFork(gt *testing.T) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewMinimal(t)
+	sys := presets.NewMantleMinimal(t)
 	t.Log("Waiting for BPO1 to activate")
 	t.Require().NotNil(sys.L1Network.Escape().ChainConfig().BPO1Time)
 	sys.L1EL.WaitForTime(*sys.L1Network.Escape().ChainConfig().BPO1Time)
@@ -83,7 +83,7 @@ func TestBlobBaseFeeIsCorrectAfterBPOFork(gt *testing.T) {
 // waitForNonTrivialBPO1Block will return an L1 blob base fee that can only be calculated using the
 // correct BPO1 parameters (i.e., the Osaka parameters result in a different value). It also
 // returns an L2 block hash from the same epoch.
-func waitForNonTrivialBPO1Block(t devtest.T, sys *presets.Minimal) (common.Hash, *big.Int) {
+func waitForNonTrivialBPO1Block(t devtest.T, sys *presets.MantleMinimal) (common.Hash, *big.Int) {
 	l1ChainConfig := sys.L1Network.Escape().ChainConfig()
 	l1BlockTime := sys.L1EL.EstimateBlockTime()
 	for {
@@ -119,7 +119,7 @@ func waitForNonTrivialBPO1Block(t devtest.T, sys *presets.Minimal) (common.Hash,
 	}
 }
 
-func spamBlobs(t devtest.T, sys *presets.Minimal) {
+func spamBlobs(t devtest.T, sys *presets.MantleMinimal) {
 	l1BlockTime := sys.L1EL.EstimateBlockTime()
 	l1ChainConfig := sys.L1Network.Escape().ChainConfig()
 

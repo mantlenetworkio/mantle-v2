@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
+// Transfer: simple L2 native transfer smoke test with balance delta assertions.
 func TestTransfer(gt *testing.T) {
 	// Create a test environment using op-devstack
 	t := devtest.SerialT(gt)

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-// TestChainFork checks that the chain does not fork (all nodes have the same block hash for a fixed block number).
+// Consistency: ensure all L2 EL nodes agree on hashes (no fork) across two successive blocks.
 func TestChainFork(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)

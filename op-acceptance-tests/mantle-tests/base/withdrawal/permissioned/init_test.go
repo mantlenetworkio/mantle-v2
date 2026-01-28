@@ -3,7 +3,7 @@ package withdrawal
 import (
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-acceptance-tests/tests/base/withdrawal"
+	"github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal"
 	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 )
 
