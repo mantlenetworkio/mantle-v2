@@ -12,6 +12,7 @@ import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
 
 // Libraries
 import { Predeploys } from "src/libraries/Predeploys.sol";
+import { Constants } from "src/libraries/Constants.sol";
 
 // Interfaces
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
@@ -260,6 +261,14 @@ contract L2Genesis is Script {
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
         vm.etch(impl, address(messenger).code);
+
+        // Initialize xDomainMsgSender to DEFAULT_L2_SENDER (0xdead) - slot 204
+        // This is required for relayMessage to work, otherwise the re-entrancy check fails
+        vm.store(
+            Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+            bytes32(uint256(204)),
+            bytes32(uint256(uint160(Constants.DEFAULT_L2_SENDER)))
+        );
 
         /// Reset so its not included state dump
         vm.etch(address(messenger), "");
