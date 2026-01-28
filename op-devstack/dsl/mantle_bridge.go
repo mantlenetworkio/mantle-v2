@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/apis"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
+	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
 	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -24,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/lmittmann/w3"
 )
 
 const (
@@ -44,40 +44,6 @@ const (
 		],"name":"MessagePassed","type":"event"}
 	]`
 
-	mantlePortalABIJSON = `[
-		{"type":"function","name":"L2_ORACLE","inputs":[],"outputs":[{"name":"","type":"address"}],"stateMutability":"view"},
-		{"type":"function","name":"proveWithdrawalTransaction","inputs":[
-			{"name":"_tx","type":"tuple","components":[
-				{"name":"nonce","type":"uint256"},
-				{"name":"sender","type":"address"},
-				{"name":"target","type":"address"},
-				{"name":"mntValue","type":"uint256"},
-				{"name":"ethValue","type":"uint256"},
-				{"name":"gasLimit","type":"uint256"},
-				{"name":"data","type":"bytes"}
-			]},
-			{"name":"_l2OutputIndex","type":"uint256"},
-			{"name":"_outputRootProof","type":"tuple","components":[
-				{"name":"version","type":"bytes32"},
-				{"name":"stateRoot","type":"bytes32"},
-				{"name":"messagePasserStorageRoot","type":"bytes32"},
-				{"name":"latestBlockhash","type":"bytes32"}
-			]},
-			{"name":"_withdrawalProof","type":"bytes[]"}
-		],"outputs":[]},
-		{"type":"function","name":"finalizeWithdrawalTransaction","inputs":[
-			{"name":"_tx","type":"tuple","components":[
-				{"name":"nonce","type":"uint256"},
-				{"name":"sender","type":"address"},
-				{"name":"target","type":"address"},
-				{"name":"mntValue","type":"uint256"},
-				{"name":"ethValue","type":"uint256"},
-				{"name":"gasLimit","type":"uint256"},
-			{"name":"data","type":"bytes"}
-			]}
-		],"outputs":[]}
-	]`
-
 	mantleL2OutputOracleABIJSON = `[
 		{"type":"function","name":"getL2Output","inputs":[{"name":"_l2OutputIndex","type":"uint256"}],"outputs":[
 			{"name":"outputRoot","type":"bytes32"},
@@ -91,35 +57,47 @@ const (
 
 type MantleBridge struct {
 	commonImpl
-	standard             *StandardBridge
-	l1PortalAddr         common.Address
-	l1StandardBridgeAddr common.Address
-	rollupCfg            *rollup.Config
-	l1Client             *L1ELNode
-	l2Client             apis.EthClient
-	portalABI            abi.ABI
-	messagePasserABI     abi.ABI
-	l2OutputOracleAddr   common.Address
-	l2OutputOracleABI    abi.ABI
+	standard           *StandardBridge
+	l1PortalAddr       common.Address
+	rollupCfg          *rollup.Config
+	l1Client           *L1ELNode
+	l2Client           apis.EthClient
+	portal             bindings.MantleOptimismPortal
+	l1Bridge           bindings.MantleL1StandardBridge
+	messagePasserABI   abi.ABI
+	l2OutputOracleAddr common.Address
+	l2OutputOracleABI  abi.ABI
 }
 
 func NewMantleBridge(t devtest.T, l2Network *L2Network, supervisor *Supervisor, l1EL *L1ELNode) *MantleBridge {
 	standard := NewStandardBridge(t, l2Network, supervisor, l1EL)
-	portalABI := mustParseABI(t, mantlePortalABIJSON)
 	messagePasserABI := mustParseABI(t, mantleMessagePasserABIJSON)
 	l2OutputOracleABI := mustParseABI(t, mantleL2OutputOracleABIJSON)
+	l1BridgeAddr := l2Network.Escape().Deployment().L1StandardBridgeProxyAddr()
+	portalAddr := l2Network.DepositContractAddr()
+	rollupCfg := l2Network.Escape().RollupConfig()
+	portal := bindings.NewBindings[bindings.MantleOptimismPortal](
+		bindings.WithTest(t),
+		bindings.WithClient(l1EL.EthClient()),
+		bindings.WithTo(portalAddr),
+	)
+	l1Bridge := bindings.NewBindings[bindings.MantleL1StandardBridge](
+		bindings.WithTest(t),
+		bindings.WithClient(l1EL.EthClient()),
+		bindings.WithTo(l1BridgeAddr),
+	)
 
 	bridge := &MantleBridge{
-		commonImpl:           commonFromT(t),
-		standard:             standard,
-		l1PortalAddr:         standard.l1PortalAddr,
-		l1StandardBridgeAddr: l2Network.Escape().Deployment().L1StandardBridgeProxyAddr(),
-		rollupCfg:            standard.rollupCfg,
-		l1Client:             l1EL,
-		l2Client:             l2Network.inner.L2ELNode(match.FirstL2EL).EthClient(),
-		portalABI:            portalABI,
-		messagePasserABI:     messagePasserABI,
-		l2OutputOracleABI:    l2OutputOracleABI,
+		commonImpl:        commonFromT(t),
+		standard:          standard,
+		l1PortalAddr:      portalAddr,
+		rollupCfg:         rollupCfg,
+		l1Client:          l1EL,
+		l2Client:          l2Network.inner.L2ELNode(match.FirstL2EL).EthClient(),
+		portal:            portal,
+		l1Bridge:          l1Bridge,
+		messagePasserABI:  messagePasserABI,
+		l2OutputOracleABI: l2OutputOracleABI,
 	}
 	bridge.l2OutputOracleAddr = bridge.readL2OutputOracleAddr()
 	return bridge
@@ -144,14 +122,14 @@ func (b *MantleBridge) L2GasCost(rcpt *types.Receipt) eth.ETH {
 }
 
 type l2OutputProposal struct {
-	OutputRoot   [32]byte `abi:"outputRoot"`
-	Timestamp    *big.Int `abi:"timestamp"`
+	OutputRoot    [32]byte `abi:"outputRoot"`
+	Timestamp     *big.Int `abi:"timestamp"`
 	L2BlockNumber *big.Int `abi:"l2BlockNumber"`
 }
 
 type mantleL2Output struct {
-	Index        *big.Int
-	OutputRoot   common.Hash
+	Index         *big.Int
+	OutputRoot    common.Hash
 	L2BlockNumber uint64
 }
 
@@ -166,12 +144,8 @@ func (b *MantleBridge) callL1(abi abi.ABI, to common.Address, method string, arg
 }
 
 func (b *MantleBridge) readL2OutputOracleAddr() common.Address {
-	out, err := b.callL1(b.portalABI, b.l1PortalAddr, "L2_ORACLE")
+	addr, err := contractio.Read(b.portal.L2Oracle(), b.ctx)
 	b.require.NoError(err, "failed to read L2_ORACLE from portal")
-	values, err := b.portalABI.Unpack("L2_ORACLE", out)
-	b.require.NoError(err, "failed to unpack L2_ORACLE from portal")
-	addr, ok := values[0].(common.Address)
-	b.require.True(ok, "unexpected L2_ORACLE return type %T", values[0])
 	return addr
 }
 
@@ -237,8 +211,8 @@ func (b *MantleBridge) forOutputPublished(l2BlockNumber *big.Int) mantleL2Output
 			b.require.Fail("L2 output block number overflows uint64", "value", proposal.L2BlockNumber)
 		}
 		output = mantleL2Output{
-			Index:        index,
-			OutputRoot:   common.Hash(proposal.OutputRoot),
+			Index:         index,
+			OutputRoot:    common.Hash(proposal.OutputRoot),
 			L2BlockNumber: proposal.L2BlockNumber.Uint64(),
 		}
 		return true
@@ -259,21 +233,44 @@ func (d MantleDeposit) GasCost() eth.ETH {
 }
 
 func (b *MantleBridge) DepositETH(amount eth.ETH, from *EOA) MantleDeposit {
-	dep := b.standard.Deposit(amount, from)
-	return MantleDeposit{bridge: b, l1Receipt: dep.l1Receipt}
+	l1Receipt, err := contractio.Write(
+		b.l1Bridge.DepositETH(mantleDepositGasLimit, []byte{}),
+		b.ctx,
+		from.Plan(),
+		txplan.WithValue(amount),
+	)
+	b.require.NoError(err, "failed to send ETH deposit")
+	b.require.Equal(types.ReceiptStatusSuccessful, l1Receipt.Status, "ETH deposit failed")
+
+	var l2DepositTx *types.DepositTx
+	for _, log := range l1Receipt.Logs {
+		if dep, err := derive.UnmarshalDepositLogEvent(log); err == nil {
+			l2DepositTx = dep
+			break
+		}
+	}
+	b.require.NotNil(l2DepositTx, "Could not find L2 deposit transaction in logs")
+
+	l2DepositTxHash := types.NewTx(l2DepositTx).Hash()
+	sequencingWindowDuration := time.Duration(b.rollupCfg.SeqWindowSize) * b.l1Client.EstimateBlockTime()
+	var l2DepositReceipt *types.Receipt
+	b.require.Eventually(func() bool {
+		var err error
+		l2DepositReceipt, err = b.l2Client.TransactionReceipt(b.ctx, l2DepositTxHash)
+		return err == nil
+	}, sequencingWindowDuration, 500*time.Millisecond, "L2 ETH deposit never found")
+	b.require.Equal(types.ReceiptStatusSuccessful, l2DepositReceipt.Status, "L2 ETH deposit should succeed")
+
+	return MantleDeposit{bridge: b, l1Receipt: l1Receipt}
 }
 
 func (b *MantleBridge) DepositMNT(amount eth.ETH, from *EOA) MantleDeposit {
-	depositFn := w3.MustNewFunc("depositMNT(uint256,uint32,bytes)", "")
-	calldata, err := depositFn.EncodeArgs(amount.ToBig(), mantleDepositGasLimit, []byte{})
-	b.require.NoError(err, "failed to encode depositMNT calldata")
-
-	tx := from.Transact(
+	l1Receipt, err := contractio.Write(
+		b.l1Bridge.DepositMNT(amount, mantleDepositGasLimit, []byte{}),
+		b.ctx,
 		from.Plan(),
-		txplan.WithTo(&b.l1StandardBridgeAddr),
-		txplan.WithData(calldata),
 	)
-	l1Receipt := tx.Included.Value()
+	b.require.NoError(err, "failed to send MNT deposit")
 	b.require.Equal(types.ReceiptStatusSuccessful, l1Receipt.Status, "MNT deposit failed")
 
 	var l2DepositTx *types.DepositTx
@@ -311,16 +308,17 @@ func (b *MantleBridge) InitiateWithdrawalMNT(amount eth.ETH, from *EOA) *MantleW
 }
 
 func (b *MantleBridge) InitiateWithdrawalETH(amount eth.ETH, target common.Address, from *EOA) *MantleWithdrawal {
-	withdrawFn := w3.MustNewFunc("initiateWithdrawal(uint256,address,uint256,bytes)", "")
-	calldata, err := withdrawFn.EncodeArgs(amount.ToBig(), target, big.NewInt(mantleWithdrawalGasLimit), []byte{})
-	b.require.NoError(err, "failed to encode initiateWithdrawal calldata")
-
-	withdrawTx := from.Transact(
-		from.Plan(),
-		txplan.WithTo(&predeploys.L2ToL1MessagePasserAddr),
-		txplan.WithData(calldata),
+	messagePasser := bindings.NewBindings[bindings.MantleL2ToL1MessagePasser](
+		bindings.WithTest(b.t),
+		bindings.WithClient(b.l2Client),
+		bindings.WithTo(predeploys.L2ToL1MessagePasserAddr),
 	)
-	withdrawReceipt := withdrawTx.Included.Value()
+	withdrawReceipt, err := contractio.Write(
+		messagePasser.InitiateWithdrawal(amount.ToBig(), target, big.NewInt(mantleWithdrawalGasLimit), []byte{}),
+		b.ctx,
+		from.Plan(),
+	)
+	b.require.NoError(err, "failed to initiate ETH withdrawal")
 	b.require.Equal(types.ReceiptStatusSuccessful, withdrawReceipt.Status, "initiating ETH withdrawal failed")
 	return &MantleWithdrawal{
 		commonImpl:  commonFromT(b.t),
@@ -340,20 +338,10 @@ type mantleMessagePassed struct {
 	WithdrawalHash common.Hash
 }
 
-type mantleWithdrawalTx struct {
-	Nonce    *big.Int
-	Sender   common.Address
-	Target   common.Address
-	MNTValue *big.Int
-	ETHValue *big.Int
-	GasLimit *big.Int
-	Data     []byte
-}
-
 type mantleProvenWithdrawalParameters struct {
-	Tx                mantleWithdrawalTx
+	Tx                bindings.MantleWithdrawalTransaction
 	L2OutputIndex     *big.Int
-	OutputRootProof   bindings.OutputRootProof
+	OutputRootProof   bindings.MantleOutputRootProof
 	WithdrawalProof   [][]byte
 	L2OutputBlockHash common.Hash
 }
@@ -389,17 +377,17 @@ func (w *MantleWithdrawal) Prove(user *EOA) {
 	w.t.Log("proveWithdrawal: proving withdrawal...")
 	params := w.proveWithdrawalParameters()
 
-	data, err := w.bridge.portalABI.Pack(
-		"proveWithdrawalTransaction",
-		params.Tx,
-		params.L2OutputIndex,
-		params.OutputRootProof,
-		params.WithdrawalProof,
-	)
-	w.require.NoError(err, "failed to pack proveWithdrawalTransaction calldata")
-
 	w.require.Eventually(func() bool {
-		receipt, err := w.bridge.sendPortalTx(user, data)
+		receipt, err := contractio.Write(
+			w.bridge.portal.ProveWithdrawalTransaction(
+				params.Tx,
+				params.L2OutputIndex,
+				params.OutputRootProof,
+				params.WithdrawalProof,
+			),
+			w.ctx,
+			user.Plan(),
+		)
 		if err != nil {
 			w.log.Error("Failed to send prove transaction", "err", err)
 			return false
@@ -411,12 +399,13 @@ func (w *MantleWithdrawal) Prove(user *EOA) {
 }
 
 func (w *MantleWithdrawal) Finalize(user *EOA) {
-	data, err := w.bridge.portalABI.Pack("finalizeWithdrawalTransaction", w.proveParams.Tx)
-	w.require.NoError(err, "failed to pack finalizeWithdrawalTransaction calldata")
-
 	w.log.Info("FinalizeWithdrawal: finalizing withdrawal...")
 	w.require.Eventually(func() bool {
-		receipt, err := w.bridge.sendPortalTx(user, data)
+		receipt, err := contractio.Write(
+			w.bridge.portal.FinalizeWithdrawalTransaction(w.proveParams.Tx),
+			w.ctx,
+			user.Plan(),
+		)
 		if err != nil {
 			return false
 		}
@@ -459,7 +448,7 @@ func (w *MantleWithdrawal) proveWithdrawalParametersForEvent(ev *mantleMessagePa
 	w.require.NotNil(withdrawalsRoot, "missing withdrawals root")
 
 	return mantleProvenWithdrawalParameters{
-		Tx: mantleWithdrawalTx{
+		Tx: bindings.MantleWithdrawalTransaction{
 			Nonce:    ev.Nonce,
 			Sender:   ev.Sender,
 			Target:   ev.Target,
@@ -469,7 +458,7 @@ func (w *MantleWithdrawal) proveWithdrawalParametersForEvent(ev *mantleMessagePa
 			Data:     ev.Data,
 		},
 		L2OutputIndex: output.Index,
-		OutputRootProof: bindings.OutputRootProof{
+		OutputRootProof: bindings.MantleOutputRootProof{
 			Version:                  [32]byte{},
 			StateRoot:                l2Header.Root(),
 			MessagePasserStorageRoot: *withdrawalsRoot,
@@ -540,22 +529,6 @@ func mantleWithdrawalHash(ev *mantleMessagePassed) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("failed to pack for withdrawal hash: %w", err)
 	}
 	return crypto.Keccak256Hash(enc), nil
-}
-
-func (b *MantleBridge) sendPortalTx(user *EOA, data []byte) (*types.Receipt, error) {
-	tx := txplan.NewPlannedTx(
-		user.Plan(),
-		txplan.WithTo(&b.l1PortalAddr),
-		txplan.WithData(data),
-	)
-	receipt, err := tx.Included.Eval(b.ctx)
-	if err != nil {
-		return nil, err
-	}
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		return nil, fmt.Errorf("tx failed with status %d", receipt.Status)
-	}
-	return receipt, nil
 }
 
 func mustParseABI(t devtest.T, jsonABI string) abi.ABI {
