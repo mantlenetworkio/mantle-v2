@@ -15,7 +15,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-// MantleBlobDataSource fetches blobs, joins them together, and decodes them as an RLP-encoded frame array.
+// MantleBlobDataSource fetches blobs or calldata as appropriate and transforms them into usable rollup data.
+// For blob transactions, it first tries to decode as Mantle format (joined blobs with RLP-encoded frame array).
+// If that fails, it falls back to standard per-blob decoding.
 type MantleBlobDataSource struct {
 	data         []eth.Data
 	ref          eth.L1BlockRef
@@ -56,7 +58,17 @@ func (ds *MantleBlobDataSource) Next(ctx context.Context) (eth.Data, error) {
 	return next, nil
 }
 
-// open fetches blobs from valid batcher transactions, joins blobs per-transaction, and decodes each as an RLP-encoded frame array.
+// batcherTxData holds information for a single batcher transaction, preserving order
+type batcherTxData struct {
+	txHash   common.Hash
+	calldata eth.Data              // non-nil for calldata transactions
+	hashes   []eth.IndexedBlobHash // non-empty for blob transactions
+}
+
+// open fetches blobs and calldata from valid batcher transactions.
+// For blob transactions, it first tries Mantle format (joined blobs, RLP decode),
+// and falls back to standard per-blob decoding if that fails.
+// Data is returned in the same order as transactions appear in the L1 block.
 func (ds *MantleBlobDataSource) open(ctx context.Context) ([]eth.Data, error) {
 	_, txs, err := ds.fetcher.InfoAndTxsByHash(ctx, ds.ref.Hash)
 	if err != nil {
@@ -66,23 +78,68 @@ func (ds *MantleBlobDataSource) open(ctx context.Context) ([]eth.Data, error) {
 		return nil, NewTemporaryError(fmt.Errorf("failed to open blob data source: %w", err))
 	}
 
-	// Collect blob hashes per valid batcher transaction
-	type txBlobInfo struct {
-		txHash common.Hash
-		hashes []eth.IndexedBlobHash
+	// 1. Extract batcher transactions and blob hashes
+	batcherTxs, allBlobHashes := ds.batcherTxsAndHashesFromTxs(txs)
+	if len(batcherTxs) == 0 {
+		return []eth.Data{}, nil
 	}
-	var txBlobInfos []txBlobInfo
+
+	// 2. Fetch all blobs at once if there are any
+	var blobMap map[uint64]*eth.Blob
+	if len(allBlobHashes) > 0 {
+		blobs, err := ds.blobsFetcher.GetBlobs(ctx, ds.ref, allBlobHashes)
+		if errors.Is(err, ethereum.NotFound) {
+			return nil, NewResetError(fmt.Errorf("failed to fetch blobs: %w", err))
+		} else if err != nil {
+			return nil, NewTemporaryError(fmt.Errorf("failed to fetch blobs: %w", err))
+		}
+		blobMap = make(map[uint64]*eth.Blob)
+		for i, h := range allBlobHashes {
+			blobMap[h.Index] = blobs[i]
+		}
+	}
+
+	// 3. Construct final result in transaction order
+	var allData []eth.Data
+	for _, txData := range batcherTxs {
+		if txData.calldata != nil {
+			allData = append(allData, txData.calldata)
+		} else {
+			txResult, err := ds.processTxBlobs(txData.txHash, txData.hashes, blobMap)
+			if err != nil {
+				return nil, NewResetError(fmt.Errorf("failed to process blobs: %w", err))
+			}
+			allData = append(allData, txResult...)
+		}
+	}
+	return allData, nil
+}
+
+// batcherTxsAndHashesFromTxs extracts batcher transaction data and blob hashes from transactions.
+// It returns batcher transactions in order and all blob hashes for batch fetching.
+func (ds *MantleBlobDataSource) batcherTxsAndHashesFromTxs(txs types.Transactions) ([]batcherTxData, []eth.IndexedBlobHash) {
+	var batcherTxs []batcherTxData
+	var allBlobHashes []eth.IndexedBlobHash
 	blobIndex := 0
+
 	for _, tx := range txs {
 		// skip any non-batcher transactions
 		if !isValidBatchTx(tx, ds.dsCfg.l1Signer, ds.dsCfg.batchInboxAddress, ds.batcherAddr, ds.log) {
 			blobIndex += len(tx.BlobHashes())
 			continue
 		}
-		// only process blob transactions
+		// handle non-blob batcher transactions by extracting their calldata
 		if tx.Type() != types.BlobTxType {
-			// skip non-blob batcher transactions for Mantle Everest
+			calldata := eth.Data(tx.Data())
+			batcherTxs = append(batcherTxs, batcherTxData{
+				txHash:   tx.Hash(),
+				calldata: calldata,
+			})
 			continue
+		}
+		// handle blob batcher transactions by extracting their blob hashes, ignoring any calldata
+		if len(tx.Data()) > 0 {
+			ds.log.Warn("blob tx has calldata, which will be ignored", "txhash", tx.Hash())
 		}
 		// extract blob hashes for this transaction
 		txHashes := make([]eth.IndexedBlobHash, 0, len(tx.BlobHashes()))
@@ -92,77 +149,71 @@ func (ds *MantleBlobDataSource) open(ctx context.Context) ([]eth.Data, error) {
 				Hash:  h,
 			}
 			txHashes = append(txHashes, idh)
+			allBlobHashes = append(allBlobHashes, idh)
 			blobIndex++
 		}
 		if len(txHashes) > 0 {
-			txBlobInfos = append(txBlobInfos, txBlobInfo{
+			batcherTxs = append(batcherTxs, batcherTxData{
 				txHash: tx.Hash(),
 				hashes: txHashes,
 			})
 		}
 	}
 
-	if len(txBlobInfos) == 0 {
-		// there are no blobs to fetch
-		return []eth.Data{}, nil
-	}
+	return batcherTxs, allBlobHashes
+}
 
-	// Collect all hashes for a single fetch
-	allHashes := make([]eth.IndexedBlobHash, 0)
-	for _, info := range txBlobInfos {
-		allHashes = append(allHashes, info.hashes...)
-	}
-
-	// download the actual blob bodies corresponding to the indexed blob hashes
-	blobs, err := ds.blobsFetcher.GetBlobs(ctx, ds.ref, allHashes)
-	if errors.Is(err, ethereum.NotFound) {
-		return nil, NewResetError(fmt.Errorf("failed to fetch blobs: %w", err))
-	} else if err != nil {
-		return nil, NewTemporaryError(fmt.Errorf("failed to fetch blobs: %w", err))
-	}
-
-	// Create a map from blob index to blob for easy lookup
-	blobMap := make(map[uint64]*eth.Blob)
-	for i, h := range allHashes {
-		blobMap[h.Index] = blobs[i]
-	}
-
-	// Process each transaction's blobs separately
-	allFrameData := []eth.Data{}
-	for _, info := range txBlobInfos {
-		// Join blobs for this transaction
-		txBlobData := make([]byte, 0, len(info.hashes)*eth.MaxBlobDataSize)
-		skipTx := false
-		for _, h := range info.hashes {
-			blob := blobMap[h.Index]
-			if blob == nil {
-				ds.log.Error("ignoring tx due to nil blob", "txHash", info.txHash, "blobIndex", h.Index)
-				skipTx = true
-				break
-			}
-			blobData, err := blob.ToData()
-			if err != nil {
-				ds.log.Error("ignoring tx due to blob parse failure", "txHash", info.txHash, "blobIndex", h.Index, "err", err)
-				skipTx = true
-				break
-			}
-			txBlobData = append(txBlobData, blobData...)
+// processTxBlobs processes blobs for a single transaction.
+// It first tries Mantle format (join all blobs, RLP decode as frame array).
+// If that fails, it falls back to standard per-blob decoding.
+// Returns (result, error) where error indicates a fatal condition (nil blob).
+func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.IndexedBlobHash, blobMap map[uint64]*eth.Blob) ([]eth.Data, error) {
+	// First, collect all blobs for this transaction
+	var blobs []*eth.Blob
+	for _, h := range hashes {
+		blob := blobMap[h.Index]
+		if blob == nil {
+			// nil blob is a fatal error, matching BlobDataSource behavior
+			return nil, fmt.Errorf("nil blob for tx %s at index %d", txHash, h.Index)
 		}
-		if skipTx {
+		blobs = append(blobs, blob)
+	}
+
+	// Try to decode all blobs and join them for Mantle format
+	txBlobData := make([]byte, 0, len(blobs)*eth.MaxBlobDataSize)
+	var individualBlobData []eth.Data
+	allBlobsValid := true
+	for i, blob := range blobs {
+		blobData, err := blob.ToData()
+		if err != nil {
+			ds.log.Error("blob parse failure", "txHash", txHash, "blobIndex", hashes[i].Index, "err", err)
+			allBlobsValid = false
+			individualBlobData = append(individualBlobData, nil) // placeholder for failed blob
 			continue
 		}
-
-		// Decode the joined blob data for this transaction as an RLP-encoded frame array
-		if len(txBlobData) > 0 {
-			var frameData []eth.Data
-			err = rlp.DecodeBytes(txBlobData, &frameData)
-			if err != nil {
-				ds.log.Error("ignoring tx due to RLP decode failure", "txHash", info.txHash, "err", err)
-				continue
-			}
-			allFrameData = append(allFrameData, frameData...)
-		}
+		individualBlobData = append(individualBlobData, blobData)
+		txBlobData = append(txBlobData, blobData...)
 	}
 
-	return allFrameData, nil
+	// Try Mantle format first if all blobs are valid
+	if allBlobsValid && len(txBlobData) > 0 {
+		var frameData []eth.Data
+		err := rlp.DecodeBytes(txBlobData, &frameData)
+		if err == nil {
+			ds.log.Debug("decoded tx blobs using Mantle format", "txHash", txHash, "frames", len(frameData))
+			return frameData, nil
+		}
+		// RLP decode failed, fall back to standard per-blob decoding
+		ds.log.Debug("Mantle format decode failed, falling back to standard blob format", "txHash", txHash, "err", err)
+	}
+
+	// Fallback: return each blob's data individually (standard format)
+	// Skip blobs that failed to parse, matching BlobDataSource.Next() behavior
+	result := make([]eth.Data, 0, len(individualBlobData))
+	for _, data := range individualBlobData {
+		if data != nil {
+			result = append(result, data)
+		}
+	}
+	return result, nil
 }
