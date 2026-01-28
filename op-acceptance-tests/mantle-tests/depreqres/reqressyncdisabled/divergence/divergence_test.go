@@ -27,10 +27,12 @@ func TestMain(m *testing.M) {
 	)
 }
 
-// TestCLELDivergence tests that the CL and EL diverge when the CL advances the unsafe head, due to accepting SYNCING response from the EL, but the EL cannot validate the block (yet), does not canonicalize it, and doesn't serve it.
+// TestCLELDivergence tests that the CL and EL diverge when the CL advances the unsafe head,
+// due to accepting SYNCING response from the EL,
+// but the EL cannot validate the block (yet), does not canonicalize it, and doesn't serve it.
 func TestCLELDivergence(gt *testing.T) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	sys := presets.NewMantleSingleChainMultiNodeWithoutCheck(t)
 	require := t.Require()
 	l := t.Logger()
 

@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 )
 
+// TestSmoke validates that DisputeGame v2 settings are wired correctly for this preset.
+// It checks that required game args can be parsed and that implementations are deployed.
 func TestSmoke(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)

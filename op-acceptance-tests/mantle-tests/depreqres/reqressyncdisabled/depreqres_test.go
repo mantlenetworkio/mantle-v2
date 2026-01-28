@@ -11,9 +11,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-supervisor/supervisor/types"
 )
 
+// Regression: req/resp sync 被禁用时，断网一侧应停滞，另一侧继续前进，重连后可恢复。
 func TestUnsafeChainNotStalling_DisabledReqRespSync(gt *testing.T) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	sys := presets.NewMantleSingleChainMultiNodeWithoutCheck(t)
 	require := t.Require()
 	l := t.Logger()
 

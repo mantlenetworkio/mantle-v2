@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRPCConnectivity checks we can connect to L2 execution layer RPC endpoints
+// Connectivity: check all L2 EL RPC endpoints respond and report the expected chain ID.
 func TestRPCConnectivity(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)

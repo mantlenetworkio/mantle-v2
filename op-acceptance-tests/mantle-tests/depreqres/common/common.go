@@ -12,9 +12,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-supervisor/supervisor/types"
 )
 
+// Helper: split-brain scenario — disconnect CL peers and assert only one side keeps progressing unsafe head.
 func UnsafeChainNotStalling_Disconnect(gt *testing.T, syncMode sync.Mode, sleep time.Duration) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	sys := presets.NewMantleSingleChainMultiNodeWithoutCheck(t)
 	require := t.Require()
 	l := t.Logger().With("syncmode", syncMode)
 
@@ -55,9 +56,10 @@ func UnsafeChainNotStalling_Disconnect(gt *testing.T, syncMode sync.Mode, sleep 
 	sys.L2ELB.Reached(eth.Unsafe, ssA_after.UnsafeL2.Number, 30)
 }
 
+// Helper: restart op-node on one side of the split-brain and ensure the other side keeps moving while restarted side stalls, then catches up.
 func UnsafeChainNotStalling_RestartOpNode(gt *testing.T, syncMode sync.Mode, sleep time.Duration) {
 	t := devtest.SerialT(gt)
-	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	sys := presets.NewMantleSingleChainMultiNodeWithoutCheck(t)
 	require := t.Require()
 	l := t.Logger().With("syncmode", syncMode)
 

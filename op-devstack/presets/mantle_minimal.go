@@ -50,6 +50,10 @@ func (m *MantleMinimal) StandardBridge() *dsl.StandardBridge {
 	return dsl.NewStandardBridge(m.T, m.L2Chain, nil, m.L1EL)
 }
 
+func (m *MantleMinimal) MantleBridge() *dsl.MantleBridge {
+	return dsl.NewMantleBridge(m.T, m.L2Chain, nil, m.L1EL)
+}
+
 // L2ELNode exposes the sequencer EL node for helpers that operate on minimal-compatible systems.
 func (m *MantleMinimal) L2ELNode() *dsl.L2ELNode {
 	return m.L2EL

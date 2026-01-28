@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
+// Smoke: ensure public RPC reflects forward progress (advances at least N blocks).
 func TestPublicRpcAdvance(gt *testing.T) {
 	t := devtest.ParallelT(gt)
 	sys := presets.NewMantleMinimal(t)
