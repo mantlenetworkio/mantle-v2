@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	ps "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params/forks"
 )
 
 func DefaultMantleMinimalSystem(dest *DefaultMinimalSystemIDs) stack.Option[*Orchestrator] {
@@ -24,6 +25,8 @@ func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultM
 		WithDeployerOptions(
 			WithLocalContractSources(),
 			WithCommons(ids.L1.ChainID()),
+			WithDefaultBPOBlobSchedule,
+			WithForkAtL1Genesis(forks.BPO2), // Both ethereum mainnet and sepolia have activated BPO2
 			WithPrefundedL2(ids.L1.ChainID(), ids.L2.ChainID()),
 		),
 		WithDeployerPipelineOption(WithL1MNT(DefaultL1MNT)),
