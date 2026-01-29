@@ -2,7 +2,6 @@ package sysgo
 
 import (
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
-	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	ps "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,7 +29,6 @@ func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultM
 		WithDeployerPipelineOption(WithL1MNT(DefaultL1MNT)),
 		WithDeployerPipelineOption(WithOperatorFeeVaultRecipient(DefaultOperatorFeeVaultRecipient)),
 		WithDeployerPipelineOption(WithMantlePortalPaused(false)),
-		WithDeployerPipelineOption(WithMantleForkAtGenesis(forks.MantleArsia)),
 	)
 
 	opt.Add(WithL1Nodes(ids.L1EL, ids.L1CL))

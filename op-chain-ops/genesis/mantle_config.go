@@ -89,6 +89,7 @@ func DefaultMantleHardforkSchedule() *UpgradeScheduleDeployConfig {
 		L2GenesisMantleEuboeaTimeOffset:            op_service.U64UtilPtr(0),
 		L2GenesisMantleSkadiTimeOffset:             op_service.U64UtilPtr(0),
 		L2GenesisMantleLimbTimeOffset:              op_service.U64UtilPtr(0),
+		L2GenesisMantleArsiaTimeOffset:             op_service.U64UtilPtr(0),
 	}
 }
 
