@@ -181,17 +181,16 @@ func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.
 
 	// Try to decode all blobs and join them for Mantle format
 	txBlobData := make([]byte, 0, len(blobs)*eth.MaxBlobDataSize)
-	var individualBlobData []eth.Data
+	var fallbackResult []eth.Data
 	allBlobsValid := true
 	for i, blob := range blobs {
 		blobData, err := blob.ToData()
 		if err != nil {
 			ds.log.Error("blob parse failure", "txHash", txHash, "blobIndex", hashes[i].Index, "err", err)
 			allBlobsValid = false
-			individualBlobData = append(individualBlobData, nil) // placeholder for failed blob
 			continue
 		}
-		individualBlobData = append(individualBlobData, blobData)
+		fallbackResult = append(fallbackResult, blobData)
 		txBlobData = append(txBlobData, blobData...)
 	}
 
@@ -207,13 +206,7 @@ func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.
 		ds.log.Debug("Mantle format decode failed, falling back to standard blob format", "txHash", txHash, "err", err)
 	}
 
-	// Fallback: return each blob's data individually (standard format)
+	// Fallback: return all valid blob data
 	// Skip blobs that failed to parse, matching BlobDataSource.Next() behavior
-	result := make([]eth.Data, 0, len(individualBlobData))
-	for _, data := range individualBlobData {
-		if data != nil {
-			result = append(result, data)
-		}
-	}
-	return result, nil
+	return fallbackResult, nil
 }
