@@ -168,25 +168,19 @@ func (ds *MantleBlobDataSource) batcherTxsAndHashesFromTxs(txs types.Transaction
 // If that fails, it falls back to standard per-blob decoding.
 // Returns (result, error) where error indicates a fatal condition (nil blob).
 func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.IndexedBlobHash, blobMap map[uint64]*eth.Blob) ([]eth.Data, error) {
-	// First, collect all blobs for this transaction
-	var blobs []*eth.Blob
+	txBlobData := make([]byte, 0, len(hashes)*eth.MaxBlobDataSize)
+	fallbackResult := make([]eth.Data, 0, len(hashes))
+	allBlobsValid := true
+
 	for _, h := range hashes {
 		blob := blobMap[h.Index]
 		if blob == nil {
 			// nil blob is a fatal error, matching BlobDataSource behavior
 			return nil, fmt.Errorf("nil blob for tx %s at index %d", txHash, h.Index)
 		}
-		blobs = append(blobs, blob)
-	}
-
-	// Try to decode all blobs and join them for Mantle format
-	txBlobData := make([]byte, 0, len(blobs)*eth.MaxBlobDataSize)
-	var fallbackResult []eth.Data
-	allBlobsValid := true
-	for i, blob := range blobs {
 		blobData, err := blob.ToData()
 		if err != nil {
-			ds.log.Error("blob parse failure", "txHash", txHash, "blobIndex", hashes[i].Index, "err", err)
+			ds.log.Error("ignoring blob due to parse failure", "txHash", txHash, "blobIndex", h.Index, "err", err)
 			allBlobsValid = false
 			continue
 		}
@@ -194,19 +188,17 @@ func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.
 		txBlobData = append(txBlobData, blobData...)
 	}
 
-	// Try Mantle format first if all blobs are valid
+	// Try Mantle format if all blobs are valid
 	if allBlobsValid && len(txBlobData) > 0 {
 		var frameData []eth.Data
-		err := rlp.DecodeBytes(txBlobData, &frameData)
-		if err == nil {
+		if err := rlp.DecodeBytes(txBlobData, &frameData); err == nil {
 			ds.log.Debug("decoded tx blobs using Mantle format", "txHash", txHash, "frames", len(frameData))
 			return frameData, nil
+		} else {
+			ds.log.Debug("Mantle format decode failed, falling back to standard blob format", "txHash", txHash, "err", err)
 		}
-		// RLP decode failed, fall back to standard per-blob decoding
-		ds.log.Debug("Mantle format decode failed, falling back to standard blob format", "txHash", txHash, "err", err)
 	}
 
-	// Fallback: return all valid blob data
-	// Skip blobs that failed to parse, matching BlobDataSource.Next() behavior
+	// Fallback: return each valid blob's data individually (standard format)
 	return fallbackResult, nil
 }
