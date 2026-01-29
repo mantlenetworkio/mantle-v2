@@ -37,8 +37,8 @@ func TestFees(gt *testing.T) {
 	tokenRatio, err := contractio.Read(gpo.TokenRatio(), ctx)
 	require.NoError(err)
 
-	fjordFees := dsl.NewFjordFees(t, sys.L2Chain)
-	result := fjordFees.ValidateMantleTransaction(alice, bob, eth.OneHundredthEther.ToBig(), tokenRatio)
+	arsiaFees := dsl.NewArsiaFees(t, sys.L2Chain, tokenRatio)
+	result := arsiaFees.ValidateTransaction(alice, bob, eth.OneHundredthEther.ToBig())
 
 	signedTx, err := dsl.FindSignedTransactionFromReceipt(ctx, l2Client, result.TransactionReceipt)
 	require.NoError(err)
