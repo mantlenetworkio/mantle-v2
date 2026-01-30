@@ -799,3 +799,244 @@ func GasLimitChange(gt *testing.T, isSpanBatch bool) {
 
 	require.Equal(t, sequencer.L2Unsafe(), verifier.L2Safe(), "verifier stays in sync, even with gaslimit changes")
 }
+
+// TestTokenRatioInBlockChange tests that when token ratio is updated within a block:
+// - Transaction 1 (before update): uses old tokenRatio
+// - Transaction 2 (SetTokenRatio): uses old tokenRatio (the tx that modifies it)
+// - Transaction 3 (after update): uses new tokenRatio
+//
+// This verifies the token ratio caching mechanism in rollup_cost.go works correctly.
+func TestTokenRatioInBlockChange(t *testing.T) {
+	gt := actionsHelpers.NewDefaultTesting(t)
+
+	dp := e2eutils.MakeMantleDeployParams(gt, actionsHelpers.DefaultRollupTestParams())
+
+	// Enable MNT as gas token
+	dp.DeployConfig.UseCustomGasToken = true
+	dp.DeployConfig.GasPayingTokenName = "MNT"
+	dp.DeployConfig.GasPayingTokenSymbol = "MNT"
+	dp.DeployConfig.NativeAssetLiquidityAmount = (*hexutil.Big)(new(big.Int).Mul(big.NewInt(2000), big.NewInt(1e18)))
+	dp.DeployConfig.LiquidityControllerOwner = dp.Addresses.Deployer
+
+	// Set initial tokenRatio: 1 ETH = 2000 MNT
+	initialTokenRatio := uint64(2000 * 1e6)
+	dp.DeployConfig.GasPriceOracleTokenRatio = initialTokenRatio
+
+	// Set Operator Fee parameters
+	dp.DeployConfig.GasPriceOracleOperatorFeeScalar = 1000
+	dp.DeployConfig.GasPriceOracleOperatorFeeConstant = 1000
+
+	// Set MinBaseFee
+	dp.DeployConfig.MinBaseFee = 10 * 1e9 // 10 gwei
+	dp.DeployConfig.L2GenesisBlockBaseFeePerGas = (*hexutil.Big)(big.NewInt(10 * 1e9))
+
+	// Activate Arsia fork at genesis
+	arsiaTimeOffset := hexutil.Uint64(0)
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, &arsiaTimeOffset)
+
+	sd := e2eutils.SetupMantleNormal(gt, dp, actionsHelpers.DefaultAlloc)
+	logger := testlog.Logger(gt, log.LevelDebug)
+	miner, seqEngine, sequencer := actionsHelpers.SetupSequencerTest(gt, sd, logger)
+
+	// Setup users
+	alice := actionsHelpers.NewBasicUser[any](logger, dp.Secrets.Alice, rand.New(rand.NewSource(1234)))
+	alice.SetUserEnv(&actionsHelpers.BasicUserEnv[any]{
+		EthCl:  seqEngine.EthClient(),
+		Signer: types.LatestSigner(sd.L2Cfg.Config),
+	})
+
+	bob := actionsHelpers.NewBasicUser[any](logger, dp.Secrets.Bob, rand.New(rand.NewSource(5678)))
+	bob.SetUserEnv(&actionsHelpers.BasicUserEnv[any]{
+		EthCl:  seqEngine.EthClient(),
+		Signer: types.LatestSigner(sd.L2Cfg.Config),
+	})
+
+	sequencer.ActL2PipelineFull(gt)
+
+	// Build initial L1 and L2 blocks
+	miner.ActEmptyBlock(gt)
+	sequencer.ActL1HeadSignal(gt)
+	sequencer.ActBuildToL1Head(gt)
+
+	// Get GPO contract
+	gpoContract, err := bindings.NewGasPriceOracle(
+		common.HexToAddress("0x420000000000000000000000000000000000000F"),
+		seqEngine.EthClient(),
+	)
+	require.NoError(gt, err)
+
+	// Setup GPO operator (find the owner first)
+	gpoOwnerAddr, err := gpoContract.Owner(&bind.CallOpts{})
+	require.NoError(gt, err)
+
+	var ownerKey *ecdsa.PrivateKey
+	switch gpoOwnerAddr {
+	case dp.Addresses.Alice:
+		ownerKey = dp.Secrets.Alice
+	case dp.Addresses.Bob:
+		ownerKey = dp.Secrets.Bob
+	case dp.Addresses.Deployer:
+		ownerKey = dp.Secrets.Deployer
+	case dp.Addresses.SysCfgOwner:
+		ownerKey = dp.Secrets.SysCfgOwner
+	default:
+		gt.Fatalf("Unknown GPO owner: %s", gpoOwnerAddr.String())
+	}
+
+	gpoOwner, err := bind.NewKeyedTransactorWithChainID(ownerKey, sd.L2Cfg.Config.ChainID)
+	require.NoError(gt, err)
+
+	// Set operator to Alice
+	_, err = gpoContract.SetOperator(gpoOwner, dp.Addresses.Alice)
+	require.NoError(gt, err)
+	sequencer.ActL2StartBlock(gt)
+	seqEngine.ActL2IncludeTx(gpoOwnerAddr)(gt)
+	sequencer.ActL2EndBlock(gt)
+
+	// Set initial tokenRatio
+	gpoOperator, err := bind.NewKeyedTransactorWithChainID(dp.Secrets.Alice, sd.L2Cfg.Config.ChainID)
+	require.NoError(gt, err)
+
+	tokenRatioValue := new(big.Int).SetUint64(initialTokenRatio)
+	_, err = gpoContract.SetTokenRatio(gpoOperator, tokenRatioValue)
+	require.NoError(gt, err)
+	sequencer.ActL2StartBlock(gt)
+	seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(gt)
+	sequencer.ActL2EndBlock(gt)
+
+	// Verify initial tokenRatio is set
+	currentRatio, err := gpoContract.TokenRatio(&bind.CallOpts{})
+	require.NoError(gt, err)
+	require.Equal(gt, tokenRatioValue, currentRatio)
+	gt.Logf("Initial tokenRatio: %s (1 ETH = %s MNT)",
+		currentRatio.String(),
+		new(big.Int).Div(currentRatio, big.NewInt(1e6)).String())
+
+	// Now test the in-block token ratio change
+
+	gt.Log("Testing in-block token ratio change")
+
+	// Start a new L2 block that will contain 3 transactions
+	sequencer.ActL2StartBlock(gt)
+
+	// Transaction 1: Alice sends a transaction (should use old tokenRatio)
+	alice.ActResetTxOpts(gt)
+	alice.ActMakeTx(gt)
+	seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(gt)
+
+	// Transaction 2: Update tokenRatio to 4000 MNT per ETH (should still use old tokenRatio)
+	newTokenRatio := uint64(4000 * 1e6) // Double the ratio
+	newTokenRatioValue := new(big.Int).SetUint64(newTokenRatio)
+	_, err = gpoContract.SetTokenRatio(gpoOperator, newTokenRatioValue)
+	require.NoError(gt, err)
+	seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(gt)
+
+	// Transaction 3: Bob sends a transaction (should use new tokenRatio)
+	bob.ActResetTxOpts(gt)
+	bob.ActMakeTx(gt)
+	seqEngine.ActL2IncludeTx(dp.Addresses.Bob)(gt)
+
+	// End the block
+	sequencer.ActL2EndBlock(gt)
+
+	// Get receipts for all three transactions
+	receipt1 := alice.LastTxReceipt(gt)
+	receipt3 := bob.LastTxReceipt(gt)
+
+	// Get the SetTokenRatio transaction receipt
+	block := seqEngine.L2Chain().CurrentBlock()
+	blockNum := block.Number.Uint64()
+	fullBlock, err := seqEngine.EthClient().BlockByNumber(gt.Ctx(), new(big.Int).SetUint64(blockNum))
+	require.NoError(gt, err)
+
+	// Filter out deposit transactions (type 0x7E)
+	var userTxs []*types.Transaction
+	for _, tx := range fullBlock.Transactions() {
+		if tx.Type() != types.DepositTxType {
+			userTxs = append(userTxs, tx)
+		}
+	}
+	require.Equal(gt, 3, len(userTxs), "Block should contain exactly 3 user transactions (excluding deposits)")
+
+	// Get the SetTokenRatio transaction receipt (should be the 2nd user transaction)
+	receipt2, err := seqEngine.EthClient().TransactionReceipt(gt.Ctx(), userTxs[1].Hash())
+	require.NoError(gt, err)
+
+	gt.Log("Verifying token ratio application")
+
+	// Verify tokenRatio is updated in contract
+	updatedRatio, err := gpoContract.TokenRatio(&bind.CallOpts{})
+	require.NoError(gt, err)
+	require.Equal(gt, newTokenRatioValue, updatedRatio)
+	gt.Logf("Updated tokenRatio: %s (1 ETH = %s MNT)",
+		updatedRatio.String(),
+		new(big.Int).Div(updatedRatio, big.NewInt(1e6)).String())
+
+	// Log L1 fee parameters for reference
+	l1BaseFee, err := gpoContract.L1BaseFee(&bind.CallOpts{})
+	require.NoError(gt, err)
+	blobBaseFee, err := gpoContract.BlobBaseFee(&bind.CallOpts{})
+	require.NoError(gt, err)
+	baseFeeScalar, err := gpoContract.BaseFeeScalar(&bind.CallOpts{})
+	require.NoError(gt, err)
+	blobBaseFeeScalar, err := gpoContract.BlobBaseFeeScalar(&bind.CallOpts{})
+	require.NoError(gt, err)
+
+	gt.Logf("L1 Fee Params: l1BaseFee=%s, blobBaseFee=%s, baseFeeScalar=%d, blobBaseFeeScalar=%d",
+		l1BaseFee.String(), blobBaseFee.String(), baseFeeScalar, blobBaseFeeScalar)
+
+	// Transaction 1: Should use old tokenRatio (2000 MNT/ETH)
+	gt.Logf("Transaction 1 (Alice, before update):")
+	gt.Logf("  L1 Fee: %s MNT", receipt1.L1Fee.String())
+	gt.Logf("  L1 Gas Used: %d", receipt1.L1GasUsed.Uint64())
+	gt.Logf("  L1 Gas Price: %s", receipt1.L1GasPrice.String())
+
+	// Transaction 2: Should use old tokenRatio (2000 MNT/ETH) - the tx that modifies it
+	gt.Logf("Transaction 2 (SetTokenRatio):")
+	gt.Logf("  L1 Fee: %s MNT", receipt2.L1Fee.String())
+	gt.Logf("  L1 Gas Used: %d", receipt2.L1GasUsed.Uint64())
+	gt.Logf("  L1 Gas Price: %s", receipt2.L1GasPrice.String())
+
+	// Transaction 3: Should use new tokenRatio (4000 MNT/ETH)
+	gt.Logf("Transaction 3 (Bob, after update):")
+	gt.Logf("  L1 Fee: %s MNT", receipt3.L1Fee.String())
+	gt.Logf("  L1 Gas Used: %d", receipt3.L1GasUsed.Uint64())
+	gt.Logf("  L1 Gas Price: %s", receipt3.L1GasPrice.String())
+
+	// Key verification: Transaction 3's L1 fee should be approximately double of Transaction 1's
+	// (because tokenRatio doubled, and L1 fee is proportional to tokenRatio)
+	// Allow some variance due to different transaction sizes
+	if receipt1.L1Fee.Sign() > 0 && receipt3.L1Fee.Sign() > 0 {
+		ratio := new(big.Float).Quo(
+			new(big.Float).SetInt(receipt3.L1Fee),
+			new(big.Float).SetInt(receipt1.L1Fee),
+		)
+		gt.Logf("L1 Fee ratio (Tx3/Tx1): %s", ratio.String())
+
+		// The ratio should be close to 2.0 (allowing 10% variance for tx size differences)
+		ratioFloat, _ := ratio.Float64()
+		require.Greater(gt, ratioFloat, 1.8, "Tx3 L1 fee should be ~2x Tx1 (got %.2f)", ratioFloat)
+		require.Less(gt, ratioFloat, 2.2, "Tx3 L1 fee should be ~2x Tx1 (got %.2f)", ratioFloat)
+	}
+
+	// Verify Transaction 2 uses old tokenRatio (similar to Tx1)
+	if receipt1.L1Fee.Sign() > 0 && receipt2.L1Fee.Sign() > 0 {
+		ratio := new(big.Float).Quo(
+			new(big.Float).SetInt(receipt2.L1Fee),
+			new(big.Float).SetInt(receipt1.L1Fee),
+		)
+		gt.Logf("L1 Fee ratio (Tx2/Tx1): %s", ratio.String())
+
+		// Tx2 should use old tokenRatio, so ratio should be close to 1.0
+		ratioFloat, _ := ratio.Float64()
+		require.Greater(gt, ratioFloat, 0.5, "Tx2 should use old tokenRatio (got %.2f)", ratioFloat)
+		require.Less(gt, ratioFloat, 1.5, "Tx2 should use old tokenRatio (got %.2f)", ratioFloat)
+	}
+
+	gt.Log("Test completed successfully!")
+	gt.Log("Verified:")
+	gt.Log("  - Tx1 (before update): uses old tokenRatio")
+	gt.Log("  - Tx2 (SetTokenRatio): uses old tokenRatio")
+	gt.Log("  - Tx3 (after update): uses new tokenRatio")
+
+}

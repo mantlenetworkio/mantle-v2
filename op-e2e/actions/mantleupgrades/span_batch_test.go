@@ -28,6 +28,7 @@ import (
 
 	batcherFlags "github.com/ethereum-optimism/optimism/op-batcher/flags"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
@@ -974,4 +975,109 @@ func TestDropSpanBatchBeforeArsia(gt *testing.T) {
 	require.NotNil(t, vTx, "Alice's transaction should be included after switching to SingularBatch")
 
 	t.Log("Safe head recovered after switching to SingularBatch")
+}
+
+// TestSpanBatchMaxBlocksPerSpanBatch tests that MaxBlocksPerSpanBatch correctly limits
+// the number of L2 blocks per span batch. When the limit is reached, a new span batch
+// is started automatically.
+func TestSpanBatchMaxBlocksPerSpanBatch(gt *testing.T) {
+	t := actionsHelpers.NewDefaultTesting(gt)
+	p := &e2eutils.TestParams{
+		MaxSequencerDrift:   20,
+		SequencerWindowSize: 24,
+		ChannelTimeout:      20,
+		L1BlockTime:         12,
+		AllocType:           config.DefaultAllocType,
+	}
+	dp := e2eutils.MakeMantleDeployParams(t, p)
+
+	// Activate Arsia (which enables Delta/SpanBatch)
+	arsiaOffset := hexutil.Uint64(0)
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, &arsiaOffset)
+	sd := e2eutils.SetupMantleNormal(t, dp, actionsHelpers.DefaultAlloc)
+	log := testlog.Logger(t, log.LevelInfo)
+	miner, seqEngine, sequencer := actionsHelpers.SetupSequencerTest(t, sd, log)
+	_, verifier := actionsHelpers.SetupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &sync.Config{})
+
+	rollupSeqCl := sequencer.RollupClient()
+	batcher := actionsHelpers.NewL2Batcher(log, sd.RollupCfg, actionsHelpers.MantleSpanBatcherCfg(dp),
+		rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Build initial L1 block
+	miner.ActEmptyBlock(t)
+
+	sequencer.ActL2PipelineFull(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Configuration: limit span batch to 5 blocks
+	const maxBlocksPerSpanBatch = 5
+	const totalL2Blocks = 12 // Should create 3 span batches: 5 + 5 + 2
+
+	// Generate L2 blocks with transactions
+	cl := seqEngine.EthClient()
+	signer := types.LatestSigner(sd.L2Cfg.Config)
+
+	for i := 0; i < totalL2Blocks; i++ {
+		sequencer.ActL2StartBlock(t)
+
+		// Add a transaction to each block
+		nonce, err := cl.PendingNonceAt(t.Ctx(), dp.Addresses.Alice)
+		require.NoError(t, err)
+		baseFee := seqEngine.L2Chain().CurrentBlock().BaseFee
+		tx := types.MustSignNewTx(dp.Secrets.Alice, signer, &types.DynamicFeeTx{
+			ChainID:   sd.L2Cfg.Config.ChainID,
+			Nonce:     nonce,
+			GasTipCap: big.NewInt(2 * params.GWei),
+			GasFeeCap: new(big.Int).Add(new(big.Int).Mul(baseFee, big.NewInt(2)), big.NewInt(2*params.GWei)),
+			Gas:       21000,
+			To:        &dp.Addresses.Bob,
+			Value:     big.NewInt(1),
+		})
+		require.NoError(t, cl.SendTransaction(t.Ctx(), tx))
+		seqEngine.ActL2IncludeTx(dp.Addresses.Alice)(t)
+
+		sequencer.ActL2EndBlock(t)
+	}
+
+	// Record unsafe head before submission
+	unsafeHead := sequencer.L2Unsafe()
+	log.Info("Generated L2 blocks", "unsafeHead", unsafeHead.Number, "totalBlocks", totalL2Blocks)
+
+	// Buffer all blocks with MaxBlocksPerSpanBatch option
+	// This will create multiple span batches when the limit is reached
+	for batcher.L2BufferedBlock.Number < unsafeHead.Number {
+		require.NoError(t, batcher.Buffer(t,
+			actionsHelpers.WithChannelModifier(derive.WithMaxBlocksPerSpanBatch(maxBlocksPerSpanBatch)),
+		), "failed to buffer block")
+	}
+
+	// Submit the channel to L1
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantleRaw(t, batcher.ReadNextOutputFrame(t))
+
+	// Include batcher tx in L1 block
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTx(dp.Addresses.Batcher)(t)
+	miner.ActL1EndBlock(t)
+
+	// Derive on sequencer
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActL2PipelineFull(t)
+
+	// Verify sequencer safe head matches unsafe head
+	require.Equal(t, unsafeHead.Number, sequencer.L2Safe().Number,
+		"sequencer safe head should match unsafe head after derivation")
+
+	// Derive on verifier
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Verify verifier safe head matches sequencer
+	require.Equal(t, sequencer.L2Safe(), verifier.L2Safe(),
+		"verifier safe head should match sequencer safe head")
+
+	log.Info("TestSpanBatchMaxBlocksPerSpanBatch passed",
+		"maxBlocksPerSpanBatch", maxBlocksPerSpanBatch,
+		"totalL2Blocks", totalL2Blocks,
+		"safeHead", verifier.L2Safe().Number)
 }

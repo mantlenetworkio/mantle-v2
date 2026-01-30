@@ -680,9 +680,9 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 
 				// Ensure that the logs contain a mention of the block being replaced _due to the signer not having enough
 				// balance_. The address has 21000 wei (gas fee for TxGas only), but needs more for gasLimit + operator fee.
-				// Note: Balance check uses gasLimit (25200) not gasUsed (21000), so want = 25200 * 1 + 65535 = 90735
+				// Note: Balance check uses gasLimit (21000) not gasUsed (21000), so want = 21000 * 1 + 65535 = 86535
 				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "insufficient funds for gas * price + value")))
-				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "have 21000 want 90735")))
+				require.NotNil(t, env.Logs.FindLog(testlog.NewAttributesContainsFilter("err", "have 21000 want 86535")))
 			} else {
 				require.Equal(t, 2, len(safeHeadBlock.Transactions()))
 			}

@@ -124,6 +124,28 @@ func MantleSingularBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
 	}
 }
 
+func MantleBlobsSpanBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:          0,
+		MaxL1TxSize:          128_000,
+		ForceSubmitSpanBatch: true,
+		BatcherKey:           dp.Secrets.Batcher,
+		DataAvailabilityType: batcherFlags.BlobsType,
+		EnableCellProofs:     true,
+	}
+}
+
+func MantleBlobsSingularBatcherCfg(dp *e2eutils.DeployParams) *BatcherCfg {
+	return &BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		ForceSubmitSingularBatch: true,
+		BatcherKey:               dp.Secrets.Batcher,
+		DataAvailabilityType:     batcherFlags.BlobsType,
+		EnableCellProofs:         true,
+	}
+}
+
 func AltDABatcherCfg(dp *e2eutils.DeployParams, altDA AltDAInputSetter) *BatcherCfg {
 	return &BatcherCfg{
 		MinL1TxSize:          0,
