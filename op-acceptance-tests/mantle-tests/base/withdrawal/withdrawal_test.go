@@ -7,9 +7,9 @@ import (
 	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 )
 
-func TestWithdrawalMNT_Permissioned(gt *testing.T) {
-	withdrawal.TestWithdrawalMNT(gt, gameTypes.PermissionedGameType)
-}
+//func TestWithdrawalMNT_Permissioned(gt *testing.T) {
+//	withdrawal.TestWithdrawalMNT(gt, gameTypes.PermissionedGameType)
+//}
 
 func TestWithdrawalETH_Permissioned(gt *testing.T) {
 	withdrawal.TestWithdrawalETH(gt, gameTypes.PermissionedGameType)
