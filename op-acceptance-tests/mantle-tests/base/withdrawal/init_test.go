@@ -1,12 +1,16 @@
 package withdrawal
 
 import (
+	"github.com/ethereum-optimism/optimism/op-devstack/compat"
+	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 	"testing"
-
-	"github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal"
-	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 )
 
 func TestMain(m *testing.M) {
-	withdrawal.InitWithGameType(m, gameTypes.PermissionedGameType)
+	presets.DoMain(m,
+		presets.WithCompatibleTypes(compat.SysGo),
+		presets.WithMantleMinimal(),
+		presets.WithTimeTravel(),
+		presets.WithFinalizationPeriodSeconds(1),
+	)
 }
