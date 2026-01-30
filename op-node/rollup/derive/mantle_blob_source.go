@@ -26,10 +26,11 @@ type MantleBlobDataSource struct {
 	fetcher      L1TransactionFetcher
 	blobsFetcher L1BlobsFetcher
 	log          log.Logger
+	blobToggle   func()
 }
 
 // NewMantleBlobDataSource creates a new Mantle blob data source.
-func NewMantleBlobDataSource(ctx context.Context, log log.Logger, dsCfg DataSourceConfig, fetcher L1TransactionFetcher, blobsFetcher L1BlobsFetcher, ref eth.L1BlockRef, batcherAddr common.Address) DataIter {
+func NewMantleBlobDataSource(ctx context.Context, log log.Logger, dsCfg DataSourceConfig, fetcher L1TransactionFetcher, blobsFetcher L1BlobsFetcher, ref eth.L1BlockRef, batcherAddr common.Address, toggle func()) DataIter {
 	return &MantleBlobDataSource{
 		ref:          ref,
 		dsCfg:        dsCfg,
@@ -37,6 +38,7 @@ func NewMantleBlobDataSource(ctx context.Context, log log.Logger, dsCfg DataSour
 		log:          log.New("origin", ref),
 		batcherAddr:  batcherAddr,
 		blobsFetcher: blobsFetcher,
+		blobToggle:   toggle,
 	}
 }
 
@@ -195,6 +197,7 @@ func (ds *MantleBlobDataSource) processTxBlobs(txHash common.Hash, hashes []eth.
 			ds.log.Debug("decoded tx blobs using Mantle format", "txHash", txHash, "frames", len(frameData))
 			return frameData, nil
 		} else {
+			ds.blobToggle()
 			ds.log.Debug("Mantle format decode failed, falling back to standard blob format", "txHash", txHash, "err", err)
 		}
 	}

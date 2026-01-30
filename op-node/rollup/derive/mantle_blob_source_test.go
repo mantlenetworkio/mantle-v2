@@ -89,7 +89,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		mockBlobsFetcher.ExpectOnGetBlobs(ctx, ref, []eth.IndexedBlobHash{indexedBlobHash}, []*eth.Blob{&ethBlob}, nil)
 
 		// Create data source
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Test Next() - should return first frame
 		data, err := ds.Next(ctx)
@@ -130,7 +130,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		blockInfo := testutils.RandomBlockInfo(rng)
 		mockFetcher.ExpectInfoAndTxsByHash(ref.Hash, blockInfo, txs, nil)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return the calldata
 		data, err := ds.Next(ctx)
@@ -166,7 +166,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		blockInfo := testutils.RandomBlockInfo(rng)
 		mockFetcher.ExpectInfoAndTxsByHash(ref.Hash, blockInfo, txs, nil)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return EOF since transaction is not from batcher
 		data, err := ds.Next(ctx)
@@ -183,7 +183,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		blockInfo := testutils.RandomBlockInfo(rng)
 		mockFetcher.ExpectInfoAndTxsByHash(ref.Hash, blockInfo, nil, ethereum.NotFound)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return ResetError
 		data, err := ds.Next(ctx)
@@ -202,7 +202,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		blockInfo := testutils.RandomBlockInfo(rng)
 		mockFetcher.ExpectInfoAndTxsByHash(ref.Hash, blockInfo, nil, expectedErr)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return TemporaryError
 		data, err := ds.Next(ctx)
@@ -238,7 +238,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		}
 		mockBlobsFetcher.ExpectOnGetBlobs(ctx, ref, []eth.IndexedBlobHash{indexedBlobHash}, nil, ethereum.NotFound)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return ResetError
 		data, err := ds.Next(ctx)
@@ -276,7 +276,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		}
 		mockBlobsFetcher.ExpectOnGetBlobs(ctx, ref, []eth.IndexedBlobHash{indexedBlobHash}, nil, expectedErr)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return TemporaryError
 		data, err := ds.Next(ctx)
@@ -314,7 +314,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 		// Return nil blob
 		mockBlobsFetcher.ExpectOnGetBlobs(ctx, ref, []eth.IndexedBlobHash{indexedBlobHash}, []*eth.Blob{nil}, nil)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return ResetError for nil blob (matching BlobDataSource behavior)
 		data, err := ds.Next(ctx)
@@ -406,7 +406,7 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 			[]eth.IndexedBlobHash{indexedBlobHash1, indexedBlobHash2, indexedBlobHash3, indexedBlobHash4},
 			[]*eth.Blob{&ethBlob1, &ethBlob2, &ethBlob3, &ethBlob4}, nil)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() {})
 
 		// Should return frames from each transaction separately (TX-scoped decoding)
 		// TX1 blobs are joined and decoded to get frameData1
@@ -492,12 +492,15 @@ func TestMantleBlobDataSource_Next(t *testing.T) {
 			[]eth.IndexedBlobHash{indexedBlobHash1, indexedBlobHash2},
 			[]*eth.Blob{&ethBlob1, &ethBlob2}, nil)
 
-		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr)
+		// Track if toggle was called (indicates fallback to standard blob format)
+		toggleCalled := false
+		ds := NewMantleBlobDataSource(ctx, logger, config, mockFetcher, mockBlobsFetcher, ref, batcherAddr, func() { toggleCalled = true })
 
 		// TX1: RLP decode fails, falls back to standard blob format (returns raw blob data)
 		data, err := ds.Next(ctx)
 		require.NoError(t, err)
 		require.Equal(t, eth.Data(invalidRLPData), data)
+		require.True(t, toggleCalled, "toggle should be called when falling back to standard blob format")
 
 		// TX2: RLP decode succeeds, returns decoded frames
 		data, err = ds.Next(ctx)
