@@ -3,6 +3,7 @@ package genesis
 import (
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -291,4 +293,98 @@ func (d *UpgradeScheduleDeployConfig) SetMantleForkTimeOffset(fork rollup.Mantle
 // ActivateMantleForkAtGenesis activates the given Mantle fork at genesis.
 func (d *UpgradeScheduleDeployConfig) ActivateMantleForkAtGenesis(fork rollup.MantleForkName) {
 	d.ActivateMantleForkAtOffset(fork, 0)
+}
+
+// MantleCheck performs Mantle-specific validation that allows multiple forks to activate at the same time.
+// This uses mantleCheckConfigBundle which will call MantleCheck() on UpgradeScheduleDeployConfig,
+// allowing Arsia fork to activate all constituent OP Stack forks simultaneously.
+func (d *DeployConfig) MantleCheck(log log.Logger) error {
+	if d.L1StartingBlockTag == nil {
+		return fmt.Errorf("%w: L1StartingBlockTag cannot be nil", ErrInvalidDeployConfig)
+	}
+
+	if d.L2GenesisCanyonTimeOffset != nil && d.EIP1559DenominatorCanyon == 0 {
+		return fmt.Errorf("%w: EIP1559DenominatorCanyon cannot be 0 if Canyon is activated", ErrInvalidDeployConfig)
+	}
+	// L2 block time must always be smaller than L1 block time
+	if d.L1BlockTime < d.L2BlockTime {
+		return fmt.Errorf("L2 block time (%d) is larger than L1 block time (%d)", d.L2BlockTime, d.L1BlockTime)
+	}
+	return mantleCheckConfigBundle(d, log)
+}
+
+// mantleCheckConfigBundle checks a config bundle using Mantle-specific validation rules.
+// It first tries to use MantleCheck if available, otherwise falls back to Check.
+func mantleCheckConfigBundle(bundle any, log log.Logger) error {
+	cfgValue := reflect.ValueOf(bundle)
+	for cfgValue.Kind() == reflect.Interface || cfgValue.Kind() == reflect.Pointer {
+		cfgValue = cfgValue.Elem()
+	}
+	if cfgValue.Kind() != reflect.Struct {
+		return fmt.Errorf("bundle type %s is not a struct", cfgValue.Type().String())
+	}
+	for i := 0; i < cfgValue.NumField(); i++ {
+		field := cfgValue.Field(i)
+		if field.Kind() != reflect.Pointer { // to call pointer-receiver methods
+			field = field.Addr()
+		}
+		name := cfgValue.Type().Field(i).Name
+		// Try MantleConfigChecker first (for fork schedule validation)
+		if v, ok := field.Interface().(MantleConfigChecker); ok {
+			if err := v.MantleCheck(log.New("config", name)); err != nil {
+				return fmt.Errorf("config field %s failed Mantle checks: %w", name, err)
+			} else {
+				log.Debug("Checked config-field (Mantle)", "name", name)
+			}
+		} else if v, ok := field.Interface().(ConfigChecker); ok {
+			// Fall back to regular Check for other fields
+			if err := v.Check(log.New("config", name)); err != nil {
+				return fmt.Errorf("config field %s failed checks: %w", name, err)
+			} else {
+				log.Debug("Checked config-field", "name", name)
+			}
+		} else {
+			log.Debug("Ignoring config-field", "name", name)
+		}
+	}
+	return nil
+}
+
+// Check will ensure that the L1Deployments are sane
+func (d *L1Deployments) MantleCheck(deployConfig *DeployConfig) error {
+	val := reflect.ValueOf(d)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	for i := 0; i < val.NumField(); i++ {
+		name := val.Type().Field(i).Name
+		if !deployConfig.UseFaultProofs &&
+			(name == "DisputeGameFactory" ||
+				name == "DisputeGameFactoryProxy") {
+			continue
+		}
+		if deployConfig.UseFaultProofs &&
+			(name == "OptimismPortal" || name == "L2OutputOracle" || name == "L2OutputOracleProxy") {
+			continue
+		}
+		if !deployConfig.UseAltDA &&
+			(name == "DataAvailabilityChallenge" ||
+				name == "DataAvailabilityChallengeProxy") {
+			continue
+		}
+		// Skip Interop-only contracts (OptimismPortalInterop, ETHLockbox)
+		// and optional Superchain contracts (ProtocolVersions)
+		// These are only needed for Interop/Superchain deployments, not for standard Mantle deployments
+		if name == "OptimismPortalInterop" ||
+			name == "ETHLockbox" ||
+			name == "ETHLockboxProxy" ||
+			name == "ProtocolVersions" ||
+			name == "ProtocolVersionsProxy" {
+			continue
+		}
+		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
+			return fmt.Errorf("%s is not set", name)
+		}
+	}
+	return nil
 }

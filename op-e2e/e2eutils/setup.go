@@ -440,7 +440,7 @@ func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *Al
 	require.NoError(t, deployConf.MantleCheck(logger))
 
 	l1Deployments := config.L1Deployments(deployParams.AllocType)
-	require.NoError(t, l1Deployments.Check(deployConf))
+	require.NoError(t, l1Deployments.MantleCheck(deployConf))
 
 	// Build L1 genesis
 	l1Genesis, err := genesis.BuildL1DeveloperGenesis(

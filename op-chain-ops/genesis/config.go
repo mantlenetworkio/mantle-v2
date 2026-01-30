@@ -89,43 +89,6 @@ func checkConfigBundle(bundle any, log log.Logger) error {
 	return nil
 }
 
-// mantleCheckConfigBundle checks a config bundle using Mantle-specific validation rules.
-// It first tries to use MantleCheck if available, otherwise falls back to Check.
-func mantleCheckConfigBundle(bundle any, log log.Logger) error {
-	cfgValue := reflect.ValueOf(bundle)
-	for cfgValue.Kind() == reflect.Interface || cfgValue.Kind() == reflect.Pointer {
-		cfgValue = cfgValue.Elem()
-	}
-	if cfgValue.Kind() != reflect.Struct {
-		return fmt.Errorf("bundle type %s is not a struct", cfgValue.Type().String())
-	}
-	for i := 0; i < cfgValue.NumField(); i++ {
-		field := cfgValue.Field(i)
-		if field.Kind() != reflect.Pointer { // to call pointer-receiver methods
-			field = field.Addr()
-		}
-		name := cfgValue.Type().Field(i).Name
-		// Try MantleConfigChecker first (for fork schedule validation)
-		if v, ok := field.Interface().(MantleConfigChecker); ok {
-			if err := v.MantleCheck(log.New("config", name)); err != nil {
-				return fmt.Errorf("config field %s failed Mantle checks: %w", name, err)
-			} else {
-				log.Debug("Checked config-field (Mantle)", "name", name)
-			}
-		} else if v, ok := field.Interface().(ConfigChecker); ok {
-			// Fall back to regular Check for other fields
-			if err := v.Check(log.New("config", name)); err != nil {
-				return fmt.Errorf("config field %s failed checks: %w", name, err)
-			} else {
-				log.Debug("Checked config-field", "name", name)
-			}
-		} else {
-			log.Debug("Ignoring config-field", "name", name)
-		}
-	}
-	return nil
-}
-
 type DevDeployConfig struct {
 	// FundDevAccounts configures whether to fund the dev accounts.
 	// This should only be used during devnet deployments.
@@ -1224,24 +1187,6 @@ func (d *DeployConfig) Check(log log.Logger) error {
 	return checkConfigBundle(d, log)
 }
 
-// MantleCheck performs Mantle-specific validation that allows multiple forks to activate at the same time.
-// This uses mantleCheckConfigBundle which will call MantleCheck() on UpgradeScheduleDeployConfig,
-// allowing Arsia fork to activate all constituent OP Stack forks simultaneously.
-func (d *DeployConfig) MantleCheck(log log.Logger) error {
-	if d.L1StartingBlockTag == nil {
-		return fmt.Errorf("%w: L1StartingBlockTag cannot be nil", ErrInvalidDeployConfig)
-	}
-
-	if d.L2GenesisCanyonTimeOffset != nil && d.EIP1559DenominatorCanyon == 0 {
-		return fmt.Errorf("%w: EIP1559DenominatorCanyon cannot be 0 if Canyon is activated", ErrInvalidDeployConfig)
-	}
-	// L2 block time must always be smaller than L1 block time
-	if d.L1BlockTime < d.L2BlockTime {
-		return fmt.Errorf("L2 block time (%d) is larger than L1 block time (%d)", d.L2BlockTime, d.L1BlockTime)
-	}
-	return mantleCheckConfigBundle(d, log)
-}
-
 // CheckAddresses will return an error if the addresses are not set.
 // These values are required to create the L2 genesis state and are present in the deploy config
 // even though the deploy config is required to deploy the contracts on L1. This creates a
@@ -1475,16 +1420,6 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 		if !deployConfig.UseAltDA &&
 			(name == "DataAvailabilityChallenge" ||
 				name == "DataAvailabilityChallengeProxy") {
-			continue
-		}
-		// Skip Interop-only contracts (OptimismPortalInterop, ETHLockbox)
-		// and optional Superchain contracts (ProtocolVersions)
-		// These are only needed for Interop/Superchain deployments, not for standard Mantle deployments
-		if name == "OptimismPortalInterop" ||
-			name == "ETHLockbox" ||
-			name == "ETHLockboxProxy" ||
-			name == "ProtocolVersions" ||
-			name == "ProtocolVersionsProxy" {
 			continue
 		}
 		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
