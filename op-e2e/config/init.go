@@ -500,7 +500,7 @@ func initMantleAllocType(root string, allocType AllocType) {
 			// For Mantle, use Arsia mode to set deploy config (Arsia is the latest Mantle fork)
 			// This replaces the original check for L2AllocsGranite
 			if mode == genesis.L2AllocsArsia {
-				dc, err := inspect.DeployConfig(st, intent.Chains[0].ID)
+				dc, err := inspect.MantleDeployConfig(st, intent.Chains[0].ID)
 				if err != nil {
 					panic(fmt.Errorf("failed to inspect deploy config: %w", err))
 				}

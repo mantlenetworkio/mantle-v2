@@ -1422,6 +1422,16 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 				name == "DataAvailabilityChallengeProxy") {
 			continue
 		}
+		// Skip Interop-only contracts (OptimismPortalInterop, ETHLockbox)
+		// and optional Superchain contracts (ProtocolVersions)
+		// These are only needed for Interop/Superchain deployments, not for standard Mantle deployments
+		if name == "OptimismPortalInterop" ||
+			name == "ETHLockbox" ||
+			name == "ETHLockboxProxy" ||
+			name == "ProtocolVersions" ||
+			name == "ProtocolVersionsProxy" {
+			continue
+		}
 		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
 			return fmt.Errorf("%s is not set", name)
 		}
