@@ -1,15 +1,21 @@
 package main
 
 import (
+	"context"
 	"os"
 
-	"github.com/ethereum/go-ethereum/log"
-	cli "github.com/urfave/cli/v2"
+	"github.com/ethereum-optimism/optimism/op-challenger/metrics"
+	"github.com/urfave/cli/v2"
 
-	"github.com/ethereum-optimism/optimism/op-challenger/challenger"
+	"github.com/ethereum/go-ethereum/log"
+
+	challenger "github.com/ethereum-optimism/optimism/op-challenger"
 	"github.com/ethereum-optimism/optimism/op-challenger/config"
 	"github.com/ethereum-optimism/optimism/op-challenger/flags"
 	"github.com/ethereum-optimism/optimism/op-challenger/version"
+	opservice "github.com/ethereum-optimism/optimism/op-service"
+	"github.com/ethereum-optimism/optimism/op-service/cliapp"
+	"github.com/ethereum-optimism/optimism/op-service/ctxinterrupt"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 )
 
@@ -19,58 +25,53 @@ var (
 )
 
 // VersionWithMeta holds the textual version string including the metadata.
-var VersionWithMeta = func() string {
-	v := version.Version
-	if GitCommit != "" {
-		v += "-" + GitCommit[:8]
-	}
-	if GitDate != "" {
-		v += "-" + GitDate
-	}
-	if version.Meta != "" {
-		v += "-" + version.Meta
-	}
-	return v
-}()
+var VersionWithMeta = opservice.FormatVersion(version.Version, GitCommit, GitDate, version.Meta)
 
 func main() {
 	args := os.Args
-	if err := run(args, challenger.Main); err != nil {
+	ctx := ctxinterrupt.WithSignalWaiterMain(context.Background())
+	if err := run(ctx, args, func(ctx context.Context, l log.Logger, config *config.Config) (cliapp.Lifecycle, error) {
+		return challenger.Main(ctx, l, config, metrics.NewMetrics())
+	}); err != nil {
 		log.Crit("Application failed", "err", err)
 	}
 }
 
-type ConfigAction func(log log.Logger, version string, config *config.Config) error
+type ConfiguredLifecycle func(ctx context.Context, log log.Logger, config *config.Config) (cliapp.Lifecycle, error)
 
-// run parses the supplied args to create a config.Config instance, sets up logging
-// then calls the supplied ConfigAction.
-// This allows testing the translation from CLI arguments to Config
-func run(args []string, action ConfigAction) error {
-	// Set up logger with a default INFO level in case we fail to parse flags,
-	// otherwise the final critical log won't show what the parsing error was.
+func run(ctx context.Context, args []string, action ConfiguredLifecycle) error {
 	oplog.SetupDefaults()
 
 	app := cli.NewApp()
 	app.Version = VersionWithMeta
-	app.Flags = flags.Flags
+	app.Flags = cliapp.ProtectFlags(flags.Flags)
 	app.Name = "op-challenger"
-	app.Usage = "Challenge Invalid L2OutputOracle Outputs"
-	app.Description = "A modular op-stack challenge agent for dispute games written in golang."
-	app.Action = func(ctx *cli.Context) error {
+	app.Usage = "Challenge outputs"
+	app.Description = "Ensures that on chain outputs are correct."
+	app.Commands = []*cli.Command{
+		ListGamesCommand,
+		ListClaimsCommand,
+		ListCreditsCommand,
+		CreateGameCommand,
+		MoveCommand,
+		ResolveCommand,
+		ResolveClaimCommand,
+		RunTraceCommand,
+	}
+	app.Action = cliapp.LifecycleCmd(func(ctx *cli.Context, close context.CancelCauseFunc) (cliapp.Lifecycle, error) {
 		logger, err := setupLogging(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger.Info("Starting challenger", "version", VersionWithMeta)
+		logger.Info("Starting op-challenger", "version", VersionWithMeta)
 
-		cfg, err := config.NewConfigFromCLI(ctx)
+		cfg, err := flags.NewConfigFromCLI(ctx, logger)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return action(logger, VersionWithMeta, cfg)
-	}
-
-	return app.Run(args)
+		return action(ctx.Context, logger, cfg)
+	})
+	return app.RunContext(ctx, args)
 }
 
 func setupLogging(ctx *cli.Context) (log.Logger, error) {

@@ -1,12 +1,19 @@
 package txmgr
 
 import (
-	"strings"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/txpool"
+)
+
+var (
+	// Returned by CriticalError when the system is unable to get the tx into the mempool in the
+	// allotted time
+	ErrMempoolDeadlineExpired = errors.New("failed to get tx into the mempool")
 )
 
 // SendState tracks information about the publication state of a given txn. In
@@ -20,12 +27,21 @@ type SendState struct {
 	now      func() time.Time
 
 	// Config
-	nonceTooLowCount    uint64
-	txInMempoolDeadline time.Time // deadline to abort at if no transactions are in the mempool
+	safeAbortNonceTooLowCount uint64
+	txInMempoolDeadline       time.Time // deadline to abort at if no transactions are in the mempool
 
 	// Counts of the different types of errors
-	successFullPublishCount   uint64 // nil error => tx made it to the mempool
-	safeAbortNonceTooLowCount uint64 // nonce too low error
+	successfulPublishCount uint64 // nil error => tx made it to the mempool
+	nonceTooLowCount       uint64 // nonce too low error
+
+	// Whether any attempt to send the tx resulted in ErrAlreadyReserved
+	alreadyReserved bool
+
+	// Whether we should bump fees before trying to publish the tx again
+	bumpFees bool
+
+	// Miscellaneous tracking
+	bumpCount int // number of times we have bumped the gas price
 }
 
 // NewSendStateWithNow creates a new send state with the provided clock.
@@ -55,10 +71,12 @@ func (s *SendState) ProcessSendError(err error) {
 
 	// Record the type of error
 	switch {
-	case err == nil:
-		s.successFullPublishCount++
-	case strings.Contains(err.Error(), core.ErrNonceTooLow.Error()):
+	case err == nil || errStringMatch(err, txpool.ErrAlreadyKnown):
+		s.successfulPublishCount++
+	case errStringMatch(err, core.ErrNonceTooLow):
 		s.nonceTooLowCount++
+	case errStringMatch(err, txpool.ErrAlreadyReserved):
+		s.alreadyReserved = true
 	}
 }
 
@@ -71,7 +89,7 @@ func (s *SendState) TxMined(txHash common.Hash) {
 	s.minedTxs[txHash] = struct{}{}
 }
 
-// TxMined records that the txn with txnHash has not been mined or has been
+// TxNotMined records that the txn with txnHash has not been mined or has been
 // reorg'd out. It is safe to call this function multiple times.
 func (s *SendState) TxNotMined(txHash common.Hash) {
 	s.mu.Lock()
@@ -90,27 +108,33 @@ func (s *SendState) TxNotMined(txHash common.Hash) {
 	}
 }
 
-// ShouldAbortImmediately returns true if the txmgr should give up on trying a
-// given txn with the target nonce.
-// This occurs when the set of errors recorded indicates that no further progress can be made
-// on this transaction.
-func (s *SendState) ShouldAbortImmediately() bool {
+// CriticalError returns a non-nil error if the txmgr should give up on trying a given txn with the
+// target nonce.  This occurs when the set of errors recorded indicates that no further progress
+// can be made on this transaction, or if there is an incompatible tx type currently in the
+// mempool.
+func (s *SendState) CriticalError() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Never abort if our latest sample reports having at least one mined txn.
-	if len(s.minedTxs) > 0 {
-		return false
+	switch {
+	case len(s.minedTxs) > 0:
+		// Never abort if our latest sample reports having at least one mined txn.
+		return nil
+	case s.nonceTooLowCount >= s.safeAbortNonceTooLowCount:
+		// we have exceeded the nonce too low count
+		return core.ErrNonceTooLow
+	case s.successfulPublishCount == 0 && s.nonceTooLowCount > 0:
+		// A nonce too low error before successfully publishing any transaction means the tx will
+		// need a different nonce, which we can force by returning error.
+		return core.ErrNonceTooLow
+	case s.successfulPublishCount == 0 && s.now().After(s.txInMempoolDeadline):
+		// unable to get the tx into the mempool in the allotted time
+		return ErrMempoolDeadlineExpired
+	case s.alreadyReserved:
+		// incompatible tx type in mempool
+		return txpool.ErrAlreadyReserved
 	}
-
-	// If we have exceeded the nonce too low count, abort
-	if s.nonceTooLowCount >= s.safeAbortNonceTooLowCount ||
-		// If we have not published a transaction in the allotted time, abort
-		(s.successFullPublishCount == 0 && s.now().After(s.txInMempoolDeadline)) {
-		return true
-	}
-
-	return false
+	return nil
 }
 
 // IsWaitingForConfirmation returns true if we have at least one confirmation on

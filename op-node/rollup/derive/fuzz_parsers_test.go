@@ -5,32 +5,30 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/tracing"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm/runtime"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm/runtime"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/ethereum-optimism/optimism/op-node/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
 var (
-	pk, _                  = crypto.GenerateKey()
-	addr                   = common.Address{0x42, 0xff}
-	opts, _                = bind.NewKeyedTransactorWithChainID(pk, common.Big1)
-	from                   = crypto.PubkeyToAddress(pk.PublicKey)
-	portalContract, _      = bindings.NewOptimismPortal(addr, nil)
-	l1BlockInfoContract, _ = bindings.NewL1Block(addr, nil)
+	pk, _   = crypto.GenerateKey()
+	opts, _ = bind.NewKeyedTransactorWithChainID(pk, common.Big1)
+	from    = crypto.PubkeyToAddress(pk.PublicKey)
 )
 
 func cap_byte_slice(b []byte, c int) []byte {
@@ -45,8 +43,8 @@ func BytesToBigInt(b []byte) *big.Int {
 	return new(big.Int).SetBytes(cap_byte_slice(b, 32))
 }
 
-// FuzzL1InfoRoundTrip checks that our encoder round trips properly
-func FuzzL1InfoRoundTrip(f *testing.F) {
+// FuzzL1InfoBedrockRoundTrip checks that our Bedrock l1 info encoder round trips properly
+func FuzzL1InfoBedrockRoundTrip(f *testing.F) {
 	f.Fuzz(func(t *testing.T, number, time uint64, baseFee, hash []byte, seqNumber uint64) {
 		in := L1BlockInfo{
 			Number:         number,
@@ -55,25 +53,60 @@ func FuzzL1InfoRoundTrip(f *testing.F) {
 			BlockHash:      common.BytesToHash(hash),
 			SequenceNumber: seqNumber,
 		}
-		enc, err := in.MarshalBinary()
+		enc, err := in.marshalBinaryBedrock()
 		if err != nil {
 			t.Fatalf("Failed to marshal binary: %v", err)
 		}
 		var out L1BlockInfo
-		err = out.UnmarshalBinary(enc)
+		err = out.unmarshalBinaryBedrock(enc)
 		if err != nil {
 			t.Fatalf("Failed to unmarshal binary: %v", err)
 		}
 		if !cmp.Equal(in, out, cmp.Comparer(testutils.BigEqual)) {
 			t.Fatalf("The data did not round trip correctly. in: %v. out: %v", in, out)
 		}
-
 	})
 }
 
-// FuzzL1InfoAgainstContract checks the custom marshalling functions against the contract
-// bindings to ensure that our functions are up to date and match the bindings.
-func FuzzL1InfoAgainstContract(f *testing.F) {
+// FuzzL1InfoEcotoneRoundTrip checks that our Ecotone encoder round trips properly
+func FuzzL1InfoEcotoneRoundTrip(f *testing.F) {
+	f.Fuzz(func(t *testing.T, number, time uint64, baseFee, blobBaseFee, hash []byte, seqNumber uint64, baseFeeScalar, blobBaseFeeScalar uint32) {
+		in := L1BlockInfo{
+			Number:            number,
+			Time:              time,
+			BaseFee:           BytesToBigInt(baseFee),
+			BlockHash:         common.BytesToHash(hash),
+			SequenceNumber:    seqNumber,
+			BlobBaseFee:       BytesToBigInt(blobBaseFee),
+			BaseFeeScalar:     baseFeeScalar,
+			BlobBaseFeeScalar: blobBaseFeeScalar,
+		}
+		enc, err := in.marshalBinaryEcotone()
+		if err != nil {
+			t.Fatalf("Failed to marshal Ecotone binary: %v", err)
+		}
+		var out L1BlockInfo
+		err = out.unmarshalBinaryEcotone(enc)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal Ecotone binary: %v", err)
+		}
+		if !cmp.Equal(in, out, cmp.Comparer(testutils.BigEqual)) {
+			t.Fatalf("The Ecotone data did not round trip correctly. in: %v. out: %v", in, out)
+		}
+		if !cmp.Equal(in, out, cmp.Comparer(testutils.BigEqual)) {
+			t.Fatalf("The Interop data did not round trip correctly. in: %v. out: %v", in, out)
+		}
+	})
+}
+
+// FuzzL1InfoAgainstContract checks the custom Bedrock L1 Info marshalling functions against the
+// setL1BlockValues contract bindings to ensure that our functions are up to date and match the
+// bindings. Note that we don't test setL1BlockValuesEcotone since it accepts only custom packed
+// calldata and cannot be invoked using the generated bindings.
+func FuzzL1InfoBedrockAgainstContract(f *testing.F) {
+	l1BlockInfoContract, err := bindings.NewL1Block(common.Address{0x42, 0xff}, nil)
+	require.NoError(f, err)
+
 	f.Fuzz(func(t *testing.T, number, time uint64, baseFee, hash []byte, seqNumber uint64, batcherHash []byte, l1FeeOverhead []byte, l1FeeScalar []byte) {
 		expected := L1BlockInfo{
 			Number:         number,
@@ -99,7 +132,7 @@ func FuzzL1InfoAgainstContract(f *testing.F) {
 			BytesToBigInt(baseFee),
 			common.BytesToHash(hash),
 			seqNumber,
-			common.BytesToAddress(batcherHash).Hash(),
+			eth.AddressAsLeftPaddedHash(common.BytesToAddress(batcherHash)),
 			common.BytesToHash(l1FeeOverhead).Big(),
 			common.BytesToHash(l1FeeScalar).Big(),
 		)
@@ -109,7 +142,7 @@ func FuzzL1InfoAgainstContract(f *testing.F) {
 
 		// Check that our encoder produces the same value and that we
 		// can decode the contract values exactly
-		enc, err := expected.MarshalBinary()
+		enc, err := expected.marshalBinaryBedrock()
 		if err != nil {
 			t.Fatalf("Failed to marshal binary: %v", err)
 		}
@@ -120,7 +153,7 @@ func FuzzL1InfoAgainstContract(f *testing.F) {
 		}
 
 		var actual L1BlockInfo
-		err = actual.UnmarshalBinary(tx.Data())
+		err = actual.unmarshalBinaryBedrock(tx.Data())
 		if err != nil {
 			t.Fatalf("Failed to unmarshal binary: %v", err)
 		}
@@ -128,7 +161,6 @@ func FuzzL1InfoAgainstContract(f *testing.F) {
 		if !cmp.Equal(expected, actual, cmp.Comparer(testutils.BigEqual)) {
 			t.Fatalf("The data did not round trip correctly. expected: %v. actual: %v", expected, actual)
 		}
-
 	})
 }
 
@@ -201,6 +233,23 @@ func FuzzUnmarshallLogEvent(f *testing.F) {
 		f.Add(c.to.Bytes(), b(c.mint), b(c.value), []byte(c.data), c.gasLimit, c.isCreation)
 	}
 
+	// Set the EVM state up once to fuzz against
+	state, err := state.New(common.Hash{}, state.NewDatabase(triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil), nil))
+	require.NoError(f, err)
+	state.SetBalance(from, uint256.MustFromBig(BytesToBigInt([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})), tracing.BalanceChangeUnspecified)
+	_, addr, _, err := runtime.Create(common.FromHex(bindings.OptimismPortalMetaData.Bin), &runtime.Config{
+		Origin:   from,
+		State:    state,
+		GasLimit: 20_000_000,
+	})
+	require.NoError(f, err)
+
+	_, err = state.Commit(0, false, false)
+	require.NoError(f, err)
+
+	portalContract, err := bindings.NewOptimismPortal(addr, nil)
+	require.NoError(f, err)
+
 	f.Fuzz(func(t *testing.T, _to, _mint, _value, data []byte, l2GasLimit uint64, isCreation bool) {
 		to := common.BytesToAddress(_to)
 		mint := BytesToBigInt(_mint)
@@ -213,21 +262,8 @@ func FuzzUnmarshallLogEvent(f *testing.F) {
 		opts.NoSend = true
 		opts.Nonce = common.Big0
 		// Create the deposit transaction
-		tx, err := portalContract.DepositTransaction(opts, value, big.NewInt(0), to, value, l2GasLimit, isCreation, data)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		state, err := state.New(common.Hash{}, state.NewDatabase(triedb.NewDatabase(rawdb.NewMemoryDatabase(), nil), nil))
-		if err != nil {
-			t.Fatal(err)
-		}
-		state.SetBalance(from, uint256.MustFromBig(BytesToBigInt([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})), tracing.BalanceChangeUnspecified)
-		state.SetCode(addr, common.FromHex(bindings.OptimismPortalDeployedBin))
-		_, err = state.Commit(0, false, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+		tx, err := portalContract.DepositTransaction(opts, to, value, l2GasLimit, isCreation, data)
+		require.NoError(t, err)
 
 		cfg := runtime.Config{
 			Origin:   from,

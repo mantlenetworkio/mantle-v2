@@ -29,12 +29,11 @@ func HashCrossDomainMessageV1(
 	nonce *big.Int,
 	sender common.Address,
 	target common.Address,
-	mntValue *big.Int,
-	ethValue *big.Int,
+	value *big.Int,
 	gasLimit *big.Int,
 	data []byte,
 ) (common.Hash, error) {
-	encoded, err := EncodeCrossDomainMessageV1(nonce, sender, target, mntValue, ethValue, gasLimit, data)
+	encoded, err := EncodeCrossDomainMessageV1(nonce, sender, target, value, gasLimit, data)
 	if err != nil {
 		return common.Hash{}, err
 	}

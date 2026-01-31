@@ -8,27 +8,30 @@ import (
 	"io"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive/params"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-var ErrMaxFrameSizeTooSmall = errors.New("maxSize is too small to fit the fixed frame overhead")
-var ErrNotDepositTx = errors.New("first transaction in block is not a deposit tx")
-var ErrTooManyRLPBytes = errors.New("batch would cause RLP bytes to go over limit")
+var (
+	ErrMaxFrameSizeTooSmall    = errors.New("maxSize is too small to fit the fixed frame overhead")
+	ErrNotDepositTx            = errors.New("first transaction in block is not a deposit tx")
+	ErrTooManyRLPBytes         = errors.New("batch would cause RLP bytes to go over limit")
+	ErrChannelOutAlreadyClosed = errors.New("channel-out already closed")
+	ErrCompressorFull          = errors.New("compressor is full")
+)
 
 // FrameV0OverHeadSize is the absolute minimum size of a frame.
 // This is the fixed overhead frame size, calculated as specified
 // in the [Frame Format] specs: 16 + 2 + 4 + 1 = 23 bytes.
 //
-// [Frame Format]: https://github.com/ethereum-optimism/optimism/blob/develop/specs/derivation.md#frame-format
+// [Frame Format]: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#frame-format
 const FrameV0OverHeadSize = 23
-
-var CompressorFullErr = errors.New("compressor is full")
 
 type Compressor interface {
 	// Writer is used to write uncompressed data which will be compressed. Should return
-	// CompressorFullErr if the compressor is full and no more data should be written.
+	// ErrCompressorFull if the compressor is full and no more data should be written.
 	io.Writer
 	// Closer Close function should be called before reading any data.
 	io.Closer
@@ -42,13 +45,26 @@ type Compressor interface {
 	// Flush flushes any uncompressed data to the compression buffer. This will result in a
 	// non-optimal compression ratio.
 	Flush() error
-	// FullErr returns CompressorFullErr if the compressor is known to be full. Note that
+	// FullErr returns ErrCompressorFull if the compressor is known to be full. Note that
 	// calls to Write will fail if an error is returned from this method, but calls to Write
-	// can still return CompressorFullErr even if this does not.
+	// can still return ErrCompressorFull even if this does not.
 	FullErr() error
 }
 
-type ChannelOut struct {
+type ChannelOut interface {
+	ID() ChannelID
+	Reset() error
+	AddBlock(*rollup.Config, *types.Block) (*L1BlockInfo, error)
+	InputBytes() int
+	ReadyBytes() int
+	Flush() error
+	FullErr() error
+	Close() error
+	OutputFrame(*bytes.Buffer, uint64) (uint16, error)
+	DiscardCompressor()
+}
+
+type SingularChannelOut struct {
 	id ChannelID
 	// Frame ID of the next frame to emit. Increment after emitting
 	frame uint64
@@ -59,18 +75,25 @@ type ChannelOut struct {
 	compress Compressor
 
 	closed bool
+
+	chainSpec *rollup.ChainSpec
 }
 
-func (co *ChannelOut) ID() ChannelID {
+func (co *SingularChannelOut) DiscardCompressor() {
+	co.compress = nil
+}
+
+func (co *SingularChannelOut) ID() ChannelID {
 	return co.id
 }
 
-func NewChannelOut(compress Compressor) (*ChannelOut, error) {
-	c := &ChannelOut{
-		id:        ChannelID{}, // TODO: use GUID here instead of fully random data
+func NewSingularChannelOut(compress Compressor, chainSpec *rollup.ChainSpec) (*SingularChannelOut, error) {
+	c := &SingularChannelOut{
+		id:        ChannelID{},
 		frame:     0,
 		rlpLength: 0,
 		compress:  compress,
+		chainSpec: chainSpec,
 	}
 	_, err := rand.Read(c.id[:])
 	if err != nil {
@@ -80,8 +103,7 @@ func NewChannelOut(compress Compressor) (*ChannelOut, error) {
 	return c, nil
 }
 
-// TODO: reuse ChannelOut for performance
-func (co *ChannelOut) Reset() error {
+func (co *SingularChannelOut) Reset() error {
 	co.frame = 0
 	co.rlpLength = 0
 	co.compress.Reset()
@@ -90,77 +112,79 @@ func (co *ChannelOut) Reset() error {
 	return err
 }
 
-// AddBlock adds a block to the channel. It returns the RLP encoded byte size
+// AddBlock adds a block to the channel. It returns the block's L1BlockInfo
 // and an error if there is a problem adding the block. The only sentinel error
 // that it returns is ErrTooManyRLPBytes. If this error is returned, the channel
 // should be closed and a new one should be made.
-func (co *ChannelOut) AddBlock(block *types.Block) (uint64, error) {
+func (co *SingularChannelOut) AddBlock(rollupCfg *rollup.Config, block *types.Block) (*L1BlockInfo, error) {
 	if co.closed {
-		return 0, errors.New("already closed")
+		return nil, ErrChannelOutAlreadyClosed
 	}
 
-	batch, _, err := BlockToBatch(block)
+	batch, l1Info, err := BlockToSingularBatch(rollupCfg, block)
 	if err != nil {
-		return 0, err
+		return nil, fmt.Errorf("converting block to batch: %w", err)
 	}
-	return co.AddBatch(batch)
+	return l1Info, co.addSingularBatch(batch, l1Info.SequenceNumber)
 }
 
-// AddBatch adds a batch to the channel. It returns the RLP encoded byte size
-// and an error if there is a problem adding the batch. The only sentinel error
+// addSingularBatch adds a batch to the channel. It returns
+// an error if there is a problem adding the batch. The only sentinel error
 // that it returns is ErrTooManyRLPBytes. If this error is returned, the channel
 // should be closed and a new one should be made.
-//
-// AddBatch should be used together with BlockToBatch if you need to access the
-// BatchData before adding a block to the channel. It isn't possible to access
-// the batch data with AddBlock.
-func (co *ChannelOut) AddBatch(batch *BatchData) (uint64, error) {
+func (co *SingularChannelOut) addSingularBatch(batch *SingularBatch, _ uint64) error {
 	if co.closed {
-		return 0, errors.New("already closed")
+		return ErrChannelOutAlreadyClosed
 	}
 
 	// We encode to a temporary buffer to determine the encoded length to
 	// ensure that the total size of all RLP elements is less than or equal to MAX_RLP_BYTES_PER_CHANNEL
 	var buf bytes.Buffer
-	if err := rlp.Encode(&buf, batch); err != nil {
-		return 0, err
+	if err := rlp.Encode(&buf, NewBatchData(batch)); err != nil {
+		return err
 	}
-	if co.rlpLength+buf.Len() > MaxRLPBytesPerChannel {
-		return 0, fmt.Errorf("could not add %d bytes to channel of %d bytes, max is %d. err: %w",
-			buf.Len(), co.rlpLength, MaxRLPBytesPerChannel, ErrTooManyRLPBytes)
+
+	// Fjord increases the max RLP bytes per channel. Activation of this change in the derivation pipeline
+	// is dependent on the timestamp of the L1 block that this channel got included in. So using the timestamp
+	// of the current batch guarantees that this channel will be included in an L1 block with a timestamp well after
+	// the Fjord activation.
+	maxRLPBytesPerChannel := co.chainSpec.MaxRLPBytesPerChannel(batch.Timestamp)
+	if co.rlpLength+buf.Len() > int(maxRLPBytesPerChannel) {
+		return fmt.Errorf("could not add %d bytes to channel of %d bytes, max is %d. err: %w",
+			buf.Len(), co.rlpLength, maxRLPBytesPerChannel, ErrTooManyRLPBytes)
 	}
 	co.rlpLength += buf.Len()
 
 	// avoid using io.Copy here, because we need all or nothing
-	written, err := co.compress.Write(buf.Bytes())
-	return uint64(written), err
+	_, err := co.compress.Write(buf.Bytes())
+	return err
 }
 
 // InputBytes returns the total amount of RLP-encoded input bytes.
-func (co *ChannelOut) InputBytes() int {
+func (co *SingularChannelOut) InputBytes() int {
 	return co.rlpLength
 }
 
 // ReadyBytes returns the number of bytes that the channel out can immediately output into a frame.
 // Use `Flush` or `Close` to move data from the compression buffer into the ready buffer if more bytes
 // are needed. Add blocks may add to the ready buffer, but it is not guaranteed due to the compression stage.
-func (co *ChannelOut) ReadyBytes() int {
+func (co *SingularChannelOut) ReadyBytes() int {
 	return co.compress.Len()
 }
 
 // Flush flushes the internal compression stage to the ready buffer. It enables pulling a larger & more
 // complete frame. It reduces the compression efficiency.
-func (co *ChannelOut) Flush() error {
+func (co *SingularChannelOut) Flush() error {
 	return co.compress.Flush()
 }
 
-func (co *ChannelOut) FullErr() error {
+func (co *SingularChannelOut) FullErr() error {
 	return co.compress.FullErr()
 }
 
-func (co *ChannelOut) Close() error {
+func (co *SingularChannelOut) Close() error {
 	if co.closed {
-		return errors.New("already closed")
+		return ErrChannelOutAlreadyClosed
 	}
 	co.closed = true
 	return co.compress.Close()
@@ -173,28 +197,13 @@ func (co *ChannelOut) Close() error {
 // Returns io.EOF when the channel is closed & there are no more frames.
 // Returns nil if there is still more buffered data.
 // Returns an error if it ran into an error during processing.
-func (co *ChannelOut) OutputFrame(w *bytes.Buffer, maxSize uint64) (uint16, error) {
-	f := Frame{
-		ID:          co.id,
-		FrameNumber: uint16(co.frame),
-	}
-
+func (co *SingularChannelOut) OutputFrame(w *bytes.Buffer, maxSize uint64) (uint16, error) {
 	// Check that the maxSize is large enough for the frame overhead size.
 	if maxSize < FrameV0OverHeadSize {
 		return 0, ErrMaxFrameSizeTooSmall
 	}
 
-	// Copy data from the local buffer into the frame data buffer
-	maxDataSize := maxSize - FrameV0OverHeadSize
-	if maxDataSize > uint64(co.compress.Len()) {
-		maxDataSize = uint64(co.compress.Len())
-		// If we are closed & will not spill past the current frame
-		// mark it is the final frame of the channel.
-		if co.closed {
-			f.IsLast = true
-		}
-	}
-	f.Data = make([]byte, maxDataSize)
+	f := createEmptyFrame(co.id, co.frame, co.ReadyBytes(), co.closed, maxSize)
 
 	if _, err := io.ReadFull(co.compress, f.Data); err != nil {
 		return 0, err
@@ -213,8 +222,12 @@ func (co *ChannelOut) OutputFrame(w *bytes.Buffer, maxSize uint64) (uint16, erro
 	}
 }
 
-// BlockToBatch transforms a block into a batch object that can easily be RLP encoded.
-func BlockToBatch(block *types.Block) (*BatchData, L1BlockInfo, error) {
+// BlockToSingularBatch transforms a block into a batch object that can easily be RLP encoded.
+func BlockToSingularBatch(rollupCfg *rollup.Config, block *types.Block) (*SingularBatch, *L1BlockInfo, error) {
+	if len(block.Transactions()) == 0 {
+		return nil, nil, fmt.Errorf("block %v has no transactions", block.Hash())
+	}
+
 	opaqueTxs := make([]hexutil.Bytes, 0, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
 		if tx.Type() == types.DepositTxType {
@@ -222,30 +235,26 @@ func BlockToBatch(block *types.Block) (*BatchData, L1BlockInfo, error) {
 		}
 		otx, err := tx.MarshalBinary()
 		if err != nil {
-			return nil, L1BlockInfo{}, fmt.Errorf("could not encode tx %v in block %v: %w", i, tx.Hash(), err)
+			return nil, nil, fmt.Errorf("could not encode tx %v in block %v: %w", i, tx.Hash(), err)
 		}
 		opaqueTxs = append(opaqueTxs, otx)
 	}
-	if len(block.Transactions()) == 0 {
-		return nil, L1BlockInfo{}, fmt.Errorf("block %v has no transactions", block.Hash())
-	}
+
 	l1InfoTx := block.Transactions()[0]
 	if l1InfoTx.Type() != types.DepositTxType {
-		return nil, L1BlockInfo{}, ErrNotDepositTx
+		return nil, nil, ErrNotDepositTx
 	}
-	l1Info, err := L1InfoDepositTxData(l1InfoTx.Data())
+	l1Info, err := L1BlockInfoFromBytes(rollupCfg, block.Time(), l1InfoTx.Data())
 	if err != nil {
 		return nil, l1Info, fmt.Errorf("could not parse the L1 Info deposit: %w", err)
 	}
 
-	return &BatchData{
-		BatchV1{
-			ParentHash:   block.ParentHash(),
-			EpochNum:     rollup.Epoch(l1Info.Number),
-			EpochHash:    l1Info.BlockHash,
-			Timestamp:    block.Time(),
-			Transactions: opaqueTxs,
-		},
+	return &SingularBatch{
+		ParentHash:   block.ParentHash(),
+		EpochNum:     rollup.Epoch(l1Info.Number),
+		EpochHash:    l1Info.BlockHash,
+		Timestamp:    block.Time(),
+		Transactions: opaqueTxs,
 	}, l1Info, nil
 }
 
@@ -272,7 +281,7 @@ func ForceCloseTxData(frames []Frame) ([]byte, error) {
 	}
 
 	var out bytes.Buffer
-	out.WriteByte(DerivationVersion0)
+	out.WriteByte(params.DerivationVersion0)
 
 	if !closed {
 		f := Frame{
@@ -302,4 +311,25 @@ func ForceCloseTxData(frames []Frame) ([]byte, error) {
 	}
 
 	return out.Bytes(), nil
+}
+
+// createEmptyFrame creates new empty Frame with given information. Frame data must be copied from ChannelOut.
+func createEmptyFrame(id ChannelID, frame uint64, readyBytes int, closed bool, maxSize uint64) *Frame {
+	f := Frame{
+		ID:          id,
+		FrameNumber: uint16(frame),
+	}
+
+	// Copy data from the local buffer into the frame data buffer
+	maxDataSize := maxSize - FrameV0OverHeadSize
+	if maxDataSize >= uint64(readyBytes) {
+		maxDataSize = uint64(readyBytes)
+		// If we are closed & will not spill past the current frame
+		// mark it as the final frame of the channel.
+		if closed {
+			f.IsLast = true
+		}
+	}
+	f.Data = make([]byte, maxDataSize)
+	return &f
 }

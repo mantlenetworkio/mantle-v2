@@ -16,6 +16,9 @@ import (
 var (
 	addressEmptyPadding [12]byte = [12]byte{}
 	uint64EmptyPadding  [24]byte = [24]byte{}
+	uint32EmptyPadding  [28]byte = [28]byte{}
+	uint16EmptyPadding  [30]byte = [30]byte{}
+	uint8EmptyPadding   [31]byte = [31]byte{}
 )
 
 func ReadSignature(r io.Reader) ([]byte, error) {
@@ -69,7 +72,37 @@ func ReadUint64(r io.Reader) (uint64, error) {
 		return n, fmt.Errorf("number padding was not empty: %x", readPadding[:])
 	}
 	if err := binary.Read(r, binary.BigEndian, &n); err != nil {
-		return 0, fmt.Errorf("expected number length to be 8 bytes")
+		return 0, errors.New("expected number length to be 8 bytes")
+	}
+	return n, nil
+}
+
+// ReadUint16 reads a big endian uint16 from a 32 byte word
+func ReadUint16(r io.Reader) (uint16, error) {
+	var readPadding [30]byte
+	var n uint16
+	if _, err := io.ReadFull(r, readPadding[:]); err != nil {
+		return n, err
+	} else if !bytes.Equal(readPadding[:], uint16EmptyPadding[:]) {
+		return n, fmt.Errorf("number padding was not empty: %x", readPadding[:])
+	}
+	if err := binary.Read(r, binary.BigEndian, &n); err != nil {
+		return 0, errors.New("expected number length to be 8 bytes")
+	}
+	return n, nil
+}
+
+// ReadUint32 reads a big endian uint32 from a 32 byte word
+func ReadUint32(r io.Reader) (uint32, error) {
+	var readPadding [28]byte
+	var n uint32
+	if _, err := io.ReadFull(r, readPadding[:]); err != nil {
+		return n, err
+	} else if !bytes.Equal(readPadding[:], uint32EmptyPadding[:]) {
+		return n, fmt.Errorf("number padding was not empty: %x", readPadding[:])
+	}
+	if err := binary.Read(r, binary.BigEndian, &n); err != nil {
+		return 0, errors.New("expected number length to be 8 bytes")
 	}
 	return n, nil
 }
@@ -125,6 +158,16 @@ func WriteUint256(w io.Writer, n *big.Int) error {
 
 func WriteUint64(w io.Writer, n uint64) error {
 	if _, err := w.Write(uint64EmptyPadding[:]); err != nil {
+		return err
+	}
+	if err := binary.Write(w, binary.BigEndian, n); err != nil {
+		return err
+	}
+	return nil
+}
+
+func WriteUint8(w io.Writer, n uint8) error {
+	if _, err := w.Write(uint8EmptyPadding[:]); err != nil {
 		return err
 	}
 	if err := binary.Write(w, binary.BigEndian, n); err != nil {

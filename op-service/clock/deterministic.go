@@ -29,6 +29,43 @@ func (t task) fire(now time.Time) bool {
 	return false
 }
 
+type timer struct {
+	f       func()
+	ch      chan time.Time
+	due     time.Time
+	stopped bool
+	run     bool
+	sync.Mutex
+}
+
+func (t *timer) isDue(now time.Time) bool {
+	t.Lock()
+	defer t.Unlock()
+	return !t.due.After(now)
+}
+
+func (t *timer) fire(now time.Time) bool {
+	t.Lock()
+	defer t.Unlock()
+	if !t.stopped {
+		t.f()
+		t.run = true
+	}
+	return false
+}
+
+func (t *timer) Ch() <-chan time.Time {
+	return t.ch
+}
+
+func (t *timer) Stop() bool {
+	t.Lock()
+	defer t.Unlock()
+	r := !t.stopped && !t.run
+	t.stopped = true
+	return r
+}
+
 type ticker struct {
 	c       Clock
 	ch      chan time.Time
@@ -70,8 +107,12 @@ func (t *ticker) fire(now time.Time) bool {
 	if t.stopped {
 		return false
 	}
-	t.ch <- now
-	t.nextDue = now.Add(t.period)
+	// Publish without blocking and only update due time if we publish successfully
+	select {
+	case t.ch <- now:
+		t.nextDue = now.Add(t.period)
+	default:
+	}
 	return true
 }
 
@@ -97,6 +138,12 @@ func (s *DeterministicClock) Now() time.Time {
 	return s.now
 }
 
+func (s *DeterministicClock) Since(t time.Time) time.Duration {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.now.Sub(t)
+}
+
 func (s *DeterministicClock) After(d time.Duration) <-chan time.Time {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -108,6 +155,18 @@ func (s *DeterministicClock) After(d time.Duration) <-chan time.Time {
 		s.addPending(&task{ch: ch, due: s.now.Add(d)})
 	}
 	return ch
+}
+
+func (s *DeterministicClock) AfterFunc(d time.Duration, f func()) Timer {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	timer := &timer{f: f, due: s.now.Add(d)}
+	if d.Nanoseconds() == 0 {
+		timer.fire(s.now)
+	} else {
+		s.addPending(timer)
+	}
+	return timer
 }
 
 func (s *DeterministicClock) NewTicker(d time.Duration) Ticker {
@@ -127,6 +186,25 @@ func (s *DeterministicClock) NewTicker(d time.Duration) Ticker {
 	return t
 }
 
+func (s *DeterministicClock) NewTimer(d time.Duration) Timer {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	ch := make(chan time.Time, 1)
+	t := &timer{
+		f: func() {
+			ch <- s.now
+		},
+		ch:  ch,
+		due: s.now.Add(d),
+	}
+	s.addPending(t)
+	return t
+}
+
+func (s *DeterministicClock) SleepCtx(ctx context.Context, d time.Duration) error {
+	return sleepCtx(ctx, d, s)
+}
+
 func (s *DeterministicClock) addPending(t action) {
 	s.pending = append(s.pending, t)
 	select {
@@ -134,6 +212,12 @@ func (s *DeterministicClock) addPending(t action) {
 	default:
 		// Must already have a new pending task flagged, do nothing
 	}
+}
+
+func (s *DeterministicClock) WaitForNewPendingTaskWithTimeout(timeout time.Duration) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return s.WaitForNewPendingTask(ctx)
 }
 
 // WaitForNewPendingTask blocks until a new task is scheduled since the last time this method was called.

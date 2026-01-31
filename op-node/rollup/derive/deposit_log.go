@@ -10,13 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
 	DepositEventABI      = "TransactionDeposited(address,address,uint256,bytes)"
 	DepositEventABIHash  = crypto.Keccak256Hash([]byte(DepositEventABI))
 	DepositEventVersion0 = common.Hash{}
-	DepositEventVersion1 = common.Hash{31: 0x01}
 )
 
 // UnmarshalDepositLogEvent decodes an EVM log entry emitted by the deposit contract into typed deposit data.
@@ -86,8 +87,6 @@ func UnmarshalDepositLogEvent(ev *types.Log) (*types.DepositTx, error) {
 	switch version {
 	case DepositEventVersion0:
 		err = unmarshalDepositVersion0(&dep, to, opaqueData)
-	case DepositEventVersion1:
-		err = unmarshalDepositVersion1(&dep, to, opaqueData)
 	default:
 		return nil, fmt.Errorf("invalid deposit version, got %s", version)
 	}
@@ -98,7 +97,7 @@ func UnmarshalDepositLogEvent(ev *types.Log) (*types.DepositTx, error) {
 }
 
 func unmarshalDepositVersion0(dep *types.DepositTx, to common.Address, opaqueData []byte) error {
-	if len(opaqueData) < 32+32+32+8+1 {
+	if len(opaqueData) < 32+32+8+1 {
 		return fmt.Errorf("unexpected opaqueData length: %d", len(opaqueData))
 	}
 	offset := uint64(0)
@@ -113,14 +112,6 @@ func unmarshalDepositVersion0(dep *types.DepositTx, to common.Address, opaqueDat
 
 	// uint256 value
 	dep.Value = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	offset += 32
-
-	// uint256 value for ethValue
-	dep.EthValue = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	// 0 mint is represented as nil to skip minting code
-	if dep.EthValue.Cmp(new(big.Int)) == 0 {
-		dep.EthValue = nil
-	}
 	offset += 32
 
 	// uint64 gas
@@ -149,76 +140,16 @@ func unmarshalDepositVersion0(dep *types.DepositTx, to common.Address, opaqueDat
 	return nil
 }
 
-func unmarshalDepositVersion1(dep *types.DepositTx, to common.Address, opaqueData []byte) error {
-	if len(opaqueData) < 32+32+32+32+8+1 {
-		return fmt.Errorf("unexpected opaqueData length: %d", len(opaqueData))
-	}
-	offset := uint64(0)
-
-	// uint256 mint
-	dep.Mint = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	// 0 mint is represented as nil to skip minting code
-	if dep.Mint.Cmp(new(big.Int)) == 0 {
-		dep.Mint = nil
-	}
-	offset += 32
-
-	// uint256 value
-	dep.Value = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	offset += 32
-
-	// uint256 value for ethValue
-	dep.EthValue = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	// 0 mint is represented as nil to skip minting code
-	if dep.EthValue.Cmp(new(big.Int)) == 0 {
-		dep.EthValue = nil
-	}
-	offset += 32
-
-	// uint256 value for ethTxValue
-	dep.EthTxValue = new(big.Int).SetBytes(opaqueData[offset : offset+32])
-	// 0 mint is represented as nil to skip minting code
-	if dep.EthTxValue.Cmp(new(big.Int)) == 0 {
-		dep.EthTxValue = nil
-	}
-	offset += 32
-
-	// uint64 gas
-	gas := new(big.Int).SetBytes(opaqueData[offset : offset+8])
-	if !gas.IsUint64() {
-		return fmt.Errorf("bad gas value: %x", opaqueData[offset:offset+8])
-	}
-	dep.Gas = gas.Uint64()
-	offset += 8
-
-	// uint8 isCreation
-	// isCreation: If the boolean byte is 1 then dep.To will stay nil,
-	// and it will create a contract using L2 account nonce to determine the created address.
-	if opaqueData[offset] == 0 {
-		dep.To = &to
-	}
-	offset += 1
-
-	// The remainder of the opaqueData is the transaction data (without length prefix).
-	// The data may be padded to a multiple of 32 bytes
-	txDataLen := uint64(len(opaqueData)) - offset
-
-	// remaining bytes fill the data
-	dep.Data = opaqueData[offset : offset+txDataLen]
-
-	return nil
-}
-
-// MarshalDepositLogEventV0 returns an EVM log entry that encodes a TransactionDeposited event from the deposit contract.
+// MarshalDepositLogEvent returns an EVM log entry that encodes a TransactionDeposited event from the deposit contract.
 // This is the reverse of the deposit transaction derivation.
-func MarshalDepositLogEventV0(depositContractAddr common.Address, deposit *types.DepositTx) (*types.Log, error) {
+func MarshalDepositLogEvent(depositContractAddr common.Address, deposit *types.DepositTx) (*types.Log, error) {
 	toBytes := common.Hash{}
 	if deposit.To != nil {
-		toBytes = deposit.To.Hash()
+		toBytes = eth.AddressAsLeftPaddedHash(*deposit.To)
 	}
 	topics := []common.Hash{
 		DepositEventABIHash,
-		deposit.From.Hash(),
+		eth.AddressAsLeftPaddedHash(deposit.From),
 		toBytes,
 		DepositEventVersion0,
 	}
@@ -260,7 +191,7 @@ func MarshalDepositLogEventV0(depositContractAddr common.Address, deposit *types
 }
 
 func marshalDepositVersion0(deposit *types.DepositTx) ([]byte, error) {
-	opaqueData := make([]byte, 32+32+32+8+1, 32+32+32+8+1+len(deposit.Data))
+	opaqueData := make([]byte, 32+32+8+1, 32+32+8+1+len(deposit.Data))
 	offset := 0
 
 	// uint256 mint
@@ -277,15 +208,6 @@ func marshalDepositVersion0(deposit *types.DepositTx) ([]byte, error) {
 		return nil, fmt.Errorf("value value exceeds 256 bits: %d", deposit.Value)
 	}
 	deposit.Value.FillBytes(opaqueData[offset : offset+32])
-	offset += 32
-
-	// uint256 value
-	if deposit.EthValue != nil {
-		if deposit.EthValue.BitLen() > 256 {
-			return nil, fmt.Errorf("ethValue value exceeds 256 bits: %d", deposit.EthValue)
-		}
-		deposit.EthValue.FillBytes(opaqueData[offset : offset+32])
-	}
 	offset += 32
 
 	// uint64 gas
