@@ -31,7 +31,7 @@ func TestSignerFactoryFromKey(t *testing.T) {
 func testSigner(t *testing.T, priv, mnemonic, hdPath string, cfg signer.CLIConfig) {
 	logger := testlog.Logger(t, log.LevelDebug)
 
-	factoryFn, addr, err := SignerFactoryFromConfig(logger, priv, mnemonic, hdPath, cfg)
+	factoryFn, addr, err := SignerFactoryFromConfig(logger, priv, mnemonic, hdPath, cfg, false, "", "", "")
 	require.NoError(t, err)
 	expectedAddr := common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
 	require.Equal(t, expectedAddr, addr)

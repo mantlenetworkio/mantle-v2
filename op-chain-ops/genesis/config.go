@@ -142,6 +142,13 @@ type OwnershipDeployConfig struct {
 	// FinalSystemOwner is the owner of the system on L1. Any L1 contract that is ownable has
 	// this account set as its owner.
 	FinalSystemOwner common.Address `json:"finalSystemOwner"`
+
+	// MANTLE_FEATURES
+	// PortalGuardian represents the guardian of the OptimismPortal.
+	PortalGuardian common.Address `json:"portalGuardian"`
+	// legacy fields
+	// Controller the deployer of the contracts on L1.
+	Controller common.Address `json:"controller"`
 }
 
 var _ ConfigChecker = (*OwnershipDeployConfig)(nil)
@@ -201,18 +208,18 @@ func (d *L2VaultsDeployConfig) Check(log log.Logger) error {
 	if d.OperatorFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: OperatorFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
 	}
-	if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.L1FeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: L1FeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.SequencerFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: SequencerFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.OperatorFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: OperatorFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
+	// if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.L1FeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: L1FeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.SequencerFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: SequencerFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.OperatorFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: OperatorFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
 	return nil
 }
 
@@ -266,6 +273,13 @@ type GasPriceOracleDeployConfig struct {
 	GasPriceOracleOperatorFeeScalar uint32 `json:"gasPriceOracleOperatorFeeScalar" evm:"operatorfeeScalar"`
 	// GasPriceOracleOperatorFeeConstant represents the value of the operator fee constant used for fee calculations.
 	GasPriceOracleOperatorFeeConstant uint64 `json:"gasPriceOracleOperatorFeeConstant" evm:"operatorfeeConstant"`
+
+	// MANTLE_FEATURES
+	// GasPriceOracleTokenRatio represents the token ratio of ETH to MNT.
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
+	// legacy fields
+	// GasPriceOracleOwner represents the owner of the GasPriceOracle.
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
 }
 
 var _ ConfigChecker = (*GasPriceOracleDeployConfig)(nil)
@@ -380,6 +394,38 @@ func (d *EIP1559DeployConfig) Check(log log.Logger) error {
 
 // UpgradeScheduleDeployConfig configures when network upgrades activate.
 type UpgradeScheduleDeployConfig struct {
+	// MANTLE_FEATURES mantle forks
+	// L2GenesisMantleBaseFeeTimeOffset is the number of seconds after genesis block that the Mantle BaseFee hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BaseFee.
+	L2GenesisMantleBaseFeeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBaseFeeTimeOffset,omitempty"`
+	// L2GenesisMantleBVMETHMintUpgradeTimeOffset is the number of seconds after genesis block that the Mantle BVM_ETH mint upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BVM_ETH mint upgrade.
+	L2GenesisMantleBVMETHMintUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBVMETHMintUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV2UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV2 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV2 upgrade.
+	L2GenesisMantleMetaTxV2UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV2UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV3UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV3 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV3 upgrade.
+	L2GenesisMantleMetaTxV3UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV3UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleProxyOwnerUpgradeTimeOffset is the number of seconds after genesis block that the Mantle ProxyOwner upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle ProxyOwner upgrade.
+	L2GenesisMantleProxyOwnerUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleProxyOwnerUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleEverestTimeOffset is the number of seconds after genesis block that the Mantle Everest hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Everest.
+	L2GenesisMantleEverestTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEverestTimeOffset,omitempty"`
+	// L2GenesisMantleEuboeaTimeOffset is the number of seconds after genesis block that the Mantle Euboea hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Euboea.
+	L2GenesisMantleEuboeaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEuboeaTimeOffset,omitempty"`
+	// L2GenesisMantleSkadiTimeOffset is the number of seconds after genesis block that the Mantle Skadi hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Skadi.
+	L2GenesisMantleSkadiTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleSkadiTimeOffset,omitempty"`
+	// L2GenesisMantleLimbTimeOffset is the number of seconds after genesis block that the Mantle Limb hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Limb.
+	L2GenesisMantleLimbTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleLimbTimeOffset,omitempty"`
+	// L2GenesisMantleArsiaTimeOffset is the number of seconds after genesis block that the Mantle Arsia hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Arsia.
+	L2GenesisMantleArsiaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleArsiaTimeOffset,omitempty"`
+
 	// L2GenesisRegolithTimeOffset is the number of seconds after genesis block that Regolith hard fork activates.
 	// Set it to 0 to activate at genesis. Nil to disable Regolith.
 	L2GenesisRegolithTimeOffset *hexutil.Uint64 `json:"l2GenesisRegolithTimeOffset,omitempty"`
@@ -657,6 +703,12 @@ func (d *UpgradeScheduleDeployConfig) Check(log log.Logger) error {
 			return err
 		}
 	}
+	mantleForks := d.mantleForks()
+	for i := 0; i < len(mantleForks)-1; i++ {
+		if err := checkFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -813,6 +865,10 @@ type DevL1DeployConfig struct {
 	L1GenesisBlockBaseFeePerGas *hexutil.Big    `json:"l1GenesisBlockBaseFeePerGas"`
 	L1GenesisBlockExcessBlobGas *hexutil.Uint64 `json:"l1GenesisBlockExcessBlobGas,omitempty"` // EIP-4844
 	L1GenesisBlockBlobGasUsed   *hexutil.Uint64 `json:"l1GenesisBlockblobGasUsed,omitempty"`   // EIP-4844
+
+	// MANTLE_FEATURES legacy fields
+	// CliqueSignerAddress represents the signer of the Clique consensus mechanism.
+	CliqueSignerAddress common.Address `json:"cliqueSignerAddress"`
 }
 
 // SuperchainL1DeployConfig configures parameters of the superchain-wide deployed contracts to L1.
@@ -830,6 +886,10 @@ type SuperchainL1DeployConfig struct {
 }
 
 func (d *SuperchainL1DeployConfig) Check(log log.Logger) error {
+	// MANTLE_FEATURES
+	// Superchain is not supported on Mantle
+	return nil
+
 	if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
 		log.Warn("RequiredProtocolVersion is empty")
 	}
@@ -957,6 +1017,10 @@ type L1DependenciesConfig struct {
 	DAChallengeProxy common.Address `json:"daChallengeProxy"`
 
 	ProtocolVersionsProxy common.Address `json:"protocolVersionsProxy"`
+
+	// MANTLE_FEATURES
+	// L1MantleToken represents the Mantle token address on L1.
+	L1MantleToken common.Address `json:"l1MantleToken"`
 }
 
 // DependencyContext is the contextual configuration needed to verify the L1 dependencies,

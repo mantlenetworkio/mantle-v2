@@ -1,18 +1,18 @@
 package genesis
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"time"
+	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/ioutil"
-	"github.com/ethereum-optimism/optimism/op-service/retry"
-	"github.com/ethereum-optimism/optimism/op-service/sources/batching"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
+	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/pipeline"
 	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -154,14 +154,9 @@ var Subcommands = cli.Commands{
 			}
 			config.SetDeployments(deployments)
 
-			var l2Allocs *foundry.ForgeAllocs
-			if l2AllocsPath := ctx.String(l2AllocsFlag.Name); l2AllocsPath != "" {
-				l2Allocs, err = foundry.LoadForgeAllocs(l2AllocsPath)
-				if err != nil {
-					return err
-				}
-			} else {
-				return errors.New("missing l2-allocs")
+			l2Allocs, err := pipeline.DefaultMantleL2GenesisStates(logger, common.Address{0x01}, config)
+			if err != nil {
+				return fmt.Errorf("failed to generate L2 genesis: %w", err)
 			}
 
 			// Retrieve SystemConfig.startBlock()
@@ -170,18 +165,17 @@ var Subcommands = cli.Commands{
 				return fmt.Errorf("cannot dial %s: %w", l1RPC, err)
 			}
 
-			caller := batching.NewMultiCaller(client.Client(), batching.DefaultBatchSize)
-			sysCfg := NewSystemConfigContract(caller, config.SystemConfigProxy)
-			startBlock, err := sysCfg.StartBlock(ctx.Context)
-			if err != nil {
-				return fmt.Errorf("failed to fetch startBlock from SystemConfig: %w", err)
+			// MANTLE_FEATURES
+			// SystemConfig contract has not yet upgraded to have startBlock() method,
+			// so we need to fetch the L1 start block from the L1 starting block tag.
+			var l1StartBlock *types.Block
+			if config.L1StartingBlockTag.BlockHash != nil {
+				l1StartBlock, err = client.BlockByHash(context.Background(), *config.L1StartingBlockTag.BlockHash)
+			} else if config.L1StartingBlockTag.BlockNumber != nil {
+				l1StartBlock, err = client.BlockByNumber(context.Background(), big.NewInt(config.L1StartingBlockTag.BlockNumber.Int64()))
 			}
-
-			logger.Info("Using L1 Start Block", "number", startBlock)
-			// retry because local devnet can experience a race condition where L1 geth isn't ready yet
-			l1StartBlock, err := retry.Do(ctx.Context, 24, retry.Fixed(1*time.Second), func() (*types.Block, error) { return client.BlockByNumber(ctx.Context, startBlock) })
 			if err != nil {
-				return fmt.Errorf("fetching start block by number: %w", err)
+				return fmt.Errorf("error getting l1 start block: %w", err)
 			}
 			logger.Info("Fetched L1 Start Block", "hash", l1StartBlock.Hash().Hex())
 
@@ -192,16 +186,17 @@ var Subcommands = cli.Commands{
 			}
 
 			// Build the L2 genesis block
-			l2Genesis, err := genesis.BuildL2Genesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()))
+			l2Genesis, err := genesis.BuildMantleGenesis(config, l2Allocs, eth.BlockRefFromHeader(l1StartBlock.Header()))
 			if err != nil {
 				return fmt.Errorf("error creating l2 genesis: %w", err)
 			}
 
 			l2GenesisBlock := l2Genesis.ToBlock()
-			rollupConfig, err := config.RollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64())
+			rollupConfig, err := config.MantleRollupConfig(eth.BlockRefFromHeader(l1StartBlock.Header()), l2GenesisBlock.Hash(), l2GenesisBlock.Number().Uint64())
 			if err != nil {
 				return err
 			}
+
 			if err := rollupConfig.Check(); err != nil {
 				return fmt.Errorf("generated rollup config does not pass validation: %w", err)
 			}

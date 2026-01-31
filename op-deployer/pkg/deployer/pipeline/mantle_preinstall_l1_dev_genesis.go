@@ -1,0 +1,20 @@
+package pipeline
+
+import (
+	"fmt"
+
+	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/opcm"
+	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
+)
+
+func PreinstallMantleL1DevGenesis(env *Env, intent *state.Intent, st *state.State) error {
+	lgr := env.Logger.New("stage", "preinstall-l1-dev-genesis")
+	lgr.Info("Adding mantle preinstalls to L1 dev genesis")
+
+	if err := opcm.InsertMantlePreinstalls(env.L1ScriptHost); err != nil {
+		return fmt.Errorf("failed to add mantle preinstalls to L1 dev state: %w", err)
+	}
+	env.L1ScriptHost.Wipe(env.Deployer)
+
+	return nil
+}

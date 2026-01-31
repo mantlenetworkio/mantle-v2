@@ -174,6 +174,7 @@ type L2Deployment struct {
 	l1StandardBridgeProxy          common.Address
 	proxyAdmin                     common.Address
 	permissionlessDelayedWETHProxy common.Address
+	l2OOAddress                    common.Address
 }
 
 var _ stack.L2Deployment = &L2Deployment{}
@@ -441,6 +442,7 @@ func (wb *worldBuilder) buildL2DeploymentOutputs() {
 			l1StandardBridgeProxy:          ch.L1StandardBridgeProxy,
 			proxyAdmin:                     ch.OpChainProxyAdminImpl,
 			permissionlessDelayedWETHProxy: ch.DelayedWethPermissionlessGameProxy,
+			l2OOAddress:                    ch.L2OutputOracleProxy,
 		}
 	}
 	wb.outSuperchainDeployment = &SuperchainDeployment{

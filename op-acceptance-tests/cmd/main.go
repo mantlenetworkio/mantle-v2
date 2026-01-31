@@ -282,7 +282,7 @@ func runOpAcceptor(ctx context.Context, tracer trace.Tracer, config AcceptorConf
 	if config.Orchestrator == "sysext" && config.Devnet != "" {
 		var devnetEnvURL string
 
-		if strings.HasPrefix(config.Devnet, "kt://") || strings.HasPrefix(config.Devnet, "ktnative://") {
+		if strings.HasPrefix(config.Devnet, "kt://") || strings.HasPrefix(config.Devnet, "ktnative://") || strings.HasPrefix(config.Devnet, "file://") {
 			// Already a URL or file path - use directly
 			devnetEnvURL = config.Devnet
 		} else {

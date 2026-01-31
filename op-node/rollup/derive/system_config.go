@@ -20,10 +20,11 @@ var (
 	SystemConfigUpdateFeeScalars           = common.Hash{31: 1}
 	SystemConfigUpdateGasLimit             = common.Hash{31: 2}
 	SystemConfigUpdateUnsafeBlockSigner    = common.Hash{31: 3}
-	SystemConfigUpdateEIP1559Params        = common.Hash{31: 4}
-	SystemConfigUpdateOperatorFeeParams    = common.Hash{31: 5}
-	SystemConfigUpdateMinBaseFee           = common.Hash{31: 6}
-	SystemConfigUpdateDAFootprintGasScalar = common.Hash{31: 7}
+	SystemConfigUpdateBaseFee              = common.Hash{31: 4}
+	SystemConfigUpdateEIP1559Params        = common.Hash{31: 5}
+	SystemConfigUpdateOperatorFeeParams    = common.Hash{31: 6}
+	SystemConfigUpdateMinBaseFee           = common.Hash{31: 7}
+	SystemConfigUpdateDAFootprintGasScalar = common.Hash{31: 8}
 )
 
 var (
@@ -117,6 +118,13 @@ func ProcessSystemConfigUpdateLogEvent(destSysCfg *eth.SystemConfig, ev *types.L
 			return err
 		}
 		destSysCfg.GasLimit = gasLimit
+		return nil
+	case SystemConfigUpdateBaseFee:
+		baseFee, err := parseSystemConfigUpdateBaseFee(ev.Data)
+		if err != nil {
+			return err
+		}
+		destSysCfg.BaseFee = baseFee
 		return nil
 	case SystemConfigUpdateEIP1559Params:
 		params, err := parseSystemConfigUpdateEIP1559Params(ev.Data)

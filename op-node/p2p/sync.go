@@ -704,7 +704,8 @@ func (s *SyncClient) doRequest(ctx context.Context, id peer.ID, expectedBlockNum
 	version := binary.LittleEndian.Uint32(versionData[:])
 	isCanyon := s.cfg.IsCanyon(s.cfg.TimestampForBlock(expectedBlockNum))
 	isIsthmus := s.cfg.IsIsthmus(s.cfg.TimestampForBlock(expectedBlockNum))
-	envelope, err := readExecutionPayload(version, data, isCanyon, isIsthmus)
+	isMantleSkadi := s.cfg.IsMantleSkadi(s.cfg.TimestampForBlock(expectedBlockNum))
+	envelope, err := readExecutionPayload(version, data, isCanyon, isIsthmus, isMantleSkadi)
 	if err != nil {
 		return err
 	}
@@ -736,7 +737,7 @@ func panicGuard[T, S, U any](fn func(T, S, U) error) func(T, S, U) error {
 }
 
 // readExecutionPayload will unmarshal the supplied data into an ExecutionPayloadEnvelope.
-func readExecutionPayload(version uint32, data []byte, isCanyon, isIsthmus bool) (*eth.ExecutionPayloadEnvelope, error) {
+func readExecutionPayload(version uint32, data []byte, isCanyon, isIsthmus, isMantleSkadi bool) (*eth.ExecutionPayloadEnvelope, error) {
 	switch version {
 	case 0:
 		blockVersion := eth.BlockV1
@@ -751,7 +752,7 @@ func readExecutionPayload(version uint32, data []byte, isCanyon, isIsthmus bool)
 	case 1:
 		envelope := &eth.ExecutionPayloadEnvelope{}
 		blockVersion := eth.BlockV3
-		if isIsthmus {
+		if isIsthmus || isMantleSkadi {
 			blockVersion = eth.BlockV4
 		}
 		if err := envelope.UnmarshalSSZ(blockVersion, uint32(len(data)), bytes.NewReader(data)); err != nil {
@@ -925,7 +926,7 @@ func (srv *ReqRespServer) handleSyncRequest(ctx context.Context, stream network.
 
 	w := snappy.NewBufferedWriter(stream)
 
-	if srv.cfg.IsEcotone(uint64(envelope.ExecutionPayload.Timestamp)) {
+	if srv.cfg.IsEcotone(uint64(envelope.ExecutionPayload.Timestamp)) || srv.cfg.IsMantleSkadi(uint64(envelope.ExecutionPayload.Timestamp)) {
 		// 0 - resultCode: success = 0
 		// 1:5 - version: 1 (little endian)
 		tmp := [5]byte{0, 1, 0, 0, 0}

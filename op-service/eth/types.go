@@ -475,11 +475,15 @@ func BlockAsPayload(bl *types.Block, config *params.ChainConfig) (*ExecutionPayl
 		// WithdrawalsRoot is only set starting at Isthmus
 	}
 
-	if config.IsCanyon(uint64(payload.Timestamp)) {
+	// MANTLE_FEATURES
+	// After MantleSkadi, the withdrawals list is non nil and empty
+	if config.IsCanyon(uint64(payload.Timestamp)) || config.IsMantleSkadi(uint64(payload.Timestamp)) {
 		payload.Withdrawals = &types.Withdrawals{}
 	}
 
-	if config.IsIsthmus(uint64(payload.Timestamp)) {
+	// MANTLE_FEATURES
+	// After MantleSkadi, the withdrawals root is set
+	if config.IsIsthmus(uint64(payload.Timestamp)) || config.IsMantleSkadi(uint64(payload.Timestamp)) {
 		payload.WithdrawalsRoot = bl.Header().WithdrawalsHash
 	}
 
@@ -517,6 +521,8 @@ type PayloadAttributes struct {
 	NoTxPool bool `json:"noTxPool,omitempty"`
 	// GasLimit override
 	GasLimit *Uint64Quantity `json:"gasLimit,omitempty"`
+	// BaseFee override
+	BaseFee *big.Int `json:"baseFee,omitempty"`
 	// EIP-1559 parameters, to be specified only post-Holocene
 	EIP1559Params *Bytes8 `json:"eip1559Params,omitempty"`
 	// MinBaseFee is the minimum base fee, to be specified only post-Jovian
@@ -607,6 +613,9 @@ type SystemConfig struct {
 	Scalar Bytes32 `json:"scalar"`
 	// GasLimit identifies the L2 block gas limit
 	GasLimit uint64 `json:"gasLimit"`
+	// BaseFee identifies the L2 block base fee
+	BaseFee *big.Int `json:"baseFee"`
+
 	// EIP1559Params contains the Holocene-encoded EIP-1559 parameters. This
 	// value will be 0 if Holocene is not active, or if derivation has yet to
 	// process any EIP_1559_PARAMS system config update events.

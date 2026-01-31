@@ -170,6 +170,7 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 	}
 
 	isIsthmus := cfg.IsIsthmus(batch.Timestamp)
+	isMantleSkadi := cfg.IsMantleSkadi(batch.Timestamp)
 
 	// We can do this check earlier, but it's a more intensive one, so we do this last.
 	for i, txBytes := range batch.Transactions {
@@ -181,8 +182,8 @@ func checkSingularBatch(cfg *rollup.Config, log log.Logger, l1Blocks []eth.L1Blo
 			log.Warn("sequencers may not embed any deposits into batch data, but found tx that has one", "tx_index", i)
 			return BatchDrop
 		}
-		if !isIsthmus && txBytes[0] == types.SetCodeTxType {
-			log.Warn("sequencers may not embed any SetCode transactions before Isthmus", "tx_index", i)
+		if !isIsthmus && !isMantleSkadi && txBytes[0] == types.SetCodeTxType {
+			log.Warn("sequencers may not embed any SetCode transactions before Isthmus or MantleSkadi", "tx_index", i)
 			return BatchDrop
 		}
 	}
