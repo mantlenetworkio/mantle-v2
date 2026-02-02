@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/shim"
@@ -30,4 +31,8 @@ func NewMantleSimpleWithSyncTester(t devtest.T) *MantleSimpleWithSyncTester {
 		MantleMinimal: *minimal,
 		SyncTester:    dsl.NewSyncTester(syncTester),
 	}
+}
+
+func WithMantleHardforkSequentialActivation(startFork, endFork forks.MantleForkName, delta uint64) stack.CommonOption {
+	return stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithMantleHardforkSequentialActivation(startFork, endFork, delta)))
 }

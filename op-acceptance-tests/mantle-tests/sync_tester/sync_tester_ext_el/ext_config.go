@@ -8,53 +8,32 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
-// Configuration defaults for op-sepolia
+// Configuration defaults for mantle-sepolia
 const (
-	DefaultNetworkPreset = "op-sepolia"
+	DefaultNetworkPreset = "mantle-sepolia"
 
 	// Tailscale networking endpoints
-	DefaultL2ELEndpointTailscale       = "https://proxyd-l2-sepolia.primary.client.dev.oplabs.cloud"
-	DefaultL1CLBeaconEndpointTailscale = "https://beacon-api-proxy-sepolia.primary.client.dev.oplabs.cloud"
-	DefaultL1ELEndpointTailscale       = "https://proxyd-l1-sepolia.primary.client.dev.oplabs.cloud"
+	DefaultL2ELEndpointTailscale       = ""
+	DefaultL1CLBeaconEndpointTailscale = ""
+	DefaultL1ELEndpointTailscale       = ""
 )
 
 var (
 	// Network presets for different networks against which we test op-node syncing
 	networkPresets = map[string]stack.ExtNetworkConfig{
-		"op-sepolia": {
-			L2NetworkName:      "op-sepolia",
+		"mantle-sepolia": {
+			L2NetworkName:      "mantle-sepolia",
 			L1ChainID:          eth.ChainIDFromUInt64(11155111),
-			L2ELEndpoint:       "https://ci-sepolia-l2.optimism.io",
-			L1CLBeaconEndpoint: "https://ci-sepolia-beacon.optimism.io",
-			L1ELEndpoint:       "https://ci-sepolia-l1.optimism.io",
+			L2ELEndpoint:       "",
+			L1CLBeaconEndpoint: "",
+			L1ELEndpoint:       "",
 		},
-		"base-sepolia": {
-			L2NetworkName:      "base-sepolia",
-			L1ChainID:          eth.ChainIDFromUInt64(11155111),
-			L2ELEndpoint:       "https://base-sepolia-rpc.optimism.io",
-			L1CLBeaconEndpoint: "https://ci-sepolia-beacon.optimism.io",
-			L1ELEndpoint:       "https://ci-sepolia-l1.optimism.io",
-		},
-		"unichain-sepolia": {
-			L2NetworkName:      "unichain-sepolia",
-			L1ChainID:          eth.ChainIDFromUInt64(11155111),
-			L2ELEndpoint:       "https://unichain-sepolia-rpc.optimism.io",
-			L1CLBeaconEndpoint: "https://ci-sepolia-beacon.optimism.io",
-			L1ELEndpoint:       "https://ci-sepolia-l1.optimism.io",
-		},
-		"op-mainnet": {
-			L2NetworkName:      "op-mainnet",
+		"mantle-mainnet": {
+			L2NetworkName:      "mantle-mainnet",
 			L1ChainID:          eth.ChainIDFromUInt64(1),
-			L2ELEndpoint:       "https://op-mainnet-rpc.optimism.io",
-			L1CLBeaconEndpoint: "https://ci-mainnet-beacon.optimism.io",
-			L1ELEndpoint:       "https://ci-mainnet-l1.optimism.io",
-		},
-		"base-mainnet": {
-			L2NetworkName:      "base-mainnet",
-			L1ChainID:          eth.ChainIDFromUInt64(1),
-			L2ELEndpoint:       "https://base-mainnet-rpc.optimism.io",
-			L1CLBeaconEndpoint: "https://ci-mainnet-beacon.optimism.io",
-			L1ELEndpoint:       "https://ci-mainnet-l1.optimism.io",
+			L2ELEndpoint:       "",
+			L1CLBeaconEndpoint: "",
+			L1ELEndpoint:       "",
 		},
 	}
 )
