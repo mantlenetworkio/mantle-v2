@@ -3,24 +3,21 @@ package sync_tester_hfs
 import (
 	"testing"
 
-	bss "github.com/ethereum-optimism/optimism/op-batcher/batcher"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 )
 
 func TestMain(m *testing.M) {
 	presets.DoMain(m, presets.WithMantleSimpleWithSyncTester(),
 		presets.WithCompatibleTypes(compat.SysGo),
-		presets.WithHardforkSequentialActivation(forks.Bedrock, forks.Jovian, 6),
+		presets.WithMantleHardforkSequentialActivation(forks.MantleSkadi, forks.MantleArsia, 6),
 		presets.WithNoDiscovery(),
-		stack.MakeCommon(sysgo.WithBatcherOption(func(id stack.L2BatcherID, cfg *bss.CLIConfig) {
-			// For supporting pre-delta batches
-			cfg.BatchType = derive.SingularBatchType
-			// For supporting pre-Fjord batches
-			cfg.CompressionAlgo = derive.Zlib
-		})))
+		stack.Combine(
+			stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithScalarAndOverhead(1368, 1000000))),
+			stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithGasLimit(1125899906842624))),
+			presets.WithMantleLegacyBatcher(),
+		))
 }
