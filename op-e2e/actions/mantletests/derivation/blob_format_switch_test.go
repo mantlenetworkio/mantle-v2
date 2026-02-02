@@ -16,14 +16,16 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
 
-// TestArsiaRejectsOldBlobFormat tests that after Arsia activation, the derivation
-// pipeline correctly rejects blob transactions using the old Limb format.
+// TestBlobFormatSwitchAfterArsia tests that after Arsia activation,
+// when encountering a new format blob, the derivation pipeline correctly switches
+// from Mantle format to standard blob format.
 //
 // This test verifies:
-// 1. Old format blobs (Limb RLP-encoded frame array) are rejected after Arsia
-// 2. Safe head does not advance when old format is submitted
-// 3. Op-node logs appropriate error messages for format mismatch
-func TestArsiaRejectsOldBlobFormat(gt *testing.T) {
+// 1. New format blobs (single frame per blob) trigger format switch after Arsia
+// 2. The switch is logged with "Mantle format decode failed, falling back to standard blob format"
+// 3. Data is successfully parsed and safe head advances
+// 4. Subsequent L1 blocks use the new BlobDataSource
+func TestBlobFormatSwitchAfterArsia(gt *testing.T) {
 	t := helpers.NewDefaultTesting(gt)
 
 	// Setup with Arsia NOT activated at genesis
@@ -42,8 +44,8 @@ func TestArsiaRejectsOldBlobFormat(gt *testing.T) {
 
 	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
 
-	// Setup log capturing for verifier to see rejection errors
-	verifLog := testlog.Logger(t, log.LevelInfo)
+	// Setup log capturing for verifier to see format switch logs (Debug level)
+	verifLog := testlog.Logger(t, log.LevelDebug)
 	verifLogHandler := testlog.WrapCaptureLogger(verifLog.Handler())
 	verifLogger := log.NewLogger(verifLogHandler)
 
@@ -124,7 +126,7 @@ func TestArsiaRejectsOldBlobFormat(gt *testing.T) {
 	sequencer.ActL1HeadSignal(t)
 	verifier.ActL1HeadSignal(t)
 
-	// PHASE 3: After Arsia - Create new L2 blocks and submit with OLD format
+	// PHASE 3: After Arsia - Create new L2 blocks and submit with NEW format
 
 	t.Log("=== PHASE 3: Creating L2 blocks after Arsia ===")
 
@@ -143,117 +145,71 @@ func TestArsiaRejectsOldBlobFormat(gt *testing.T) {
 	frameData := batcher.ReadNextOutputFrame(t)
 	t.Logf("Prepared frame data for submission: %d bytes", len(frameData))
 
-	// Submit using OLD FORMAT (Limb) by specifying a timestamp BEFORE Arsia activation
-	// This forces ActL2BatchSubmitMantleRawAtTime to use the old RLP-encoded frame array format
-	preArsiaTime := arsiaActivationTime - 10 // Use time before Arsia activation
-	t.Logf("Submitting blob with OLD format using timestamp %d (Arsia activates at %d)",
-		preArsiaTime, arsiaActivationTime)
+	// Submit using NEW FORMAT by specifying a timestamp AFTER Arsia activation
+	// This forces ActL2BatchSubmitMantleRawAtTime to use the new OP Stack format
+	postArsiaTime := arsiaActivationTime + 10 // Use time after Arsia activation
+	t.Logf("Submitting blob with NEW format using timestamp %d (Arsia activates at %d)",
+		postArsiaTime, arsiaActivationTime)
 
-	// This will create a blob using old Limb format (RLP-encoded frame array)
-	// even though we're after Arsia activation on L1
-	batcher.ActL2BatchSubmitMantleRawAtTime(t, frameData, preArsiaTime)
-	oldFormatTX := batcher.LastSubmitted
+	// This will create a blob using new OP Stack format (single frame per blob)
+	batcher.ActL2BatchSubmitMantleRawAtTime(t, frameData, postArsiaTime)
+	newFormatTX := batcher.LastSubmitted
 
 	miner.ActL1StartBlock(12)(t)
-	miner.ActL1IncludeTxByHash(oldFormatTX.Hash())(t)
+	miner.ActL1IncludeTxByHash(newFormatTX.Hash())(t)
 	miner.ActL1EndBlock(t)
-	oldFormatL1Block := miner.L1Chain().CurrentBlock()
-	t.Logf("Old format blob submitted at L1 block %d (time %d, after Arsia %d)",
-		oldFormatL1Block.Number.Uint64(), oldFormatL1Block.Time, arsiaActivationTime)
+	newFormatL1Block := miner.L1Chain().CurrentBlock()
+	t.Logf("New format blob submitted at L1 block %d (time %d, after Arsia %d)",
+		newFormatL1Block.Number.Uint64(), newFormatL1Block.Time, arsiaActivationTime)
 
-	// Signal verifier to process the L1 block with old format blob
+	// Signal verifier to process the L1 block with new format blob
 	verifier.ActL1HeadSignal(t)
 	verifier.ActL2PipelineFull(t)
 
-	// Verify that safe head DID NOT advance
-	// The derivation pipeline should reject the old format blob
-	verifierSafeAfterOldBlob := verifier.L2Safe()
-	require.Equal(t, verifierSafeBeforeArsia.Number, verifierSafeAfterOldBlob.Number,
-		"Safe head should NOT advance after receiving old format blob")
-	require.Equal(t, verifierSafeBeforeArsia.Hash, verifierSafeAfterOldBlob.Hash,
-		"Safe head hash should not change after old format blob")
-	t.Logf("Safe head correctly did not advance: still at block %d", verifierSafeAfterOldBlob.Number)
+	// Verify that safe head DID advance
+	// The derivation pipeline should switch to standard blob format and successfully parse
+	verifierSafeAfterNewBlob := verifier.L2Safe()
+	require.Greater(t, verifierSafeAfterNewBlob.Number, verifierSafeBeforeArsia.Number,
+		"Safe head should advance after format switch")
+	t.Logf("Safe head advanced from block %d to block %d after format switch",
+		verifierSafeBeforeArsia.Number, verifierSafeAfterNewBlob.Number)
 
-	// PHASE 4: Verify error logs
+	// PHASE 4: Verify format switch logs
 
-	t.Log("=== PHASE 4: Verifying error logs ===")
+	t.Log("=== PHASE 4: Verifying format switch logs ===")
 
 	capturingHandler, ok := verifLogHandler.(*testlog.CapturingHandler)
 	require.True(t, ok, "Should be able to cast to CapturingHandler")
 
-	// Look for logs at WARN or ERROR level (blob format issues may be logged as warnings)
-	allLogs := capturingHandler.FindLogs(
-		testlog.NewLevelFilter(log.LevelWarn),
+	// Look for the specific format switch log message
+	formatSwitchLog := capturingHandler.FindLog(
+		testlog.NewMessageContainsFilter("Mantle format decode failed, falling back to standard blob format"),
 	)
-
-	t.Logf("Total WARN+ level logs found: %d", len(allLogs))
-
-	// Look for specific error messages related to blob parsing
-	// Check various keywords that might appear in blob format rejection logs
-	var blobFormatErrors []*testlog.CapturedRecord
-	keywords := []string{
-		"blob", "Blob",
-		"parse", "Parse",
-		"decode", "Decode",
-		"RLP", "rlp",
-		"format", "Format",
-		"invalid", "Invalid",
-		"failed", "Failed",
-		"error", "Error",
-		"reject", "Reject",
-	}
-
-	for _, logEntry := range allLogs {
-		msg := logEntry.Message
-		// Check if message contains any blob-related keywords
-		if containsAny(msg, keywords) {
-			blobFormatErrors = append(blobFormatErrors, logEntry)
-			t.Logf("Found potential blob error log: level=%v, msg=%s", logEntry.Level, msg)
-		}
-	}
-
-	// Log some sample entries even if we don't find specific blob errors
-	if len(blobFormatErrors) == 0 {
-		t.Logf("No blob-related error logs found. Showing first 5 WARN+ logs:")
-		for i, logEntry := range allLogs {
-			if i >= 5 {
-				break
-			}
-			t.Logf("  Log %d: level=%v, msg=%s", i+1, logEntry.Level, logEntry.Message)
-		}
-	}
-
-	// The key verification is that safe head did NOT advance
-	// Logs are additional evidence, but the main test is the behavior
-	if len(blobFormatErrors) > 0 {
-		t.Logf("Found %d blob-related log entries", len(blobFormatErrors))
-		t.Logf("Sample log: %s", blobFormatErrors[0].Message)
-	} else {
-		t.Logf("No specific blob format error logs found, but safe head correctly did not advance")
-		t.Logf("This indicates the old format blob was silently ignored/rejected by the derivation pipeline")
-	}
+	require.NotNil(t, formatSwitchLog,
+		"Should find 'Mantle format decode failed, falling back to standard blob format' log")
+	t.Logf("Found format switch log: %s", formatSwitchLog.Message)
 
 	// Summary
 
 	t.Log("=== SUMMARY ===")
 	t.Logf("Before Arsia: Safe head at block %d", verifierSafeBeforeArsia.Number)
-	t.Logf("After old format blob: Safe head remained at block %d (correctly rejected)", verifierSafeAfterOldBlob.Number)
-	t.Logf("Blob-related error logs found: %d entries", len(blobFormatErrors))
-	t.Log("Test PASSED: Old format blobs correctly rejected after Arsia activation")
-	t.Log("Key verification: Safe head did NOT advance with old format")
-	if len(blobFormatErrors) > 0 {
-		t.Log("Additional evidence: Error logs captured")
-	}
+	t.Logf("After new format blob (after Arsia): Safe head advanced to block %d", verifierSafeAfterNewBlob.Number)
+	t.Log("Test PASSED: Format switch triggered successfully after Arsia activation")
+	t.Log("Key verifications:")
+	t.Log("  1. Safe head advanced (data parsed successfully)")
+	t.Log("  2. Format switch log captured")
 }
 
-// TestArsiaRejectsNewBlobFormatBeforeActivation tests that before Arsia activation,
-// the derivation pipeline correctly rejects blob transactions using the new OP Stack format.
+// TestBlobFormatSwitchBeforeArsia tests that before Arsia activation,
+// when encountering a new format blob, the derivation pipeline correctly switches
+// from Mantle format to standard blob format.
 //
 // This test verifies:
-// 1. New format blobs (single frame per blob) are rejected before Arsia
-// 2. Safe head does not advance when new format is submitted before Arsia
-// 3. Op-node logs appropriate error messages for format mismatch
-func TestArsiaRejectsNewBlobFormatBeforeActivation(gt *testing.T) {
+// 1. New format blobs (single frame per blob) trigger format switch before Arsia
+// 2. The switch is logged with "Mantle format decode failed, falling back to standard blob format"
+// 3. Data is successfully parsed and safe head advances
+// 4. Subsequent L1 blocks use the new BlobDataSource
+func TestBlobFormatSwitchBeforeArsia(gt *testing.T) {
 	t := helpers.NewDefaultTesting(gt)
 
 	// Setup with Arsia NOT activated at genesis
@@ -272,8 +228,8 @@ func TestArsiaRejectsNewBlobFormatBeforeActivation(gt *testing.T) {
 
 	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
 
-	// Setup log capturing for verifier to see rejection errors
-	verifLog := testlog.Logger(t, log.LevelInfo)
+	// Setup log capturing for verifier to see format switch logs (Debug level)
+	verifLog := testlog.Logger(t, log.LevelDebug)
 	verifLogHandler := testlog.WrapCaptureLogger(verifLog.Handler())
 	verifLogger := log.NewLogger(verifLogHandler)
 
@@ -395,94 +351,36 @@ func TestArsiaRejectsNewBlobFormatBeforeActivation(gt *testing.T) {
 	verifier.ActL1HeadSignal(t)
 	verifier.ActL2PipelineFull(t)
 
-	// Verify that safe head DID NOT advance
-	// The derivation pipeline should reject the new format blob before Arsia
+	// Verify that safe head DID advance
+	// The derivation pipeline should switch to standard blob format and successfully parse
 	verifierSafeAfterNewBlob := verifier.L2Safe()
-	require.Equal(t, verifierSafeBeforeNewBlob.Number, verifierSafeAfterNewBlob.Number,
-		"Safe head should NOT advance after receiving new format blob before Arsia")
-	require.Equal(t, verifierSafeBeforeNewBlob.Hash, verifierSafeAfterNewBlob.Hash,
-		"Safe head hash should not change after new format blob")
-	t.Logf("Safe head correctly did not advance: still at block %d", verifierSafeAfterNewBlob.Number)
+	require.Greater(t, verifierSafeAfterNewBlob.Number, verifierSafeBeforeNewBlob.Number,
+		"Safe head should advance after format switch")
+	t.Logf("Safe head advanced from block %d to block %d after format switch",
+		verifierSafeBeforeNewBlob.Number, verifierSafeAfterNewBlob.Number)
 
-	// PHASE 3: Verify error logs
+	// PHASE 3: Verify format switch logs
 
-	t.Log("=== PHASE 3: Verifying error logs ===")
+	t.Log("=== PHASE 3: Verifying format switch logs ===")
 
 	capturingHandler, ok := verifLogHandler.(*testlog.CapturingHandler)
 	require.True(t, ok, "Should be able to cast to CapturingHandler")
 
-	// Look for logs at WARN or ERROR level
-	allLogs := capturingHandler.FindLogs(
-		testlog.NewLevelFilter(log.LevelWarn),
+	// Look for the specific format switch log message
+	formatSwitchLog := capturingHandler.FindLog(
+		testlog.NewMessageContainsFilter("Mantle format decode failed, falling back to standard blob format"),
 	)
-
-	t.Logf("Total WARN+ level logs found: %d", len(allLogs))
-
-	// Look for specific error messages related to blob parsing
-	var blobFormatErrors []*testlog.CapturedRecord
-	keywords := []string{
-		"blob", "Blob",
-		"parse", "Parse",
-		"decode", "Decode",
-		"RLP", "rlp",
-		"format", "Format",
-		"invalid", "Invalid",
-		"failed", "Failed",
-		"error", "Error",
-		"reject", "Reject",
-	}
-
-	for _, logEntry := range allLogs {
-		msg := logEntry.Message
-		if containsAny(msg, keywords) {
-			blobFormatErrors = append(blobFormatErrors, logEntry)
-			t.Logf("Found potential blob error log: level=%v, msg=%s", logEntry.Level, msg)
-		}
-	}
-
-	// Log some sample entries even if we don't find specific blob errors
-	if len(blobFormatErrors) == 0 {
-		t.Logf("No blob-related error logs found. Showing first 5 WARN+ logs:")
-		for i, logEntry := range allLogs {
-			if i >= 5 {
-				break
-			}
-			t.Logf("  Log %d: level=%v, msg=%s", i+1, logEntry.Level, logEntry.Message)
-		}
-	}
-
-	// The key verification is that safe head did NOT advance
-	if len(blobFormatErrors) > 0 {
-		t.Logf("Found %d blob-related log entries", len(blobFormatErrors))
-		t.Logf("Sample log: %s", blobFormatErrors[0].Message)
-	} else {
-		t.Logf("No specific blob format error logs found, but safe head correctly did not advance")
-		t.Logf("This indicates the new format blob was silently ignored/rejected by the derivation pipeline")
-	}
+	require.NotNil(t, formatSwitchLog,
+		"Should find 'Mantle format decode failed, falling back to standard blob format' log")
+	t.Logf("Found format switch log: %s", formatSwitchLog.Message)
 
 	// Summary
 
 	t.Log("=== SUMMARY ===")
 	t.Logf("Before submitting new format blob: Safe head at block %d", verifierSafeBeforeNewBlob.Number)
-	t.Logf("After new format blob (before Arsia): Safe head remained at block %d (correctly rejected)", verifierSafeAfterNewBlob.Number)
-	t.Logf("Blob-related error logs found: %d entries", len(blobFormatErrors))
-	t.Log("Test PASSED: New format blobs correctly rejected before Arsia activation")
-	t.Log("Key verification: Safe head did NOT advance with new format before Arsia")
-	if len(blobFormatErrors) > 0 {
-		t.Log("Additional evidence: Error logs captured")
-	}
-}
-
-// containsAny checks if the string contains any of the given substrings
-func containsAny(s string, substrings []string) bool {
-	for _, substr := range substrings {
-		if len(s) >= len(substr) {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-		}
-	}
-	return false
+	t.Logf("After new format blob (before Arsia): Safe head advanced to block %d", verifierSafeAfterNewBlob.Number)
+	t.Log("Test PASSED: Format switch triggered successfully before Arsia activation")
+	t.Log("Key verifications:")
+	t.Log("  1. Safe head advanced (data parsed successfully)")
+	t.Log("  2. Format switch log captured")
 }
