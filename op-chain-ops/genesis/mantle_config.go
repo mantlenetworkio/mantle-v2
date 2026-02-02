@@ -124,11 +124,11 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 
-	if genesis.Config.IsHolocene(genesis.Timestamp) && genesis.Config.Optimism != nil {
-		denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
-		elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
-		genesis.ExtraData = eip1559.EncodeHoloceneExtraData(denom, elasticity)
-	}
+	//if genesis.Config.IsHolocene(genesis.Timestamp) && genesis.Config.Optimism != nil {
+	//	denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
+	//	elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
+	//	genesis.ExtraData = eip1559.EncodeHoloceneExtraData(denom, elasticity)
+	//}
 	if genesis.Config.IsMinBaseFee(genesis.Timestamp) && genesis.Config.Optimism != nil {
 		denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
 		elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
