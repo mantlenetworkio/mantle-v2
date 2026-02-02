@@ -1,4 +1,4 @@
-package pectra
+package skadi
 
 import (
 	"context"
@@ -40,9 +40,11 @@ func newSystem(t devtest.T) *testSystem {
 	orch.Hydrate(system)
 
 	l2 := dsl.NewL2Network(system.L2Network(match.Assume(t, match.L2ChainA)), orch.ControlPlane())
-	t.Require().True(l2.IsMantleForkActive(forks.MantleSkadi), "Mantle Skadi fork must be active for Pectra features")
+	t.Require().True(l2.IsMantleForkActive(forks.MantleArsia), "Mantle Skadi fork must be active for Pectra features")
 
 	l2EL := dsl.NewL2ELNode(l2.Escape().L2ELNode(match.WithArchive(t.Ctx())), orch.ControlPlane())
+	l2EL.WaitForOnline()
+	l2EL.WaitForBlockNumber(10)
 	wallet := dsl.NewRandomHDWallet(t, 30)
 	l2Faucet := dsl.NewFaucet(l2.Escape().Faucet(match.FirstFaucet))
 
@@ -56,7 +58,14 @@ func newSystem(t devtest.T) *testSystem {
 func TestPectra(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := newSystem(t)
-	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
+	sys.L2EL.WaitForOnline()
+	sys.L2EL.WaitForBlockNumber(10)
+	debugWallet := dsl.NewRandomHDWallet(t, 30)
+	alice := debugWallet.NewEOA(sys.L2EL)
+	t.Logger().Info("Funding test EOA via faucet", "address", alice.Address(), "amount", eth.OneTenthEther)
+	t.Logger().Info("L2 balance before fund", "balance", alice.GetBalance())
+	sys.FunderL2.FundAtLeast(alice, eth.OneTenthEther)
+	t.Logger().Info("L2 balance after fund", "balance", alice.GetBalance())
 
 	cases := []struct {
 		name       string

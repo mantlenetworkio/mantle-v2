@@ -104,7 +104,7 @@ func WithMantleForkAtOffset(fork forks.MantleForkName, offset *uint64) DeployerP
 		for _, l2 := range intent.Chains {
 			key := fmt.Sprintf("l2Genesis%sTimeOffset", string(fork))
 			if offset == nil {
-				delete(l2.DeployOverrides, key)
+				l2.DeployOverrides[key] = nil
 			} else {
 				// The typing is important, or op-deployer merge-JSON tricks will fail
 				l2.DeployOverrides[key] = (*hexutil.Uint64)(offset)
