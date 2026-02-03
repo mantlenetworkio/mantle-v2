@@ -104,11 +104,43 @@ func WithMantleForkAtOffset(fork forks.MantleForkName, offset *uint64) DeployerP
 		for _, l2 := range intent.Chains {
 			key := fmt.Sprintf("l2Genesis%sTimeOffset", string(fork))
 			if offset == nil {
-				l2.DeployOverrides[key] = nil
+				l2.DeployOverrides[key] = nil // Explicitly set to nil
 			} else {
 				// The typing is important, or op-deployer merge-JSON tricks will fail
 				l2.DeployOverrides[key] = (*hexutil.Uint64)(offset)
 			}
+		}
+	}
+}
+
+func WithMantleHardforkSequentialActivation(startFork, endFork forks.MantleForkName, delta uint64) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting MantleHardforkSequentialActivation", "startFork", string(startFork), "endFork", string(endFork), "delta", delta)
+		var opts []DeployerPipelineOption
+		opts = append(opts, WithMantleForkAtGenesis(startFork))
+		var activateWithOffset bool
+		var deactivate bool
+		var relativeIdx uint64
+		for _, fork := range forks.AllMantleForks {
+			if deactivate {
+				opts = append(opts, WithMantleForkAtOffset(fork, nil))
+				continue
+			}
+			if activateWithOffset {
+				offset := delta * relativeIdx
+				opts = append(opts, WithMantleForkAtOffset(fork, &offset))
+				relativeIdx++
+			}
+			if fork == startFork {
+				activateWithOffset = true
+			}
+			if fork == endFork {
+				deactivate = true
+			}
+		}
+
+		for _, opt := range opts {
+			opt(wb, intent, cfg)
 		}
 	}
 }

@@ -148,7 +148,7 @@ func TestMinBaseFee(gt *testing.T) {
 	sys := presets.NewMinimal(t)
 	require := t.Require()
 
-	require.True(sys.L2Chain.IsForkActive(forks.Jovian), "Jovian fork must be active for this test")
+	require.True(sys.L2Chain.IsMantleForkActive(forks.MantleArsia), "Arsia fork must be active for this test")
 
 	minBaseFee := newMinBaseFee(t, sys.L2Chain, sys.L1EL, sys.L2EL)
 	minBaseFee.checkCompatibility(t)

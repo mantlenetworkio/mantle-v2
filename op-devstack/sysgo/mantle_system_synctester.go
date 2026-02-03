@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/params/forks"
 )
 
 // Mantle variant of DefaultMinimalSystemWithSyncTester.
@@ -71,8 +72,13 @@ func DefaultMantleSimpleSystemWithSyncTester(dest *DefaultSimpleSystemWithSyncTe
 		WithDeployerOptions(
 			WithLocalContractSources(),
 			WithCommons(ids.L1.ChainID()),
+			WithDefaultBPOBlobSchedule,
+			WithForkAtL1Genesis(forks.BPO2), // Both ethereum mainnet and sepolia have activated BPO2
 			WithPrefundedL2(ids.L1.ChainID(), ids.L2.ChainID()),
 		),
+		WithDeployerPipelineOption(WithL1MNT(DefaultL1MNT)),
+		WithDeployerPipelineOption(WithOperatorFeeVaultRecipient(DefaultOperatorFeeVaultRecipient)),
+		WithDeployerPipelineOption(WithMantlePortalPaused(false)),
 	)
 
 	opt.Add(WithL1Nodes(ids.L1EL, ids.L1CL))
@@ -81,15 +87,11 @@ func DefaultMantleSimpleSystemWithSyncTester(dest *DefaultSimpleSystemWithSyncTe
 	opt.Add(WithL2CLNode(ids.L2CL, ids.L1CL, ids.L1EL, ids.L2EL, L2CLSequencer()))
 
 	opt.Add(WithBatcher(ids.L2Batcher, ids.L1EL, ids.L2CL, ids.L2EL))
-	opt.Add(WithProposer(ids.L2Proposer, ids.L1EL, &ids.L2CL, nil))
+	opt.Add(WithLegacyProposer(ids.L2Proposer, ids.L1EL, &ids.L2CL, nil))
 
 	opt.Add(WithFaucets([]stack.L1ELNodeID{ids.L1EL}, []stack.L2ELNodeID{ids.L2EL}))
 
 	opt.Add(WithTestSequencer(ids.TestSequencer, ids.L1CL, ids.L2CL, ids.L1EL, ids.L2EL))
-
-	opt.Add(WithL2Challenger(ids.L2Challenger, ids.L1EL, ids.L1CL, nil, nil, &ids.L2CL, []stack.L2ELNodeID{
-		ids.L2EL,
-	}))
 
 	opt.Add(WithSyncTester(ids.SyncTester, []stack.L2ELNodeID{ids.L2EL}))
 
