@@ -158,7 +158,7 @@ func (n *NodeP2P) init(
 	}
 	n.scorer = NewScorer(eps, metrics, n.appScorer, log)
 	// notify of any new connections/streams/etc.
-	n.host.Network().Notify(NewNetworkNotifier(log, metrics))
+	n.host.Network().Notify(NewNetworkNotifier(log, metrics, n.IsStatic, n.store))
 	// note: the IDDelta functionality was removed from libP2P, and no longer needs to be explicitly disabled.
 	n.gs, err = NewGossipSub(resourcesCtx, n.host, rollupCfg, setup, n.scorer, metrics, log)
 	if err != nil {
