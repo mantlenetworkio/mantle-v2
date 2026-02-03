@@ -376,7 +376,13 @@ func (n *NodeP2P) DiscoveryProcess(ctx context.Context, log log.Logger, cfg *rol
 			// or peers on different chains, or anyone we have not seen via discovery.
 			// There is no tag score decay yet, so just set it to 42.
 			n.ConnectionManager().TagPeer(info.ID, fmt.Sprintf("opstack-%d-%d", dat.chainID, dat.version), 42)
-			log.Debug("discovered peer", "peer", info.ID, "nodeID", found.ID(), "addr", info.Addrs[0])
+			log.Debug("discovered peer",
+				"peer", info.ID,
+				"nodeID", found.ID(),
+				"addr", info.Addrs[0],
+				"enr", found.String(),
+				"opstack_id", dat.chainID,
+			)
 		case <-connectTicker.C:
 			connected := n.Host().Network().Peers()
 			log.Debug("peering tick", "connected", len(connected),

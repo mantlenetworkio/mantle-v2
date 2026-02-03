@@ -158,7 +158,7 @@ func (n *NodeP2P) init(
 	}
 	n.scorer = NewScorer(eps, metrics, n.appScorer, log)
 	// notify of any new connections/streams/etc.
-	n.host.Network().Notify(NewNetworkNotifier(log, metrics, n.IsStatic, n.store))
+	n.host.Network().Notify(NewNetworkNotifier(log, metrics, n.IsStatic, n.store, n.lookupENRFromTable))
 	// note: the IDDelta functionality was removed from libP2P, and no longer needs to be explicitly disabled.
 	n.gs, err = NewGossipSub(resourcesCtx, n.host, rollupCfg, setup, n.scorer, metrics, log)
 	if err != nil {
@@ -215,6 +215,27 @@ func (n *NodeP2P) Dv5Local() *enode.LocalNode {
 
 func (n *NodeP2P) Dv5Udp() *discover.UDPv5 {
 	return n.dv5Udp
+}
+
+func (n *NodeP2P) lookupENRFromTable(id peer.ID) (string, uint64) {
+	if n.dv5Udp == nil {
+		return "", 0
+	}
+	for _, rec := range n.dv5Udp.AllNodes() {
+		info, _, err := enrToAddrInfo(rec)
+		if err != nil {
+			continue
+		}
+		if info.ID != id {
+			continue
+		}
+		var dat OpStackENRData
+		if err := rec.Load(&dat); err != nil {
+			return rec.String(), 0
+		}
+		return rec.String(), dat.chainID
+	}
+	return "", 0
 }
 
 func (n *NodeP2P) GossipSub() *pubsub.PubSub {
