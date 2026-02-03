@@ -1,12 +1,11 @@
-package skadi
+package pectra
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -60,12 +59,7 @@ func TestPectra(gt *testing.T) {
 	sys := newSystem(t)
 	sys.L2EL.WaitForOnline()
 	sys.L2EL.WaitForBlockNumber(10)
-	debugWallet := dsl.NewRandomHDWallet(t, 30)
-	alice := debugWallet.NewEOA(sys.L2EL)
-	t.Logger().Info("Funding test EOA via faucet", "address", alice.Address(), "amount", eth.OneTenthEther)
-	t.Logger().Info("L2 balance before fund", "balance", alice.GetBalance())
-	sys.FunderL2.FundAtLeast(alice, eth.OneTenthEther)
-	t.Logger().Info("L2 balance after fund", "balance", alice.GetBalance())
+	alice := sys.FunderL2.NewFundedEOA(eth.HundredEther)
 
 	cases := []struct {
 		name       string
@@ -149,16 +143,16 @@ func runSetCodeTxBasicTest(t devtest.T, alice *dsl.EOA, sys *testSystem) {
 		alice.Plan(),
 		txplan.WithType(gethTypes.SetCodeTxType),
 		txplan.WithTo(&fromAddr),
-		txplan.WithGasLimit(75_000),
+		//txplan.WithGasLimit(75_000),
 		txplan.WithAuthorizations([]gethTypes.SetCodeAuthorization{auth1}),
 	)
 
 	setCodeTx := txplan.NewPlannedTx(setCodeTxOpts)
 	// todo: The gas estimator in this test suite doesn't yet handle the intrinsic gas of EIP-7702 transactions.
 	// We hardcode the gas estimation function here to avoid the issue.
-	setCodeTx.Gas.Fn(func(ctx context.Context) (uint64, error) {
-		return 75_000, nil
-	})
+	//setCodeTx.Gas.Fn(func(ctx context.Context) (uint64, error) {
+	//	return 75_000, nil
+	//})
 
 	// Fetch the receipt for the tx
 	receipt, err := setCodeTx.Included.Eval(t.Ctx())
@@ -287,7 +281,7 @@ func deployProgram(t devtest.T, user *dsl.EOA, bytecode []byte) common.Address {
 	deployTxOpts := txplan.Combine(
 		user.Plan(),
 		txplan.WithData(bytecode),
-		txplan.WithGasLimit(1_000_000),
+		//txplan.WithGasLimit(1_000_000),
 	)
 
 	deployTx := txplan.NewPlannedTx(deployTxOpts)
