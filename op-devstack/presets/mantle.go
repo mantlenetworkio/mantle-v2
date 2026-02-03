@@ -11,6 +11,7 @@ import (
 func WithMantleSkadiAtGenesis() stack.CommonOption {
 	return stack.Combine(
 		stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithMantleForkAtGenesis(forks.MantleSkadi))),
+		stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithScalarAndOverhead(1368, 1000000))),
 		stack.MakeCommon(sysgo.WithDeployerPipelineOption(sysgo.WithGasLimit(1125899906842624))),
 		// Skadi uses the legacy batcher which uses singular batches and zlib compression
 		WithMantleLegacyBatcher(),

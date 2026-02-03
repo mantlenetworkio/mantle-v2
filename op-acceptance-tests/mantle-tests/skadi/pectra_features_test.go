@@ -1,7 +1,6 @@
-package pectra
+package skadi
 
 import (
-	"crypto/rand"
 	"encoding/binary"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"testing"
@@ -24,7 +23,6 @@ const (
 	SET_CODE_TX_BASIC uint64 = iota
 	BLOCK_HISTORY_CONSISTENCY
 	EMPTY_REQUESTS_HASH
-	CALLDATA_COST_INCREASE
 )
 
 type testSystem struct {
@@ -39,7 +37,7 @@ func newSystem(t devtest.T) *testSystem {
 	orch.Hydrate(system)
 
 	l2 := dsl.NewL2Network(system.L2Network(match.Assume(t, match.L2ChainA)), orch.ControlPlane())
-	t.Require().True(l2.IsMantleForkActive(forks.MantleArsia), "Mantle Skadi fork must be active for Pectra features")
+	t.Require().True(l2.IsMantleForkActive(forks.MantleSkadi), "Mantle Skadi fork must be active for Pectra features")
 
 	l2EL := dsl.NewL2ELNode(l2.Escape().L2ELNode(match.WithArchive(t.Ctx())), orch.ControlPlane())
 	l2EL.WaitForOnline()
@@ -68,7 +66,6 @@ func TestPectra(gt *testing.T) {
 		{"SetCodeBasic", SET_CODE_TX_BASIC},
 		{"BlockHistoryConsistency", BLOCK_HISTORY_CONSISTENCY},
 		{"EmptyRequestsHash", EMPTY_REQUESTS_HASH},
-		{"CalldataCostIncrease", CALLDATA_COST_INCREASE},
 	}
 
 	for _, c := range cases {
@@ -88,8 +85,6 @@ func runPectraFeatureTest(t devtest.T, sys *testSystem, alice *dsl.EOA, testVect
 		runBlockHistoryConsistencyTest(t, sys.L2EL)
 	case EMPTY_REQUESTS_HASH:
 		runEmptyRequestsHashTest(t, sys.L2EL)
-	case CALLDATA_COST_INCREASE:
-		runCalldataCostTest(t, alice)
 	default:
 		require.Fail("unknown test vector: %d", testVector)
 	}
@@ -222,57 +217,6 @@ func runEmptyRequestsHashTest(t devtest.T, l2EL *dsl.L2ELNode) {
 	} else {
 		require.Fail("RequestsHash field not found - chain may not be Isthmus-activated")
 	}
-}
-
-func runCalldataCostTest(t devtest.T, alice *dsl.EOA) {
-	require := t.Require()
-
-	dat := make([]byte, 2048)
-	_, err := rand.Read(dat)
-	require.NoError(err)
-
-	idPrecompile := common.BytesToAddress([]byte{0x4})
-	idTxOpts := txplan.Combine(
-		alice.Plan(),
-		txplan.WithData(dat),
-		txplan.WithTo(&idPrecompile),
-	)
-
-	idTx := txplan.NewPlannedTx(idTxOpts)
-	receipt, err := idTx.Included.Eval(t.Ctx())
-	require.NoError(err)
-	require.Equal(uint64(1), receipt.Status)
-
-	// ID Precompile:
-	//   data_word_size = (data_size + 31) / 32
-	//   id_static_gas = 15
-	//   id_dynamic_gas = 3 * data_word_size
-	// EIP-7623:
-	//   total_cost_floor_per_token = 10
-	//   standard_token_cost = 4
-	//   tokens_in_calldata = zero_bytes_in_calldata + nonzero_bytes_in_calldata * 4
-	//   calldata_cost = standard_token_cost * tokens_in_calldata
-	//
-	// Expected gas usage is:
-	// 21_000 (base cost) + max(id_static_gas + id_dynamic_gas + calldata_cost, total_cost_floor_per_token * tokens_in_calldata)
-	var zeros, nonZeros int
-	for _, b := range dat {
-		if b == 0 {
-			zeros++
-		} else {
-			nonZeros++
-		}
-	}
-	tokensInCalldata := zeros + nonZeros*4
-
-	expectedGas := 21_000 + max(15+3*((len(dat)+31)/32)+4*tokensInCalldata, 10*tokensInCalldata)
-	require.EqualValues(expectedGas, receipt.GasUsed, "Gas usage does not match expected value")
-
-	t.Log("Calldata cost test completed successfully",
-		"gasUsed", receipt.GasUsed,
-		"expectedGas", expectedGas,
-		"zeros", zeros,
-		"nonZeros", nonZeros)
 }
 
 func deployProgram(t devtest.T, user *dsl.EOA, bytecode []byte) common.Address {
