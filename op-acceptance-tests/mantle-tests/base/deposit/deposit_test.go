@@ -75,3 +75,11 @@ func TestDepositETHByBridge_WithoutMsgValue(gt *testing.T) {
 func TestDepositETHByBridge_WithMsgValue(gt *testing.T) {
 	runDepositCase(gt, depositByBridge, assetETH, msgValueWith)
 }
+
+func TestDepositETHByPortal_TxValueTransfer(gt *testing.T) {
+	runPortalETHTxValueTransferCase(gt)
+}
+
+func TestDepositMNTByPortal_TxValueTransfer(gt *testing.T) {
+	runPortalMNTTxValueTransferCase(gt)
+}
