@@ -493,11 +493,11 @@ func (b *MantleBridge) parseMessagePassed(receipt *types.Receipt) (*mantleMessag
 		}
 
 		var decoded struct {
-			MNTValue       *big.Int
-			ETHValue       *big.Int
-			GasLimit       *big.Int
-			Data           []byte
-			WithdrawalHash common.Hash
+			MNTValue       *big.Int    `abi:"mntValue"`
+			ETHValue       *big.Int    `abi:"ethValue"`
+			GasLimit       *big.Int    `abi:"gasLimit"`
+			Data           []byte      `abi:"data"`
+			WithdrawalHash common.Hash `abi:"withdrawalHash"`
 		}
 		if err := b.messagePasserABI.UnpackIntoInterface(&decoded, "MessagePassed", log.Data); err != nil {
 			return nil, fmt.Errorf("failed to unpack MessagePassed log: %w", err)

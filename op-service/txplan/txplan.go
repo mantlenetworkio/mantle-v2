@@ -217,21 +217,26 @@ func WithEstimator(cl Estimator, invalidateOnNewBlock bool) Option {
 			&tx.Data,
 			&tx.AccessList,
 			&tx.GasRatio,
+			&tx.AuthList,
 		)
 		if invalidateOnNewBlock {
 			tx.Gas.DependOn(&tx.AgainstBlock)
 		}
+		if tx.Type.Value() == types.SetCodeTxType {
+			tx.Gas.DependOn(&tx.AuthList, &tx.Type)
+		}
 		tx.Gas.Fn(func(ctx context.Context) (uint64, error) {
 			msg := ethereum.CallMsg{
-				From:       tx.Sender.Value(),
-				To:         tx.To.Value(),
-				Gas:        0, // infinite gas, will be estimated
-				GasPrice:   nil,
-				GasFeeCap:  tx.GasFeeCap.Value(),
-				GasTipCap:  tx.GasTipCap.Value(),
-				Value:      tx.Value.Value(),
-				Data:       tx.Data.Value(),
-				AccessList: tx.AccessList.Value(),
+				From:              tx.Sender.Value(),
+				To:                tx.To.Value(),
+				Gas:               0, // infinite gas, will be estimated
+				GasPrice:          nil,
+				GasFeeCap:         tx.GasFeeCap.Value(),
+				GasTipCap:         tx.GasTipCap.Value(),
+				Value:             tx.Value.Value(),
+				Data:              tx.Data.Value(),
+				AccessList:        tx.AccessList.Value(),
+				AuthorizationList: tx.AuthList.Value(),
 			}
 			gas, err := cl.EstimateGas(ctx, msg)
 			if err != nil {

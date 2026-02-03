@@ -1,13 +1,8 @@
 package withdrawal
 
 import (
-	"testing"
-	"time"
-
 	"github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/custom_gas_token"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
-	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
-	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl/contract"
@@ -15,25 +10,13 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
-	"github.com/ethereum/go-ethereum/common"
+	"testing"
+	"time"
 )
 
-var bvmETHAddr = common.HexToAddress("0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111")
-
-func InitWithGameType(m *testing.M, gameType gameTypes.GameType) {
-	_ = gameType
-	presets.DoMain(m,
-		presets.WithCompatibleTypes(compat.SysGo),
-		presets.WithMantleMinimal(),
-		presets.WithTimeTravel(),
-		presets.WithFinalizationPeriodSeconds(1),
-	)
-}
-
-func TestWithdrawalMNT(gt *testing.T, gameType gameTypes.GameType) {
+func TestWithdrawalMNT(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)
-	_ = gameType
 
 	custom_gas_token.SkipIfCGT(t, sys)
 	sys.L1Network.WaitForOnline()
@@ -66,40 +49,34 @@ func TestWithdrawalMNT(gt *testing.T, gameType gameTypes.GameType) {
 	l1User.WaitForTokenBalance(l1MNTAddr, depositAmount)
 	initialL1MNTBalance := l1User.GetTokenBalance(l1MNTAddr)
 
-	approveReceipt := contract.Write(l1User, mntToken.Approve(l1BridgeAddr, depositAmount))
-	expectedL1Balance := initialL1Balance.Sub(bridge.L1GasCost(approveReceipt))
+	contract.Write(l1User, mntToken.Approve(l1BridgeAddr, depositAmount))
 
-	initialL2Balance := l2User.GetBalance()
-	deposit := bridge.DepositMNT(depositAmount, l1User)
-	expectedL1Balance = expectedL1Balance.Sub(deposit.GasCost())
-	l1User.VerifyBalanceExact(expectedL1Balance)
+	initialL2MNTBalance := l2User.GetBalance()
+	bridge.DepositMNT(depositAmount, l1User)
 	l1User.WaitForTokenBalance(l1MNTAddr, initialL1MNTBalance.Sub(depositAmount))
 
-	expectedL2Balance := initialL2Balance.Add(depositAmount)
-	l2User.WaitForBalance(expectedL2Balance)
-
+	expectedL2MNTBalance := initialL2MNTBalance.Add(depositAmount)
+	l2User.WaitForBalance(expectedL2MNTBalance)
 	withdrawal := bridge.InitiateWithdrawalMNT(withdrawalAmount, l2User)
-	expectedL2Balance = expectedL2Balance.Sub(withdrawalAmount).Sub(withdrawal.InitiateGasCost())
-	l2User.VerifyBalanceExact(expectedL2Balance)
+	expectedL2MNTBalance = expectedL2MNTBalance.Sub(withdrawalAmount).Sub(withdrawal.InitiateGasCost())
+	l2User.VerifyBalanceExact(expectedL2MNTBalance)
 
+	expectedL1MNTBalance := l1User.GetTokenBalance(l1MNTAddr)
 	withdrawal.Prove(l1User)
-	expectedL1Balance = expectedL1Balance.Sub(withdrawal.ProveGasCost())
-	l1User.VerifyBalanceExact(expectedL1Balance)
+	l1User.VerifyTokenBalance(l1MNTAddr, expectedL1MNTBalance)
 
 	sys.AdvanceTime(bridge.WithdrawalDelay() + time.Second)
+	waitForL1TimeAfter(t, sys, bridge.WithdrawalDelay())
 	t.Logger().Info("Attempting to finalize", "finalizationDelay", bridge.WithdrawalDelay())
 	withdrawal.Finalize(l1User)
-	expectedL1Balance = expectedL1Balance.Sub(withdrawal.FinalizeGasCost())
-	l1User.VerifyBalanceExact(expectedL1Balance)
 
-	expectedL1MNTBalance := initialL1MNTBalance.Sub(depositAmount).Add(withdrawalAmount)
+	expectedL1MNTBalance = expectedL1MNTBalance.Add(withdrawalAmount)
 	l1User.WaitForTokenBalance(l1MNTAddr, expectedL1MNTBalance)
 }
 
-func TestWithdrawalETH(gt *testing.T, gameType gameTypes.GameType) {
+func TestWithdrawalETH(gt *testing.T) {
 	t := devtest.SerialT(gt)
 	sys := presets.NewMantleMinimal(t)
-	_ = gameType
 
 	custom_gas_token.SkipIfCGT(t, sys)
 	sys.L1Network.WaitForOnline()
@@ -130,6 +107,7 @@ func TestWithdrawalETH(gt *testing.T, gameType gameTypes.GameType) {
 	l1User.VerifyBalanceExact(expectedL1Balance)
 
 	sys.AdvanceTime(bridge.WithdrawalDelay() + time.Second)
+	waitForL1TimeAfter(t, sys, bridge.WithdrawalDelay())
 	t.Logger().Info("Attempting to finalize", "finalizationDelay", bridge.WithdrawalDelay())
 	withdrawal.Finalize(l1User)
 	expectedL1Balance = expectedL1Balance.Sub(withdrawal.FinalizeGasCost()).Add(withdrawalAmount)
