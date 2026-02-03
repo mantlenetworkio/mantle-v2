@@ -801,6 +801,9 @@ func (n *OpNode) SignAndPublishL2Payload(ctx context.Context, envelope *eth.Exec
 }
 
 func (n *OpNode) RequestL2Range(ctx context.Context, start, end eth.L2BlockRef) error {
+	if n.rpcSync != nil {
+		return n.rpcSync.RequestL2Range(ctx, start, end)
+	}
 	if p2pNode := n.getP2PNodeIfEnabled(); p2pNode != nil && p2pNode.AltSyncEnabled() {
 		if unixTimeStale(start.Time, 12*time.Hour) {
 			n.log.Debug(
@@ -811,9 +814,6 @@ func (n *OpNode) RequestL2Range(ctx context.Context, start, end eth.L2BlockRef) 
 			return nil
 		}
 		return p2pNode.RequestL2Range(ctx, start, end)
-	}
-	if n.rpcSync != nil {
-		return n.rpcSync.RequestL2Range(ctx, start, end)
 	}
 	n.log.Debug("ignoring request to sync L2 range, no sync method available", "start", start, "end", end)
 	return nil
