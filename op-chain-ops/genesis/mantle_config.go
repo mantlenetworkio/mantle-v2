@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -124,15 +123,8 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 
-	//if genesis.Config.IsHolocene(genesis.Timestamp) && genesis.Config.Optimism != nil {
-	//	denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
-	//	elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
-	//	genesis.ExtraData = eip1559.EncodeHoloceneExtraData(denom, elasticity)
-	//}
-	if genesis.Config.IsMinBaseFee(genesis.Timestamp) && genesis.Config.Optimism != nil {
-		denom := uint64(genesis.Config.Optimism.EIP1559Denominator)
-		elasticity := uint64(genesis.Config.Optimism.EIP1559Elasticity)
-		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(denom, elasticity, 0)
+	if genesis.Config.IsMantleArsia(genesis.Timestamp) {
+		genesis.ExtraData = MinBaseFeeExtraData
 	}
 
 	if config.GasPriceOracleTokenRatio != 0 {
