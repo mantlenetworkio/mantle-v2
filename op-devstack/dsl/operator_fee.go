@@ -93,7 +93,7 @@ func (of *OperatorFee) SetOperatorFee(scalar uint32, constant uint64) {
 		systemOwner.Plan(), txplan.WithRetryInclusion(of.l1Client.Escape().EthClient(), 12, retry.Exponential()))
 	of.require.NoError(err)
 
-	of.log.Info("Set operator fee on L1", "scalar", scalar, "constant", constant, "tx hash", receipt.TxHash.String())
+	of.t.Logf("Set operator fee on L1: scalar=%d, constant=%d, tx hash=%s", scalar, constant, receipt.TxHash.String())
 }
 
 func (of *OperatorFee) WaitForL2SyncWithCurrentL1State() {
