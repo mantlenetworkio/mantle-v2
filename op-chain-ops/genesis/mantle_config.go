@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -124,7 +125,17 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 	}
 
 	if genesis.Config.IsMantleArsia(genesis.Timestamp) {
-		genesis.ExtraData = MinBaseFeeExtraData
+		eip1559Denom := config.EIP1559Denominator
+		if eip1559Denom == 0 {
+			eip1559Denom = 50
+		}
+
+		eip1559Elasticity := config.EIP1559Elasticity
+		if eip1559Elasticity == 0 {
+			eip1559Elasticity = 10
+		}
+		// Use config values instead of hardcoded defaults
+		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(uint64(eip1559Denom), uint64(eip1559Elasticity), 0)
 	}
 
 	if config.GasPriceOracleTokenRatio != 0 {
