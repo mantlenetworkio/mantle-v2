@@ -10,8 +10,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack/match"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
+	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -85,13 +87,13 @@ func (of *OperatorFee) GetSystemOwner() *EOA {
 func (of *OperatorFee) SetOperatorFee(scalar uint32, constant uint64) {
 	systemOwner := of.GetSystemOwner()
 
-	_, err := contractio.Write(
+	receipt, err := contractio.Write(
 		of.systemConfig.SetOperatorFeeScalars(scalar, constant),
 		of.ctx,
-		systemOwner.Plan())
+		systemOwner.Plan(), txplan.WithRetryInclusion(of.l1Client.Escape().EthClient(), 12, retry.Exponential()))
 	of.require.NoError(err)
 
-	of.t.Logf("Set operator fee on L1: scalar=%d, constant=%d", scalar, constant)
+	of.t.Logf("Set operator fee on L1: scalar=%d, constant=%d, tx hash=%s", scalar, constant, receipt.TxHash.String())
 }
 
 func (of *OperatorFee) WaitForL2SyncWithCurrentL1State() {
