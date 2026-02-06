@@ -125,15 +125,8 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 	}
 
 	if genesis.Config.IsMantleArsia(genesis.Timestamp) {
-		eip1559Denom := config.EIP1559Denominator
-		if eip1559Denom == 0 {
-			eip1559Denom = 50
-		}
-
-		eip1559Elasticity := config.EIP1559Elasticity
-		if eip1559Elasticity == 0 {
-			eip1559Elasticity = 10
-		}
+		eip1559Denom := genesis.Config.Optimism.EIP1559Denominator
+		eip1559Elasticity := genesis.Config.Optimism.EIP1559Elasticity
 		// Use config values instead of hardcoded defaults
 		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(uint64(eip1559Denom), uint64(eip1559Elasticity), 0)
 	}
