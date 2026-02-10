@@ -29,6 +29,7 @@ Other notes
 package deposit
 
 import (
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"testing"
 	"time"
 
@@ -257,11 +258,28 @@ func writeDepositTx(t devtest.T, user *dsl.EOA, call bindings.TypedCall[any], ms
 }
 
 func writeDepositTxAllowError(t devtest.T, user *dsl.EOA, call bindings.TypedCall[any], msgValue eth.ETH) (*types.Receipt, error) {
+	plan, err := contractio.Plan(call)
+	if err != nil {
+		return nil, err
+	}
 	opts := []txplan.Option{user.Plan()}
 	if msgValue != eth.ZeroWei {
 		opts = append(opts, txplan.WithValue(msgValue))
 	}
-	return contractio.Write(call, t.Ctx(), txplan.Combine(opts...))
+	opts = append(opts, txplan.WithRetryInclusion(call.Client(), 10, retry.Exponential()))
+	tx := txplan.NewPlannedTx(plan, txplan.Combine(opts...))
+
+	signed, err := tx.Signed.Eval(t.Ctx())
+	if err != nil {
+		return nil, err
+	}
+	t.Logger().Info("deposit tx signed", "hash_full", signed.Hash().Hex(), "from", signed.From)
+
+	receipt, err := tx.Included.Eval(t.Ctx())
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
 }
 
 func waitForL2Deposit(t devtest.T, sys *presets.MantleMinimal, receipt *types.Receipt) {

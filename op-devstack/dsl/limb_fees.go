@@ -42,6 +42,65 @@ func NewLimbFees(t devtest.T, l2Network *L2Network) *LimbFees {
 	}
 }
 
+// ValidateReceipt validates a transaction receipt and returns the validation result.
+// It assumes the receipt is for a simple L2 ETH transfer of the given amount.
+func (lf *LimbFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) LimbFeesValidationResult {
+	client := lf.l2Network.inner.L2ELNode(match.FirstL2EL).EthClient()
+	lf.require.NotNil(receipt, "receipt must not be nil")
+	lf.require.Equal(types.ReceiptStatusSuccessful, receipt.Status)
+	lf.require.NotNil(amount, "amount must not be nil")
+	lf.require.NotNil(receipt.BlockNumber, "receipt block number must not be nil")
+
+	signedTx := lf.findSignedTx(client, receipt)
+	signer := types.LatestSignerForChainID(signedTx.ChainId())
+	from, err := types.Sender(signer, signedTx)
+	lf.require.NoError(err)
+
+	blockNum := new(big.Int).Set(receipt.BlockNumber)
+	beforeBlockNum := new(big.Int).Sub(new(big.Int).Set(blockNum), big.NewInt(1))
+
+	startBalance, err := client.BalanceAt(lf.ctx, from, beforeBlockNum)
+	lf.require.NoError(err, "must lookup sender balance before")
+	endBalance, err := client.BalanceAt(lf.ctx, from, blockNum)
+	lf.require.NoError(err, "must lookup sender balance after")
+
+	vaultsBefore := lf.getVaultBalancesAt(client, beforeBlockNum)
+	vaultsAfter := lf.getVaultBalancesAt(client, blockNum)
+	vaultIncreases := lf.calculateVaultIncreases(vaultsBefore, vaultsAfter)
+
+	blockInfo, err := client.InfoByHash(lf.ctx, receipt.BlockHash)
+	lf.require.NoError(err)
+
+	baseFee := new(big.Int).Mul(blockInfo.BaseFee(), big.NewInt(int64(receipt.GasUsed)))
+	totalFee := new(big.Int).Mul(receipt.EffectiveGasPrice, big.NewInt(int64(receipt.GasUsed)))
+	priorityFee := new(big.Int).Sub(totalFee, baseFee)
+
+	walletBalanceDiff := new(big.Int).Sub(startBalance, endBalance)
+	walletBalanceDiff.Sub(walletBalanceDiff, amount)
+
+	lf.log.Info("receipt details", "gasUsed", receipt.GasUsed, "effectiveGasPrice", receipt.EffectiveGasPrice, "l1Fee", receipt.L1Fee)
+	lf.log.Info("Limb fees", "baseFee", baseFee, "priorityFee", priorityFee, "totalFee", totalFee)
+	lf.log.Info("Limb vault balances", "baseFeeVault", vaultIncreases.BaseFeeVault, "l1FeeVault", vaultIncreases.L1FeeVault, "sequencerVault", vaultIncreases.SequencerVault)
+	lf.log.Info("Limb wallet balance diff", "walletBalanceDiff", walletBalanceDiff)
+	lf.log.Info("Limb transfer amount", "transferAmount", amount)
+
+	lf.validateTotalBalance(walletBalanceDiff, totalFee, vaultIncreases)
+	lf.validateFeeDistribution(baseFee, priorityFee, vaultIncreases)
+	lf.validateLimbFeatures(receipt)
+
+	return LimbFeesValidationResult{
+		TransactionReceipt: receipt,
+		L1Fee:              receipt.L1Fee,
+		L2Fee:              new(big.Int).Sub(totalFee, receipt.L1Fee),
+		BaseFee:            baseFee,
+		PriorityFee:        priorityFee,
+		TotalFee:           totalFee,
+		VaultBalances:      vaultIncreases,
+		WalletBalanceDiff:  walletBalanceDiff,
+		TransferAmount:     amount,
+	}
+}
+
 func (lf *LimbFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) LimbFeesValidationResult {
 	client := lf.l2Network.inner.L2ELNode(match.FirstL2EL).EthClient()
 
@@ -97,6 +156,20 @@ func (lf *LimbFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) Lim
 	}
 }
 
+func (lf *LimbFees) findSignedTx(client apis.EthClient, receipt *types.Receipt) *types.Transaction {
+	_, txs, err := client.InfoAndTxsByHash(lf.ctx, receipt.BlockHash)
+	lf.require.NoError(err)
+
+	for _, tx := range txs {
+		if tx.Hash() == receipt.TxHash {
+			return tx
+		}
+	}
+
+	lf.require.Fail("should find the signed transaction")
+	return nil
+}
+
 func (lf *LimbFees) getVaultBalances(client apis.EthClient) LimbVaultBalances {
 	baseFee := lf.getBalance(client, predeploys.BaseFeeVaultAddr)
 	l1Fee := lf.getBalance(client, predeploys.L1FeeVaultAddr)
@@ -111,6 +184,24 @@ func (lf *LimbFees) getVaultBalances(client apis.EthClient) LimbVaultBalances {
 
 func (lf *LimbFees) getBalance(client apis.EthClient, addr common.Address) *big.Int {
 	balance, err := client.BalanceAt(lf.ctx, addr, nil)
+	lf.require.NoError(err)
+	return balance
+}
+
+func (lf *LimbFees) getVaultBalancesAt(client apis.EthClient, blockNum *big.Int) LimbVaultBalances {
+	baseFee := lf.getBalanceAt(client, predeploys.BaseFeeVaultAddr, blockNum)
+	l1Fee := lf.getBalanceAt(client, predeploys.L1FeeVaultAddr, blockNum)
+	sequencer := lf.getBalanceAt(client, predeploys.SequencerFeeVaultAddr, blockNum)
+
+	return LimbVaultBalances{
+		BaseFeeVault:   baseFee,
+		L1FeeVault:     l1Fee,
+		SequencerVault: sequencer,
+	}
+}
+
+func (lf *LimbFees) getBalanceAt(client apis.EthClient, addr common.Address, blockNum *big.Int) *big.Int {
+	balance, err := client.BalanceAt(lf.ctx, addr, blockNum)
 	lf.require.NoError(err)
 	return balance
 }
