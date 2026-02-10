@@ -211,6 +211,10 @@ func (dp *DerivationPipeline) Step(ctx context.Context, pendingSafeHead eth.L2Bl
 			return nil, fmt.Errorf("failed to verify L1 origin transition: %w", err)
 		}
 		dp.transformStages(prevOrigin, newOrigin)
+		// Mantle Arsia avtivates multiple optimism forks at the same time
+		// To prevent certain upgrade transformations from being skipped, we explicitly
+		// perform the necessary transformations here.
+		dp.transformMantleStages(prevOrigin, newOrigin)
 		dp.origin = newOrigin
 	}
 
