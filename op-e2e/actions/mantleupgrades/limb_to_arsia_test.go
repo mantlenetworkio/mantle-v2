@@ -778,3 +778,212 @@ func TestLimbToArsiaUpgradeWithTransactions(gt *testing.T) {
 	logger.Info("Limb and Arsia version transactions processed correctly")
 	logger.Info("Upgrade test with transactions passed")
 }
+
+// TestArsiaTriggersHoloceneStageTransformation tests that when Arsia fork activates,
+// it correctly triggers the Holocene stage transformation in the derivation pipeline.
+//
+// This is critical because Arsia is a Mantle-specific fork that encompasses multiple
+// OP Stack forks including Holocene. Without proper stage transformation:
+// - BatchQueue won't be replaced by BatchStage
+// - Past batches won't be handled correctly (BatchPast vs BatchDrop)
+// - The derivation pipeline may behave incorrectly after upgrade
+//
+// The test verifies:
+// 1. Before Arsia: No Holocene stage transformation logs
+// 2. After Arsia activation: "BatchMux: transforming to Holocene stage" log appears
+// 3. The derivation pipeline continues to work correctly after transformation
+func TestArsiaTriggersHoloceneStageTransformation(gt *testing.T) {
+	t := helpers.NewDefaultTesting(gt)
+
+	// ========== Phase 1: Setup environment with log capturing ==========
+
+	testParams := &e2eutils.TestParams{
+		MaxSequencerDrift:   40,
+		SequencerWindowSize: 120,
+		ChannelTimeout:      120,
+		L1BlockTime:         12,
+		AllocType:           config.DefaultAllocType,
+	}
+
+	dp := e2eutils.MakeMantleDeployParams(t, testParams)
+	dp.DeployConfig.L2BlockTime = 2
+
+	// Limb at genesis, Arsia activates later
+	limbOffset := hexutil.Uint64(0)
+	arsiaOffset := hexutil.Uint64(48)
+	mantleHelpers.ApplyLimbToArsiaUpgrade(dp, &limbOffset, &arsiaOffset)
+
+	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
+
+	// Setup log capturing for both sequencer and verifier
+	seqLog := testlog.Logger(t, log.LevelInfo)
+	seqLogHandler := testlog.WrapCaptureLogger(seqLog.Handler())
+	seqLogger := log.NewLogger(seqLogHandler)
+
+	verifLog := testlog.Logger(t, log.LevelInfo)
+	verifLogHandler := testlog.WrapCaptureLogger(verifLog.Handler())
+	verifLogger := log.NewLogger(verifLogHandler)
+
+	miner, seqEngine, sequencer := helpers.SetupSequencerTest(t, sd, seqLogger)
+	_, verifier := helpers.SetupVerifier(t, sd, verifLogger, miner.L1Client(t, sd.RollupCfg),
+		miner.BlobStore(), &sync.Config{})
+
+	batcher := helpers.NewL2Batcher(testlog.Logger(t, log.LevelInfo), sd.RollupCfg,
+		helpers.MantleDefaultBatcherCfg(dp),
+		sequencer.RollupClient(), miner.EthClient(), seqEngine.EthClient(),
+		seqEngine.EngineClient(t, sd.RollupCfg))
+
+	// Helper functions to check logs
+	seqCapture := seqLogHandler.(*testlog.CapturingHandler)
+	verifCapture := verifLogHandler.(*testlog.CapturingHandler)
+
+	// Holocene activates two stage transformations:
+	// 1. BatchMux: BatchQueue -> BatchStage
+	// 2. ChannelMux: ChannelBank -> ChannelAssembler
+	findBatchMuxTransformLog := func(handler *testlog.CapturingHandler) *testlog.CapturedRecord {
+		return handler.FindLog(
+			testlog.NewMessageContainsFilter("BatchMux: transforming to Holocene stage"),
+		)
+	}
+
+	findChannelMuxTransformLog := func(handler *testlog.CapturingHandler) *testlog.CapturedRecord {
+		return handler.FindLog(
+			testlog.NewMessageContainsFilter("ChannelMux: transforming to Holocene stage"),
+		)
+	}
+
+	// ========== Phase 2: Verify no transformation before Arsia ==========
+
+	sequencer.ActL2PipelineFull(t)
+	verifier.ActL2PipelineFull(t)
+
+	genesisTime := sd.RollupCfg.Genesis.L2Time
+	expectedArsiaTime := genesisTime + uint64(arsiaOffset)
+
+	// Verify initial state
+	require.True(t, sd.RollupCfg.IsMantleLimb(genesisTime), "Limb should be active at genesis")
+	require.False(t, sd.RollupCfg.IsMantleArsia(genesisTime), "Arsia should not be active at genesis")
+	require.False(t, sd.RollupCfg.IsHolocene(genesisTime), "Holocene should not be active at genesis")
+
+	// Build some L2 blocks before Arsia
+	miner.ActEmptyBlock(t)
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	// Submit batch before Arsia
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batcher.LastSubmitted.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	// Derive on verifier
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Verify NO Holocene transformation happened yet (both BatchMux and ChannelMux)
+	require.Nil(t, findBatchMuxTransformLog(seqCapture),
+		"Sequencer should NOT have BatchMux transformation log before Arsia")
+	require.Nil(t, findChannelMuxTransformLog(seqCapture),
+		"Sequencer should NOT have ChannelMux transformation log before Arsia")
+	require.Nil(t, findBatchMuxTransformLog(verifCapture),
+		"Verifier should NOT have BatchMux transformation log before Arsia")
+	require.Nil(t, findChannelMuxTransformLog(verifCapture),
+		"Verifier should NOT have ChannelMux transformation log before Arsia")
+
+	t.Log("Phase 2 passed: No Holocene stage transformations before Arsia activation")
+
+	// ========== Phase 3: Activate Arsia and verify transformation ==========
+
+	// Push L1 time past Arsia activation
+	for miner.L1Chain().CurrentBlock().Time < expectedArsiaTime+60 {
+		miner.ActEmptyBlock(t)
+	}
+
+	// Build L2 blocks after Arsia activation
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	// Verify Arsia is now active
+	currentL2Time := sequencer.SyncStatus().UnsafeL2.Time
+	require.True(t, sd.RollupCfg.IsMantleArsia(currentL2Time), "Arsia should be active now")
+	require.True(t, sd.RollupCfg.IsHolocene(currentL2Time), "Holocene should be active with Arsia")
+
+	// Submit batch after Arsia
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batcher.LastSubmitted.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	// Derive on verifier - this should trigger Holocene stage transformations
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	// Verify both Holocene transformations happened on verifier:
+	// 1. BatchMux: BatchQueue -> BatchStage
+	verifBatchMuxLog := findBatchMuxTransformLog(verifCapture)
+	require.NotNil(t, verifBatchMuxLog,
+		"Verifier should have 'BatchMux: transforming to Holocene stage' log after Arsia activation")
+	t.Logf("Found verifier BatchMux transformation log: %s", verifBatchMuxLog.Message)
+
+	// 2. ChannelMux: ChannelBank -> ChannelAssembler
+	verifChannelMuxLog := findChannelMuxTransformLog(verifCapture)
+	require.NotNil(t, verifChannelMuxLog,
+		"Verifier should have 'ChannelMux: transforming to Holocene stage' log after Arsia activation")
+	t.Logf("Found verifier ChannelMux transformation log: %s", verifChannelMuxLog.Message)
+
+	// Derive on sequencer
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActL2PipelineFull(t)
+
+	// Verify both Holocene transformations happened on sequencer:
+	// 1. BatchMux: BatchQueue -> BatchStage
+	seqBatchMuxLog := findBatchMuxTransformLog(seqCapture)
+	require.NotNil(t, seqBatchMuxLog,
+		"Sequencer should have 'BatchMux: transforming to Holocene stage' log after Arsia activation")
+	t.Logf("Found sequencer BatchMux transformation log: %s", seqBatchMuxLog.Message)
+
+	// 2. ChannelMux: ChannelBank -> ChannelAssembler
+	seqChannelMuxLog := findChannelMuxTransformLog(seqCapture)
+	require.NotNil(t, seqChannelMuxLog,
+		"Sequencer should have 'ChannelMux: transforming to Holocene stage' log after Arsia activation")
+	t.Logf("Found sequencer ChannelMux transformation log: %s", seqChannelMuxLog.Message)
+
+	t.Log("Phase 3 passed: Both BatchMux and ChannelMux transformations occurred after Arsia activation")
+
+	// ========== Phase 4: Verify derivation continues to work ==========
+
+	// Build more L2 blocks
+	for i := 0; i < 3; i++ {
+		sequencer.ActL2StartBlock(t)
+		sequencer.ActL2EndBlock(t)
+	}
+
+	// Submit another batch
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batcher.LastSubmitted.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	// Verify derivation works correctly after transformation
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActL2PipelineFull(t)
+
+	// Verify sequencer and verifier are in sync
+	require.Equal(t, sequencer.L2Safe().Hash, verifier.L2Safe().Hash,
+		"Sequencer and verifier should have same safe head after Holocene transformation")
+
+	t.Log("Phase 4 passed: Derivation continues to work correctly after Holocene transformation")
+	t.Log("TestArsiaTriggersHoloceneStageTransformation PASSED")
+}
