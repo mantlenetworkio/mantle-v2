@@ -125,6 +125,6 @@ gates:
   - id: mantle-temp
     description: "Mantle network tests."
     tests:
-      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
-        name: TestChainFork
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
+        name: TestDepositMNTByBridge_WithoutMsgValue
         timeout: 5m

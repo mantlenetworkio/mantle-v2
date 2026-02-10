@@ -1,7 +1,11 @@
 package base
 
 import (
-	"math/big"
+	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
+	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
+	txib "github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
+	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -20,16 +24,27 @@ func TestTransfer(gt *testing.T) {
 	aliceBalance := alice.GetBalance()
 	bob := sys.Wallet.NewEOA(sys.L2EL)
 	bobBalance := bob.GetBalance()
+	t.Logger().Info("L2 balances before transfer", "alice", alice.Address(), "aliceBalance", aliceBalance, "bob", bob.Address(), "bobBalance", bobBalance)
 
 	depositAmount := eth.OneHundredthEther
 	bobAddr := bob.Address()
-	receipt := alice.Transfer(bobAddr, depositAmount)
+	receipt := alice.Transfer(bobAddr, depositAmount).Included.Value()
 	bob.WaitForBalance(bobBalance.Add(depositAmount))
 
-	gasCost := new(big.Int).Mul(new(big.Int).SetUint64(receipt.Included.Value().GasUsed), receipt.Included.Value().EffectiveGasPrice)
-	expectedBalanceChange := new(big.Int).Add(gasCost, receipt.Included.Value().L1Fee)
-	expectedFinalL2 := new(big.Int).Sub(aliceBalance.ToBig(), depositAmount.ToBig())
-	expectedFinalL2.Sub(expectedFinalL2, expectedBalanceChange)
+	if sys.L2Chain.IsMantleForkActive(forks.MantleArsia) {
+		l2Client := sys.L2EL.Escape().EthClient()
+		gpo := txib.NewGasPriceOracle(
+			txib.WithClient(l2Client),
+			txib.WithTo(predeploys.GasPriceOracleAddr),
+			txib.WithTest(t),
+		)
+		tokenRatio, err := contractio.Read(gpo.TokenRatio(), t.Ctx())
+		t.Require().NoError(err)
 
-	alice.WaitForBalance(eth.WeiBig(expectedFinalL2))
+		fees := dsl.NewArsiaFees(t, sys.L2Chain, tokenRatio)
+		fees.ValidateReceipt(receipt, depositAmount.ToBig())
+	} else {
+		fees := dsl.NewLimbFees(t, sys.L2Chain)
+		fees.ValidateReceipt(receipt, depositAmount.ToBig())
+	}
 }

@@ -3,9 +3,12 @@ package dsl
 import (
 	"math/big"
 
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack/match"
+	"github.com/ethereum-optimism/optimism/op-service/apis"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -24,6 +27,84 @@ func NewArsiaFees(t devtest.T, l2Network *L2Network, tokenRatio *big.Int) *Arsia
 	return &ArsiaFees{
 		FjordFees:  NewFjordFees(t, l2Network),
 		tokenRatio: tokenRatio,
+	}
+}
+
+// ValidateReceipt validates a transaction receipt and returns the validation result.
+// It assumes the receipt is for a simple L2 ETH transfer of the given amount.
+func (af *ArsiaFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) ArsiaFeesValidationResult {
+	client := af.l2Network.inner.L2ELNode(match.FirstL2EL).EthClient()
+	af.require.NotNil(receipt, "receipt must not be nil")
+	af.require.Equal(types.ReceiptStatusSuccessful, receipt.Status)
+	af.require.NotNil(amount, "amount must not be nil")
+	af.require.NotNil(receipt.BlockNumber, "receipt block number must not be nil")
+
+	signedTx := af.findSignedTx(client, receipt)
+	signer := types.LatestSignerForChainID(signedTx.ChainId())
+	from, err := types.Sender(signer, signedTx)
+	af.require.NoError(err)
+
+	blockNum := new(big.Int).Set(receipt.BlockNumber)
+	beforeBlockNum := new(big.Int).Sub(new(big.Int).Set(blockNum), big.NewInt(1))
+
+	startBalance, err := client.BalanceAt(af.ctx, from, beforeBlockNum)
+	af.require.NoError(err, "must lookup sender balance before")
+	endBalance, err := client.BalanceAt(af.ctx, from, blockNum)
+	af.require.NoError(err, "must lookup sender balance after")
+
+	vaultsBefore := af.getVaultBalancesAt(client, beforeBlockNum)
+	vaultsAfter := af.getVaultBalancesAt(client, blockNum)
+	vaultIncreases := af.calculateVaultIncreases(vaultsBefore, vaultsAfter)
+
+	coinbaseStartBalance := af.getCoinbaseBalanceAt(client, receipt.BlockHash, beforeBlockNum)
+	coinbaseEndBalance := af.getCoinbaseBalanceAt(client, receipt.BlockHash, blockNum)
+	coinbaseDiff := new(big.Int).Sub(coinbaseEndBalance, coinbaseStartBalance)
+
+	l1Fee := big.NewInt(0)
+	if receipt.L1Fee != nil {
+		l1Fee = receipt.L1Fee
+	}
+
+	block, err := client.InfoByHash(af.ctx, receipt.BlockHash)
+	af.require.NoError(err)
+
+	baseFee := new(big.Int).Mul(block.BaseFee(), big.NewInt(int64(receipt.GasUsed)))
+	totalGasFee := new(big.Int).Mul(receipt.EffectiveGasPrice, big.NewInt(int64(receipt.GasUsed)))
+	priorityFee := new(big.Int).Sub(totalGasFee, baseFee)
+
+	l2Fee := new(big.Int).Set(priorityFee)
+	operatorFee := vaultIncreases.OperatorVault
+
+	af.validateVaultIncreaseFees(l2Fee, baseFee, priorityFee, l1Fee, operatorFee, coinbaseDiff, vaultsAfter, vaultsBefore)
+
+	totalFee := new(big.Int).Add(l1Fee, l2Fee)
+	totalFee.Add(totalFee, baseFee)
+	totalFee.Add(totalFee, operatorFee)
+
+	walletBalanceDiff := new(big.Int).Sub(startBalance, endBalance)
+	walletBalanceDiff.Sub(walletBalanceDiff, amount)
+
+	fastLzSize, estimatedBrotliSize := af.validateFeatures(receipt, l1Fee)
+	af.validateFeeDistribution(l1Fee, baseFee, priorityFee, operatorFee, vaultIncreases)
+	af.validateTotalBalance(walletBalanceDiff, totalFee, vaultIncreases)
+
+	return ArsiaFeesValidationResult{
+		FjordFeesValidationResult: FjordFeesValidationResult{
+			TransactionReceipt:  receipt,
+			L1Fee:               l1Fee,
+			L2Fee:               l2Fee,
+			BaseFee:             baseFee,
+			PriorityFee:         priorityFee,
+			TotalFee:            totalFee,
+			VaultBalances:       vaultIncreases,
+			WalletBalanceDiff:   walletBalanceDiff,
+			TransferAmount:      amount,
+			FastLzSize:          fastLzSize,
+			EstimatedBrotliSize: estimatedBrotliSize,
+			OperatorFee:         operatorFee,
+			CoinbaseDiff:        coinbaseDiff,
+		},
+		TokenRatio: af.tokenRatio,
 	}
 }
 
@@ -93,6 +174,50 @@ func (af *ArsiaFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) Ar
 		},
 		TokenRatio: af.tokenRatio,
 	}
+}
+
+func (af *ArsiaFees) findSignedTx(client apis.EthClient, receipt *types.Receipt) *types.Transaction {
+	_, txs, err := client.InfoAndTxsByHash(af.ctx, receipt.BlockHash)
+	af.require.NoError(err)
+
+	for _, tx := range txs {
+		if tx.Hash() == receipt.TxHash {
+			return tx
+		}
+	}
+
+	af.require.Fail("should find the signed transaction")
+	return nil
+}
+
+func (af *ArsiaFees) getVaultBalancesAt(client apis.EthClient, blockNum *big.Int) VaultBalances {
+	baseFee := af.getBalanceAt(client, predeploys.BaseFeeVaultAddr, blockNum)
+	l1Fee := af.getBalanceAt(client, predeploys.L1FeeVaultAddr, blockNum)
+	sequencer := af.getBalanceAt(client, predeploys.SequencerFeeVaultAddr, blockNum)
+	operator := af.getBalanceAt(client, predeploys.OperatorFeeVaultAddr, blockNum)
+
+	return VaultBalances{
+		BaseFeeVault:   baseFee,
+		L1FeeVault:     l1Fee,
+		SequencerVault: sequencer,
+		OperatorVault:  operator,
+	}
+}
+
+func (af *ArsiaFees) getBalanceAt(client apis.EthClient, addr common.Address, blockNum *big.Int) *big.Int {
+	balance, err := client.BalanceAt(af.ctx, addr, blockNum)
+	af.require.NoError(err)
+	return balance
+}
+
+func (af *ArsiaFees) getCoinbaseBalanceAt(client apis.EthClient, blockHash common.Hash, blockNum *big.Int) *big.Int {
+	block, err := client.InfoByHash(af.ctx, blockHash)
+	af.require.NoError(err, "should get block info")
+	coinbase := block.Coinbase()
+
+	balance, err := client.BalanceAt(af.ctx, coinbase, blockNum)
+	af.require.NoError(err, "should get coinbase balance")
+	return balance
 }
 
 // validateFeatures validates that the features of the Arsia transaction are correct
