@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	synctester "github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -102,7 +103,7 @@ func setupOrchestrator(gt *testing.T, t devtest.T, blocksToSync uint64) (*sysgo.
 	ctx := t.Ctx()
 	require := t.Require()
 
-	config, err := GetNetworkPresetFromEnv()
+	config, err := synctester.GetNetworkPresetFromEnv()
 	require.NoError(err, "failed to initialize network preset")
 
 	// Runtime configuration values
