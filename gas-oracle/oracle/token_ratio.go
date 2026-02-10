@@ -20,21 +20,21 @@ import (
 )
 
 func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployContractBackend, tokenRatio *tokenratio.Client, cfg *Config) (func() error, error) {
-	if cfg.l2ChainID == nil {
+	if cfg.L2ChainID == nil {
 		return nil, errNoChainID
 	}
 
 	var opts *bind.TransactOpts
 	var err error
 	if !cfg.EnableHsm {
-		if cfg.privateKey == nil {
+		if cfg.PrivateKey == nil {
 			return nil, errNoPrivateKey
 		}
-		if cfg.l2ChainID == nil {
+		if cfg.L2ChainID == nil {
 			return nil, errNoChainID
 		}
 
-		opts, err = bind.NewKeyedTransactorWithChainID(cfg.privateKey, cfg.l2ChainID)
+		opts, err = bind.NewKeyedTransactorWithChainID(cfg.PrivateKey, cfg.L2ChainID)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			EthereumAddr: common.HexToAddress(cfg.HsmAddress),
 			Gclient:      client,
 		}
-		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), cfg.l2ChainID)
+		opts, err = mk.NewEthereumTransactorWithChainID(context.Background(), cfg.L2ChainID)
 		if err != nil {
 			log.Warn("gasoracle", "create signer error", err.Error())
 			return nil, err
@@ -72,7 +72,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 
 	// Create a new contract bindings in scope of the updateL2GasPriceFn
 	// that is returned from this function
-	contract, err := bindings.NewGasPriceOracle(cfg.gasPriceOracleAddress, l2Backend)
+	contract, err := bindings.NewGasPriceOracle(cfg.GasPriceOracleAddress, l2Backend)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 	if err != nil {
 		return nil, err
 	}
-	ometrics.GasOracleStats.FeeScalarGauge.Update(feeScalar.Int64())
+	ometrics.UpdateFeeScalar(feeScalar.Int64())
 
 	return func() error {
 		lastTokenRatio, err := contract.TokenRatio(&bind.CallOpts{
@@ -107,22 +107,22 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			return err
 		}
 		// Update fee scalar & l1 base fee metrics
-		ometrics.GasOracleStats.FeeScalarGauge.Update(feeScalar.Int64())
-		ometrics.GasOracleStats.L1BaseFeeGauge.Update(l1BaseFee.Int64())
+		ometrics.UpdateFeeScalar(feeScalar.Int64())
+		ometrics.UpdateL1BaseFee(l1BaseFee.Int64())
 
 		// NOTE this will return base multiple with coin ratio
-		latestRatio := tokenRatio.TokenRatio() * cfg.tokenRatioScalar
-		ometrics.GasOracleStats.TokenRatioGauge.Update(tokenRatio.TokenRatio())
-		ometrics.GasOracleStats.TokenRatioWithScalarGauge.Update(latestRatio)
-		if !isDifferenceSignificant(lastTokenRatio.Uint64(), uint64(latestRatio), cfg.tokenRatioSignificanceFactor) {
+		latestRatio := tokenRatio.TokenRatio() * cfg.TokenRatioScalar
+		ometrics.UpdateTokenRatio(tokenRatio.TokenRatio())
+		ometrics.UpdateTokenRatioWithScalar(latestRatio)
+		if !isDifferenceSignificant(lastTokenRatio.Uint64(), uint64(latestRatio), cfg.TokenRatioSignificanceFactor) {
 			log.Warn("non significant tokenRatio update", "former", lastTokenRatio, "current", latestRatio)
 			return nil
 		}
 
 		// Use the configured gas price if it is set,
 		// otherwise use gas estimation
-		if cfg.gasPrice != nil {
-			opts.GasPrice = cfg.gasPrice
+		if cfg.GasPrice != nil {
+			opts.GasPrice = cfg.GasPrice
 		} else {
 			gasPrice, err := l2Backend.SuggestGasPrice(opts.Context)
 			if err != nil {
@@ -141,9 +141,9 @@ func wrapUpdateTokenRatio(l1Backend bind.ContractTransactor, l2Backend DeployCon
 			return fmt.Errorf("cannot update tokenRatio: %w", err)
 		}
 		log.Info("TokenRatio transaction already sent", "hash", tx.Hash().Hex(), "tokenRatio", int64(latestRatio))
-		ometrics.GasOracleStats.TokenRatioOnchainGauge.Update(latestRatio)
+		ometrics.UpdateTokenRatioOnchain(latestRatio)
 
-		if cfg.waitForReceipt {
+		if cfg.WaitForReceipt {
 			// Wait for the receipt
 			receipt, err := waitForReceipt(l2Backend, tx)
 			if err != nil {

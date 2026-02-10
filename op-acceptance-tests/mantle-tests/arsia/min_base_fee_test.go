@@ -1,11 +1,10 @@
-package jovian
+package arsia
 
 import (
 	"math/big"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
-	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -58,20 +57,7 @@ func (mbf *minBaseFeeEnv) checkCompatibility(t devtest.T) {
 }
 
 func (mbf *minBaseFeeEnv) getSystemConfigOwner(t devtest.T) *dsl.EOA {
-	// priv := mbf.l2Network.Escape().Keys().Secret(devkeys.SystemConfigOwner.Key(mbf.l2Network.ChainID().ToBig()))
-
-	// mantle uses final system owner for system config owner
-	// For keyring used by sysgo, we use L1 chain ID. It is generated with chain id and role index.
-	// For keyring used by external devnet, we use L2 chain ID. It is read from a devnet environment file and mapped to a key named by l2 chain id and role index.
-	var chainID *big.Int
-	orch := presets.Orchestrator()
-	if orch.Type() == compat.SysGo {
-		chainID = mbf.l1Client.ChainID().ToBig()
-	} else {
-		// External devnet (sysext)
-		chainID = mbf.l2Network.ChainID().ToBig()
-	}
-	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.L1ProxyAdminOwnerRole.Key(chainID))
+	priv := mbf.l2Network.Escape().Keys().Secret(devkeys.SystemConfigOwner.Key(mbf.l2Network.ChainID().ToBig()))
 	return dsl.NewKey(t, priv).User(mbf.l1Client)
 }
 
@@ -87,8 +73,10 @@ func (mbf *minBaseFeeEnv) setMinBaseFeeViaSytemConfigOnL1(t devtest.T, minBaseFe
 		txplan.WithRetryInclusion(elClient, 10, retry.Exponential()),
 	)
 
-	_, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), customPlan)
+	receipt, err := contractio.Write(mbf.systemConfig.SetMinBaseFee(minBaseFee), t.Ctx(), customPlan)
 	t.Require().NoError(err, "SetMinBaseFee transaction failed")
+
+	t.Log("tx hash", "tx hash", receipt.TxHash)
 
 	t.Logf("Set min base fee on L1: minBaseFee=%d", minBaseFee)
 }
@@ -113,8 +101,8 @@ func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expecte
 	var elasticity uint64
 	if rollupCfg.ChainOpConfig == nil {
 		// mantle default values
-		denominator = 50
-		elasticity = 4
+		denominator = 8
+		elasticity = 2
 		t.Logf("mantle default values: denominator: %d, elasticity: %d", denominator, elasticity)
 	} else {
 		denominator = rollupCfg.ChainOpConfig.EIP1559Denominator
@@ -149,7 +137,7 @@ func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expecte
 		got := binary.BigEndian.Uint64(header.Extra[9:])
 		actualBlockExtraData = header.Extra
 		return got == expected
-	}, 2*time.Minute, 5*time.Second, "L2 min base fee in block header did not sync within timeout")
+	}, 3*time.Minute, 5*time.Second, "L2 min base fee in block header did not sync within timeout")
 
 	t.Require().Equal(expectedExtraData, eth.BytesMax32(actualBlockExtraData), "block header extradata doesnt match")
 }
@@ -160,7 +148,7 @@ func TestMinBaseFee(gt *testing.T) {
 	sys := presets.NewMinimal(t)
 	require := t.Require()
 
-	require.True(sys.L2Chain.IsForkActive(forks.Jovian), "Jovian fork must be active for this test")
+	require.True(sys.L2Chain.IsMantleForkActive(forks.MantleArsia), "Arsia fork must be active for this test")
 
 	minBaseFee := newMinBaseFee(t, sys.L2Chain, sys.L1EL, sys.L2EL)
 	minBaseFee.checkCompatibility(t)

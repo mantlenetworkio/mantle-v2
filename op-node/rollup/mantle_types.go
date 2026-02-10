@@ -125,6 +125,18 @@ func (c *Config) SetMantleActivationTime(fork MantleForkName, timestamp *uint64)
 	}
 }
 
+// IsActivationBlock returns the fork which activates at the block with time newTime if the previous
+// block's time is oldTime. It returns an empty ForkName if no fork activation takes place between
+// those timestamps. It can be used for both, L1 and L2 blocks.
+func (c *Config) IsMantleActivationBlock(oldTime, newTime uint64) MantleForkName {
+	for _, fork := range scheduleableMantleForks {
+		if c.IsMantleForkActive(fork, newTime) && !c.IsMantleForkActive(fork, oldTime) {
+			return fork
+		}
+	}
+	return forks.MantleNone
+}
+
 type MantleForkName = forks.MantleForkName
 
 var scheduleableMantleForks = forks.MantleForksFrom(forks.MantleBaseFee)

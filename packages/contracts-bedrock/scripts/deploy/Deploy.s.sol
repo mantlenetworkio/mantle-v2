@@ -257,6 +257,7 @@ contract Deploy is Deployer {
             l2OutputOracleImpl: IL2OutputOracle(artifacts.mustGetAddress("L2OutputOracle")),
             l2OutputOracleProxy: IL2OutputOracle(artifacts.mustGetAddress("L2OutputOracleProxy")),
             finalSystemOwner: cfg.finalSystemOwner(),
+            systemConfigOwner: cfg.systemConfigOwner(),
             basefeeScalar: uint32(cfg.basefeeScalar()),
             blobbasefeeScalar: uint32(cfg.blobbasefeeScalar()),
             batchSenderAddress: cfg.batchSenderAddress(),

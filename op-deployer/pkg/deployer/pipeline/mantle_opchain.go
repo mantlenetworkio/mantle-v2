@@ -68,6 +68,7 @@ func DeployMantleOPChain(env *Env, intent *state.Intent, st *state.State, chainI
 		L2OutputOracleImpl:                thisState.L2OutputOracleImpl,
 		L2OutputOracleProxy:               thisState.L2OutputOracleProxy,
 		FinalSystemOwner:                  thisIntent.Roles.L1ProxyAdminOwner,
+		SystemConfigOwner:                 thisIntent.Roles.SystemConfigOwner,
 		BasefeeScalar:                     deployParams.BasefeeScalar,
 		BlobbasefeeScalar:                 deployParams.BlobbasefeeScalar,
 		BatchSenderAddress:                thisIntent.Roles.Batcher,
