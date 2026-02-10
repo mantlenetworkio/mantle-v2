@@ -32,7 +32,7 @@ func TestSyncTesterUnsafeOnlyReachUnsafeTip(gt *testing.T) {
 
 	// Make sure the unsafe only CL can still advance unsafe
 	target := unsafeTipNum + 3
-	sys.L2ELReadOnly.Reached(eth.Unsafe, target, 3)
+	sys.L2ELReadOnly.Reached(eth.Unsafe, target, 5)
 	for i := unsafeTipNum + 1; i <= target; i++ {
 		sys.L2CL.SignalTarget(sys.L2ELReadOnly, i)
 	}
@@ -41,7 +41,7 @@ func TestSyncTesterUnsafeOnlyReachUnsafeTip(gt *testing.T) {
 
 	// Check unsafe gap is closed
 	target = unsafeTipNum + 9
-	sys.L2ELReadOnly.Reached(eth.Unsafe, target, 6)
+	sys.L2ELReadOnly.Reached(eth.Unsafe, target, 10)
 	for i := unsafeTipNum + 6; i <= target; i++ {
 		sys.L2CL.SignalTarget(sys.L2ELReadOnly, i)
 	}
