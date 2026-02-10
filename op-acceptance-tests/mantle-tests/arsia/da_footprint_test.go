@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum-optimism/optimism/op-service/txinclude"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
@@ -36,7 +37,7 @@ func NewCalldataSpammer(eoa *loadtest.SyncEOA) *CalldataSpammer {
 }
 
 func (s *CalldataSpammer) Spam(t devtest.T) error {
-	data := make([]byte, 50_000)
+	data := make([]byte, 30_000)
 	_, err := rand.Read(data)
 	t.Require().NoError(err)
 	_, err = s.eoa.Include(t, txplan.WithTo(&common.Address{}), txplan.WithData(data))
@@ -97,7 +98,7 @@ func (env *daFootprintEnv) getSystemConfigOwner(t devtest.T) *dsl.EOA {
 
 func (env *daFootprintEnv) setDAFootprintGasScalarViaSystemConfig(t devtest.T, scalar uint16) *types.Receipt {
 	owner := env.getSystemConfigOwner(t)
-	rec, err := contractio.Write(env.systemConfig.SetDAFootprintGasScalar(scalar), t.Ctx(), owner.Plan())
+	rec, err := contractio.Write(env.systemConfig.SetDAFootprintGasScalar(scalar), t.Ctx(), owner.Plan(), txplan.WithRetryInclusion(env.l1Client.Escape().EthClient(), 12, retry.Exponential()))
 	t.Require().NoError(err, "SetDAFootprintGasScalar transaction failed")
 	t.Logf("Set DA footprint gas scalar on L1: scalar=%d", scalar)
 	return rec

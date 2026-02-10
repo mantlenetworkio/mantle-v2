@@ -1,9 +1,12 @@
 package sysgo
 
 import (
+	"fmt"
+
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params/forks"
 )
 
@@ -101,6 +104,73 @@ func DefaultMantleSimpleSystemWithSyncTester(dest *DefaultSimpleSystemWithSyncTe
 
 	// P2P Connect CLs to signal unsafe heads
 	opt.Add(WithL2CLP2PConnection(ids.L2CL, ids.L2CL2))
+
+	opt.Add(WithL2MetricsDashboard())
+
+	opt.Add(stack.Finally(func(orch *Orchestrator) {
+		*dest = ids
+	}))
+
+	return opt
+}
+
+// ExternalELSystemWithEndpoint creates a minimal external EL system
+// using network config provided directly in the ExtNetworkConfig.
+// This supports networks not in the superchain registry (e.g. Mantle) by
+// accepting the rollup config and chain config via the ExtNetworkConfig struct.
+func ExternalELSystemWithEndpoint(dest *DefaultMinimalExternalELSystemIDs, networkPreset stack.ExtNetworkConfig) stack.Option[*Orchestrator] {
+	l2ChainID := networkPreset.L2ChainID
+
+	ids := NewExternalELSystemIDs(networkPreset.L1ChainID, l2ChainID)
+
+	opt := stack.Combine[*Orchestrator]()
+	opt.Add(stack.BeforeDeploy(func(o *Orchestrator) {
+		o.P().Logger().Info("Setting up external EL system", "network", networkPreset.L2NetworkName)
+	}))
+
+	opt.Add(WithMnemonicKeys(devkeys.TestMnemonic))
+
+	// Resolve L1 chain config: prefer externally-provided config, fall back to well-known chain lookup
+	l1ChainConfig := networkPreset.L1ChainConfig
+	if l1ChainConfig == nil {
+		chainID := ids.L1.ChainID()
+		l1ChainConfig = eth.L1ChainConfigByChainID(chainID)
+		if l1ChainConfig == nil {
+			panic(fmt.Sprintf("unsupported L1 chain ID: %s (provide L1ChainConfig in ExtNetworkConfig for non-standard chains)", chainID))
+		}
+	}
+
+	// Skip deployer since we're using external L1 and externally-provided L2 config
+	// Create L1 network record for external L1
+	opt.Add(stack.BeforeDeploy(func(o *Orchestrator) {
+		l1Net := &L1Network{
+			id: ids.L1,
+			genesis: &core.Genesis{
+				Config: l1ChainConfig,
+			},
+			blockTime: 12,
+		}
+		o.l1Nets.Set(ids.L1.ChainID(), l1Net)
+	}))
+
+	opt.Add(WithExtL1Nodes(ids.L1EL, ids.L1CL, networkPreset.L1ELEndpoint, networkPreset.L1CLBeaconEndpoint))
+
+	// Use configs from ExtNetworkConfig
+	opt.Add(WithEmptyDepSetFromExtConfig(
+		stack.L2NetworkID(l2ChainID),
+		networkPreset.L2NetworkName,
+		networkPreset.RollupConfig,
+		networkPreset.L2ChainConfig,
+	))
+
+	// Add SyncTester service with external endpoint
+	opt.Add(WithSyncTesterWithExternalEndpoint(ids.SyncTester, networkPreset.L2ELEndpoint, l2ChainID))
+
+	// Add SyncTesterL2ELNode as the L2EL replacement for real-world EL endpoint
+	opt.Add(WithSyncTesterL2ELNode(ids.L2EL, ids.L2EL))
+	opt.Add(WithL2CLNode(ids.L2CL, ids.L1CL, ids.L1EL, ids.L2EL))
+
+	opt.Add(WithExtL2Node(ids.L2ELReadOnly, networkPreset.L2ELEndpoint))
 
 	opt.Add(WithL2MetricsDashboard())
 
