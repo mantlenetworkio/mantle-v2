@@ -1,10 +1,10 @@
 package sync_tester_ext_el
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
+	synctester "github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack/match"
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
-	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
@@ -104,7 +103,7 @@ func setupOrchestrator(gt *testing.T, t devtest.T, blocksToSync uint64) (*sysgo.
 	ctx := t.Ctx()
 	require := t.Require()
 
-	config, err := GetNetworkPreset(os.Getenv("NETWORK_PRESET"))
+	config, err := synctester.GetNetworkPresetFromEnv()
 	require.NoError(err, "failed to initialize network preset")
 
 	// Runtime configuration values
@@ -117,6 +116,8 @@ func setupOrchestrator(gt *testing.T, t devtest.T, blocksToSync uint64) (*sysgo.
 	l.Info("L1_EL_ENDPOINT", "value", config.L1ELEndpoint)
 	l.Info("TAILSCALE_NETWORKING", "value", os.Getenv("TAILSCALE_NETWORKING"))
 	l.Info("L2_CL_SYNCMODE", "value", L2CLSyncMode)
+	l.Info("Config has RollupConfig", "value", config.RollupConfig != nil)
+	l.Info("Config has L2ChainConfig", "value", config.L2ChainConfig != nil)
 
 	// Setup orchestrator
 	logger := testlog.Logger(gt, log.LevelInfo)
@@ -143,12 +144,9 @@ func setupOrchestrator(gt *testing.T, t devtest.T, blocksToSync uint64) (*sysgo.
 	target := initial + blocksToSync
 	l.Info("LATEST_BLOCK", "latest_block", latestBlock.NumberU64(), "session_initial_block", initial, "target_block", target)
 
-	opt := presets.WithExternalELWithSuperchainRegistry(config)
+	opt := presets.WithExternalEL(config)
 	if L2CLSyncMode == sync.ELSync {
-		chainCfg := chaincfg.ChainByName(config.L2NetworkName)
-		if chainCfg == nil {
-			panic(fmt.Sprintf("network %s not found in superchain registry", config.L2NetworkName))
-		}
+		require.NotNil(config.RollupConfig, "rollup config is required for EL sync mode; set ROLLUP_CONFIG_PATH env var")
 		opt = stack.Combine(opt,
 			presets.WithExecutionLayerSyncOnVerifiers(),
 			presets.WithELSyncActive(),
@@ -156,7 +154,7 @@ func setupOrchestrator(gt *testing.T, t devtest.T, blocksToSync uint64) (*sysgo.
 				Latest: initial,
 				Safe:   0,
 				// Need to set finalized to genesis to unskip EL Sync
-				Finalized: chainCfg.Genesis.L2.Number,
+				Finalized: config.RollupConfig.Genesis.L2.Number,
 			}),
 		)
 	} else {

@@ -37,6 +37,10 @@ func WithExternalELWithSuperchainRegistry(networkPreset stack.ExtNetworkConfig) 
 	return stack.MakeCommon(sysgo.ExternalELSystemWithEndpointAndSuperchainRegistry(&sysgo.DefaultMinimalExternalELSystemIDs{}, networkPreset))
 }
 
+func WithExternalEL(networkPreset stack.ExtNetworkConfig) stack.CommonOption {
+	return stack.MakeCommon(sysgo.ExternalELSystemWithEndpoint(&sysgo.DefaultMinimalExternalELSystemIDs{}, networkPreset))
+}
+
 func NewMinimalExternalEL(t devtest.T) *MinimalExternalEL {
 	orch := Orchestrator()
 	system := shim.NewSystem(t)

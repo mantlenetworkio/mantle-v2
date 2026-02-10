@@ -1,25 +1,33 @@
 package sync_tester_unsafe_only_ext
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-acceptance-tests/tests/sync_tester/sync_tester_ext_el"
+	synctester "github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester"
 	bss "github.com/ethereum-optimism/optimism/op-batcher/batcher"
 	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
-	"github.com/ethereum-optimism/optimism/op-node/chaincfg"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 func TestMain(m *testing.M) {
-	// Target op-sepolia
-	networkName := "op-sepolia"
-	config, _ := sync_tester_ext_el.GetNetworkPreset(networkName)
-	chainCfg := chaincfg.ChainByName(networkName)
+	config, err := synctester.GetNetworkPresetFromEnv()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to load network preset from env: %v\n", err)
+		os.Exit(1)
+	}
+	if config.RollupConfig == nil {
+		fmt.Fprintf(os.Stderr, "rollup config is required for unsafe-only test\n")
+		os.Exit(1)
+	}
+	genesisL2Number := config.RollupConfig.Genesis.L2.Number
+
 	presets.DoMain(m,
-		presets.WithExternalELWithSuperchainRegistry(config),
+		presets.WithExternalEL(config),
 		// CL connected to sync tester EL is verifier
 		presets.WithExecutionLayerSyncOnVerifiers(),
 		// Make sync tester EL mock EL Sync
@@ -35,9 +43,9 @@ func TestMain(m *testing.M) {
 		})),
 		// Sync tester EL at genesis
 		presets.WithSyncTesterELInitialState(eth.FCUState{
-			Latest:    chainCfg.Genesis.L2.Number,
-			Safe:      chainCfg.Genesis.L2.Number,
-			Finalized: chainCfg.Genesis.L2.Number,
+			Latest:    genesisL2Number,
+			Safe:      genesisL2Number,
+			Finalized: genesisL2Number,
 		}),
 	)
 }
