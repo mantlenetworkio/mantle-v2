@@ -49,18 +49,18 @@ type GasPriceOracle struct {
 
 // Start runs the GasPriceOracle
 func (g *GasPriceOracle) Start() error {
-	if g.config.l1ChainID == nil {
+	if g.config.L1ChainID == nil {
 		return fmt.Errorf("layer-one: %w", errNoChainID)
 	}
-	if g.config.l2ChainID == nil {
+	if g.config.L2ChainID == nil {
 		return fmt.Errorf("layer-two: %w", errNoChainID)
 	}
 	var address common.Address
 	if !g.config.EnableHsm {
-		if g.config.privateKey == nil {
+		if g.config.PrivateKey == nil {
 			return errNoPrivateKey
 		}
-		address = crypto.PubkeyToAddress(g.config.privateKey.PublicKey)
+		address = crypto.PubkeyToAddress(g.config.PrivateKey.PublicKey)
 	} else {
 		address = common.HexToAddress(g.config.HsmAddress)
 	}
@@ -95,7 +95,7 @@ func (g *GasPriceOracle) ensure() error {
 	if g.config.EnableHsm {
 		address = common.HexToAddress(g.config.HsmAddress)
 	} else {
-		address = crypto.PubkeyToAddress(g.config.privateKey.PublicKey)
+		address = crypto.PubkeyToAddress(g.config.PrivateKey.PublicKey)
 	}
 	if address != operator {
 		log.Error("Signing key does not match contract operator", "signer", address.Hex(), "operator", operator.Hex())
@@ -105,7 +105,7 @@ func (g *GasPriceOracle) ensure() error {
 }
 
 func (g *GasPriceOracle) TokenRatioLoop() {
-	timer := time.NewTicker(time.Duration(g.config.tokenRatioEpochLengthSeconds) * time.Second)
+	timer := time.NewTicker(time.Duration(g.config.TokenRatioEpochLengthSeconds) * time.Second)
 	defer timer.Stop()
 
 	updateTokenRatio, err := wrapUpdateTokenRatio(g.l1Backend, g.l2Backend, g.tokenRatio, g.config)
@@ -126,8 +126,8 @@ func (g *GasPriceOracle) TokenRatioLoop() {
 
 // NewGasPriceOracle creates a new GasPriceOracle based on a Config
 func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
-	tokenRatioClient, err := NewTokenRatioClient(cfg.ethereumHttpUrl, cfg.layerTwoHttpUrl, cfg.tokenRatioCexURL, cfg.tokenRatioDexURL,
-		cfg.tokenRatioUpdateFrequencySecond)
+	tokenRatioClient, err := NewTokenRatioClient(cfg.EthereumHttpUrl, cfg.LayerTwoHttpUrl, cfg.TokenRatioCexURL, cfg.TokenRatioDexURL,
+		cfg.TokenRatioUpdateFrequencySecond)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		return nil, err
 	}
 
-	address := cfg.gasPriceOracleAddress
+	address := cfg.GasPriceOracleAddress
 	contract, err := bindings.NewGasPriceOracle(address, tokenRatioClient.l2Client)
 	if err != nil {
 		return nil, err
@@ -170,25 +170,25 @@ func NewGasPriceOracle(cfg *Config) (*GasPriceOracle, error) {
 		return nil, err
 	}
 
-	if cfg.l2ChainID != nil {
-		if cfg.l2ChainID.Cmp(l2ChainID) != 0 {
+	if cfg.L2ChainID != nil {
+		if cfg.L2ChainID.Cmp(l2ChainID) != 0 {
 			return nil, fmt.Errorf("%w: L2: configured with %d and got %d",
-				errWrongChainID, cfg.l2ChainID, l2ChainID)
+				errWrongChainID, cfg.L2ChainID, l2ChainID)
 		}
 	} else {
-		cfg.l2ChainID = l2ChainID
+		cfg.L2ChainID = l2ChainID
 	}
 
-	if cfg.l1ChainID != nil {
-		if cfg.l1ChainID.Cmp(l1ChainID) != 0 {
+	if cfg.L1ChainID != nil {
+		if cfg.L1ChainID.Cmp(l1ChainID) != 0 {
 			return nil, fmt.Errorf("%w: L1: configured with %d and got %d",
-				errWrongChainID, cfg.l1ChainID, l1ChainID)
+				errWrongChainID, cfg.L1ChainID, l1ChainID)
 		}
 	} else {
-		cfg.l1ChainID = l1ChainID
+		cfg.L1ChainID = l1ChainID
 	}
 
-	if !cfg.EnableHsm && cfg.privateKey == nil {
+	if !cfg.EnableHsm && cfg.PrivateKey == nil {
 		return nil, errNoPrivateKey
 	}
 

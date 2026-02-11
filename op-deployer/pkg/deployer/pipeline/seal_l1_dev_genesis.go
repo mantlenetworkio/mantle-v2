@@ -50,6 +50,7 @@ func SealL1DevGenesis(env *Env, intent *state.Intent, st *state.State) error {
 		L1PragueTimeOffset: l1DevParams.PragueTimeOffset,
 		L1OsakaTimeOffset:  l1DevParams.OsakaTimeOffset,
 		L1BPO1TimeOffset:   l1DevParams.BPO1TimeOffset,
+		L1BPO2TimeOffset:   l1DevParams.BPO2TimeOffset,
 		BlobScheduleConfig: l1DevParams.BlobSchedule,
 	})
 	if err != nil {

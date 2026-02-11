@@ -1,4 +1,4 @@
-package jovian
+package arsia
 
 import (
 	"testing"
@@ -7,5 +7,5 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	presets.DoMain(m, presets.WithMantleMinimal(), presets.WithMantleArsiaAtGenesis())
+	presets.DoMain(m, presets.WithMantleMinimal())
 }

@@ -362,6 +362,9 @@ contract L2Genesis is Script {
         // Set in proxy (storage is only used in proxy, not in implementation)
         vm.store(Predeploys.GAS_PRICE_ORACLE, ownerSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
         vm.store(Predeploys.GAS_PRICE_ORACLE, operatorSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
+
+        // Set initial token ratio to 3000
+        vm.store(Predeploys.GAS_PRICE_ORACLE, bytes32(uint256(0)), bytes32(uint256(3000)));
     }
 
     /// @notice This predeploy is following the safety invariant #1.

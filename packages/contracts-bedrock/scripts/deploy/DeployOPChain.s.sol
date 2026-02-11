@@ -42,6 +42,7 @@ contract DeployOPChain is Script {
         IL2OutputOracle l2OutputOracleImpl;
         IL2OutputOracle l2OutputOracleProxy;
         address finalSystemOwner;
+        address systemConfigOwner;
         uint32 basefeeScalar;
         uint32 blobbasefeeScalar;
         address batchSenderAddress;
@@ -105,7 +106,7 @@ contract DeployOPChain is Script {
         bytes memory data = abi.encodeCall(
             ISystemConfig.initialize,
             (
-                _input.finalSystemOwner,
+                _input.systemConfigOwner,
                 _input.basefeeScalar,
                 _input.blobbasefeeScalar,
                 bytes32(uint256(uint160(_input.batchSenderAddress))),

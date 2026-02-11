@@ -18,6 +18,10 @@ type GasPriceOracle struct {
 	GetL1Fee           func(data []byte) TypedCall[eth.ETH]             `sol:"getL1Fee"`
 	GetL1GasUsed       func(data []byte) TypedCall[uint64]              `sol:"getL1GasUsed"`
 	GetL1FeeUpperBound func(unsignedTxSize *big.Int) TypedCall[eth.ETH] `sol:"getL1FeeUpperBound"`
+
+	// Mantle specific functions
+	IsArsia    func() TypedCall[bool]     `sol:"isArsia"`
+	TokenRatio func() TypedCall[*big.Int] `sol:"tokenRatio"`
 }
 
 func NewGasPriceOracle(opts ...CallFactoryOption) *GasPriceOracle {

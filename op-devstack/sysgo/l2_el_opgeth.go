@@ -11,6 +11,7 @@ import (
 	gn "github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/preconf"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -117,6 +118,17 @@ func (n *OpGeth) Start() {
 		func(ethCfg *ethconfig.Config, nodeCfg *gn.Config) error {
 			ethCfg.InteropMessageRPC = n.supervisorRPC
 			ethCfg.InteropMempoolFiltering = true
+
+			// Ensure preconf configs are non-nil before overriding defaults.
+			minerPreconf := preconf.DefaultMinerConfig
+			ethCfg.Miner.PreconfConfig = &minerPreconf
+			txpoolPreconf := preconf.DefaultTxPoolConfig
+			ethCfg.TxPool.Preconf = &txpoolPreconf
+
+			ethCfg.Miner.PreconfConfig.EnablePreconfChecker = false
+			ethCfg.TxPool.Preconf.AllPreconfs = false
+			ethCfg.TxPool.Preconf.FromPreconfs = nil
+			ethCfg.TxPool.Preconf.ToPreconfs = nil
 
 			listenAddr := n.cfg.P2PAddr
 			port := n.cfg.P2PPort

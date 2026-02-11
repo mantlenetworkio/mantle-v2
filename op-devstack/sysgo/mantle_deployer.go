@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/intentbuilder"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	ps "github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -22,58 +21,9 @@ import (
 var DefaultL1MNT = common.HexToAddress("0x8000000000000000000000000000000000000000")
 var DefaultOperatorFeeVaultRecipient = common.HexToAddress("0x976EA74026E726554dB657fA54763abd0C3a0aa9")
 
-func DefaultMantleMinimalSystem(dest *DefaultMinimalSystemIDs) stack.Option[*Orchestrator] {
-	ids := NewDefaultMinimalSystemIDs(DefaultL1ID, DefaultL2AID)
-	return defaultMantleMinimalSystemOpts(&ids, dest)
-}
-
-func defaultMantleMinimalSystemOpts(ids *DefaultMinimalSystemIDs, dest *DefaultMinimalSystemIDs) stack.CombinedOption[*Orchestrator] {
-	opt := stack.Combine[*Orchestrator]()
-	opt.Add(stack.BeforeDeploy(func(o *Orchestrator) {
-		o.P().Logger().Info("Setting up")
-	}))
-
-	opt.Add(WithMnemonicKeys(devkeys.TestMnemonic))
-
-	opt.Add(WithMantleDeployer(),
-		WithDeployerOptions(
-			WithLocalContractSources(),
-			WithCommons(ids.L1.ChainID()),
-			WithPrefundedL2(ids.L1.ChainID(), ids.L2.ChainID()),
-		),
-		WithDeployerPipelineOption(WithL1MNT(DefaultL1MNT)),
-		WithDeployerPipelineOption(WithOperatorFeeVaultRecipient(DefaultOperatorFeeVaultRecipient)),
-	)
-
-	opt.Add(WithL1Nodes(ids.L1EL, ids.L1CL))
-
-	opt.Add(WithL2ELNode(ids.L2EL))
-	opt.Add(WithL2CLNode(ids.L2CL, ids.L1CL, ids.L1EL, ids.L2EL, L2CLSequencer()))
-
-	opt.Add(WithBatcher(ids.L2Batcher, ids.L1EL, ids.L2CL, ids.L2EL))
-	opt.Add(WithLegacyProposer(ids.L2Proposer, ids.L1EL, &ids.L2CL, nil))
-
-	opt.Add(WithFaucets([]stack.L1ELNodeID{ids.L1EL}, []stack.L2ELNodeID{ids.L2EL}))
-
-	opt.Add(WithTestSequencer(ids.TestSequencer, ids.L1CL, ids.L2CL, ids.L1EL, ids.L2EL))
-
-	// opt.Add(WithL2Challenger(ids.L2Challenger, ids.L1EL, ids.L1CL, nil, nil, &ids.L2CL, []stack.L2ELNodeID{
-	// 	ids.L2EL,
-	// }))
-
-	opt.Add(WithL2MetricsDashboard())
-
-	opt.Add(stack.Finally(func(orch *Orchestrator) {
-		*dest = *ids
-	}))
-
-	return opt
-}
-
-// An alternative way to set the L1MNT and OperatorFeeVaultRecipient is to use the WithDeployerOption.
-// It requires we extend the L2Configurator interface to include WithL1MNT and WithOperatorFeeVaultRecipient.
+// WithL1MNT An alternative way to set the L1MNT. The other way is to use the WithDeployerOption.
+// It requires we extend the L2Configurator interface to include WithL1MNT.
 // Since MNT token address is a Mantle-only feature, directly modifying deployer pipeline seems cleaner.
-// But if one day we integrate mantle rde-v3 as an orchestrator choice, we should think about which way is better.
 func WithL1MNT(l1MNT common.Address) DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
 		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting L1MNT", "l1MNT", l1MNT.Hex())
@@ -92,31 +42,35 @@ func WithOperatorFeeVaultRecipient(recipient common.Address) DeployerPipelineOpt
 	}
 }
 
-func WithLegacyProposer(proposerID stack.L2ProposerID, l1ELID stack.L1ELNodeID,
-	l2CLID *stack.L2CLNodeID, supervisorID *stack.SupervisorID) stack.Option[*Orchestrator] {
-	return stack.AfterDeploy(func(orch *Orchestrator) {
-		WithLegacyProposerOption(orch, proposerID)
-		WithProposerPostDeploy(orch, proposerID, l1ELID, l2CLID, supervisorID)
-	})
+// WithMantlePortalPaused sets the OptimismPortalPaused override (defaults to true in Mantle artifacts).
+func WithMantlePortalPaused(paused bool) DeployerPipelineOption {
+	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting OptimismPortalPaused", "paused", paused)
+		if intent.GlobalDeployOverrides == nil {
+			intent.GlobalDeployOverrides = make(map[string]any)
+		}
+		intent.GlobalDeployOverrides["OptimismPortalPaused"] = paused
+	}
 }
 
-func WithLegacyProposerOption(orch *Orchestrator, proposerID stack.L2ProposerID) {
-	orch.proposerOptions = append(orch.proposerOptions, func(id stack.L2ProposerID, cfg *ps.CLIConfig) {
-		ctx := orch.P().Ctx()
-		ctx = stack.ContextWithID(ctx, proposerID)
-		p := orch.P().WithCtx(ctx)
-
-		require := p.Require()
-		l2Net, ok := orch.l2Nets.Get(proposerID.ChainID())
-		require.True(ok)
-		cfg.L2OOAddress = l2Net.deployment.L2OOAddress().Hex()
-		// turn off DGF by setting relating contract address to empty string
-		cfg.DGFAddress = ""
-	})
+func WithScalarAndOverhead(scalar uint32, overhead uint64) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting Scalar and Overhead", "scalar", scalar, "overhead", overhead)
+		if intent.GlobalDeployOverrides == nil {
+			intent.GlobalDeployOverrides = make(map[string]any)
+		}
+		intent.GlobalDeployOverrides["gasPriceOracleScalar"] = scalar
+		intent.GlobalDeployOverrides["gasPriceOracleOverhead"] = overhead
+	}
 }
 
-func (d *L2Deployment) L2OOAddress() common.Address {
-	return d.l2OOAddress
+func WithGasLimit(gasLimit uint64) DeployerPipelineOption {
+	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting GasLimit", "gasLimit", gasLimit)
+		for _, l2 := range intent.Chains {
+			l2.GasLimit = gasLimit
+		}
+	}
 }
 
 func WithMantleForkAtGenesis(fork forks.MantleForkName) DeployerPipelineOption {
@@ -150,20 +104,48 @@ func WithMantleForkAtOffset(fork forks.MantleForkName, offset *uint64) DeployerP
 		for _, l2 := range intent.Chains {
 			key := fmt.Sprintf("l2Genesis%sTimeOffset", string(fork))
 			if offset == nil {
-				delete(l2.DeployOverrides, key)
+				l2.DeployOverrides[key] = nil // Explicitly set to nil
 			} else {
 				// The typing is important, or op-deployer merge-JSON tricks will fail
 				l2.DeployOverrides[key] = (*hexutil.Uint64)(offset)
 			}
 		}
-
 	}
 }
 
-/////////////////////////////////////////////////////////////
-// Deployer
-/////////////////////////////////////////////////////////////
+func WithMantleHardforkSequentialActivation(startFork, endFork forks.MantleForkName, delta uint64) DeployerPipelineOption {
+	return func(wb *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting MantleHardforkSequentialActivation", "startFork", string(startFork), "endFork", string(endFork), "delta", delta)
+		var opts []DeployerPipelineOption
+		opts = append(opts, WithMantleForkAtGenesis(startFork))
+		var activateWithOffset bool
+		var deactivate bool
+		var relativeIdx uint64
+		for _, fork := range forks.AllMantleForks {
+			if deactivate {
+				opts = append(opts, WithMantleForkAtOffset(fork, nil))
+				continue
+			}
+			if activateWithOffset {
+				offset := delta * relativeIdx
+				opts = append(opts, WithMantleForkAtOffset(fork, &offset))
+				relativeIdx++
+			}
+			if fork == startFork {
+				activateWithOffset = true
+			}
+			if fork == endFork {
+				deactivate = true
+			}
+		}
 
+		for _, opt := range opts {
+			opt(wb, intent, cfg)
+		}
+	}
+}
+
+// WithMantleDeployer swaps in the Mantle-specific deployer pipeline.
 func WithMantleDeployer() stack.Option[*Orchestrator] {
 	return stack.FnOption[*Orchestrator]{
 		BeforeDeployFn: func(o *Orchestrator) {
@@ -229,10 +211,7 @@ func WithMantleDeployer() stack.Option[*Orchestrator] {
 	}
 }
 
-/////////////////////////////////////////////////////////////
-// world builder
-/////////////////////////////////////////////////////////////
-
+// BuildMantle runs the Mantle deployer pipeline and captures outputs.
 func (wb *worldBuilder) BuildMantle() {
 	st := &state.State{
 		Version: 1,
