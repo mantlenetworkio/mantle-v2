@@ -165,6 +165,7 @@ type MantleL2GenesisInput struct {
 	L1FeeVaultRecipient         common.Address
 	OperatorFeeVaultRecipient   common.Address
 	GasPriceOracleOwner         common.Address
+	GasPriceOracleTokenRatio    *big.Int
 	MantleFork                  *big.Int
 	FundDevAccounts             bool
 }
