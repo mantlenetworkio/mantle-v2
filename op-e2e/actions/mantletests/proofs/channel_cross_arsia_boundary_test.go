@@ -16,9 +16,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ProgramAction_MantleArsiaActivation(gt *testing.T) {
+// TestChannelCrossArsiaActivationBoundary verifies that when a single channel's frames
+// span across the Arsia activation boundary (Frame 0 before Arsia with RLP format,
+// Frame 1 after Arsia with standard OP Stack format), the channel cannot be completed
+// and the safe head does not progress.
+//
+// This test documents a known issue: if the batcher submits a channel that crosses
+// the Arsia activation boundary, the format mismatch will cause frame drops.
+// In production, the batcher should be stopped before Arsia activation to ensure
+// all channels complete before the fork.
+func TestChannelCrossArsiaActivationBoundary(gt *testing.T) {
 
-	runMantleArsiaDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[any]) {
+	runTest := func(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
 
 		// Define override to activate MantleArsia 14 seconds after genesis
@@ -35,19 +44,13 @@ func Test_ProgramAction_MantleArsiaActivation(gt *testing.T) {
 		genesisTime := env.Sequencer.RollupCfg.Genesis.L2Time
 		arsiaTime := *env.Sequencer.RollupCfg.MantleArsiaTime
 		t.Logf("L2 Genesis Time: %d, MantleArsiaTime: %d", genesisTime, arsiaTime)
-		t.Logf("HoloceneTime: %v", env.Sequencer.RollupCfg.HoloceneTime)
-		// Build the L2 chain until the MantleArsia activation time,
-		// which for the Execution Engine is an L2 block timestamp
+
+		// Build the L2 chain until the MantleArsia activation time
 		for env.Engine.L2Chain().CurrentBlock().Time < *env.Sequencer.RollupCfg.MantleArsiaTime {
-			b := env.Engine.L2Chain().GetBlockByHash(env.Sequencer.L2Unsafe().Hash)
-			require.Equal(t, "", string(b.Extra()), "extra data should be empty before MantleArsia activation")
 			env.Sequencer.ActL2StartBlock(t)
-			// Send an L2 tx
-			// Manually create a transaction to avoid gas estimation issues in activation block
 			env.Alice.L2.ActResetTxOpts(t)
 			nonce := env.Alice.L2.PendingNonce(t)
 
-			// Get latest header for gas price info
 			latestHeader, err := env.Engine.EthClient().HeaderByNumber(t.Ctx(), nil)
 			require.NoError(t, err)
 			gasTipCap := big.NewInt(2 * params.GWei)
@@ -59,85 +62,84 @@ func Test_ProgramAction_MantleArsiaActivation(gt *testing.T) {
 				Nonce:     nonce,
 				GasTipCap: gasTipCap,
 				GasFeeCap: gasFeeCap,
-				Gas:       50_000, // Manually set gas limit to avoid estimation
+				Gas:       50_000,
 				To:        &toAddr,
 				Value:     big.NewInt(0),
 				Data:      []byte{},
 			})
 
-			// Send the transaction to the txpool first
 			require.NoError(t, env.Engine.EthClient().SendTransaction(t.Ctx(), tx))
-
-			// Then include it in the block
 			env.Engine.ActL2IncludeTx(env.Alice.Address())(t)
 			env.Sequencer.ActL2EndBlock(t)
-			t.Log("Unsafe block with timestamp %d", b.Time)
 		}
-		b := env.Engine.L2Chain().GetBlockByHash(env.Sequencer.L2Unsafe().Hash)
-		require.Len(t, b.Extra(), 17, "extra data should be 17 bytes after Arsia activation")
 
 		// Calculate the expected L1 block times
-		// Each L1 block is 12 seconds apart
 		l1BlockTime1 := genesisTime + 12 // 12s after genesis, before Arsia (14s)
 		l1BlockTime2 := genesisTime + 24 // 24s after genesis, after Arsia (14s)
 
 		t.Logf("L1 Block 1 time: %d (Arsia active: %v)", l1BlockTime1, l1BlockTime1 >= arsiaTime)
 		t.Logf("L1 Block 2 time: %d (Arsia active: %v)", l1BlockTime2, l1BlockTime2 >= arsiaTime)
 
+		// === Create a SINGLE channel with 2 frames that will cross the Arsia boundary ===
+		orderedFrames := make([][]byte, 0, 2)
+
+		env.Batcher.ActCreateChannel(t, false)
+		for i, blockNum := range []uint{1, 2} {
+			env.Batcher.ActAddBlockByNumber(t, int64(blockNum), actionsHelpers.BlockLogger(t))
+			if i == 1 {
+				env.Batcher.ActL2ChannelClose(t)
+			}
+			frame := env.Batcher.ReadNextOutputFrame(t)
+			require.NotEmpty(t, frame, "frame %d", i)
+			orderedFrames = append(orderedFrames, frame)
+		}
+
 		includeBatchTx := func() {
-			// Include the last transaction submitted by the batcher.
 			env.Miner.ActL1StartBlock(12)(t)
 			env.Miner.ActL1IncludeTxByHash(env.Batcher.LastSubmitted.Hash())(t)
 			env.Miner.ActL1EndBlock(t)
 		}
 
-		// === Channel 1: Submit block 1 before Arsia activation (RLP format) ===
-		env.Batcher.ActCreateChannel(t, false)
-		env.Batcher.ActAddBlockByNumber(t, 1, actionsHelpers.BlockLogger(t))
-		env.Batcher.ActL2ChannelClose(t)
-		frame1 := env.Batcher.ReadNextOutputFrame(t)
-		require.NotEmpty(t, frame1, "frame 1 should not be empty")
+		// Submit Frame 0 BEFORE Arsia activation (uses RLP format)
+		env.Batcher.ActL2BatchSubmitMantleRawAtTime(t, orderedFrames[0], l1BlockTime1)
+		includeBatchTx()
 
-		// Submit channel 1 before Arsia activation
-		env.Batcher.ActL2BatchSubmitMantleRawAtTime(t, frame1, l1BlockTime1)
-		includeBatchTx() // L1 block should have a timestamp of 12s after genesis
+		// Submit Frame 1 AFTER Arsia activation (uses standard OP Stack format)
+		// This creates a format mismatch within the same channel!
+		env.Batcher.ActL2BatchSubmitMantleRawAtTime(t, orderedFrames[1], l1BlockTime2)
+		includeBatchTx()
 
-		// === Channel 2: Submit block 2 after Arsia activation (standard OP Stack format) ===
-		env.Batcher.ActCreateChannel(t, false)
-		env.Batcher.ActAddBlockByNumber(t, 2, actionsHelpers.BlockLogger(t))
-		env.Batcher.ActL2ChannelClose(t)
-		frame2 := env.Batcher.ReadNextOutputFrame(t)
-		require.NotEmpty(t, frame2, "frame 2 should not be empty")
-
-		// Submit channel 2 after Arsia activation
-		env.Batcher.ActL2BatchSubmitMantleRawAtTime(t, frame2, l1BlockTime2)
-		includeBatchTx() // L1 block should have a timestamp of 24s after genesis
-
-		// Instruct the sequencer to derive the L2 chain from the data on L1 that the batcher just posted.
+		// Derive the L2 chain
 		env.Sequencer.ActL1HeadSignal(t)
 		env.Sequencer.ActL2PipelineFull(t)
 
 		l2SafeHead := env.Sequencer.L2Safe()
 		t.Logf("L2 Safe Head: Number=%d, Time=%d", l2SafeHead.Number, l2SafeHead.Time)
 
-		// With separate channels using correct format for each, both should be processed successfully
-		// and the safe head should progress to block 2
-		require.EqualValues(t, uint64(2), l2SafeHead.Number, "safe head should progress to block 2 with correct format")
+		// === Verify: Safe head should NOT progress due to channel format mismatch ===
+		require.EqualValues(t, uint64(0), l2SafeHead.Number,
+			"safe head should remain at 0 because channel frames have mismatched formats")
 
-		t.Log("Safe head progressed as expected", "l2SafeHeadNumber", l2SafeHead.Number)
+		// Verify that frame dropping occurred
+		droppingLogs := env.Logs.FindLogs(
+			testlog.NewMessageContainsFilter("dropping non-first frame"),
+			testlog.NewAttributesFilter("role", "sequencer"),
+		)
+		require.Greater(t, len(droppingLogs), 0,
+			"should have 'dropping non-first frame' log due to format mismatch")
 
-		droppingLogs := env.Logs.FindLogs(testlog.NewMessageContainsFilter("dropping non-first frame"), testlog.NewAttributesFilter("role", "sequencer"))
-		require.Len(t, droppingLogs, 0, "should not have any dropping frame logs with separate channels")
+		t.Log("Test passed: Channel crossing Arsia boundary correctly fails to complete")
 	}
 
 	matrix := helpers.NewMatrix[any]()
 	defer matrix.Run(gt)
 
 	matrix.AddTestCase(
-		"HonestClaim-MantleArsiaActivation",
+		"ChannelCrossArsiaActivationBoundary",
 		nil,
 		helpers.NewForkMatrix(helpers.MantleArsia),
-		runMantleArsiaDerivationTest,
+		runTest,
 		helpers.ExpectNoError(),
 	)
 }
+

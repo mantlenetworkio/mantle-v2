@@ -96,14 +96,11 @@ func Test_ProgramAction_PragueForkAfterGenesis(gt *testing.T) {
 		}
 
 		requireSafeHeadProgression := func(t actionsHelpers.StatefulTesting, safeL2Before, safeL2After eth.L2BlockRef, batchedWithSetCodeTx bool) {
-			isLimb := testCfg.Hardfork.Name == "MantleLimb"
 			if batchedWithSetCodeTx {
 				require.Equal(t, safeL2Before, safeL2After, "safe head should not have changed (SetCode / type 4 batcher tx ignored)")
 				require.Equal(t, safeL2Before.L1Origin.Number, safeL2After.Number, "l1 origin of l2 safe should not have changed (SetCode / type 4 batcher tx ignored)")
-			} else if isLimb {
-				require.Equal(t, safeL2Before, safeL2After, "safe head should not have changed (Limb does not support calldata / DynamicFee tx ignored)")
-				require.Equal(t, safeL2Before.L1Origin.Number, safeL2After.L1Origin.Number, "l1 origin of l2 safe should not have changed (Limb does not support calldata / DynamicFee tx ignored)")
 			} else {
+				// Both Limb and Arsia support calldata (DynamicFee tx)
 				require.Greater(t, safeL2After.Number, safeL2Before.Number, "safe head should have progressed (DynamicFee / type 2 batcher tx derived from)")
 				require.Equal(t, verifier.SyncStatus().UnsafeL2.Number, safeL2After.Number, "safe head should equal unsafe head (DynamicFee / type 2 batcher tx derived from)")
 				require.Greater(t, safeL2After.L1Origin.Number, safeL2Before.L1Origin.Number, "l1 origin of l2 safe should have progressed (DynamicFee / type 2 batcher tx tx derived from)")
