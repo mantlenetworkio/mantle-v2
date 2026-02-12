@@ -128,7 +128,7 @@ func TestDAFootprint(gt *testing.T) {
 	env.checkCompatibility(t)
 
 	systemOwner := env.getSystemConfigOwner(t)
-	sys.FunderL1.FundAtLeast(systemOwner, eth.HalfEther)
+	sys.FunderL1.FundAtLeast(systemOwner, eth.OneHundredthEther)
 	l2BlockTime := time.Duration(sys.L2Chain.Escape().RollupConfig().BlockTime) * time.Second
 	sys.L2EL.WaitForOnline()
 	ethClient := sys.L2EL.Escape().EthClient()

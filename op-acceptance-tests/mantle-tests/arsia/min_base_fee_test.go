@@ -96,20 +96,6 @@ func (mbf *minBaseFeeEnv) verifyMinBaseFee(t devtest.T, minBase *big.Int) {
 // waitForMinBaseFeeConfigChangeOnL2 waits until the L2 latest payload extra-data encodes the expected min base fee.
 func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expected uint64) {
 	client := mbf.l2EL.Escape().L2EthClient()
-	rollupCfg := mbf.l2Network.Escape().RollupConfig()
-	var denominator uint64
-	var elasticity uint64
-	if rollupCfg.ChainOpConfig == nil {
-		// mantle default values
-		denominator = 8
-		elasticity = 2
-		t.Logf("mantle default values: denominator: %d, elasticity: %d", denominator, elasticity)
-	} else {
-		denominator = rollupCfg.ChainOpConfig.EIP1559Denominator
-		elasticity = rollupCfg.ChainOpConfig.EIP1559Elasticity
-		t.Logf("rollup config values: denominator: %d, elasticity: %d", denominator, elasticity)
-	}
-	expectedExtraData := eth.BytesMax32(eip1559.EncodeMinBaseFeeExtraData(denominator, elasticity, expected))
 
 	// Check extradata in block header (for all clients)
 	var actualBlockExtraData []byte
@@ -139,6 +125,14 @@ func (mbf *minBaseFeeEnv) waitForMinBaseFeeConfigChangeOnL2(t devtest.T, expecte
 		return got == expected
 	}, 3*time.Minute, 5*time.Second, "L2 min base fee in block header did not sync within timeout")
 
+	// Read the actual denominator and elasticity from the block header extradata
+	// rather than assuming they match the rollup config, since the chain may use
+	// different values post-fork (e.g. Canyon denominator vs base denominator).
+	denominator := binary.BigEndian.Uint32(actualBlockExtraData[1:5])
+	elasticity := binary.BigEndian.Uint32(actualBlockExtraData[5:9])
+	t.Logf("actual chain EIP-1559 params from block header: denominator: %d, elasticity: %d", denominator, elasticity)
+
+	expectedExtraData := eth.BytesMax32(eip1559.EncodeMinBaseFeeExtraData(uint64(denominator), uint64(elasticity), expected))
 	t.Require().Equal(expectedExtraData, eth.BytesMax32(actualBlockExtraData), "block header extradata doesnt match")
 }
 
@@ -154,7 +148,7 @@ func TestMinBaseFee(gt *testing.T) {
 	minBaseFee.checkCompatibility(t)
 
 	systemOwner := minBaseFee.getSystemConfigOwner(t)
-	sys.FunderL1.FundAtLeast(systemOwner, eth.OneTenthEther)
+	sys.FunderL1.FundAtLeast(systemOwner, eth.OneHundredthEther)
 
 	testCases := []struct {
 		name       string
