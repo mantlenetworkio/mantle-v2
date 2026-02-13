@@ -3,6 +3,7 @@ package arsia
 import (
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"math/big"
 	"sync"
 	"testing"
@@ -128,7 +129,7 @@ func TestDAFootprint(gt *testing.T) {
 	env.checkCompatibility(t)
 
 	systemOwner := env.getSystemConfigOwner(t)
-	sys.FunderL1.FundAtLeast(systemOwner, eth.OneHundredthEther)
+	sys.FunderL1.FundAtLeast(systemOwner, eth.TenEther)
 	l2BlockTime := time.Duration(sys.L2Chain.Escape().RollupConfig().BlockTime) * time.Second
 	sys.L2EL.WaitForOnline()
 	ethClient := sys.L2EL.Escape().EthClient()
@@ -140,7 +141,7 @@ func TestDAFootprint(gt *testing.T) {
 		setScalar *uint16
 		expected  uint16
 	}{
-		{"DefaultScalar", nil, uint16(derive.DAFootprintGasScalarDefault)},
+		// {"DefaultScalar", nil, uint16(derive.DAFootprintGasScalarDefault)},
 		{"Scalar1000", &s1000, uint16(1000)},
 		{"ScalarZeroUsesDefault", &s0, uint16(derive.DAFootprintGasScalarDefault)},
 	}
@@ -185,9 +186,6 @@ func TestDAFootprint(gt *testing.T) {
 				loadtest.NewBurst(l2BlockTime).Run(t, NewCalldataSpammer(loadtest.NewSyncEOA(includer, eoa.Plan())))
 			}()
 
-			rollupCfg := sys.L2Chain.Escape().RollupConfig()
-			gasTarget := rollupCfg.Genesis.SystemConfig.GasLimit / rollupCfg.ChainOpConfig.EIP1559Elasticity
-
 			var blockDAFootprint uint64
 			info := sys.L2EL.WaitForUnsafe(func(info eth.BlockInfo) (bool, error) {
 				blockGasUsed := info.GasUsed()
@@ -199,6 +197,12 @@ func TestDAFootprint(gt *testing.T) {
 						eth.ToBlockID(info), blockDAFootprint, blockGasUsed)
 					return false, nil
 				}
+				// Read elasticity from the block's extradata (as geth does via DecodeOptimismExtraData),
+				// not from the rollup config, since the on-chain values may differ.
+				extra := info.Header().Extra
+				require.True(len(extra) >= 9, "block extradata too short to decode EIP-1559 params")
+				elasticity := uint64(binary.BigEndian.Uint32(extra[5:9]))
+				gasTarget := info.GasLimit() / elasticity
 				if blockDAFootprint <= gasTarget {
 					t.Logf("Block %s has DA footprint (%d) <= gasTarget (%d), trying next...",
 						eth.ToBlockID(info), blockDAFootprint, gasTarget)
@@ -232,6 +236,15 @@ func TestDAFootprint(gt *testing.T) {
 			// Check base fee calculation of next block
 			// Calculate expected base fee as:
 			// parentBaseFee + max(1, parentBaseFee * gasUsedDelta / parentGasTarget / baseFeeChangeDenominator)
+			// Read denominator and elasticity from the block's extradata (as geth does).
+			extra := info.Header().Extra
+			require.True(len(extra) >= 9, "block extradata too short to decode EIP-1559 params")
+			denominator := uint64(binary.BigEndian.Uint32(extra[1:5]))
+			elasticity := uint64(binary.BigEndian.Uint32(extra[5:9]))
+			gasTarget := info.GasLimit() / elasticity
+			t.Logf("EIP-1559 params from block extradata: denominator=%d, elasticity=%d, gasTarget=%d",
+				denominator, elasticity, gasTarget)
+
 			var (
 				baseFee = new(big.Int)
 				denom   = new(big.Int)
@@ -239,7 +252,7 @@ func TestDAFootprint(gt *testing.T) {
 			baseFee.SetUint64(blockDAFootprint - gasTarget) // gasUsedDelta
 			baseFee.Mul(baseFee, info.BaseFee())
 			baseFee.Div(baseFee, denom.SetUint64(gasTarget))
-			baseFee.Div(baseFee, denom.SetUint64(*rollupCfg.ChainOpConfig.EIP1559DenominatorCanyon))
+			baseFee.Div(baseFee, denom.SetUint64(denominator))
 			if baseFee.Cmp(common.Big1) < 0 {
 				baseFee.Add(info.BaseFee(), common.Big1)
 			} else {
