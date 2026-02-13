@@ -53,6 +53,15 @@ type ConfigChecker interface {
 	Check(log log.Logger) error
 }
 
+// MantleConfigChecker extends ConfigChecker with Mantle-specific validation.
+// Mantle validation allows multiple forks to activate at the same time (even post-Genesis),
+// which is necessary for Arsia fork that encompasses multiple OP Stack forks.
+type MantleConfigChecker interface {
+	ConfigChecker
+	// MantleCheck verifies the contents of a config with Mantle-specific rules.
+	MantleCheck(log log.Logger) error
+}
+
 func checkConfigBundle(bundle any, log log.Logger) error {
 	cfgValue := reflect.ValueOf(bundle)
 	for cfgValue.Kind() == reflect.Interface || cfgValue.Kind() == reflect.Pointer {
@@ -276,10 +285,10 @@ type GasPriceOracleDeployConfig struct {
 
 	// MANTLE_FEATURES
 	// GasPriceOracleTokenRatio represents the token ratio of ETH to MNT.
-	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio"`
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio" evm:"tokenRatio"`
 	// legacy fields
 	// GasPriceOracleOwner represents the owner of the GasPriceOracle.
-	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner"`
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner" evm:"owner"`
 }
 
 var _ ConfigChecker = (*GasPriceOracleDeployConfig)(nil)
@@ -706,6 +715,47 @@ func (d *UpgradeScheduleDeployConfig) Check(log log.Logger) error {
 	mantleForks := d.mantleForks()
 	for i := 0; i < len(mantleForks)-1; i++ {
 		if err := checkFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MantleCheck performs Mantle-specific validation that allows multiple forks to activate at the same time.
+// This is necessary for Arsia fork which encompasses multiple OP Stack forks (Canyon, Delta, Ecotone, Fjord, Granite, Holocene, Isthmus, Jovian).
+//
+// Mantle validation rules:
+//  1. parent fork is before or at the same time as child fork
+//  2. forks CAN activate at the same time (even post-Genesis) - this is the key difference from Check()
+func (d *UpgradeScheduleDeployConfig) MantleCheck(log log.Logger) error {
+	// mantleCheckFork checks that fork A is before or at the same time as fork B
+	// Unlike Check(), it ALLOWS multiple forks to activate at the same post-Genesis time
+	mantleCheckFork := func(a, b *hexutil.Uint64, aName, bName string) error {
+		if a == nil && b == nil {
+			return nil
+		}
+		if a == nil && b != nil {
+			return fmt.Errorf("fork %s set (to %d), but prior fork %s missing", bName, *b, aName)
+		}
+		if a != nil && b == nil {
+			return nil
+		}
+		if *a > *b {
+			return fmt.Errorf("fork %s set to %d, but prior fork %s has higher offset %d", bName, *b, aName, *a)
+		}
+		// ✅ MANTLE: Allow multiple forks at the same time (removed `&& *a != 0` check)
+		// This enables Arsia to activate all constituent OP Stack forks simultaneously
+		return nil
+	}
+	forks := d.forks()
+	for i := 0; i < len(forks)-1; i++ {
+		if err := mantleCheckFork(forks[i].L2GenesisTimeOffset, forks[i+1].L2GenesisTimeOffset, forks[i].Name, forks[i+1].Name); err != nil {
+			return err
+		}
+	}
+	mantleForks := d.mantleForks()
+	for i := 0; i < len(mantleForks)-1; i++ {
+		if err := mantleCheckFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
 			return err
 		}
 	}
@@ -1317,6 +1367,7 @@ func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deplo
 		L1ERC721BridgeProxy:               contracts.L1Erc721BridgeProxy,
 		L1StandardBridge:                  contracts.L1StandardBridgeImpl,
 		L1StandardBridgeProxy:             contracts.L1StandardBridgeProxy,
+		L2OutputOracle:                    contracts.L2OutputOracleImpl,
 		L2OutputOracleProxy:               contracts.L2OutputOracleProxy,
 		OptimismMintableERC20Factory:      contracts.OptimismMintableErc20FactoryImpl,
 		OptimismMintableERC20FactoryProxy: contracts.OptimismMintableErc20FactoryProxy,
@@ -1371,7 +1422,16 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 				name == "DataAvailabilityChallengeProxy") {
 			continue
 		}
-
+		// Skip Interop-only contracts (OptimismPortalInterop, ETHLockbox)
+		// and optional Superchain contracts (ProtocolVersions)
+		// These are only needed for Interop/Superchain deployments, not for standard Mantle deployments
+		if name == "OptimismPortalInterop" ||
+			name == "ETHLockbox" ||
+			name == "ETHLockboxProxy" ||
+			name == "ProtocolVersions" ||
+			name == "ProtocolVersionsProxy" {
+			continue
+		}
 		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
 			return fmt.Errorf("%s is not set", name)
 		}

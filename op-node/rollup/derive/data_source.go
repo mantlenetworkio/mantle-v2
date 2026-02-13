@@ -48,6 +48,7 @@ type DataSourceFactory struct {
 
 	// Mantle Features
 	mantleEverestTime *uint64
+	blobSourceChanged bool
 }
 
 func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher, blobsFetcher L1BlobsFetcher, altDAFetcher AltDAInputFetcher) *DataSourceFactory {
@@ -64,6 +65,7 @@ func NewDataSourceFactory(log log.Logger, cfg *rollup.Config, fetcher L1Fetcher,
 		altDAFetcher:      altDAFetcher,
 		ecotoneTime:       cfg.EcotoneTime,
 		mantleEverestTime: cfg.MantleEverestTime,
+		blobSourceChanged: false,
 	}
 }
 
@@ -72,7 +74,7 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 	// Creates a data iterator from blob or calldata source so we can forward it to the altDA source
 	// if enabled as it still requires an L1 data source for fetching input commmitments.
 	var src DataIter
-	if ds.ecotoneTime != nil && ref.Time >= *ds.ecotoneTime {
+	if ds.ecotoneTime != nil && ref.Time >= *ds.ecotoneTime && ds.blobSourceChanged {
 		if ds.blobsFetcher == nil {
 			return nil, fmt.Errorf("ecotone upgrade active but beacon endpoint not configured")
 		}
@@ -81,7 +83,9 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 		if ds.blobsFetcher == nil {
 			return nil, fmt.Errorf("mantle everest upgrade active but beacon endpoint not configured")
 		}
-		src = NewMantleBlobDataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ds.blobsFetcher, ref, batcherAddr)
+		// Mantle blob data source try to decode blobs using Mantle format first, and fall back to standard blob format if it fails.
+		// Once the Mantle format try is failed and Arsia fork is activated, we will switch to the new blob source.
+		src = NewMantleBlobDataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ds.blobsFetcher, ref, batcherAddr, func() { ds.blobSourceChanged = true })
 	} else {
 		src = NewCalldataSource(ctx, ds.log, ds.dsCfg, ds.fetcher, ref, batcherAddr)
 	}

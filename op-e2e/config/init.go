@@ -181,7 +181,7 @@ func init() {
 	oplog.SetGlobalLogHandler(errHandler)
 
 	for _, allocType := range allocTypes {
-		initAllocType(root, allocType)
+		initMantleAllocType(root, allocType)
 	}
 
 	// Use regular level going forward.
@@ -337,6 +337,200 @@ func initAllocType(root string, allocType AllocType) {
 	l2AllocsByType[allocType] = l2Alloc
 }
 
+func initMantleAllocType(root string, allocType AllocType) {
+	artifactsPath := path.Join(root, "packages", "contracts-bedrock", "forge-artifacts")
+	if err := ensureDir(artifactsPath); err != nil {
+		panic(fmt.Errorf("invalid artifacts path: %w", err))
+	}
+
+	loc, err := artifacts.NewFileLocator(artifactsPath)
+	if err != nil {
+		panic(fmt.Errorf("failed to create artifacts locator: %w", err))
+	}
+
+	lgr := log.New()
+
+	// Mantle only needs two allocs modes:
+	// - Limb: Bedrock + Regolith + Mantle base forks (BaseFee, Everest, Euboea, Skadi) + Limb
+	// - Arsia: Limb + Arsia + all OP Stack forks (Canyon through Jovian)
+	// Unlike vanilla OP Stack, Mantle doesn't need separate allocs for each OP Stack fork
+	// because Arsia activates all OP Stack forks at once.
+	allocModes := []genesis.L2AllocsMode{
+		genesis.L2AllocsLimb,
+		genesis.L2AllocsArsia,
+	}
+
+	l2Alloc := make(map[genesis.L2AllocsMode]*foundry.ForgeAllocs)
+	var wg sync.WaitGroup
+
+	pk := secrets.DefaultSecrets.Deployer
+	deployerAddr := crypto.PubkeyToAddress(pk.PublicKey)
+	lgr.Info("deployer address", "address", deployerAddr.Hex())
+
+	for _, mode := range allocModes {
+		wg.Add(1)
+		go func(mode genesis.L2AllocsMode) {
+			defer wg.Done()
+
+			intent := defaultMantleIntent(root, loc, deployerAddr, allocType)
+			if allocType == AllocTypeAltDA {
+				intent.Chains[0].DangerousAltDAConfig = genesis.AltDADeployConfig{
+					UseAltDA:                   true,
+					DACommitmentType:           "KeccakCommitment",
+					DAChallengeWindow:          16,
+					DAResolveWindow:            16,
+					DABondSize:                 1000000,
+					DAResolverRefundPercentage: 0,
+				}
+			}
+
+			baseUpgradeSchedule := map[string]any{
+				"l2GenesisRegolithTimeOffset": nil,
+				"l2GenesisCanyonTimeOffset":   nil,
+				"l2GenesisDeltaTimeOffset":    nil,
+				"l2GenesisEcotoneTimeOffset":  nil,
+				"l2GenesisFjordTimeOffset":    nil,
+				"l2GenesisGraniteTimeOffset":  nil,
+				"l2GenesisHoloceneTimeOffset": nil,
+				"l2GenesisIsthmusTimeOffset":  nil,
+				"l2GenesisJovianTimeOffset":   nil,
+				// Mantle specific forks - initialize to nil
+				"l2GenesisMantleBaseFeeTimeOffset":           nil,
+				"l2GenesisMantleBVMETHMintUpgradeTimeOffset": nil,
+				"l2GenesisMantleMetaTxV2UpgradeTimeOffset":   nil,
+				"l2GenesisMantleMetaTxV3UpgradeTimeOffset":   nil,
+				"l2GenesisMantleProxyOwnerUpgradeTimeOffset": nil,
+				"l2GenesisMantleEverestTimeOffset":           nil,
+				"l2GenesisMantleEuboeaTimeOffset":            nil,
+				"l2GenesisMantleSkadiTimeOffset":             nil,
+				"l2GenesisMantleLimbTimeOffset":              nil,
+				"l2GenesisMantleArsiaTimeOffset":             nil,
+			}
+
+			// Use UpgradeScheduleDeployConfig to activate forks at genesis
+			upgradeSchedule := new(genesis.UpgradeScheduleDeployConfig)
+
+			switch mode {
+			case genesis.L2AllocsLimb:
+				// Limb mode: Activate Regolith + Mantle base forks + Limb
+				// Do NOT activate OP Stack forks after Canyon
+				// Do NOT activate Arsia
+
+				// Activate Regolith (OP Stack base fork)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Regolith)
+
+				// Activate all Mantle base forks
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleBaseFee)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleEverest)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleEuboea)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleSkadi)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleLimb)
+
+			case genesis.L2AllocsArsia:
+				// Arsia mode: Activate all OP Stack forks (Regolith through Jovian) + all Mantle forks
+				// Arsia conceptually encompasses Canyon through Jovian, but we need to activate them explicitly
+
+				// Activate all OP Stack forks
+				upgradeSchedule.ActivateForkAtGenesis(forks.Regolith)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Canyon)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Delta)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Ecotone)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Fjord)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Granite)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Holocene)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Isthmus)
+				upgradeSchedule.ActivateForkAtGenesis(forks.Jovian)
+
+				// Activate all Mantle forks
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleBaseFee)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleEverest)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleEuboea)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleSkadi)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleLimb)
+				upgradeSchedule.ActivateMantleForkAtGenesis(forks.MantleArsia)
+
+			default:
+				panic(fmt.Sprintf("unsupported L2 allocs mode for Mantle: %s", mode))
+			}
+
+			// Serialize upgradeSchedule and copy to baseUpgradeSchedule
+			upgradeOverridesJSON, err := json.Marshal(upgradeSchedule)
+			if err != nil {
+				panic(fmt.Errorf("failed to marshal upgrade schedule: %w", err))
+			}
+			var upgradeOverrides map[string]any
+			if err := json.Unmarshal(upgradeOverridesJSON, &upgradeOverrides); err != nil {
+				panic(fmt.Errorf("failed to unmarshal upgrade schedule: %w", err))
+			}
+			maps.Copy(baseUpgradeSchedule, upgradeOverrides)
+
+			// Manually activate intermediate Mantle forks that don't have constants in forks package
+			// These forks are required for validation but don't have corresponding MantleForkName constants
+			// They must be activated in order: BaseFee -> BVMETHMintUpgrade -> MetaTxV2 -> MetaTxV3 -> ProxyOwner -> Everest
+			baseUpgradeSchedule["l2GenesisMantleBVMETHMintUpgradeTimeOffset"] = "0x0"
+			baseUpgradeSchedule["l2GenesisMantleMetaTxV2UpgradeTimeOffset"] = "0x0"
+			baseUpgradeSchedule["l2GenesisMantleMetaTxV3UpgradeTimeOffset"] = "0x0"
+			baseUpgradeSchedule["l2GenesisMantleProxyOwnerUpgradeTimeOffset"] = "0x0"
+
+			maps.Copy(intent.GlobalDeployOverrides, baseUpgradeSchedule)
+
+			st := &state.State{
+				Version: 1,
+			}
+
+			if err := deployer.MantleApplyPipeline(
+				context.Background(),
+				deployer.ApplyPipelineOpts{
+					DeploymentTarget:   deployer.DeploymentTargetGenesis,
+					L1RPCUrl:           "",
+					DeployerPrivateKey: pk,
+					Intent:             intent,
+					State:              st,
+					Logger:             lgr,
+					StateWriter:        pipeline.NoopStateWriter(),
+				},
+			); err != nil {
+				panic(fmt.Errorf("failed to apply pipeline: %w", err))
+			}
+
+			mtx.Lock()
+			l2Alloc[mode] = st.Chains[0].Allocs.Data
+			mtx.Unlock()
+
+			// For Mantle, use Arsia mode to set deploy config (Arsia is the latest Mantle fork)
+			// This replaces the original check for L2AllocsGranite
+			if mode == genesis.L2AllocsArsia {
+				dc, err := inspect.MantleDeployConfig(st, intent.Chains[0].ID)
+				if err != nil {
+					panic(fmt.Errorf("failed to inspect deploy config: %w", err))
+				}
+
+				l1Contracts, err := inspect.L1ForMantle(st, intent.Chains[0].ID)
+				if err != nil {
+					panic(fmt.Errorf("failed to inspect L1: %w", err))
+				}
+
+				// Set the L1 genesis block timestamp to now
+				dc.L1GenesisBlockTimestamp = hexutil.Uint64(time.Now().Unix())
+				dc.FundDevAccounts = true
+				// Speed up the in memory tests
+				dc.L1BlockTime = 2
+				dc.L2BlockTime = 1
+				dc.SetContracts(l1Contracts)
+				mtx.Lock()
+				deployConfigsByType[allocType] = dc
+				l1AllocsByType[allocType] = st.L1StateDump.Data
+
+				l1Deployments := genesis.CreateL1DeploymentsFromContracts(l1Contracts)
+				l1DeploymentsByType[allocType] = l1Deployments
+				mtx.Unlock()
+			}
+		}(mode)
+	}
+	wg.Wait()
+	l2AllocsByType[allocType] = l2Alloc
+}
+
 func defaultIntent(root string, loc *artifacts.Locator, deployer common.Address, allocType AllocType) *state.Intent {
 	secrets := secrets.DefaultSecrets
 	addrs := secrets.Addresses()
@@ -419,6 +613,131 @@ func defaultIntent(root string, loc *artifacts.Locator, deployer common.Address,
 				UseRevenueShare:    true,
 				ChainFeesRecipient: common.HexToAddress("0xBcd4042DE499D14e55001CcbB24a551F3b954096"),
 				AdditionalDisputeGames: []state.AdditionalDisputeGame{
+					{
+						ChainProofParams: state.ChainProofParams{
+							// Alphabet game
+							DisputeGameType:         255,
+							DisputeAbsolutePrestate: defaultPrestate,
+							DisputeMaxGameDepth:     14 + 3 + 1,
+							DisputeSplitDepth:       14,
+							DisputeClockExtension:   0,
+							DisputeMaxClockDuration: 1200,
+						},
+						VMType: state.VMTypeAlphabet,
+					},
+					{
+						ChainProofParams: state.ChainProofParams{
+							DisputeGameType:         0,
+							DisputeAbsolutePrestate: cannonPrestate(root, allocType),
+							DisputeMaxGameDepth:     50,
+							DisputeSplitDepth:       14,
+							DisputeClockExtension:   0,
+							DisputeMaxClockDuration: 1200,
+						},
+						VMType: cannonVMType(allocType),
+					},
+				},
+			},
+		},
+	}
+}
+
+func defaultMantleIntent(root string, loc *artifacts.Locator, deployer common.Address, allocType AllocType) *state.Intent {
+	secrets := secrets.DefaultSecrets
+	addrs := secrets.Addresses()
+	defaultPrestate := common.HexToHash("0x03c7ae758795765c6664a5d39bf63841c71ff191e9189522bad8ebff5d4eca98")
+	genesisOutputRoot := common.HexToHash("0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF")
+	return &state.Intent{
+		ConfigType: state.IntentTypeCustom,
+		L1ChainID:  900,
+		SuperchainRoles: &addresses.SuperchainRoles{
+			SuperchainProxyAdminOwner: deployer,
+			ProtocolVersionsOwner:     deployer,
+			SuperchainGuardian:        deployer,
+			Challenger:                common.HexToAddress("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"),
+		},
+		FundDevAccounts:    true,
+		L1ContractsLocator: loc,
+		L2ContractsLocator: loc,
+		GlobalDeployOverrides: map[string]any{
+			"maxSequencerDrift":                        300,
+			"sequencerWindowSize":                      200,
+			"channelTimeout":                           120,
+			"l2OutputOracleSubmissionInterval":         10,
+			"l2OutputOracleStartingTimestamp":          0,
+			"l2OutputOracleProposer":                   addrs.Proposer,
+			"l2OutputOracleChallenger":                 "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+			"l2GenesisBlockGasLimit":                   "0x1c9c380",
+			"l1BlockTime":                              6,
+			"baseFeeVaultMinimumWithdrawalAmount":      "0x8ac7230489e80000",
+			"l1FeeVaultMinimumWithdrawalAmount":        "0x8ac7230489e80000",
+			"sequencerFeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+			"baseFeeVaultWithdrawalNetwork":            0,
+			"l1FeeVaultWithdrawalNetwork":              0,
+			"sequencerFeeVaultWithdrawalNetwork":       0,
+			"finalizationPeriodSeconds":                2,
+			"l2GenesisBlockBaseFeePerGas":              "0x1",
+			"gasPriceOracleOverhead":                   2100,
+			"gasPriceOracleScalar":                     1000000,
+			"gasPriceOracleBaseFeeScalar":              1368,
+			"gasPriceOracleBlobBaseFeeScalar":          801949,
+			"gasPriceOracleOperatorFeeScalar":          0,
+			"gasPriceOracleOperatorFeeConstant":        0,
+			"l1CancunTimeOffset":                       "0x0",
+			"faultGameAbsolutePrestate":                defaultPrestate.Hex(),
+			"faultGameMaxDepth":                        50,
+			"faultGameClockExtension":                  1,
+			"faultGameMaxClockDuration":                1200,
+			"faultGameGenesisBlock":                    0,
+			"faultGameGenesisOutputRoot":               genesisOutputRoot.Hex(),
+			"faultGameSplitDepth":                      14,
+			"dangerouslyAllowCustomDisputeParameters":  true,
+			"faultGameWithdrawalDelay":                 604800,
+			"preimageOracleMinProposalSize":            10000,
+			"preimageOracleChallengePeriod":            120,
+			"proofMaturityDelaySeconds":                12,
+			"disputeGameFinalityDelaySeconds":          6,
+		},
+		Chains: []*state.ChainIntent{
+			{
+				ID:                         common.BigToHash(big.NewInt(901)),
+				BaseFeeVaultRecipient:      common.HexToAddress("0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"),
+				L1FeeVaultRecipient:        common.HexToAddress("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
+				SequencerFeeVaultRecipient: common.HexToAddress("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"),
+				OperatorFeeVaultRecipient:  common.HexToAddress("0x976EA74026E726554dB657fA54763abd0C3a0aa9"),
+				L1MNT:                      common.HexToAddress("0x8000000000000000000000000000000000000000"),
+				Eip1559Denominator:         50,
+				Eip1559DenominatorCanyon:   250,
+				Eip1559Elasticity:          4,
+				GasLimit:                   standard.GasLimit,
+				GasPriceOracleOwner:        deployer,
+				Roles: state.ChainRoles{
+					// Use deployer as L1PAO to deploy additional dispute impls
+					L1ProxyAdminOwner: deployer,
+					L2ProxyAdminOwner: deployer,
+					SystemConfigOwner: deployer,
+					UnsafeBlockSigner: common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"),
+					Batcher:           addrs.Batcher,
+					Proposer:          addrs.Proposer,
+					Challenger:        common.HexToAddress("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"),
+				},
+				AdditionalDisputeGames: []state.AdditionalDisputeGame{
+					{
+						ChainProofParams: state.ChainProofParams{
+							// Fast game
+							DisputeGameType:         254,
+							DisputeAbsolutePrestate: defaultPrestate,
+							DisputeMaxGameDepth:     14 + 3 + 1,
+							DisputeSplitDepth:       14,
+							DisputeClockExtension:   0,
+							DisputeMaxClockDuration: 0,
+						},
+						VMType: state.VMTypeAlphabet,
+						//UseCustomOracle:              true,
+						//OracleMinProposalSize:        10000,
+						//OracleChallengePeriodSeconds: 0,
+						MakeRespected: true,
+					},
 					{
 						ChainProofParams: state.ChainProofParams{
 							// Alphabet game

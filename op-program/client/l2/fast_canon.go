@@ -171,3 +171,17 @@ func (c *chainContext) GetHeader(hash common.Hash, number uint64) *types.Header 
 	// The EVM should never call this method during eip-2935 historical block retrieval
 	panic("unexpected call to GetHeader")
 }
+
+func (c *chainContext) CurrentHeader() *types.Header {
+	// The EVM should never call this method during eip-2935 historical block retrieval
+	panic("unexpected call to CurrentHeader")
+}
+
+func (c *chainContext) GetHeaderByNumber(number uint64) *types.Header {
+	// The EVM should never call this method during eip-2935 historical block retrieval
+	panic("unexpected call to GetHeaderByNumber")
+}
+func (c *chainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+	// The EVM should never call this method during eip-2935 historical block retrieval
+	panic("unexpected call to GetHeaderByHash")
+}

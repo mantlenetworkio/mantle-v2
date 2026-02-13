@@ -31,6 +31,9 @@ const (
 	L2AllocsIsthmus  L2AllocsMode = "isthmus"
 	L2AllocsJovian   L2AllocsMode = "jovian"
 	L2AllocsInterop  L2AllocsMode = "interop"
+	// Mantle-specific allocs modes
+	L2AllocsLimb  L2AllocsMode = "limb"
+	L2AllocsArsia L2AllocsMode = "arsia"
 )
 
 var (

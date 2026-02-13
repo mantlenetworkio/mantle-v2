@@ -256,6 +256,12 @@ func (s *L2Sequencer) ActBuildL2ToHolocene(t Testing) {
 	}
 }
 
+func (s *L2Sequencer) ActBuildL2ToArsia(t Testing) {
+	require.NotNil(t, s.RollupCfg.MantleArsiaTime, "cannot activate ArsiaTime when it is not scheduled")
+	for s.L2Unsafe().Time < *s.RollupCfg.MantleArsiaTime {
+		s.ActL2EmptyBlock(t)
+	}
+}
 func (s *L2Sequencer) ActBuildL2ToIsthmus(t Testing) {
 	require.NotNil(t, s.RollupCfg.IsthmusTime, "cannot activate IsthmusTime when it is not scheduled")
 	for s.L2Unsafe().Time < *s.RollupCfg.IsthmusTime {
@@ -271,4 +277,14 @@ func (s *L2Sequencer) ActBuildL2ToInterop(t Testing) {
 	for s.L2Unsafe().Time < *s.RollupCfg.InteropTime {
 		s.ActL2EmptyBlock(t)
 	}
+}
+
+func (s *L2Sequencer) ActBuildL2ToMantleFork(t Testing, fork forks.MantleForkName) eth.L2BlockRef {
+	activationTime := s.RollupCfg.MantleActivationTime(fork)
+	require.NotNil(t, activationTime, "cannot activate %s when it is not scheduled", fork)
+
+	for !s.RollupCfg.IsMantleForkActive(fork, s.L2Unsafe().Time) {
+		s.ActL2EmptyBlock(t)
+	}
+	return s.L2Unsafe()
 }

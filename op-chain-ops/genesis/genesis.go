@@ -118,13 +118,15 @@ func NewL2Genesis(config *DeployConfig, l1StartHeader *eth.BlockRef) (*core.Gene
 		genesis.ExcessBlobGas = u64ptr(0)
 	}
 	if optimismChainConfig.IsHolocene(genesis.Timestamp) {
-		genesis.ExtraData = HoloceneExtraData
+		// Use config values instead of hardcoded defaults
+		genesis.ExtraData = eip1559.EncodeHoloceneExtraData(uint64(eip1559Denom), uint64(eip1559Elasticity))
 	}
 	if optimismChainConfig.IsIsthmus(genesis.Timestamp) {
 		genesis.Alloc[params.HistoryStorageAddress] = types.Account{Nonce: 1, Code: params.HistoryStorageCode, Balance: common.Big0}
 	}
 	if optimismChainConfig.IsMinBaseFee(genesis.Timestamp) {
-		genesis.ExtraData = MinBaseFeeExtraData
+		// Use config values instead of hardcoded defaults
+		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(uint64(eip1559Denom), uint64(eip1559Elasticity), 0)
 	}
 
 	return genesis, nil

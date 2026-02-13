@@ -2,6 +2,8 @@ package helpers
 
 import (
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	batcherFlags "github.com/ethereum-optimism/optimism/op-batcher/flags"
+	upgradesHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/mantleupgrades/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/upgrades/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
@@ -61,6 +63,43 @@ func SetupReorgTest(t Testing, config *e2eutils.TestParams, deltaTimeOffset *hex
 	log := testlog.Logger(t, log.LevelDebug)
 
 	return SetupReorgTestActors(t, dp, sd, log)
+}
+
+func SetupMantleReorgTest(t Testing, config *e2eutils.TestParams, arsiaTimeOffset *hexutil.Uint64, isSpanBatch bool) (*e2eutils.SetupData, *e2eutils.DeployParams, *L1Miner, *L2Sequencer, *L2Engine, *L2Verifier, *L2Engine, *L2Batcher) {
+	dp := e2eutils.MakeMantleDeployParams(t, config)
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, arsiaTimeOffset)
+
+	sd := e2eutils.SetupMantleNormal(t, dp, DefaultAlloc)
+	log := testlog.Logger(t, log.LevelDebug)
+
+	return SetupMantleReorgTestActors(t, dp, sd, log, isSpanBatch)
+}
+
+func SetupMantleReorgTestActors(t Testing, dp *e2eutils.DeployParams, sd *e2eutils.SetupData, log log.Logger, isSpanBatch bool) (*e2eutils.SetupData, *e2eutils.DeployParams, *L1Miner, *L2Sequencer, *L2Engine, *L2Verifier, *L2Engine, *L2Batcher) {
+	miner, seqEngine, sequencer := SetupSequencerTest(t, sd, log)
+	miner.ActL1SetFeeRecipient(common.Address{'A'})
+	sequencer.ActL2PipelineFull(t)
+	verifEngine, verifier := SetupVerifier(t, sd, log, miner.L1Client(t, sd.RollupCfg), miner.BlobStore(), &sync.Config{})
+	rollupSeqCl := sequencer.RollupClient()
+	batcher := NewL2Batcher(log, sd.RollupCfg, &BatcherCfg{
+		MinL1TxSize:          0,
+		MaxL1TxSize:          128_000,
+		BatcherKey:           dp.Secrets.Batcher,
+		ForceSubmitSpanBatch: true,
+		DataAvailabilityType: batcherFlags.CalldataType,
+	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	if !isSpanBatch {
+		batcher = NewL2Batcher(log, sd.RollupCfg, &BatcherCfg{
+			MinL1TxSize:              0,
+			MaxL1TxSize:              128_000,
+			BatcherKey:               dp.Secrets.Batcher,
+			ForceSubmitSingularBatch: true,
+			DataAvailabilityType:     batcherFlags.CalldataType,
+		}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	}
+	return sd, dp, miner, sequencer, seqEngine, verifier, verifEngine, batcher
 }
 
 func SetupReorgTestActors(t Testing, dp *e2eutils.DeployParams, sd *e2eutils.SetupData, log log.Logger) (*e2eutils.SetupData, *e2eutils.DeployParams, *L1Miner, *L2Sequencer, *L2Engine, *L2Verifier, *L2Engine, *L2Batcher) {

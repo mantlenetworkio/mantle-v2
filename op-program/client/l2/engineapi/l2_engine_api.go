@@ -402,8 +402,10 @@ func (ea *L2EngineAPI) NewPayloadV4(ctx context.Context, params *eth.ExecutionPa
 		return &eth.PayloadStatusV1{Status: eth.ExecutionInvalid}, engine.InvalidParams.With(errors.New("nil executionRequests post-prague"))
 	}
 
-	if !ea.config().IsIsthmus(uint64(params.Timestamp)) {
-		return &eth.PayloadStatusV1{Status: eth.ExecutionInvalid}, engine.UnsupportedFork.With(errors.New("newPayloadV4 called pre-isthmus"))
+	// Mantle: V4 API is supported from MantleSkadi onwards (which includes LIMB and Arsia)
+	// Standard OP Stack: V4 API requires Isthmus fork
+	if !ea.config().IsIsthmus(uint64(params.Timestamp)) && !ea.config().IsMantleSkadi(uint64(params.Timestamp)) {
+		return &eth.PayloadStatusV1{Status: eth.ExecutionInvalid}, engine.UnsupportedFork.With(errors.New("newPayloadV4 called pre-isthmus/pre-mantle-skadi"))
 	}
 
 	if params.WithdrawalsRoot == nil {

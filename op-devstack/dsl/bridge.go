@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
+	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -200,9 +201,10 @@ func (b *StandardBridge) InitiateWithdrawal(amount eth.ETH, from *EOA) *Withdraw
 func (b *StandardBridge) ERC20Deposit(l1TokenAddr common.Address, l2TokenAddr common.Address, amount eth.ETH, from *EOA) *Deposit {
 	// Use the l1StandardBridge to deposit ERC20 tokens
 	depositCall := b.l1StandardBridge.DepositERC20To(l1TokenAddr, l2TokenAddr, from.Address(), amount, 200000, []byte{})
-	depositReceipt, err := contractio.Write(depositCall, b.ctx, from.Plan())
+	depositReceipt, err := contractio.Write(depositCall, b.ctx, from.Plan(), txplan.WithGasRatio(2.0))
 	b.require.NoError(err, "Failed to send ERC20 deposit transaction")
 	b.require.Equal(types.ReceiptStatusSuccessful, depositReceipt.Status, "ERC20 deposit should succeed")
+	b.log.Info("ERC20 deposit tx hash", "hash", depositReceipt.TxHash.Hex())
 
 	// Wait for the deposit to be processed on the L2
 	// Find the deposit log to get the L2 deposit transaction
