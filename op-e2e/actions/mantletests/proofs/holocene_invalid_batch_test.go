@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
@@ -176,7 +177,10 @@ func Test_ProgramAction_ArsiaInvalidBatch(gt *testing.T) {
 			tp.ChannelTimeout = 10
 		})
 
-		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
+		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), func(dc *genesis.DeployConfig) {
+			// Set tokenRatio to 1 to avoid gas calculation issues in MantleLimb
+			dc.GasPriceOracleTokenRatio = 1
+		})
 		t.Logf("Test: %s, SpanBatch: %v, BreachDrift: %v",
 			testCfg.Custom.name,
 			testCfg.Custom.useSpanBatch,
@@ -225,6 +229,7 @@ func Test_ProgramAction_ArsiaInvalidBatch(gt *testing.T) {
 				// Send an L2 tx
 				env.Alice.L2.ActResetTxOpts(t)
 				env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)(t)
+				env.Alice.L2.ActSetTxGasLimit(55_000)(t) // Set fixed gas limit to avoid estimation issues
 				env.Alice.L2.ActMakeTx(t)
 				env.Engine.ActL2IncludeTx(env.Alice.Address())(t)
 			}
@@ -239,6 +244,7 @@ func Test_ProgramAction_ArsiaInvalidBatch(gt *testing.T) {
 				// Send an L2 tx and force sequencer to include it
 				env.Alice.L2.ActResetTxOpts(t)
 				env.Alice.L2.ActSetTxToAddr(&env.Dp.Addresses.Bob)(t)
+				env.Alice.L2.ActSetTxGasLimit(55_000)(t) // Set fixed gas limit to avoid estimation issues
 				env.Alice.L2.ActMakeTx(t)
 				env.Engine.ActL2IncludeTxIgnoreForcedEmpty(env.Alice.Address())(t)
 			}

@@ -36,6 +36,8 @@ func TestChannelCrossArsiaActivationBoundary(gt *testing.T) {
 			dc.L1GenesisBlockTimestamp = hexutil.Uint64(now)
 			fourteen := uint64(14)
 			dc.ActivateMantleForkAtOffset(rollup.MantleForkName("MantleArsia"), fourteen)
+			// Set tokenRatio to 1 to avoid gas calculation issues in pre-Arsia blocks
+			dc.GasPriceOracleTokenRatio = 1
 		}
 
 		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg(), setMantleArsiaTime)
@@ -62,7 +64,7 @@ func TestChannelCrossArsiaActivationBoundary(gt *testing.T) {
 				Nonce:     nonce,
 				GasTipCap: gasTipCap,
 				GasFeeCap: gasFeeCap,
-				Gas:       50_000,
+				Gas:       55_000, // Increased to cover L1 cost in pre-Arsia blocks
 				To:        &toAddr,
 				Value:     big.NewInt(0),
 				Data:      []byte{},
@@ -142,4 +144,3 @@ func TestChannelCrossArsiaActivationBoundary(gt *testing.T) {
 		helpers.ExpectNoError(),
 	)
 }
-

@@ -27,6 +27,7 @@ func Test_ProgramAction_MantleArsiaActivation(gt *testing.T) {
 			dc.L1GenesisBlockTimestamp = hexutil.Uint64(now)
 			fourteen := uint64(14)
 			dc.ActivateMantleForkAtOffset(rollup.MantleForkName("MantleArsia"), fourteen)
+			dc.GasPriceOracleTokenRatio = 1
 		}
 
 		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg(), setMantleArsiaTime)
