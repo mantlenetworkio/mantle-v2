@@ -29,8 +29,9 @@ func OverrideEnvVar(envPrefix string, fork forks.Name) []string {
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
 	flags := append(CLIOverrideFlags(envPrefix, category), CLIMantleOverrideFlags(envPrefix, category)...)
-	flags = append(flags, CLINetworkFlag(envPrefix, category),
-		CLIRollupConfigFlag(envPrefix, category))
+	// Mantle don't rely on superchain registry
+	// flags = append(flags, CLINetworkFlag(envPrefix, category))
+	flags = append(flags, CLIRollupConfigFlag(envPrefix, category))
 	return flags
 }
 
