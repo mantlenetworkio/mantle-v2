@@ -242,6 +242,23 @@ func ChainOperatorKeys(chainID *big.Int) func(ChainOperatorRole) ChainOperatorKe
 	}
 }
 
+// L1MNTFaucetKey identifies the account that holds MNT tokens on L1 for funding test accounts.
+// In sysgo (HD mnemonic), this derives the same key as UserKey(0) (dev account #0).
+// In sysext (devnet JSON), the private key is read from the "l1MNTFaucet" wallet entry.
+type L1MNTFaucetKey struct{}
+
+var L1MNTFaucet L1MNTFaucetKey
+
+var _ Key = L1MNTFaucet
+
+func (k L1MNTFaucetKey) HDPath() string {
+	return UserKey(0).HDPath()
+}
+
+func (k L1MNTFaucetKey) String() string {
+	return "l1MNTFaucet"
+}
+
 // Key identifies an account, and produces an HD-Path to derive the secret-key from.
 //
 // We organize the dev keys with a mnemonic key-path structure as following:

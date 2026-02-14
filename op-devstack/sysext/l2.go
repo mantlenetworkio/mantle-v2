@@ -486,6 +486,12 @@ func (o *Orchestrator) getWalletMappings(l1Wallets descriptors.WalletMap) map[st
 
 	o.addFaucetMappings(mappings, l1Wallets)
 
+	// L1 MNT faucet mapping: the account that holds MNT tokens for funding test accounts
+	l1MNTFaucetName := devkeys.L1MNTFaucet.String()
+	if _, hasL1MNTFaucet := l1Wallets[l1MNTFaucetName]; hasL1MNTFaucet {
+		mappings[l1MNTFaucetName] = &FaucetKey{name: l1MNTFaucetName}
+	}
+
 	// Dynamically discover user-key-* mappings from available L1 wallets
 	for walletRole := range l1Wallets {
 		if strings.HasPrefix(walletRole, "user-key-") {
