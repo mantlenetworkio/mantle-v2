@@ -133,7 +133,10 @@ func Test_ProgramAction_ArsiaOrLimbWithdrawalsRoot(gt *testing.T) {
 func testWithdrawalsRoot(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	t := actionsHelpers.NewDefaultTesting(gt)
 	tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {})
-	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg())
+	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), func(dc *genesis.DeployConfig) {
+		// Set tokenRatio to 1 to avoid gas calculation issues in MantleLimb
+		dc.GasPriceOracleTokenRatio = 1
+	})
 
 	sequencer, engine := env.Sequencer, env.Engine
 
@@ -150,7 +153,7 @@ func testWithdrawalsRoot(gt *testing.T, testCfg *helpers.TestCfg[any]) {
 	l2opts, err := bind.NewKeyedTransactorWithChainID(env.Alice.L2.Secret(), new(big.Int).SetUint64(env.Dp.DeployConfig.L2ChainID))
 	require.Nil(t, err)
 	l2opts.Value = big.NewInt(500)
-	l2opts.GasLimit = 100000
+	l2opts.GasLimit = 150000 // Increased to cover L1 cost in MantleLimb
 
 	_, err = l2withdrawer.Receive(l2opts)
 	require.Nil(t, err)
@@ -190,6 +193,10 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterArsiaOrLimb(gt *testing.T
 		tp := helpers.NewTestParams(func(tp *e2eutils.TestParams) {})
 
 		var setTime = func(dc *genesis.DeployConfig) {
+			// Set tokenRatio to 1 to avoid gas calculation issues in MantleLimb
+			dc.GasPriceOracleTokenRatio = 1
+			// Set larger block gas limit to handle high L1 costs in pre-MantleLimb blocks
+			dc.L2GenesisBlockGasLimit = 50000000
 			two := hexutil.Uint64(timeOffset)
 			if testCfg.Hardfork.Name == helpers.MantleLimb.Name {
 				dc.L2GenesisMantleLimbTimeOffset = &two
@@ -197,6 +204,7 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterArsiaOrLimb(gt *testing.T
 				dc.L2GenesisMantleArsiaTimeOffset = &two
 			}
 			dc.L1PragueTimeOffset = &zeroHex64
+
 		}
 		env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), setTime)
 		withdrawalTx, withdrawalTxBlock, totalBlocks := testCfg.Custom.withdrawalTx, testCfg.Custom.withdrawalTxBlock, testCfg.Custom.totalBlocks
@@ -228,7 +236,8 @@ func Test_ProgramAction_WithdrawalsRootBeforeAtAndAfterArsiaOrLimb(gt *testing.T
 				l2opts, err := bind.NewKeyedTransactorWithChainID(env.Alice.L2.Secret(), new(big.Int).SetUint64(env.Dp.DeployConfig.L2ChainID))
 				require.NoError(t, err)
 				l2opts.Value = big.NewInt(500)
-				l2opts.GasLimit = 100000
+				// Set large gas limit to handle high L1 costs in pre-MantleLimb blocks (scalar=1,000,000)
+				l2opts.GasLimit = 40000000
 				tx, err = l2withdrawer.Receive(l2opts)
 				require.NoError(t, err)
 

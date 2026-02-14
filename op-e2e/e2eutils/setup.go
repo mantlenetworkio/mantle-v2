@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-e2e/config/secrets"
 	"github.com/ethereum-optimism/optimism/op-supervisor/supervisor/backend/depset"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +19,7 @@ import (
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -482,6 +484,14 @@ func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *Al
 		l2Genesis.Alloc[addr] = val
 	}
 
+	// Apply GasPriceOracleTokenRatio override if specified in DeployConfig.
+	// The forge-generated L2 allocs contain a default tokenRatio (3000), but tests may
+	// need to override this value. If GasPriceOracleTokenRatio is non-zero, we override
+	// the storage slot 0 of GasPriceOracle contract.
+	if deployConf.GasPriceOracleTokenRatio != 0 {
+		ApplyGasPriceOracleTokenRatioOverride(l2Genesis, deployConf.GasPriceOracleTokenRatio)
+	}
+
 	// Setup AltDA if needed
 	var pcfg *rollup.AltDAConfig
 	if deployConf.UseAltDA {
@@ -563,4 +573,25 @@ func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *Al
 		ChainSpec:     rollup.NewChainSpec(rollupCfg),
 		DeploymentsL1: l1Deployments,
 	}
+}
+
+// ApplyGasPriceOracleTokenRatioOverride modifies the GasPriceOracle storage in the L2 genesis
+// to set the tokenRatio value. This is useful for tests that need to override the default
+// tokenRatio (3000) that comes from forge-generated allocs.
+//
+// This function should be called AFTER SetupMantleNormal to override the tokenRatio.
+//
+// Example usage:
+//
+//	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
+//	e2eutils.ApplyGasPriceOracleTokenRatioOverride(sd.L2Cfg, 1) // Set tokenRatio to 1
+func ApplyGasPriceOracleTokenRatioOverride(l2Genesis *core.Genesis, tokenRatio uint64) {
+	tokenRatioSlot := common.BigToHash(big.NewInt(0))
+	gpoAccount := l2Genesis.Alloc[predeploys.GasPriceOracleAddr]
+
+	if gpoAccount.Storage == nil {
+		gpoAccount.Storage = map[common.Hash]common.Hash{}
+	}
+	gpoAccount.Storage[tokenRatioSlot] = common.BigToHash(new(big.Int).SetUint64(tokenRatio))
+	l2Genesis.Alloc[predeploys.GasPriceOracleAddr] = gpoAccount
 }

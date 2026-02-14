@@ -45,6 +45,8 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 		AllocType:           config.DefaultAllocType,
 	}
 	dp := e2eutils.MakeMantleDeployParams(t, p)
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
+	dp.DeployConfig.L2GenesisBlockGasLimit = 300000000
 
 	// do not activate Delta hardfork for verifier
 	upgradesHelpers.ApplyArsiaTimeOffset(dp, nil)
@@ -80,7 +82,7 @@ func TestDropSpanBatchBeforeHardfork(gt *testing.T) {
 		Nonce:     n,
 		GasTipCap: big.NewInt(2 * params.GWei),
 		GasFeeCap: new(big.Int).Add(miner.L1Chain().CurrentBlock().BaseFee, big.NewInt(2*params.GWei)),
-		Gas:       params.TxGas,
+		Gas:       50000,
 		To:        &dp.Addresses.Bob,
 		Value:     e2eutils.Ether(2),
 	})
@@ -148,7 +150,8 @@ func TestHardforkMiddleOfArsiaSpanBatch(gt *testing.T) {
 	}
 	dp := e2eutils.MakeMantleDeployParams(t, p)
 	dp.DeployConfig.L2BlockTime = 2
-
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
+	dp.DeployConfig.L2GenesisBlockGasLimit = 300000000
 	// Activate HF in the middle of the first epoch
 	arsiaOffset := hexutil.Uint64(6)
 	upgradesHelpers.ApplyArsiaTimeOffset(dp, &arsiaOffset)
@@ -180,7 +183,7 @@ func TestHardforkMiddleOfArsiaSpanBatch(gt *testing.T) {
 		Nonce:     n,
 		GasTipCap: big.NewInt(2 * params.GWei),
 		GasFeeCap: new(big.Int).Add(miner.L1Chain().CurrentBlock().BaseFee, big.NewInt(2*params.GWei)),
-		Gas:       params.TxGas,
+		Gas:       50000,
 		To:        &dp.Addresses.Bob,
 		Value:     e2eutils.Ether(2),
 	})
@@ -854,6 +857,8 @@ func TestDropSpanBatchBeforeArsia(gt *testing.T) {
 		AllocType:           config.DefaultAllocType,
 	}
 	dp := e2eutils.MakeMantleDeployParams(t, p)
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
+	dp.DeployConfig.L2GenesisBlockGasLimit = 300000000
 
 	// Do not activate Arsia hardfork for verifier
 	upgradesHelpers.ApplyArsiaTimeOffset(dp, nil)
@@ -888,7 +893,7 @@ func TestDropSpanBatchBeforeArsia(gt *testing.T) {
 		Nonce:     n,
 		GasTipCap: big.NewInt(2 * params.GWei),
 		GasFeeCap: new(big.Int).Add(miner.L1Chain().CurrentBlock().BaseFee, big.NewInt(2*params.GWei)),
-		Gas:       params.TxGas,
+		Gas:       50000,
 		To:        &dp.Addresses.Bob,
 		Value:     e2eutils.Ether(2),
 	})
