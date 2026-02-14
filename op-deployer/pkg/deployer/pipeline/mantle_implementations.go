@@ -106,6 +106,7 @@ func DeployMantleImplementations(env *Env, intent *state.Intent, st *state.State
 		return fmt.Errorf("error deploying Mantle implementations: %w", err)
 	}
 
+	thisState.MNTTokenProxy = thisIntent.L1MNT
 	thisState.OptimismPortalImpl = dio.OptimismPortalImpl
 	thisState.SystemConfigImpl = dio.SystemConfigImpl
 	thisState.L1CrossDomainMessengerImpl = dio.L1CrossDomainMessengerImpl

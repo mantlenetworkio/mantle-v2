@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-e2e/config/secrets"
 	"github.com/ethereum-optimism/optimism/op-supervisor/supervisor/backend/depset"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +19,7 @@ import (
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
+	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -66,6 +68,34 @@ func MakeDeployParams(t require.TestingT, tp *TestParams) *DeployParams {
 	deployConfig.L1BlockTime = tp.L1BlockTime
 	deployConfig.UseAltDA = tp.UseAltDA
 	ApplyDeployConfigForks(deployConfig)
+
+	logger := log.NewLogger(log.DiscardHandler())
+	require.NoError(t, deployConfig.Check(logger))
+	require.Equal(t, addresses.Batcher, deployConfig.BatchSenderAddress)
+	require.Equal(t, addresses.Proposer, deployConfig.L2OutputOracleProposer)
+	require.Equal(t, addresses.SequencerP2P, deployConfig.P2PSequencerAddress)
+
+	return &DeployParams{
+		DeployConfig:   deployConfig,
+		MnemonicConfig: mnemonicCfg,
+		Secrets:        secrets,
+		Addresses:      addresses,
+		AllocType:      tp.AllocType,
+	}
+}
+
+func MakeMantleDeployParams(t require.TestingT, tp *TestParams) *DeployParams {
+	mnemonicCfg := secrets.DefaultMnemonicConfig
+	secrets := secrets.DefaultSecrets
+	addresses := secrets.Addresses()
+
+	deployConfig := config.DeployConfig(tp.AllocType)
+	deployConfig.MaxSequencerDrift = tp.MaxSequencerDrift
+	deployConfig.SequencerWindowSize = tp.SequencerWindowSize
+	deployConfig.ChannelTimeoutBedrock = tp.ChannelTimeout
+	deployConfig.L1BlockTime = tp.L1BlockTime
+	deployConfig.UseAltDA = tp.UseAltDA
+	ApplyMantleDeployConfigForks(deployConfig)
 
 	logger := log.NewLogger(log.DiscardHandler())
 	require.NoError(t, deployConfig.Check(logger))
@@ -131,6 +161,26 @@ func GetL2AllocsMode(dc *genesis.DeployConfig, t uint64) genesis.L2AllocsMode {
 		return genesis.L2AllocsEcotone
 	}
 	return genesis.L2AllocsDelta
+}
+
+// GetMantleL2AllocsMode determines which L2 allocs mode to use for Mantle based on the deploy config.
+// Mantle only has two allocs modes:
+// - L2AllocsLimb: Bedrock + Regolith + Mantle base forks (BaseFee, Everest, Euboea, Skadi) + Limb
+// - L2AllocsArsia: Limb + Arsia + all OP Stack forks (Canyon through Jovian)
+//
+// Unlike vanilla OP Stack which has separate allocs for each fork (Delta, Ecotone, Fjord, etc.),
+// Mantle activates all OP Stack forks at once when Arsia is activated.
+func GetMantleL2AllocsMode(dc *genesis.DeployConfig, t uint64) genesis.L2AllocsMode {
+	// Check if Arsia is activated at genesis
+	if arsiaTime := dc.MantleArsiaTime(t); arsiaTime != nil && *arsiaTime <= 0 {
+		return genesis.L2AllocsArsia
+	}
+	// Check if Limb is activated at genesis
+	if limbTime := dc.MantleLimbTime(t); limbTime != nil && *limbTime <= 0 {
+		return genesis.L2AllocsLimb
+	}
+	// Otherwise use Limb mode
+	return genesis.L2AllocsLimb
 }
 
 // Setup computes the testing setup configurations from deployment configuration and optional allocation parameters.
@@ -249,6 +299,13 @@ func SystemConfigFromDeployConfig(deployConfig *genesis.DeployConfig) eth.System
 }
 
 func ApplyDeployConfigForks(deployConfig *genesis.DeployConfig) {
+	//add mantle forks
+	isMantleArsia := os.Getenv("OP_E2E_USE_MANTLE_ARSIA") == "true"
+	isMantleLimb := isMantleArsia || os.Getenv("OP_E2E_USE_MANTLE_LIMB") == "true"
+	isMantleSkadi := isMantleLimb || os.Getenv("OP_E2E_USE_MANTLE_SKADI") == "true"
+	isMantleEverest := isMantleSkadi || os.Getenv("OP_E2E_USE_MANTLE_EVEREST") == "true"
+	isMantleBaseFee := isMantleEverest || os.Getenv("OP_E2E_USE_MANTLE_BASEFEE") == "true"
+	//keep optimism forks
 	isJovian := os.Getenv("OP_E2E_USE_JOVIAN") == "true"
 	isIsthmus := isJovian || os.Getenv("OP_E2E_USE_ISTHMUS") == "true"
 	isHolocene := isIsthmus || os.Getenv("OP_E2E_USE_HOLOCENE") == "true"
@@ -277,9 +334,264 @@ func ApplyDeployConfigForks(deployConfig *genesis.DeployConfig) {
 	if isJovian {
 		deployConfig.L2GenesisJovianTimeOffset = new(hexutil.Uint64)
 	}
+	if isMantleBaseFee {
+		deployConfig.L2GenesisMantleBaseFeeTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleEverest {
+		deployConfig.L2GenesisMantleEverestTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleSkadi {
+		deployConfig.L2GenesisMantleSkadiTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleLimb {
+		deployConfig.L2GenesisMantleLimbTimeOffset = new(hexutil.Uint64)
+
+	}
+	if isMantleArsia {
+		deployConfig.L2GenesisMantleArsiaTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisJovianTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisIsthmusTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisHoloceneTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisGraniteTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisFjordTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisEcotoneTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisDeltaTimeOffset = new(hexutil.Uint64)
+	}
 	// Canyon and lower is activated by default
 	deployConfig.L2GenesisCanyonTimeOffset = new(hexutil.Uint64)
 	deployConfig.L2GenesisRegolithTimeOffset = new(hexutil.Uint64)
 	// Activated by default, contracts depend on it
 	deployConfig.L1CancunTimeOffset = new(hexutil.Uint64)
+}
+
+func ApplyMantleDeployConfigForks(deployConfig *genesis.DeployConfig) {
+	//add mantle forks
+	isMantleArsia := os.Getenv("OP_E2E_USE_MANTLE_ARSIA") == "true"
+	isMantleLimb := isMantleArsia || os.Getenv("OP_E2E_USE_MANTLE_LIMB") == "true"
+	isMantleSkadi := isMantleLimb || os.Getenv("OP_E2E_USE_MANTLE_SKADI") == "true"
+	isMantleEverest := isMantleSkadi || os.Getenv("OP_E2E_USE_MANTLE_EVEREST") == "true"
+	isMantleBaseFee := isMantleEverest || os.Getenv("OP_E2E_USE_MANTLE_BASEFEE") == "true"
+
+	if isMantleBaseFee {
+		deployConfig.L2GenesisMantleBaseFeeTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleEverest {
+		deployConfig.L2GenesisMantleEverestTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleSkadi {
+		deployConfig.L2GenesisMantleSkadiTimeOffset = new(hexutil.Uint64)
+	}
+	if isMantleLimb && !isMantleArsia {
+		// LIMB version only: activate LIMB fork
+		deployConfig.L2GenesisMantleLimbTimeOffset = new(hexutil.Uint64)
+
+		// CRITICAL: Disable ARSIA fork (since init.go sets it to 0x0 by default)
+		deployConfig.L2GenesisMantleArsiaTimeOffset = nil
+
+		// CRITICAL: Disable all OP Stack forks for LIMB version
+		// LIMB only includes: Regolith + Mantle forks (BaseFee, Everest, Skadi, Limb)
+		// LIMB excludes: Canyon, Delta, Ecotone, Fjord, Granite, Holocene, Isthmus, Jovian
+		// This overrides any previous settings from init phase
+		deployConfig.L2GenesisDeltaTimeOffset = nil
+		deployConfig.L2GenesisEcotoneTimeOffset = nil
+		deployConfig.L2GenesisFjordTimeOffset = nil
+		deployConfig.L2GenesisGraniteTimeOffset = nil
+		deployConfig.L2GenesisHoloceneTimeOffset = nil
+		deployConfig.L2GenesisIsthmusTimeOffset = nil
+		deployConfig.L2GenesisJovianTimeOffset = nil
+		deployConfig.L2GenesisCanyonTimeOffset = nil
+	}
+	if isMantleArsia {
+		// ARSIA version: activate both Mantle and OP Stack forks
+		deployConfig.L2GenesisMantleLimbTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisMantleArsiaTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisJovianTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisIsthmusTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisHoloceneTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisGraniteTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisFjordTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisEcotoneTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisDeltaTimeOffset = new(hexutil.Uint64)
+		deployConfig.L2GenesisCanyonTimeOffset = new(hexutil.Uint64)
+	}
+	deployConfig.L2GenesisRegolithTimeOffset = new(hexutil.Uint64)
+	// Activated by default, contracts depend on it
+	deployConfig.L1CancunTimeOffset = new(hexutil.Uint64)
+	//activate L1 Prague
+	deployConfig.L1PragueTimeOffset = new(hexutil.Uint64)
+	//activate L1 Osaka
+	deployConfig.L1OsakaTimeOffset = new(hexutil.Uint64)
+	deployConfig.L1BlobScheduleConfig = &params.BlobScheduleConfig{
+		Cancun: params.DefaultCancunBlobConfig,
+		Prague: params.DefaultPragueBlobConfig,
+		Osaka:  params.DefaultOsakaBlobConfig, // Max = 9
+	}
+}
+
+// SetupMantleNormal creates a Mantle test environment based on DeployConfig
+// This is a generic setup function that:
+// 1. Reads fork configuration directly from DeployConfig (already set by MakeDeployParams or caller)
+// 2. Does NOT modify any fork times - respects what's in DeployConfig
+// 3. Applies Mantle overrides to map OP Stack forks to Mantle forks
+func SetupMantleNormal(t require.TestingT, deployParams *DeployParams, alloc *AllocParams) *SetupData {
+	deployConf := deployParams.DeployConfig.Copy()
+	deployConf.L1GenesisBlockTimestamp = hexutil.Uint64(time.Now().Unix())
+	logger := log.NewLogger(log.DiscardHandler())
+	// Use MantleCheck instead of Check to allow multiple forks at the same time
+	// This is necessary for Arsia fork which encompasses multiple OP Stack forks
+	require.NoError(t, deployConf.MantleCheck(logger))
+
+	l1Deployments := config.L1Deployments(deployParams.AllocType)
+	require.NoError(t, l1Deployments.Check(deployConf))
+
+	// Build L1 genesis
+	l1Genesis, err := genesis.BuildL1DeveloperGenesis(
+		deployConf,
+		config.L1Allocs(deployParams.AllocType),
+		l1Deployments,
+	)
+	require.NoError(t, err, "failed to create l1 genesis")
+	if alloc.PrefundTestUsers {
+		for _, addr := range deployParams.Addresses.All() {
+			l1Genesis.Alloc[addr] = types.Account{
+				Balance: Ether(1e12),
+			}
+		}
+	}
+	for addr, val := range alloc.L1Alloc {
+		l1Genesis.Alloc[addr] = val
+	}
+
+	l1Block := l1Genesis.ToBlock()
+
+	// Build L2 genesis
+	// Use GetMantleL2AllocsMode for Mantle-specific allocs mode determination
+	// Mantle only has two modes: Limb and Arsia (not separate modes for each OP Stack fork)
+	allocsMode := GetMantleL2AllocsMode(deployConf, l1Block.Time())
+	l2Allocs := config.L2Allocs(deployParams.AllocType, allocsMode)
+	// Use BuildMantleGenesis instead of BuildL2Genesis to apply Mantle-specific overrides
+	// This ensures ShanghaiTime and CancunTime are correctly mapped to MantleSkadiTime
+	l2Genesis, err := genesis.BuildMantleGenesis(deployConf, l2Allocs, eth.BlockRefFromHeader(l1Block.Header()))
+	require.NoError(t, err, "failed to create l2 genesis")
+	if alloc.PrefundTestUsers {
+		for _, addr := range deployParams.Addresses.All() {
+			l2Genesis.Alloc[addr] = types.Account{
+				Balance: Ether(1e12),
+			}
+		}
+	}
+	for addr, val := range alloc.L2Alloc {
+		l2Genesis.Alloc[addr] = val
+	}
+
+	// Apply GasPriceOracleTokenRatio override if specified in DeployConfig.
+	// The forge-generated L2 allocs contain a default tokenRatio (3000), but tests may
+	// need to override this value. If GasPriceOracleTokenRatio is non-zero, we override
+	// the storage slot 0 of GasPriceOracle contract.
+	if deployConf.GasPriceOracleTokenRatio != 0 {
+		ApplyGasPriceOracleTokenRatioOverride(l2Genesis, deployConf.GasPriceOracleTokenRatio)
+	}
+
+	// Setup AltDA if needed
+	var pcfg *rollup.AltDAConfig
+	if deployConf.UseAltDA {
+		pcfg = &rollup.AltDAConfig{
+			DAChallengeAddress: l1Deployments.DataAvailabilityChallengeProxy,
+			DAChallengeWindow:  deployConf.DAChallengeWindow,
+			DAResolveWindow:    deployConf.DAResolveWindow,
+			CommitmentType:     altda.KeccakCommitmentString,
+		}
+	}
+
+	// Build rollup config - directly use fork times from DeployConfig
+	// No modification here - respect what caller has set
+	rollupCfg := &rollup.Config{
+		Genesis: rollup.Genesis{
+			L1: eth.BlockID{
+				Hash:   l1Block.Hash(),
+				Number: 0,
+			},
+			L2: eth.BlockID{
+				Hash:   l2Genesis.ToBlock().Hash(),
+				Number: 0,
+			},
+			L2Time:       uint64(deployConf.L1GenesisBlockTimestamp),
+			SystemConfig: SystemConfigFromDeployConfig(deployConf),
+		},
+		BlockTime:              deployConf.L2BlockTime,
+		MaxSequencerDrift:      deployConf.MaxSequencerDrift,
+		SeqWindowSize:          deployConf.SequencerWindowSize,
+		ChannelTimeoutBedrock:  deployConf.ChannelTimeoutBedrock,
+		L1ChainID:              new(big.Int).SetUint64(deployConf.L1ChainID),
+		L2ChainID:              new(big.Int).SetUint64(deployConf.L2ChainID),
+		BatchInboxAddress:      deployConf.BatchInboxAddress,
+		DepositContractAddress: deployConf.OptimismPortalProxy,
+		L1SystemConfigAddress:  deployConf.SystemConfigProxy,
+		RegolithTime:           deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		CanyonTime:             deployConf.CanyonTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		DeltaTime:              deployConf.DeltaTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		EcotoneTime:            deployConf.EcotoneTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		FjordTime:              deployConf.FjordTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		GraniteTime:            deployConf.GraniteTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		HoloceneTime:           deployConf.HoloceneTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		PectraBlobScheduleTime: deployConf.PectraBlobScheduleTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		IsthmusTime:            deployConf.IsthmusTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		JovianTime:             deployConf.JovianTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		InteropTime:            deployConf.InteropTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		// Mantle-specific fork times
+		MantleBaseFeeTime: deployConf.MantleBaseFeeTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleEverestTime: deployConf.MantleEverestTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleEuboeaTime:  deployConf.MantleEuboeaTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleSkadiTime:   deployConf.MantleSkadiTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleLimbTime:    deployConf.MantleLimbTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		MantleArsiaTime:   deployConf.MantleArsiaTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		AltDAConfig:       pcfg,
+		ChainOpConfig: &params.OptimismConfig{
+			EIP1559Elasticity:        deployConf.EIP1559Elasticity,
+			EIP1559Denominator:       deployConf.EIP1559Denominator,
+			EIP1559DenominatorCanyon: &deployConf.EIP1559DenominatorCanyon,
+		},
+	}
+
+	// Apply Mantle overrides to map OP Stack forks to Mantle forks
+	// This ensures that when MantleArsia is activated, all required OP forks are also activated
+	if err := rollupCfg.AlignOpWithMantle(); err != nil {
+		require.NoError(t, err, "failed to apply Mantle overrides")
+	}
+
+	require.NoError(t, rollupCfg.Check())
+
+	// Sanity check that the config is correct
+	require.Equal(t, deployParams.Secrets.Addresses().Batcher, deployParams.DeployConfig.BatchSenderAddress)
+	require.Equal(t, deployParams.Secrets.Addresses().SequencerP2P, deployParams.DeployConfig.P2PSequencerAddress)
+	require.Equal(t, deployParams.Secrets.Addresses().Proposer, deployParams.DeployConfig.L2OutputOracleProposer)
+
+	return &SetupData{
+		L1Cfg:         l1Genesis,
+		L2Cfg:         l2Genesis,
+		RollupCfg:     rollupCfg,
+		ChainSpec:     rollup.NewChainSpec(rollupCfg),
+		DeploymentsL1: l1Deployments,
+	}
+}
+
+// ApplyGasPriceOracleTokenRatioOverride modifies the GasPriceOracle storage in the L2 genesis
+// to set the tokenRatio value. This is useful for tests that need to override the default
+// tokenRatio (3000) that comes from forge-generated allocs.
+//
+// This function should be called AFTER SetupMantleNormal to override the tokenRatio.
+//
+// Example usage:
+//
+//	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
+//	e2eutils.ApplyGasPriceOracleTokenRatioOverride(sd.L2Cfg, 1) // Set tokenRatio to 1
+func ApplyGasPriceOracleTokenRatioOverride(l2Genesis *core.Genesis, tokenRatio uint64) {
+	tokenRatioSlot := common.BigToHash(big.NewInt(0))
+	gpoAccount := l2Genesis.Alloc[predeploys.GasPriceOracleAddr]
+
+	if gpoAccount.Storage == nil {
+		gpoAccount.Storage = map[common.Hash]common.Hash{}
+	}
+	gpoAccount.Storage[tokenRatioSlot] = common.BigToHash(new(big.Int).SetUint64(tokenRatio))
+	l2Genesis.Alloc[predeploys.GasPriceOracleAddr] = gpoAccount
 }

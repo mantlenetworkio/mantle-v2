@@ -135,6 +135,7 @@ type MantleDeployOPChainInput struct {
 	L2OutputOracleImpl                common.Address
 	L2OutputOracleProxy               common.Address
 	FinalSystemOwner                  common.Address
+	SystemConfigOwner                 common.Address
 	BasefeeScalar                     uint32
 	BlobbasefeeScalar                 uint32
 	BatchSenderAddress                common.Address
@@ -164,6 +165,7 @@ type MantleL2GenesisInput struct {
 	L1FeeVaultRecipient         common.Address
 	OperatorFeeVaultRecipient   common.Address
 	GasPriceOracleOwner         common.Address
+	GasPriceOracleTokenRatio    *big.Int
 	MantleFork                  *big.Int
 	FundDevAccounts             bool
 }

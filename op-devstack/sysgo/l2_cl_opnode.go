@@ -294,6 +294,7 @@ func WithOpNode(l2CLID stack.L2CLNodeID, l1CLID stack.L1CLNodeID, l1ELID stack.L
 				SequencerConfDepth: 2,
 			},
 			Rollup:        *l2Net.rollupCfg,
+			L2Sync:        &config.L2SyncEndpointConfig{},
 			DependencySet: depSet,
 			P2PSigner:     p2pSignerSetup, // nil when not sequencer
 			RPC: oprpc.CLIConfig{

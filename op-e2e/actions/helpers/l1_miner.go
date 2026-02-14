@@ -92,7 +92,7 @@ func (s *L1Miner) ActL1StartBlock(timeDelta uint64) Action {
 		}
 
 		if s.l1Cfg.Config.IsLondon(header.Number) {
-			header.BaseFee = eip1559.CalcBaseFee(s.l1Cfg.Config, parent, header.Time)
+			header.BaseFee = eip1559.CalcBaseFee(s.l1Cfg.Config, parent)
 			// At the transition, double the gas limit so the gas target is equal to the old gas limit.
 			if !s.l1Cfg.Config.IsLondon(parent.Number) {
 				header.GasLimit = parent.GasLimit * s.l1Cfg.Config.ElasticityMultiplier()
@@ -284,11 +284,15 @@ func (s *L1Miner) ActL1EndBlock(t Testing) *types.Block {
 		t.Fatalf("l1 trie write error: %v", err)
 	}
 	// now that the blob txs are in a canonical block, flush them to the blob store
+	// Use global blob index across all transactions in the block (not per-transaction index)
+	globalBlobIndex := uint64(0)
 	for _, sidecar := range s.l1BuildingBlobSidecars {
 		for i, h := range sidecar.BlobHashes() {
 			blob := (*eth.Blob)(&sidecar.Blobs[i])
-			indexedHash := eth.IndexedBlobHash{Index: uint64(i), Hash: h}
+			// Use globalBlobIndex instead of i to match derivation pipeline's indexing
+			indexedHash := eth.IndexedBlobHash{Index: globalBlobIndex, Hash: h}
 			s.blobStore.StoreBlob(block.Time(), indexedHash, blob)
+			globalBlobIndex++
 		}
 	}
 	_, err = s.l1Chain.InsertChain(types.Blocks{block})

@@ -41,6 +41,7 @@ contract L2Genesis is Script {
         address l1FeeVaultRecipient;
         address operatorFeeVaultRecipient;
         address gasPriceOracleOwner;
+        uint256 gasPriceOracleTokenRatio;
         uint256 mantleFork;
         bool fundDevAccounts;
     }
@@ -50,6 +51,7 @@ contract L2Genesis is Script {
 
     uint256 internal constant PRECOMPILE_COUNT = 256;
     uint80 internal constant DEV_ACCOUNT_FUND_AMT = 10_000 ether;
+    uint256 internal constant DEFAULT_GAS_PRICE_ORACLE_TOKEN_RATIO = 3000;
 
     /// @notice Default Anvil dev accounts. Only funded if `cfg.fundDevAccounts == true`.
     /// Also known as "test test test test test test test test test test test junk" mnemonic accounts,
@@ -362,6 +364,13 @@ contract L2Genesis is Script {
         // Set in proxy (storage is only used in proxy, not in implementation)
         vm.store(Predeploys.GAS_PRICE_ORACLE, ownerSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
         vm.store(Predeploys.GAS_PRICE_ORACLE, operatorSlot, bytes32(uint256(uint160(_input.gasPriceOracleOwner))));
+
+        // Set initial token ratio
+        uint256 tokenRatio = _input.gasPriceOracleTokenRatio;
+        if (tokenRatio == 0) {
+            tokenRatio = DEFAULT_GAS_PRICE_ORACLE_TOKEN_RATIO;
+        }
+        vm.store(Predeploys.GAS_PRICE_ORACLE, bytes32(uint256(0)), bytes32(tokenRatio));
     }
 
     /// @notice This predeploy is following the safety invariant #1.

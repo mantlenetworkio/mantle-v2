@@ -55,7 +55,7 @@ def main():
         log.error('Failed to fetch chain ID from localhost:8545 after L1 startup')
         raise Exception('Cannot determine L1 chain ID')
     log.info(f'Using chain ID {chain_id} from localhost:8545')
-
+    
     # Update deployment_json_path with actual chain_id
     deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
 
@@ -141,7 +141,7 @@ def get_chain_id_from_rpc(rpc_url='http://localhost:8545'):
             'params': [],
             'id': 1
         }).encode('utf-8')
-
+        
         req = Request(rpc_url, data=data, headers={'Content-Type': 'application/json'})
         with urlopen(req, timeout=5) as response:
             result = json.loads(response.read().decode('utf-8'))

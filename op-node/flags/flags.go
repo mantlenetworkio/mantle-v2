@@ -369,6 +369,7 @@ var (
 		Name:    "syncmode.backup",
 		Usage:   "Enable backup L2 unsafe sync.",
 		EnvVars: prefixEnvVars("SYNCMODE_BACKUP"),
+		Value:   true,
 		Hidden:  true,
 	}
 	BackupL2UnsafeSyncRPC = &cli.StringFlag{

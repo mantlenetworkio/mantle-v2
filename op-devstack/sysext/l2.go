@@ -115,6 +115,31 @@ func (o *Orchestrator) hydrateL2ELCL(node *descriptors.Node, l2Net stack.Extensi
 		l2EL.SetLabel(match.LabelVendor, string(match.OpReth))
 	}
 	l2Net.AddL2ELNode(l2EL)
+	var elEndpointString string
+	for proto, endpoint := range elService.Endpoints {
+		if proto == RPCProtocol {
+			port := endpoint.Port
+			if o.usePrivatePorts {
+				port = endpoint.PrivatePort
+			}
+			scheme := endpoint.Scheme
+			if scheme == "" {
+				scheme = HTTPProtocol
+			}
+			host := endpoint.Host
+			path := ""
+			if strings.Contains(host, "/") {
+				parts := strings.SplitN(host, "/", 2)
+				host = parts[0]
+				path = "/" + parts[1]
+			}
+			elEndpointString = fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
+			break
+		}
+	}
+	require.NotEmpty(elEndpointString, "no endpoint found for EL service", elService.Name)
+
+	l2Net.Logger().Info("Found endpoint for EL service", "endpoint", elEndpointString)
 
 	clService, ok := node.Services[CLServiceName]
 	require.True(ok, "need L2 CL service for chain", l2ID)
@@ -460,6 +485,12 @@ func (o *Orchestrator) getWalletMappings(l1Wallets descriptors.WalletMap) map[st
 	}
 
 	o.addFaucetMappings(mappings, l1Wallets)
+
+	// L1 MNT faucet mapping: the account that holds MNT tokens for funding test accounts
+	l1MNTFaucetName := devkeys.L1MNTFaucet.String()
+	if _, hasL1MNTFaucet := l1Wallets[l1MNTFaucetName]; hasL1MNTFaucet {
+		mappings[l1MNTFaucetName] = &FaucetKey{name: l1MNTFaucetName}
+	}
 
 	// Dynamically discover user-key-* mappings from available L1 wallets
 	for walletRole := range l1Wallets {

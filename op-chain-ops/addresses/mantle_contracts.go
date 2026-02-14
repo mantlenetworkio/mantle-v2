@@ -2,8 +2,10 @@ package addresses
 
 import "github.com/ethereum/go-ethereum/common"
 
-type MantleImplContracts struct {
+type MantleContracts struct {
 	AllSetUp bool
+
+	MNTTokenProxy common.Address
 
 	// Mantle uses legacy implementations which could not be shared between chains.
 	OptimismPortalImpl               common.Address
