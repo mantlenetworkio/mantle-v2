@@ -238,6 +238,7 @@ func (b *MantleBridge) DepositETH(amount eth.ETH, from *EOA) MantleDeposit {
 		b.ctx,
 		from.Plan(),
 		txplan.WithValue(amount),
+		txplan.WithGasRatio(2.0),
 	)
 	b.require.NoError(err, "failed to send ETH deposit")
 	b.require.Equal(types.ReceiptStatusSuccessful, l1Receipt.Status, "ETH deposit failed")
@@ -269,6 +270,7 @@ func (b *MantleBridge) DepositMNT(amount eth.ETH, from *EOA) MantleDeposit {
 		b.l1Bridge.DepositMNT(amount, mantleDepositGasLimit, []byte{}),
 		b.ctx,
 		from.Plan(),
+		txplan.WithGasRatio(2.0),
 	)
 	b.require.NoError(err, "failed to send MNT deposit")
 	b.require.Equal(types.ReceiptStatusSuccessful, l1Receipt.Status, "MNT deposit failed")

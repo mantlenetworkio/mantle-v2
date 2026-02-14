@@ -64,32 +64,32 @@ func L1ForMantle(globalState *state.State, chainID common.Hash) (*addresses.L1Co
 		OpChainContracts:         chainState.OpChainContracts,
 	}
 	// Mantle special handling: If the implementation contracts in ImplementationsContracts are empty
-	//then they are filled from MantleImplContracts (Mantle stores the implementation contracts in MantleImplContracts
+	//then they are filled from MantleContracts (Mantle stores the implementation contracts in MantleContracts
 
-	if chainState.MantleImplContracts.AllSetUp ||
-		chainState.MantleImplContracts.L1CrossDomainMessengerImpl != (common.Address{}) {
+	if chainState.MantleContracts.AllSetUp ||
+		chainState.MantleContracts.L1CrossDomainMessengerImpl != (common.Address{}) {
 
 		//Fill in the missing Mantle implementation contract in ImplementationsContracts
 		if l1Contracts.L1CrossDomainMessengerImpl == (common.Address{}) {
-			l1Contracts.L1CrossDomainMessengerImpl = chainState.MantleImplContracts.L1CrossDomainMessengerImpl
+			l1Contracts.L1CrossDomainMessengerImpl = chainState.MantleContracts.L1CrossDomainMessengerImpl
 		}
 		if l1Contracts.L1StandardBridgeImpl == (common.Address{}) {
-			l1Contracts.L1StandardBridgeImpl = chainState.MantleImplContracts.L1StandardBridgeImpl
+			l1Contracts.L1StandardBridgeImpl = chainState.MantleContracts.L1StandardBridgeImpl
 		}
 		if l1Contracts.L1Erc721BridgeImpl == (common.Address{}) {
-			l1Contracts.L1Erc721BridgeImpl = chainState.MantleImplContracts.L1Erc721BridgeImpl
+			l1Contracts.L1Erc721BridgeImpl = chainState.MantleContracts.L1Erc721BridgeImpl
 		}
 		if l1Contracts.OptimismMintableErc20FactoryImpl == (common.Address{}) {
-			l1Contracts.OptimismMintableErc20FactoryImpl = chainState.MantleImplContracts.OptimismMintableErc20FactoryImpl
+			l1Contracts.OptimismMintableErc20FactoryImpl = chainState.MantleContracts.OptimismMintableErc20FactoryImpl
 		}
 		if l1Contracts.SystemConfigImpl == (common.Address{}) {
-			l1Contracts.SystemConfigImpl = chainState.MantleImplContracts.SystemConfigImpl
+			l1Contracts.SystemConfigImpl = chainState.MantleContracts.SystemConfigImpl
 		}
 		if l1Contracts.OptimismPortalImpl == (common.Address{}) {
-			l1Contracts.OptimismPortalImpl = chainState.MantleImplContracts.OptimismPortalImpl
+			l1Contracts.OptimismPortalImpl = chainState.MantleContracts.OptimismPortalImpl
 		}
 		if l1Contracts.L2OutputOracleImpl == (common.Address{}) {
-			l1Contracts.L2OutputOracleImpl = chainState.MantleImplContracts.L2OutputOracleImpl
+			l1Contracts.L2OutputOracleImpl = chainState.MantleContracts.L2OutputOracleImpl
 		}
 	}
 

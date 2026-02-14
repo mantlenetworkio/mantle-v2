@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum-optimism/optimism/devnet-sdk/descriptors"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -27,6 +28,14 @@ func fixupMantleDevnetConfig(config *descriptors.DevnetEnvironment) error {
 	// Check if "mantle" feature is enabled
 	if !slices.Contains(config.Features, FeatureMantle) {
 		return nil
+	}
+
+	// fixupL1ChainConfig replaces the L1 chain config with the built-in one for well-known
+	// chains. Op-acceptor uses an older geth dependency that strips newer fork fields
+	// (e.g., BPO1Time, BlobScheduleConfig) during JSON round-tripping. The built-in config
+	// is authoritative for well-known L1 chains.
+	if wellKnown := eth.L1ChainConfigByChainID(eth.ChainIDFromBig(config.L1.Config.ChainID)); wellKnown != nil {
+		config.L1.Config = wellKnown
 	}
 
 	// Fetch rollup config from L2 nodes to get the authoritative config

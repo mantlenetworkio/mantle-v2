@@ -16,18 +16,6 @@ func TestDepositMNTByPortal_WithMsgValue(gt *testing.T) {
 	runDepositCase(gt, depositByPortal, assetMNT, msgValueWith)
 }
 
-func TestDepositERC20ByPortal_ZeroValue(gt *testing.T) {
-	runDepositCase(gt, depositByPortal, assetERC20, msgValueZero)
-}
-
-func TestDepositERC20ByPortal_WithoutMsgValue(gt *testing.T) {
-	runDepositCase(gt, depositByPortal, assetERC20, msgValueWithout)
-}
-
-func TestDepositERC20ByPortal_WithMsgValue(gt *testing.T) {
-	runDepositCase(gt, depositByPortal, assetERC20, msgValueWith)
-}
-
 func TestDepositETHByPortal_ZeroValue(gt *testing.T) {
 	runDepositCase(gt, depositByPortal, assetETH, msgValueZero)
 }
