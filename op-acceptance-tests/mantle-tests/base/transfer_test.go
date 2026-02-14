@@ -1,12 +1,13 @@
 package base
 
 import (
+	"testing"
+
 	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	txib "github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/contractio"
-	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -20,7 +21,7 @@ func TestTransfer(gt *testing.T) {
 	sys := presets.NewMantleMinimal(t)
 
 	// Create two L2 wallets
-	alice := sys.FunderL2.NewFundedEOA(eth.ThreeHundredthsEther)
+	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
 	aliceBalance := alice.GetBalance()
 	bob := sys.Wallet.NewEOA(sys.L2EL)
 	bobBalance := bob.GetBalance()
