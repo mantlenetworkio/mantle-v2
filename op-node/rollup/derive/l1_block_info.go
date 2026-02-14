@@ -30,6 +30,9 @@ const (
 	L1InfoEcotoneLen = 4 + 32*5             // after Ecotone upgrade, args are packed into 5 32-byte slots
 	L1InfoIsthmusLen = 4 + 32*5 + 4 + 8     // after Isthmus upgrade, additionally pack in operator fee scalar and constant
 	L1InfoJovianLen  = L1InfoIsthmusLen + 2 // after Jovian upgrade, additionally pack in DA footprint gas scalar
+
+	// Mantle features
+	L1InfoFuncArsiaSignature = "setL1BlockValuesArsia()"
 )
 
 var (
@@ -42,6 +45,9 @@ var (
 	ErrInvalidEcotoneFormat = errors.New("invalid ecotone l1 block info format")
 	ErrInvalidIsthmusFormat = errors.New("invalid isthmus l1 block info format")
 	ErrInvalidJovianFormat  = errors.New("invalid jovian l1 block info format")
+
+	// Mantle features
+	L1InfoFuncArsiaBytes4 = crypto.Keccak256([]byte(L1InfoFuncArsiaSignature))[:4]
 )
 
 const (
@@ -467,6 +473,9 @@ func isJovianButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64) bool
 func L1BlockInfoFromBytes(rollupCfg *rollup.Config, l2BlockTime uint64, data []byte) (*L1BlockInfo, error) {
 	var info L1BlockInfo
 	// Important, this must be ordered from most recent to oldest
+	if isMantleArsiaButNotFirstBlock(rollupCfg, l2BlockTime) {
+		return &info, info.unmarshalBinaryMantleArsia(data)
+	}
 	if isJovianButNotFirstBlock(rollupCfg, l2BlockTime) {
 		return &info, info.unmarshalBinaryJovian(data)
 	}
@@ -494,6 +503,8 @@ func L1InfoDeposit(rollupCfg *rollup.Config, l1ChainConfig *params.ChainConfig, 
 	isEcotoneActivated := isEcotoneButNotFirstBlock(rollupCfg, l2Timestamp)
 	isIsthmusActivated := isIsthmusButNotFirstBlock(rollupCfg, l2Timestamp)
 	isJovianActivated := isJovianButNotFirstBlock(rollupCfg, l2Timestamp)
+
+	isMantleArsiaActivated := isMantleArsiaButNotFirstBlock(rollupCfg, l2Timestamp)
 
 	// 1. Set all fields according to active forks
 	if isEcotoneActivated {
@@ -539,6 +550,11 @@ func L1InfoDeposit(rollupCfg *rollup.Config, l1ChainConfig *params.ChainConfig, 
 	var data []byte
 	var err error
 	switch {
+	case isMantleArsiaActivated:
+		data, err = l1BlockInfo.marshalBinaryMantleArsia()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mantle Arsia l1 block info: %w", err)
+		}
 	case isJovianActivated:
 		data, err = l1BlockInfo.marshalBinaryJovian()
 		if err != nil {
@@ -597,4 +613,39 @@ func L1InfoDepositBytes(rollupCfg *rollup.Config, l1ChainConfig *params.ChainCon
 		return nil, fmt.Errorf("failed to encode L1 info tx: %w", err)
 	}
 	return opaqueL1Tx, nil
+}
+
+// Mantle features
+func (info *L1BlockInfo) marshalBinaryMantleArsia() ([]byte, error) {
+	w := bytes.NewBuffer(make([]byte, 0, L1InfoJovianLen))
+	if err := solabi.WriteSignature(w, L1InfoFuncArsiaBytes4); err != nil {
+		return nil, err
+	}
+	if err := info.writeBinaryJovian(w); err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+func (info *L1BlockInfo) unmarshalBinaryMantleArsia(data []byte) error {
+	if len(data) != L1InfoJovianLen {
+		return fmt.Errorf("data is unexpected length: %d", len(data))
+	}
+	r := bytes.NewReader(data)
+	if _, err := solabi.ReadAndValidateSignature(r, []byte(L1InfoFuncArsiaBytes4)); err != nil {
+		return err
+	}
+	if err := info.readBinaryJovian(r); err != nil {
+		return err
+	}
+	if !solabi.EmptyReader(r) {
+		return errors.New("too many bytes")
+	}
+	return nil
+}
+
+// isMantleArsiaButNotFirstBlock returns whether the specified block is subject to the Mantle Arsia upgrade,
+// but is not the activation block itself.
+func isMantleArsiaButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64) bool {
+	return rollupCfg.IsMantleArsia(l2Timestamp) && !rollupCfg.IsMantleArsiaActivationBlock(l2Timestamp)
 }

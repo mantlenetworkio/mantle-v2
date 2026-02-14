@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -63,6 +64,7 @@ func NewL1Replica(t Testing, log log.Logger, genesis *core.Genesis) *L1Replica {
 			Datacap:   blobpool.DefaultConfig.Datacap,
 			PriceBump: blobpool.DefaultConfig.PriceBump,
 		},
+		Miner: miner.DefaultConfig,
 	}
 	nodeCfg := &node.Config{
 		Name:        "l1-geth",

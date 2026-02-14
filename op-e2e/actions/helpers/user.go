@@ -257,15 +257,19 @@ func (s *BasicUser[B]) Secret() *ecdsa.PrivateKey {
 }
 
 func (s *BasicUser[B]) MakeTransaction(t Testing) *types.Transaction {
-	gas, err := s.env.EthCl.EstimateGas(t.Ctx(), ethereum.CallMsg{
-		From:      s.address,
-		To:        s.txToAddr,
-		GasFeeCap: s.txOpts.GasFeeCap,
-		GasTipCap: s.txOpts.GasTipCap,
-		Value:     s.TxValue(),
-		Data:      s.txCallData,
-	})
-	require.NoError(t, err, "gas estimation should pass")
+	gas := s.txOpts.GasLimit
+	if gas == 0 {
+		var err error
+		gas, err = s.env.EthCl.EstimateGas(t.Ctx(), ethereum.CallMsg{
+			From:      s.address,
+			To:        s.txToAddr,
+			GasFeeCap: s.txOpts.GasFeeCap,
+			GasTipCap: s.txOpts.GasTipCap,
+			Value:     s.TxValue(),
+			Data:      s.txCallData,
+		})
+		require.NoError(t, err, "gas estimation should pass")
+	}
 	return types.MustSignNewTx(s.account, s.env.Signer, &types.DynamicFeeTx{
 		To:        s.txToAddr,
 		GasFeeCap: s.txOpts.GasFeeCap,

@@ -51,3 +51,47 @@ func L1(globalState *state.State, chainID common.Hash) (*addresses.L1Contracts, 
 
 	return &l1Contracts, nil
 }
+
+func L1ForMantle(globalState *state.State, chainID common.Hash) (*addresses.L1Contracts, error) {
+	chainState, err := globalState.Chain(chainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chain state for ID %s: %w", chainID.String(), err)
+	}
+
+	l1Contracts := addresses.L1Contracts{
+		SuperchainContracts:      *globalState.SuperchainDeployment,
+		ImplementationsContracts: *globalState.ImplementationsDeployment,
+		OpChainContracts:         chainState.OpChainContracts,
+	}
+	// Mantle special handling: If the implementation contracts in ImplementationsContracts are empty
+	//then they are filled from MantleContracts (Mantle stores the implementation contracts in MantleContracts
+
+	if chainState.MantleContracts.AllSetUp ||
+		chainState.MantleContracts.L1CrossDomainMessengerImpl != (common.Address{}) {
+
+		//Fill in the missing Mantle implementation contract in ImplementationsContracts
+		if l1Contracts.L1CrossDomainMessengerImpl == (common.Address{}) {
+			l1Contracts.L1CrossDomainMessengerImpl = chainState.MantleContracts.L1CrossDomainMessengerImpl
+		}
+		if l1Contracts.L1StandardBridgeImpl == (common.Address{}) {
+			l1Contracts.L1StandardBridgeImpl = chainState.MantleContracts.L1StandardBridgeImpl
+		}
+		if l1Contracts.L1Erc721BridgeImpl == (common.Address{}) {
+			l1Contracts.L1Erc721BridgeImpl = chainState.MantleContracts.L1Erc721BridgeImpl
+		}
+		if l1Contracts.OptimismMintableErc20FactoryImpl == (common.Address{}) {
+			l1Contracts.OptimismMintableErc20FactoryImpl = chainState.MantleContracts.OptimismMintableErc20FactoryImpl
+		}
+		if l1Contracts.SystemConfigImpl == (common.Address{}) {
+			l1Contracts.SystemConfigImpl = chainState.MantleContracts.SystemConfigImpl
+		}
+		if l1Contracts.OptimismPortalImpl == (common.Address{}) {
+			l1Contracts.OptimismPortalImpl = chainState.MantleContracts.OptimismPortalImpl
+		}
+		if l1Contracts.L2OutputOracleImpl == (common.Address{}) {
+			l1Contracts.L2OutputOracleImpl = chainState.MantleContracts.L2OutputOracleImpl
+		}
+	}
+
+	return &l1Contracts, nil
+}

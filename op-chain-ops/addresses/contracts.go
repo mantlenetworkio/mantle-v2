@@ -64,6 +64,7 @@ type OpChainContracts struct {
 	OpChainFaultProofsContracts
 	OpChainAltDAContracts
 	OpChainLegacyContracts
+	MantleContracts
 }
 
 // OpChainCoreContracts struct contains contracts that all L2s need, regardless of feature set

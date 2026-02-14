@@ -133,6 +133,30 @@ type Config struct {
 	// Active if InteropTime != nil && L2 block timestamp >= *InteropTime, inactive otherwise.
 	InteropTime *uint64 `json:"interop_time,omitempty"`
 
+	// MantleBaseFeeTime sets the activation time of the Mantle BaseFee network-upgrade:
+	// Active if MantleBaseFeeTime != nil && L2 block timestamp >= *MantleBaseFeeTime, inactive otherwise.
+	MantleBaseFeeTime *uint64 `json:"mantle_base_fee_time,omitempty"`
+
+	// MantleEverestTime sets the activation time of the Everest network-upgrade:
+	// Active if MantleEverestTime != nil && L2 block timestamp >= *MantleEverestTime, inactive otherwise.
+	MantleEverestTime *uint64 `json:"mantle_everest_time,omitempty"`
+
+	// MantleEuboeaTime sets the activation time of the Euboea network-upgrade:
+	// Active if MantleEuboeaTime != nil && L2 block timestamp >= *MantleEuboeaTime, inactive otherwise.
+	MantleEuboeaTime *uint64 `json:"mantle_euboea_time,omitempty"`
+
+	// MantleSkadiTime sets the activation time of the Skadi network-upgrade:
+	// Active if MantleSkadiTime != nil && L2 block timestamp >= *MantleSkadiTime, inactive otherwise.
+	MantleSkadiTime *uint64 `json:"mantle_skadi_time,omitempty"`
+
+	// MantleLimbTime sets the activation time of the Limb network-upgrade:
+	// Active if MantleLimbTime != nil && L2 block timestamp >= *MantleLimbTime, inactive otherwise.
+	MantleLimbTime *uint64 `json:"mantle_limb_time,omitempty"`
+
+	// MantleArsiaTime sets the activation time of the Arsia network-upgrade:
+	// Active if MantleArsiaTime != nil && L2 block timestamp >= *MantleArsiaTime, inactive otherwise.
+	MantleArsiaTime *uint64 `json:"mantle_arsia_time,omitempty"`
+
 	// Note: below addresses are part of the block-derivation process,
 	// and required to be the same network-wide to stay in consensus.
 
@@ -164,6 +188,12 @@ type Config struct {
 	// This feature (de)activates by L1 origin timestamp, to keep a consistent L1 block info per L2
 	// epoch.
 	PectraBlobScheduleTime *uint64 `json:"pectra_blob_schedule_time,omitempty"`
+
+	// Mantle features: Legacy fields
+	// Use Da from MantleDA(EigenDA)
+	MantleDaSwitch bool `json:"mantle_da_switch,omitempty"`
+	// MantleDA(EigenDA) DataLayrServiceManage contract address
+	DataLayrServiceManagerAddr string `json:"datalayr_service_manager_addr,omitempty"`
 }
 
 // ValidateL1Config checks L1 config variables for errors.
@@ -437,6 +467,11 @@ func (c *Config) IsForkActive(fork ForkName, timestamp uint64) bool {
 	return activationTime != nil && timestamp >= *activationTime
 }
 
+func (c *Config) IsMantleForkActive(fork MantleForkName, timestamp uint64) bool {
+	activationTime := c.MantleActivationTime(fork)
+	return activationTime != nil && timestamp >= *activationTime
+}
+
 // IsRegolith returns true if the Regolith hardfork is active at or past the given timestamp.
 func (c *Config) IsRegolith(timestamp uint64) bool {
 	return c.IsForkActive(forks.Regolith, timestamp)
@@ -679,7 +714,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 		return eth.FCUV3
 	}
 	ts := uint64(attr.Timestamp)
-	if c.IsEcotone(ts) {
+	if c.IsEcotone(ts) || c.IsMantleSkadi(ts) {
 		// Cancun
 		return eth.FCUV3
 	} else if c.IsCanyon(ts) {
@@ -694,7 +729,7 @@ func (c *Config) ForkchoiceUpdatedVersion(attr *eth.PayloadAttributes) eth.Engin
 
 // NewPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.NewPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
@@ -706,7 +741,7 @@ func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 
 // GetPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) {
+	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.GetPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun

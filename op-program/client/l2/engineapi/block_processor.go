@@ -58,7 +58,7 @@ func NewBlockProcessorFromPayloadAttributes(provider BlockDataProvider, parent c
 	if attrs.EIP1559Params != nil {
 		d, e := eip1559.DecodeHolocene1559Params(attrs.EIP1559Params[:])
 		if d == 0 {
-			d = provider.Config().BaseFeeChangeDenominator(header.Time)
+			d = provider.Config().BaseFeeChangeDenominator()
 			e = provider.Config().ElasticityMultiplier()
 		}
 		if provider.Config().IsOptimismHolocene(header.Time) {
@@ -84,7 +84,7 @@ func NewBlockProcessorFromHeader(provider BlockDataProvider, h *types.Header) (*
 		return nil, fmt.Errorf("get parent state: %w", err)
 	}
 	header.Number = new(big.Int).Add(parentHeader.Number, common.Big1)
-	header.BaseFee = eip1559.CalcBaseFee(provider.Config(), parentHeader, header.Time)
+	header.BaseFee = eip1559.CalcBaseFee(provider.Config(), parentHeader)
 	header.GasUsed = 0
 	gasPool := new(core.GasPool).AddGas(header.GasLimit)
 	mkEVM := func() *vm.EVM {
@@ -116,12 +116,14 @@ func NewBlockProcessorFromHeader(provider BlockDataProvider, h *types.Header) (*
 	if provider.Config().IsPrague(header.Number, header.Time) {
 		core.ProcessParentBlockHash(header.ParentHash, vmenv)
 	}
-	if provider.Config().IsIsthmus(header.Time) {
-		// set the header withdrawals root for Isthmus blocks
+	// Mantle: Set withdrawals and requests hash for both Isthmus (OP Stack) and MantleSkadi (LIMB)
+	// In Mantle LIMB version, MantleSkadi provides similar functionality to Isthmus
+	if provider.Config().IsIsthmus(header.Time) || provider.Config().IsOptimismWithSkadi(header.Time) {
+		// set the header withdrawals root for Isthmus/Skadi blocks
 		mpHash := statedb.GetStorageRoot(predeploys.L2ToL1MessagePasserAddr)
 		header.WithdrawalsHash = &mpHash
 
-		// set the header requests root to empty hash for Isthmus blocks
+		// set the header requests root to empty hash for Isthmus/Skadi blocks
 		header.RequestsHash = &types.EmptyRequestsHash
 	}
 

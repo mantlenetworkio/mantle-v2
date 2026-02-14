@@ -23,7 +23,7 @@ func TestUnmarshalLogEvent(t *testing.T) {
 				LogIndex:    uint64(rng.Intn(10000)),
 			}
 			depInput := testutils.GenerateDeposit(source.SourceHash(), rng)
-			log, err := MarshalDepositLogEvent(MockDepositContractAddr, depInput)
+			log, err := MarshalDepositLogEventV0(MockDepositContractAddr, depInput)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -69,7 +69,7 @@ func makeReceipts(rng *rand.Rand, blockHash common.Hash, depositContractAddr com
 				if status == types.ReceiptStatusSuccessful {
 					expectedDeposits = append(expectedDeposits, dep)
 				}
-				ev, err = MarshalDepositLogEvent(depositContractAddr, dep)
+				ev, err = MarshalDepositLogEventV0(depositContractAddr, dep)
 				if err != nil {
 					return []*types.Receipt{}, []*types.DepositTx{}, err
 				}

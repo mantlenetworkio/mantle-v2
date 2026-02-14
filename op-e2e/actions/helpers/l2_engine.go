@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient/gethclient"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -79,6 +80,7 @@ func newBackend(t e2eutils.TestingBase, genesis *core.Genesis, jwtPath string, o
 		Genesis:     genesis,
 		StateScheme: rawdb.HashScheme,
 		NoPruning:   true,
+		Miner:       miner.DefaultConfig,
 	}
 	nodeCfg := &node.Config{
 		Name:        "l2-geth",

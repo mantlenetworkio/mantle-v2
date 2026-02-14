@@ -53,6 +53,15 @@ type ConfigChecker interface {
 	Check(log log.Logger) error
 }
 
+// MantleConfigChecker extends ConfigChecker with Mantle-specific validation.
+// Mantle validation allows multiple forks to activate at the same time (even post-Genesis),
+// which is necessary for Arsia fork that encompasses multiple OP Stack forks.
+type MantleConfigChecker interface {
+	ConfigChecker
+	// MantleCheck verifies the contents of a config with Mantle-specific rules.
+	MantleCheck(log log.Logger) error
+}
+
 func checkConfigBundle(bundle any, log log.Logger) error {
 	cfgValue := reflect.ValueOf(bundle)
 	for cfgValue.Kind() == reflect.Interface || cfgValue.Kind() == reflect.Pointer {
@@ -142,6 +151,13 @@ type OwnershipDeployConfig struct {
 	// FinalSystemOwner is the owner of the system on L1. Any L1 contract that is ownable has
 	// this account set as its owner.
 	FinalSystemOwner common.Address `json:"finalSystemOwner"`
+
+	// MANTLE_FEATURES
+	// PortalGuardian represents the guardian of the OptimismPortal.
+	PortalGuardian common.Address `json:"portalGuardian"`
+	// legacy fields
+	// Controller the deployer of the contracts on L1.
+	Controller common.Address `json:"controller"`
 }
 
 var _ ConfigChecker = (*OwnershipDeployConfig)(nil)
@@ -201,18 +217,18 @@ func (d *L2VaultsDeployConfig) Check(log log.Logger) error {
 	if d.OperatorFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: OperatorFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
 	}
-	if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.L1FeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: L1FeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.SequencerFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: SequencerFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
-	if !d.OperatorFeeVaultWithdrawalNetwork.Valid() {
-		return fmt.Errorf("%w: OperatorFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
-	}
+	// if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.L1FeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: L1FeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.SequencerFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: SequencerFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
+	// if !d.OperatorFeeVaultWithdrawalNetwork.Valid() {
+	// 	return fmt.Errorf("%w: OperatorFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
+	// }
 	return nil
 }
 
@@ -266,6 +282,13 @@ type GasPriceOracleDeployConfig struct {
 	GasPriceOracleOperatorFeeScalar uint32 `json:"gasPriceOracleOperatorFeeScalar" evm:"operatorfeeScalar"`
 	// GasPriceOracleOperatorFeeConstant represents the value of the operator fee constant used for fee calculations.
 	GasPriceOracleOperatorFeeConstant uint64 `json:"gasPriceOracleOperatorFeeConstant" evm:"operatorfeeConstant"`
+
+	// MANTLE_FEATURES
+	// GasPriceOracleTokenRatio represents the token ratio of ETH to MNT.
+	GasPriceOracleTokenRatio uint64 `json:"gasPriceOracleTokenRatio" evm:"tokenRatio"`
+	// legacy fields
+	// GasPriceOracleOwner represents the owner of the GasPriceOracle.
+	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner" evm:"owner"`
 }
 
 var _ ConfigChecker = (*GasPriceOracleDeployConfig)(nil)
@@ -380,6 +403,38 @@ func (d *EIP1559DeployConfig) Check(log log.Logger) error {
 
 // UpgradeScheduleDeployConfig configures when network upgrades activate.
 type UpgradeScheduleDeployConfig struct {
+	// MANTLE_FEATURES mantle forks
+	// L2GenesisMantleBaseFeeTimeOffset is the number of seconds after genesis block that the Mantle BaseFee hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BaseFee.
+	L2GenesisMantleBaseFeeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBaseFeeTimeOffset,omitempty"`
+	// L2GenesisMantleBVMETHMintUpgradeTimeOffset is the number of seconds after genesis block that the Mantle BVM_ETH mint upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle BVM_ETH mint upgrade.
+	L2GenesisMantleBVMETHMintUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleBVMETHMintUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV2UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV2 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV2 upgrade.
+	L2GenesisMantleMetaTxV2UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV2UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleMetaTxV3UpgradeTimeOffset is the number of seconds after genesis block that the Mantle MetaTxV3 upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle MetaTxV3 upgrade.
+	L2GenesisMantleMetaTxV3UpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleMetaTxV3UpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleProxyOwnerUpgradeTimeOffset is the number of seconds after genesis block that the Mantle ProxyOwner upgrade hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle ProxyOwner upgrade.
+	L2GenesisMantleProxyOwnerUpgradeTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleProxyOwnerUpgradeTimeOffset,omitempty"`
+	// L2GenesisMantleEverestTimeOffset is the number of seconds after genesis block that the Mantle Everest hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Everest.
+	L2GenesisMantleEverestTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEverestTimeOffset,omitempty"`
+	// L2GenesisMantleEuboeaTimeOffset is the number of seconds after genesis block that the Mantle Euboea hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Euboea.
+	L2GenesisMantleEuboeaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleEuboeaTimeOffset,omitempty"`
+	// L2GenesisMantleSkadiTimeOffset is the number of seconds after genesis block that the Mantle Skadi hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Skadi.
+	L2GenesisMantleSkadiTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleSkadiTimeOffset,omitempty"`
+	// L2GenesisMantleLimbTimeOffset is the number of seconds after genesis block that the Mantle Limb hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Limb.
+	L2GenesisMantleLimbTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleLimbTimeOffset,omitempty"`
+	// L2GenesisMantleArsiaTimeOffset is the number of seconds after genesis block that the Mantle Arsia hard fork activates.
+	// Set it to 0 to activate at genesis. Nil to disable Mantle Arsia.
+	L2GenesisMantleArsiaTimeOffset *hexutil.Uint64 `json:"l2GenesisMantleArsiaTimeOffset,omitempty"`
+
 	// L2GenesisRegolithTimeOffset is the number of seconds after genesis block that Regolith hard fork activates.
 	// Set it to 0 to activate at genesis. Nil to disable Regolith.
 	L2GenesisRegolithTimeOffset *hexutil.Uint64 `json:"l2GenesisRegolithTimeOffset,omitempty"`
@@ -657,6 +712,53 @@ func (d *UpgradeScheduleDeployConfig) Check(log log.Logger) error {
 			return err
 		}
 	}
+	mantleForks := d.mantleForks()
+	for i := 0; i < len(mantleForks)-1; i++ {
+		if err := checkFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MantleCheck performs Mantle-specific validation that allows multiple forks to activate at the same time.
+// This is necessary for Arsia fork which encompasses multiple OP Stack forks (Canyon, Delta, Ecotone, Fjord, Granite, Holocene, Isthmus, Jovian).
+//
+// Mantle validation rules:
+//  1. parent fork is before or at the same time as child fork
+//  2. forks CAN activate at the same time (even post-Genesis) - this is the key difference from Check()
+func (d *UpgradeScheduleDeployConfig) MantleCheck(log log.Logger) error {
+	// mantleCheckFork checks that fork A is before or at the same time as fork B
+	// Unlike Check(), it ALLOWS multiple forks to activate at the same post-Genesis time
+	mantleCheckFork := func(a, b *hexutil.Uint64, aName, bName string) error {
+		if a == nil && b == nil {
+			return nil
+		}
+		if a == nil && b != nil {
+			return fmt.Errorf("fork %s set (to %d), but prior fork %s missing", bName, *b, aName)
+		}
+		if a != nil && b == nil {
+			return nil
+		}
+		if *a > *b {
+			return fmt.Errorf("fork %s set to %d, but prior fork %s has higher offset %d", bName, *b, aName, *a)
+		}
+		// ✅ MANTLE: Allow multiple forks at the same time (removed `&& *a != 0` check)
+		// This enables Arsia to activate all constituent OP Stack forks simultaneously
+		return nil
+	}
+	forks := d.forks()
+	for i := 0; i < len(forks)-1; i++ {
+		if err := mantleCheckFork(forks[i].L2GenesisTimeOffset, forks[i+1].L2GenesisTimeOffset, forks[i].Name, forks[i+1].Name); err != nil {
+			return err
+		}
+	}
+	mantleForks := d.mantleForks()
+	for i := 0; i < len(mantleForks)-1; i++ {
+		if err := mantleCheckFork(mantleForks[i].L2GenesisTimeOffset, mantleForks[i+1].L2GenesisTimeOffset, mantleForks[i].Name, mantleForks[i+1].Name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -813,6 +915,10 @@ type DevL1DeployConfig struct {
 	L1GenesisBlockBaseFeePerGas *hexutil.Big    `json:"l1GenesisBlockBaseFeePerGas"`
 	L1GenesisBlockExcessBlobGas *hexutil.Uint64 `json:"l1GenesisBlockExcessBlobGas,omitempty"` // EIP-4844
 	L1GenesisBlockBlobGasUsed   *hexutil.Uint64 `json:"l1GenesisBlockblobGasUsed,omitempty"`   // EIP-4844
+
+	// MANTLE_FEATURES legacy fields
+	// CliqueSignerAddress represents the signer of the Clique consensus mechanism.
+	CliqueSignerAddress common.Address `json:"cliqueSignerAddress"`
 }
 
 // SuperchainL1DeployConfig configures parameters of the superchain-wide deployed contracts to L1.
@@ -830,6 +936,10 @@ type SuperchainL1DeployConfig struct {
 }
 
 func (d *SuperchainL1DeployConfig) Check(log log.Logger) error {
+	// MANTLE_FEATURES
+	// Superchain is not supported on Mantle
+	return nil
+
 	if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
 		log.Warn("RequiredProtocolVersion is empty")
 	}
@@ -957,6 +1067,10 @@ type L1DependenciesConfig struct {
 	DAChallengeProxy common.Address `json:"daChallengeProxy"`
 
 	ProtocolVersionsProxy common.Address `json:"protocolVersionsProxy"`
+
+	// MANTLE_FEATURES
+	// L1MantleToken represents the Mantle token address on L1.
+	L1MantleToken common.Address `json:"l1MantleToken"`
 }
 
 // DependencyContext is the contextual configuration needed to verify the L1 dependencies,
@@ -1253,6 +1367,7 @@ func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deplo
 		L1ERC721BridgeProxy:               contracts.L1Erc721BridgeProxy,
 		L1StandardBridge:                  contracts.L1StandardBridgeImpl,
 		L1StandardBridgeProxy:             contracts.L1StandardBridgeProxy,
+		L2OutputOracle:                    contracts.L2OutputOracleImpl,
 		L2OutputOracleProxy:               contracts.L2OutputOracleProxy,
 		OptimismMintableERC20Factory:      contracts.OptimismMintableErc20FactoryImpl,
 		OptimismMintableERC20FactoryProxy: contracts.OptimismMintableErc20FactoryProxy,
@@ -1307,7 +1422,16 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 				name == "DataAvailabilityChallengeProxy") {
 			continue
 		}
-
+		// Skip Interop-only contracts (OptimismPortalInterop, ETHLockbox)
+		// and optional Superchain contracts (ProtocolVersions)
+		// These are only needed for Interop/Superchain deployments, not for standard Mantle deployments
+		if name == "OptimismPortalInterop" ||
+			name == "ETHLockbox" ||
+			name == "ETHLockboxProxy" ||
+			name == "ProtocolVersions" ||
+			name == "ProtocolVersionsProxy" {
+			continue
+		}
 		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
 			return fmt.Errorf("%s is not set", name)
 		}

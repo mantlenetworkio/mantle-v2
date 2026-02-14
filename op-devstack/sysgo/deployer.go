@@ -174,6 +174,8 @@ type L2Deployment struct {
 	l1StandardBridgeProxy          common.Address
 	proxyAdmin                     common.Address
 	permissionlessDelayedWETHProxy common.Address
+	l2OOAddress                    common.Address
+	l1MNT                          common.Address
 }
 
 var _ stack.L2Deployment = &L2Deployment{}
@@ -188,6 +190,10 @@ func (d *L2Deployment) DisputeGameFactoryProxyAddr() common.Address {
 
 func (d *L2Deployment) L1StandardBridgeProxyAddr() common.Address {
 	return d.l1StandardBridgeProxy
+}
+
+func (d *L2Deployment) L1MNTAddr() common.Address {
+	return d.l1MNT
 }
 
 func (d *L2Deployment) ProxyAdminAddr() common.Address {
@@ -441,6 +447,8 @@ func (wb *worldBuilder) buildL2DeploymentOutputs() {
 			l1StandardBridgeProxy:          ch.L1StandardBridgeProxy,
 			proxyAdmin:                     ch.OpChainProxyAdminImpl,
 			permissionlessDelayedWETHProxy: ch.DelayedWethPermissionlessGameProxy,
+			l2OOAddress:                    ch.L2OutputOracleProxy,
+			l1MNT:                          ch.MantleContracts.MNTTokenProxy,
 		}
 	}
 	wb.outSuperchainDeployment = &SuperchainDeployment{

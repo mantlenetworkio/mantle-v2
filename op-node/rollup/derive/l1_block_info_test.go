@@ -1,7 +1,10 @@
 package derive
 
 import (
+	"bytes"
 	crand "crypto/rand"
+	"encoding/binary"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -10,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/ethereum-optimism/optimism/op-core/forks"
@@ -38,6 +40,18 @@ func randomL1Cfg(rng *rand.Rand, l1Info eth.BlockInfo) eth.SystemConfig {
 		Scalar:      [32]byte{},
 		GasLimit:    1234567,
 	}
+}
+
+func extractDAFootprintGasScalar(data []byte) (uint16, error) {
+	if len(data) < L1InfoJovianLen {
+		return 0, fmt.Errorf("L1 attributes transaction data too short for DA footprint gas scalar: %d", len(data))
+	}
+	// Future forks need to be added here
+	if !bytes.Equal(data[0:4], L1InfoFuncJovianBytes4) {
+		return 0, fmt.Errorf("L1 attributes transaction data does not have Jovian selector")
+	}
+	daFootprintGasScalar := binary.BigEndian.Uint16(data[L1InfoJovianLen-2 : L1InfoJovianLen])
+	return daFootprintGasScalar, nil
 }
 
 func TestParseL1InfoDepositTxData(t *testing.T) {
@@ -131,6 +145,7 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
 	})
 	t.Run("activation-block ecotone", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -144,6 +159,7 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoBedrockLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncBedrockBytes4, depTx.Data[:4])
 	})
 	t.Run("genesis-block ecotone", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -155,6 +171,7 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
 	})
 	t.Run("isthmus", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
@@ -180,7 +197,8 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
-		// Isthmus activates, but ecotone L1 info is still used at this upgrade block
+		// Isthmus activation block still uses previous format
+		// In Mantle, Granite also maps to MantleArsia, so it uses Isthmus format with Arsia signature
 		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
 		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
 	})
@@ -207,7 +225,7 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
-		dafgs, err := types.ExtractDAFootprintGasScalar(depTx.Data)
+		dafgs, err := extractDAFootprintGasScalar(depTx.Data)
 		require.NoError(t, err)
 		// randomL1Cfg has scalar 0, which should be translated to the default value.
 		require.Equal(t, uint16(DAFootprintGasScalarDefault), dafgs)
@@ -275,5 +293,29 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
 		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+	})
+	t.Run("arsia uses jovian format with arsia signature", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
+		rollupCfg.MantleActivateAtGenesis(forks.MantleArsia)
+		// Arsia timestamp - one block after genesis to avoid activation block
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		// Arsia (via Jovian) uses same data length as Jovian
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+		// Mantle's Arsia fork includes Isthmus features but uses Arsia function signature
+		// Since Isthmus maps to MantleArsia, the signature should be Arsia
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4], "Jovian activation should use Arsia signature for Mantle")
+
+		// Verify it can be decoded back
+		res, err := L1BlockInfoFromBytes(&rollupCfg, timestamp, depTx.Data)
+		require.NoError(t, err, "should decode Arsia format")
+		assert.Equal(t, res.Number, info.NumberU64())
+		assert.Equal(t, res.Time, info.Time())
 	})
 }
