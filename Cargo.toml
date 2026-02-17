@@ -39,6 +39,8 @@ members = [
   "op-reth/crates/reth/",
   "op-reth/crates/rpc/",
   "op-reth/crates/storage/",
+  "op-reth/crates/exex/",
+  "op-reth/crates/trie/",
   "op-reth/crates/txpool/",
   "op-reth/examples/*",
 
@@ -288,6 +290,8 @@ reth-optimism-primitives = { path = "op-reth/crates/primitives/", default-featur
 reth-op = { path = "op-reth/crates/reth/", default-features = false }
 reth-optimism-rpc = { path = "op-reth/crates/rpc/" }
 reth-optimism-storage = { path = "op-reth/crates/storage/" }
+reth-optimism-exex = { path = "op-reth/crates/exex/" }
+reth-optimism-trie = { path = "op-reth/crates/trie/" }
 reth-optimism-txpool = { path = "op-reth/crates/txpool/" }
 
 # ==================== OP-ALLOY INTERNAL CRATES ====================
@@ -331,6 +335,7 @@ reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth", rev = 
 reth-evm = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f", default-features = false }
 reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f" }
 reth-exex = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f" }
+reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f" }
 reth-execution-errors = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f", default-features = false }
 reth-execution-types = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f", default-features = false }
 reth-fs-util = { git = "https://github.com/paradigmxyz/reth", rev = "2c5d00f" }
@@ -532,7 +537,8 @@ proptest-derive = "0.7"
 proptest-arbitrary-interop = "0.1.0"
 rstest = "0.26.1"
 similar-asserts = { version = "1.7.0", features = ["serde"] }
-tempfile = "3.25.0"
+tempfile = "3.24.0"
+serial_test = "3"
 test-case = "3"
 test-fuzz = "7.2.5"
 
