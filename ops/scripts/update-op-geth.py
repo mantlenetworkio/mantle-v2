@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 
-import json
 import subprocess
 import os
 
 
-GETH_VERSION='v1.11.2'
+GETH_VERSION='v1.12.0'
 
 
 def main():
-	for project in ('.', 'indexer'):
+	for project in ('.',):
 		print(f'Updating {project}...')
 		update_mod(project)
 

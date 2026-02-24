@@ -175,7 +175,7 @@ func FuzzDeriveDepositsBadVersion(f *testing.F) {
 		hasBadDepositVersion := false
 		for _, receipt := range receipts {
 
-			// TODO: Using a hardcoded index (Topics[3]) here is not ideal. The MarshalDepositLogEventV0 method should
+			// TODO: Using a hardcoded index (Topics[3]) here is not ideal. The MarshalDepositLogEvent method should
 			//  be spliced apart to be more configurable for these tests.
 
 			// Loop for each log in this receipt and check if it has a deposit event from our contract

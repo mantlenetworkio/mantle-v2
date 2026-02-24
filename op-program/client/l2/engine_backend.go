@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi"
+	l2Types "github.com/ethereum-optimism/optimism/op-program/client/l2/types"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
@@ -17,8 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/triedb"
-
-	"github.com/ethereum-optimism/optimism/op-program/client/l2/engineapi"
 )
 
 var (
@@ -32,14 +33,11 @@ type OracleBackedL2Chain struct {
 	chainCfg   *params.ChainConfig
 	engine     consensus.Engine
 	oracleHead *types.Header
-	head       *types.Header
 	safe       *types.Header
 	finalized  *types.Header
 	vmCfg      vm.Config
 
-	// Block by number cache
-	hashByNum            map[uint64]common.Hash
-	earliestIndexedBlock *types.Header
+	canon *FastCanonicalBlockHeaderOracle
 
 	// Inserted blocks
 	blocks map[common.Hash]*types.Block
@@ -48,53 +46,74 @@ type OracleBackedL2Chain struct {
 	db                  ethdb.KeyValueStore
 }
 
-var _ engineapi.EngineBackend = (*OracleBackedL2Chain)(nil)
+// Must implement CachingEngineBackend, not just EngineBackend to ensure that blocks are stored when they are created
+// and don't need to be re-executed when sent back via execution_newPayload.
+var _ engineapi.CachingEngineBackend = (*OracleBackedL2Chain)(nil)
 
-func NewOracleBackedL2Chain(logger log.Logger, oracle Oracle, chainCfg *params.ChainConfig, l2Head common.Hash) (*OracleBackedL2Chain, error) {
-	head := oracle.BlockByHash(l2Head)
+func NewOracleBackedL2Chain(
+	logger log.Logger,
+	oracle Oracle,
+	precompileOracle engineapi.PrecompileOracle,
+	chainCfg *params.ChainConfig,
+	l2OutputRoot common.Hash,
+	db KeyValueStore,
+) (*OracleBackedL2Chain, error) {
+	chainID := eth.ChainIDFromBig(chainCfg.ChainID)
+	output := oracle.OutputByRoot(l2OutputRoot, chainID)
+	outputV0, ok := output.(*eth.OutputV0)
+	if !ok {
+		return nil, fmt.Errorf("%w: version: %d", ErrUnsupportedL2Output, output.Version())
+	}
+	head := oracle.BlockByHash(outputV0.BlockHash, chainID)
 	logger.Info("Loaded L2 head", "hash", head.Hash(), "number", head.Number())
-	return &OracleBackedL2Chain{
+	return NewOracleBackedL2ChainFromHead(logger, oracle, precompileOracle, chainCfg, head, db), nil
+}
+
+func NewOracleBackedL2ChainFromHead(
+	logger log.Logger,
+	oracle Oracle,
+	precompileOracle engineapi.PrecompileOracle,
+	chainCfg *params.ChainConfig,
+	head *types.Block,
+	db KeyValueStore,
+) *OracleBackedL2Chain {
+	chainID := eth.ChainIDFromBig(chainCfg.ChainID)
+	chain := &OracleBackedL2Chain{
 		log:      logger,
 		oracle:   oracle,
 		chainCfg: chainCfg,
 		engine:   beacon.New(nil),
 
-		hashByNum: map[uint64]common.Hash{
-			head.NumberU64(): head.Hash(),
-		},
-		earliestIndexedBlock: head.Header(),
-
 		// Treat the agreed starting head as finalized - nothing before it can be disputed
-		head:                head.Header(),
 		safe:                head.Header(),
 		finalized:           head.Header(),
 		oracleHead:          head.Header(),
 		blocks:              make(map[common.Hash]*types.Block),
 		receiptsByBlockHash: make(map[common.Hash]types.Receipts),
-		db:                  NewOracleBackedDB(oracle),
-	}, nil
+		db:                  NewOracleBackedDB(db, oracle, chainID),
+		vmCfg: vm.Config{
+			PrecompileOverrides: engineapi.CreatePrecompileOverrides(precompileOracle),
+		},
+	}
+	// Use the chain's GetBlockByHash to ensure newly built blocks are visible to the canonical chain
+	blockByHash := func(hash common.Hash) *types.Block {
+		return chain.GetBlockByHash(hash)
+	}
+	fallback := NewCanonicalBlockHeaderOracle(head.Header(), blockByHash)
+	chain.canon = NewFastCanonicalBlockHeaderOracle(head.Header(), blockByHash, chainCfg, oracle, db, fallback)
+	return chain
 }
 
 func (o *OracleBackedL2Chain) CurrentHeader() *types.Header {
-	return o.head
+	return o.canon.CurrentHeader()
 }
 
 func (o *OracleBackedL2Chain) GetHeaderByNumber(n uint64) *types.Header {
-	if o.head.Number.Uint64() < n {
-		return nil
-	}
-	hash, ok := o.hashByNum[n]
-	if ok {
-		return o.GetHeaderByHash(hash)
-	}
-	// Walk back from current head to the requested block number
-	h := o.head
-	for h.Number.Uint64() > n {
-		h = o.GetHeaderByHash(h.ParentHash)
-		o.hashByNum[h.Number.Uint64()] = h.Hash()
-	}
-	o.earliestIndexedBlock = h
-	return h
+	return o.canon.GetHeaderByNumber(n)
+}
+
+func (o *OracleBackedL2Chain) Hinter() l2Types.OracleHinter {
+	return o.oracle.Hinter()
 }
 
 func (o *OracleBackedL2Chain) GetTd(hash common.Hash, number uint64) *big.Int {
@@ -121,7 +140,7 @@ func (o *OracleBackedL2Chain) GetBlockByHash(hash common.Hash) *types.Block {
 		return block
 	}
 	// Retrieve from the oracle
-	return o.oracle.BlockByHash(hash)
+	return o.oracle.BlockByHash(hash, eth.ChainIDFromBig(o.chainCfg.ChainID))
 }
 
 func (o *OracleBackedL2Chain) GetBlock(hash common.Hash, number uint64) *types.Block {
@@ -160,6 +179,15 @@ func (o *OracleBackedL2Chain) GetCanonicalHash(n uint64) common.Hash {
 	return header.Hash()
 }
 
+func (o *OracleBackedL2Chain) GetReceiptsByBlockHash(hash common.Hash) types.Receipts {
+	receipts, ok := o.receiptsByBlockHash[hash]
+	if ok {
+		return receipts
+	}
+	_, receipts = o.oracle.ReceiptsByBlockHash(hash, eth.ChainIDFromBig(o.chainCfg.ChainID))
+	return receipts
+}
+
 func (o *OracleBackedL2Chain) GetVMConfig() *vm.Config {
 	return &o.vmCfg
 }
@@ -173,7 +201,12 @@ func (o *OracleBackedL2Chain) Engine() consensus.Engine {
 }
 
 func (o *OracleBackedL2Chain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(o.db), nil), nil))
+	stateDB, err := state.New(root, state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(o.db), nil), nil))
+	if err != nil {
+		return nil, err
+	}
+	stateDB.MakeSinglethreaded()
+	return stateDB, nil
 }
 
 func (o *OracleBackedL2Chain) InsertBlockWithoutSetHead(block *types.Block, makeWitness bool) (*stateless.Witness, error) {
@@ -212,29 +245,7 @@ func (o *OracleBackedL2Chain) AssembleAndInsertBlockWithoutSetHead(processor *en
 }
 
 func (o *OracleBackedL2Chain) SetCanonical(head *types.Block) (common.Hash, error) {
-	oldHead := o.head
-	o.head = head.Header()
-
-	// Remove canonical hashes after the new header
-	for n := head.NumberU64() + 1; n <= oldHead.Number.Uint64(); n++ {
-		delete(o.hashByNum, n)
-	}
-
-	// Add new canonical blocks to the block by number cache
-	// Since the original head is added to the block number cache and acts as the finalized block,
-	// at some point we must reach the existing canonical chain and can stop updating.
-	h := o.head
-	for {
-		newHash := h.Hash()
-		prevHash, ok := o.hashByNum[h.Number.Uint64()]
-		if ok && prevHash == newHash {
-			// Connected with the existing canonical chain so stop updating
-			break
-		}
-		o.hashByNum[h.Number.Uint64()] = newHash
-		h = o.GetHeaderByHash(h.ParentHash)
-	}
-	return head.Hash(), nil
+	return o.canon.SetCanonical(head.Header()), nil
 }
 
 func (o *OracleBackedL2Chain) SetFinalized(header *types.Header) {

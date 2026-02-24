@@ -3,92 +3,96 @@ package driver
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 
-	"github.com/ethereum/go-ethereum/log"
-
-	"github.com/ethereum-optimism/optimism/op-node/metrics"
-	"github.com/ethereum-optimism/optimism/op-node/node/safedb"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
+
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	"github.com/ethereum-optimism/optimism/op-node/metrics"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/attributes"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/engine"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
+	"github.com/ethereum-optimism/optimism/op-service/event"
 )
 
-var (
-	ErrClaimNotValid = errors.New("invalid claim")
-)
+var errTooManyEvents = errors.New("way too many events queued up, something is wrong")
 
-type Derivation interface {
-	Step(ctx context.Context) error
-	SafeL2Head() eth.L2BlockRef
-}
-
-type L2Source interface {
-	derive.Engine
-	L2OutputRoot() (eth.Bytes32, error)
-}
-
-type DaSource interface {
-	RetrievalFramesFromDa(dataStoreId uint32) ([]byte, error)
-	RetrievalFramesFromDaIndexer(dataStoreId uint32) ([]byte, error)
-	IsDaIndexer() bool
+type EndCondition interface {
+	Closing() bool
+	Result() (eth.L2BlockRef, error)
 }
 
 type Driver struct {
-	logger         log.Logger
-	pipeline       Derivation
-	l2OutputRoot   func() (eth.Bytes32, error)
-	targetBlockNum uint64
+	logger log.Logger
+
+	events []event.Event
+
+	end     EndCondition
+	deriver event.Deriver
 }
 
-func NewDriver(logger log.Logger, cfg *rollup.Config, l1Source derive.L1Fetcher, l2Source L2Source, targetBlockNum uint64) *Driver {
-	pipeline := derive.NewDerivationPipeline(logger, cfg, l1Source, nil, l2Source, metrics.NoopMetrics, &sync.Config{}, safedb.Disabled, nil)
+func NewDriver(logger log.Logger, cfg *rollup.Config, depSet derive.DependencySet, l1Source derive.L1Fetcher,
+	l1BlobsSource derive.L1BlobsFetcher, l2Source engine.Engine, targetBlockNum uint64, l1ChainConfig *params.ChainConfig) *Driver {
 
-	pipeline.Reset()
-	return &Driver{
-		logger:         logger,
-		pipeline:       pipeline,
-		l2OutputRoot:   l2Source.L2OutputRoot,
-		targetBlockNum: targetBlockNum,
+	d := &Driver{
+		logger: logger,
 	}
+
+	pipeline := derive.NewDerivationPipeline(logger, cfg, depSet, l1Source, l1BlobsSource, altda.Disabled, l2Source, metrics.NoopMetrics, false, l1ChainConfig)
+	pipelineDeriver := derive.NewPipelineDeriver(context.Background(), pipeline)
+	pipelineDeriver.AttachEmitter(d)
+
+	syncCfg := &sync.Config{SyncMode: sync.CLSync}
+	ec := engine.NewEngineController(context.Background(), l2Source, logger, metrics.NoopMetrics, cfg, syncCfg, l1Source, d)
+
+	attrHandler := attributes.NewAttributesHandler(logger, cfg, context.Background(), l2Source, ec)
+	ec.SetAttributesResetter(attrHandler)
+	ec.SetPipelineResetter(pipelineDeriver)
+
+	prog := &ProgramDeriver{
+		logger:           logger,
+		Emitter:          d,
+		engineController: ec,
+		closing:          false,
+		result:           eth.L2BlockRef{},
+		targetBlockNum:   targetBlockNum,
+	}
+
+	d.deriver = &event.DeriverMux{
+		prog,
+		ec,
+		pipelineDeriver,
+	}
+	d.end = prog
+
+	return d
 }
 
-// Step runs the next step of the derivation pipeline.
-// Returns nil if there are further steps to be performed
-// Returns io.EOF if the derivation completed successfully
-// Returns a non-EOF error if the derivation failed
-func (d *Driver) Step(ctx context.Context) error {
-	if err := d.pipeline.Step(ctx); errors.Is(err, io.EOF) {
-		d.logger.Info("Derivation complete: reached L1 head", "head", d.pipeline.SafeL2Head())
-		return io.EOF
-	} else if errors.Is(err, derive.NotEnoughData) {
-		head := d.pipeline.SafeL2Head()
-		if head.Number >= d.targetBlockNum {
-			d.logger.Info("Derivation complete: reached L2 block", "head", head)
-			return io.EOF
+func (d *Driver) Emit(ctx context.Context, ev event.Event) {
+	if d.end.Closing() {
+		return
+	}
+	d.events = append(d.events, ev)
+}
+
+func (d *Driver) RunComplete() (eth.L2BlockRef, error) {
+	// Initial reset
+	d.Emit(context.Background(), engine.ResetEngineRequestEvent{})
+
+	for !d.end.Closing() {
+		if len(d.events) == 0 {
+			d.logger.Info("Derivation complete: no further data to process")
+			return d.end.Result()
 		}
-		d.logger.Debug("Data is lacking")
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("pipeline err: %w", err)
+		if len(d.events) > 10000 { // sanity check, in case of bugs. Better than going OOM.
+			return eth.L2BlockRef{}, errTooManyEvents
+		}
+		ev := d.events[0]
+		d.events = d.events[1:]
+		d.deriver.OnEvent(context.Background(), ev)
 	}
-	return nil
-}
-
-func (d *Driver) SafeHead() eth.L2BlockRef {
-	return d.pipeline.SafeL2Head()
-}
-
-func (d *Driver) ValidateClaim(claimedOutputRoot eth.Bytes32) error {
-	outputRoot, err := d.l2OutputRoot()
-	if err != nil {
-		return fmt.Errorf("calculate L2 output root: %w", err)
-	}
-	d.logger.Info("Validating claim", "head", d.SafeHead(), "output", outputRoot, "claim", claimedOutputRoot)
-	if claimedOutputRoot != outputRoot {
-		return fmt.Errorf("%w: claim: %v actual: %v", ErrClaimNotValid, claimedOutputRoot, outputRoot)
-	}
-	return nil
+	return d.end.Result()
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
@@ -214,11 +216,11 @@ func unmarshalDepositVersion1(dep *types.DepositTx, to common.Address, opaqueDat
 func MarshalDepositLogEventV0(depositContractAddr common.Address, deposit *types.DepositTx) (*types.Log, error) {
 	toBytes := common.Hash{}
 	if deposit.To != nil {
-		toBytes = deposit.To.Hash()
+		toBytes = eth.AddressAsLeftPaddedHash(*deposit.To)
 	}
 	topics := []common.Hash{
 		DepositEventABIHash,
-		deposit.From.Hash(),
+		eth.AddressAsLeftPaddedHash(deposit.From),
 		toBytes,
 		DepositEventVersion0,
 	}

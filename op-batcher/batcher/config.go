@@ -2,95 +2,64 @@ package batcher
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
-
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
+	"github.com/ethereum-optimism/optimism/op-batcher/config"
 	"github.com/ethereum-optimism/optimism/op-batcher/flags"
-	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
-	"github.com/ethereum-optimism/optimism/op-batcher/rpc"
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
-	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
-	"github.com/ethereum-optimism/optimism/op-service/eigenda"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
-	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
+	oprpc "github.com/ethereum-optimism/optimism/op-service/rpc"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
-	"github.com/ethereum-optimism/optimism/op-service/upgrade"
 )
 
-var (
-	ErrDisperserSocketEmpty     = errors.New("disperser socket is empty for MantleDA")
-	ErrDisperserTimeoutZero     = errors.New("disperser timeout is zero for MantleDA")
-	ErrDataStoreDurationZero    = errors.New("datastore duration is zero for MantleDA")
-	ErrGraphPollingDurationZero = errors.New("graph node polling duration is zero for MantleDA")
-	ErrGraphProviderEmpty       = errors.New("graph node provider is empty for MantleDA")
-)
+// Current max blobs const, irrespective of active fork, is that of the Prague
+// blob config.
+var maxBlobsPerBlock = params.DefaultPragueBlobConfig.Max
 
-type Config struct {
-	log        log.Logger
-	metr       metrics.Metricer
-	L1Client   *ethclient.Client
-	L2Client   *ethclient.Client
-	RollupNode *sources.RollupClient
-	TxManager  txmgr.TxManager
+type ThrottleConfig struct {
+	AdditionalEndpoints []string
 
-	NetworkTimeout         time.Duration
-	PollInterval           time.Duration
-	MaxPendingTransactions uint64
+	TxSizeLowerLimit    uint64
+	TxSizeUpperLimit    uint64
+	BlockSizeLowerLimit uint64
+	BlockSizeUpperLimit uint64
 
-	// Rollup MantleDA
-	DisperserSocket                string
-	DisperserTimeout               time.Duration
-	DataStoreDuration              uint64
-	GraphPollingDuration           time.Duration
-	RollupMaxSize                  uint64
-	MantleDaNodes                  int
-	DataLayrServiceManagerAddr     common.Address
-	DataLayrServiceManagerContract *bindings.ContractDataLayrServiceManager
-	DataLayrServiceManagerABI      *abi.ABI
+	ControllerType config.ThrottleControllerType
+	LowerThreshold uint64
+	UpperThreshold uint64
 
-	// RollupConfig is queried at startup
-	Rollup *rollup.Config
-
-	// Channel builder parameters
-	Channel ChannelConfig
-	EigenDA eigenda.Config
-	// Upgrade Da from MantleDA to EigenDA
-	DaUpgradeChainConfig *upgrade.UpgradeChainConfig
-	//skip eigenda and submit to ethereum blob transaction
-	SkipEigenDaRpc bool
+	// PID Controller specific parameters
+	PidKp          float64
+	PidKi          float64
+	PidKd          float64
+	PidIntegralMax float64
+	PidOutputMax   float64
+	PidSampleTime  time.Duration
 }
 
-// Check ensures that the [Config] is valid.
-func (c *Config) Check() error {
-	if err := c.Rollup.Check(); err != nil {
-		return err
+func (c *ThrottleConfig) Check() error {
+	if !config.ValidThrottleControllerType(c.ControllerType) {
+		return fmt.Errorf("invalid throttle controller type: %s (must be one of: %v)", c.ControllerType, config.ThrottleControllerTypes)
 	}
-	if err := c.Channel.Check(); err != nil {
-		return err
+
+	if c.LowerThreshold != 0 && c.UpperThreshold <= c.LowerThreshold {
+		return fmt.Errorf("throttle.upper-threshold must be greater than throttle.lower-threshold")
 	}
-	if c.Rollup.MantleDaSwitch {
-		if len(c.DisperserSocket) == 0 {
-			return ErrDisperserSocketEmpty
-		}
-		if c.DisperserTimeout == 0 {
-			return ErrDisperserTimeoutZero
-		}
-		if c.DataStoreDuration == 0 {
-			return ErrDataStoreDurationZero
-		}
-		if c.GraphPollingDuration == 0 {
-			return ErrGraphPollingDurationZero
-		}
+
+	if c.BlockSizeLowerLimit > 0 && c.BlockSizeLowerLimit >= c.BlockSizeUpperLimit {
+		return fmt.Errorf("throttle.block-size-lower-limit must be less than throttle.block-size-upper-limit")
+	}
+
+	if c.TxSizeLowerLimit > 0 && c.ControllerType != config.StepControllerType && c.TxSizeLowerLimit >= c.TxSizeUpperLimit {
+		return fmt.Errorf("throttle.tx-size-lower-limit must be less than throttle.tx-size-upper-limit")
 	}
 	return nil
 }
@@ -99,32 +68,11 @@ type CLIConfig struct {
 	// L1EthRpc is the HTTP provider URL for L1.
 	L1EthRpc string
 
-	// L2EthRpc is the HTTP provider URL for the L2 execution engine.
-	L2EthRpc string
+	// L2EthRpc is the HTTP provider URL for the L2 execution engine. A comma-separated list enables the active L2 provider. Such a list needs to match the number of RollupRpcs provided.
+	L2EthRpc []string
 
-	// RollupRpc is the HTTP provider URL for the L2 rollup node.
-	RollupRpc string
-
-	// DisperserSocket is the websocket for the MantleDA disperser.
-	DisperserSocket string
-
-	// DisperserTimeout timeout for context
-	DisperserTimeout time.Duration
-
-	// DataStoreDuration data store time on MantleDA
-	DataStoreDuration uint64
-
-	//GraphPollingDuration listen to graph node polling time
-	GraphPollingDuration time.Duration
-
-	//GraphProvider is graph node url of MantleDA
-	GraphProvider string
-
-	//RollupMaxSize is the maximum size of tx data that can be rollup to MantleDA at one time
-	RollupMaxSize uint64
-
-	//The number of MantleDA nodes
-	MantleDaNodes int
+	// RollupRpc is the HTTP provider URL for the L2 rollup node. A comma-separated list enables the active L2 provider. Such a list needs to match the number of L2EthRpcs provided.
+	RollupRpc []string
 
 	// MaxChannelDuration is the maximum duration (in #L1-blocks) to keep a
 	// channel open. This allows to more eagerly send batcher transactions
@@ -146,29 +94,114 @@ type CLIConfig struct {
 	PollInterval time.Duration
 
 	// MaxPendingTransactions is the maximum number of concurrent pending
-	// transactions sent to the transaction manager.
+	// transactions sent to the transaction manager (0 == no limit).
 	MaxPendingTransactions uint64
 
 	// MaxL1TxSize is the maximum size of a batch tx submitted to L1.
+	// If using blobs, this setting is ignored and the max blob size is used.
 	MaxL1TxSize uint64
 
+	// Maximum number of blocks to add to a span batch. Default is 0 - no maximum.
+	MaxBlocksPerSpanBatch int
+
+	// The target number of frames to create per channel. Controls number of blobs
+	// per blob tx, if using Blob DA.
+	TargetNumFrames int
+
+	// ApproxComprRatio to assume (only [compressor.RatioCompressor]).
+	// Should be slightly smaller than average from experiments to avoid the
+	// chances of creating a small additional leftover frame.
+	ApproxComprRatio float64
+
+	// Type of compressor to use. Must be one of [compressor.KindKeys].
+	Compressor string
+
+	// Type of compression algorithm to use. Must be one of [zlib, brotli, brotli[9-11]]
+	CompressionAlgo derive.CompressionAlgo
+
+	// If Stopped is true, the batcher starts stopped and won't start batching right away.
+	// Batching needs to be started via an admin RPC.
 	Stopped bool
 
-	TxMgrConfig      txmgr.CLIConfig
-	RPCConfig        rpc.CLIConfig
-	LogConfig        oplog.CLIConfig
-	MetricsConfig    opmetrics.CLIConfig
-	PprofConfig      oppprof.CLIConfig
-	CompressorConfig compressor.CLIConfig
+	// Whether to wait for the sequencer to sync to a recent block at startup.
+	WaitNodeSync bool
 
-	EigenDAConfig  eigenda.CLIConfig
-	SkipEigenDaRpc bool
+	// How many blocks back to look for recent batcher transactions during node sync at startup.
+	// If 0, the batcher will just use the current head.
+	CheckRecentTxsDepth int
+
+	BatchType uint
+
+	// DataAvailabilityType is one of the values defined in op-batcher/flags/types.go and dictates
+	// the data availability type to use for posting batches, e.g. blobs vs calldata, or auto
+	// for choosing the most economic type dynamically at the start of each channel.
+	DataAvailabilityType flags.DataAvailabilityType
+
+	// ActiveSequencerCheckDuration is the duration between checks to determine the active sequencer endpoint.
+	ActiveSequencerCheckDuration time.Duration
+
+	// TestUseMaxTxSizeForBlobs allows to set the blob size with MaxL1TxSize.
+	// Should only be used for testing purposes.
+	TestUseMaxTxSizeForBlobs bool
+
+	ThrottleConfig ThrottleConfig
+
+	TxMgrConfig   txmgr.CLIConfig
+	LogConfig     oplog.CLIConfig
+	MetricsConfig opmetrics.CLIConfig
+	PprofConfig   oppprof.CLIConfig
+	RPC           oprpc.CLIConfig
+	AltDA         altda.CLIConfig
 }
 
-func (c CLIConfig) Check() error {
-	if err := c.RPCConfig.Check(); err != nil {
+func (c *CLIConfig) Check() error {
+	if c.L1EthRpc == "" {
+		return errors.New("empty L1 RPC URL")
+	}
+	if len(c.L2EthRpc) == 0 {
+		return errors.New("empty L2 RPC URL")
+	}
+	if len(c.RollupRpc) == 0 {
+		return errors.New("empty rollup RPC URL")
+	}
+	if len(c.RollupRpc) != len(c.L2EthRpc) {
+		return errors.New("number of rollup and eth URLs must match")
+	}
+	if c.PollInterval == 0 {
+		return errors.New("must set PollInterval")
+	}
+	if c.MaxL1TxSize <= 1 {
+		return errors.New("MaxL1TxSize must be greater than 1")
+	}
+	if c.TargetNumFrames < 1 {
+		return errors.New("TargetNumFrames must be at least 1")
+	}
+	if c.Compressor == compressor.RatioKind && (c.ApproxComprRatio <= 0 || c.ApproxComprRatio > 1) {
+		return fmt.Errorf("invalid ApproxComprRatio %v for ratio compressor", c.ApproxComprRatio)
+	}
+	if !derive.ValidCompressionAlgo(c.CompressionAlgo) {
+		return fmt.Errorf("invalid compression algo %v", c.CompressionAlgo)
+	}
+	if c.BatchType > derive.SpanBatchType {
+		return fmt.Errorf("unknown batch type: %v", c.BatchType)
+	}
+	if c.CheckRecentTxsDepth > 128 {
+		return fmt.Errorf("CheckRecentTxsDepth cannot be set higher than 128: %v", c.CheckRecentTxsDepth)
+	}
+	if !flags.ValidDataAvailabilityType(c.DataAvailabilityType) {
+		return fmt.Errorf("unknown data availability type: %q", c.DataAvailabilityType)
+	}
+	// Most chains' L1s still have only Cancun active, but we don't want to
+	// overcomplicate this check with a dynamic L1 query, so we just use maxBlobsPerBlock.
+	// We want to check for both, blobs and auto da-type.
+	if c.DataAvailabilityType != flags.CalldataType && c.TargetNumFrames > maxBlobsPerBlock {
+		return fmt.Errorf("too many frames for blob transactions, max %d", maxBlobsPerBlock)
+	}
+
+	if err := c.ThrottleConfig.Check(); err != nil {
 		return err
 	}
+
 	if err := c.MetricsConfig.Check(); err != nil {
 		return err
 	}
@@ -178,47 +211,58 @@ func (c CLIConfig) Check() error {
 	if err := c.TxMgrConfig.Check(); err != nil {
 		return err
 	}
-	if err := c.EigenDAConfig.Check(); err != nil {
+	if err := c.RPC.Check(); err != nil {
 		return err
-	}
-
-	//Used to ensure that when using an Ethereum blob, a single frame is not larger than MaxBlobDataSize * MaxblobNum
-	//Considering that the frame needs to go through rlp. EncodeToBytes before submitting da, the maximum size after encoding cannot be accurately calculated.
-	//So MaxL1TxSize > MaxBlobDataSize is used here to make a rough judgment
-	if c.MaxL1TxSize > eth.MaxBlobDataSize {
-		return errors.New("MaxL1TxSize must less than MaxBlobDataSize")
 	}
 	return nil
 }
 
 // NewConfig parses the Config from the provided flags or environment variables.
-func NewConfig(ctx *cli.Context) CLIConfig {
-	return CLIConfig{
+func NewConfig(ctx *cli.Context) *CLIConfig {
+	return &CLIConfig{
 		/* Required Flags */
 		L1EthRpc:        ctx.String(flags.L1EthRpcFlag.Name),
-		L2EthRpc:        ctx.String(flags.L2EthRpcFlag.Name),
-		RollupRpc:       ctx.String(flags.RollupRpcFlag.Name),
+		L2EthRpc:        ctx.StringSlice(flags.L2EthRpcFlag.Name),
+		RollupRpc:       ctx.StringSlice(flags.RollupRpcFlag.Name),
 		SubSafetyMargin: ctx.Uint64(flags.SubSafetyMarginFlag.Name),
 		PollInterval:    ctx.Duration(flags.PollIntervalFlag.Name),
 
 		/* Optional Flags */
-		MaxPendingTransactions: ctx.Uint64(flags.MaxPendingTransactionsFlag.Name),
-		MaxChannelDuration:     ctx.Uint64(flags.MaxChannelDurationFlag.Name),
-		MaxL1TxSize:            ctx.Uint64(flags.MaxL1TxSizeBytesFlag.Name),
-		DisperserSocket:        ctx.String(flags.DisperserSocketFlag.Name),
-		DisperserTimeout:       ctx.Duration(flags.DisperserTimeoutFlag.Name),
-		DataStoreDuration:      ctx.Uint64(flags.DataStoreDurationFlag.Name),
-		GraphPollingDuration:   ctx.Duration(flags.GraphPollingDurationFlag.Name),
-		GraphProvider:          ctx.String(flags.GraphProviderFlag.Name),
-		RollupMaxSize:          ctx.Uint64(flags.RollUpMaxSizeFlag.Name),
-		Stopped:                ctx.Bool(flags.StoppedFlag.Name),
-		SkipEigenDaRpc:         ctx.Bool(flags.SkipEigenDaRpcFlag.Name),
-		TxMgrConfig:            txmgr.ReadCLIConfig(ctx),
-		RPCConfig:              rpc.ReadCLIConfig(ctx),
-		LogConfig:              oplog.ReadCLIConfig(ctx),
-		MetricsConfig:          opmetrics.ReadCLIConfig(ctx),
-		PprofConfig:            oppprof.ReadCLIConfig(ctx),
-		CompressorConfig:       compressor.ReadCLIConfig(ctx),
-		EigenDAConfig:          eigenda.ReadCLIConfig(ctx),
+		MaxPendingTransactions:       ctx.Uint64(flags.MaxPendingTransactionsFlag.Name),
+		MaxChannelDuration:           ctx.Uint64(flags.MaxChannelDurationFlag.Name),
+		MaxL1TxSize:                  ctx.Uint64(flags.MaxL1TxSizeBytesFlag.Name),
+		MaxBlocksPerSpanBatch:        ctx.Int(flags.MaxBlocksPerSpanBatch.Name),
+		TargetNumFrames:              ctx.Int(flags.TargetNumFramesFlag.Name),
+		ApproxComprRatio:             ctx.Float64(flags.ApproxComprRatioFlag.Name),
+		Compressor:                   ctx.String(flags.CompressorFlag.Name),
+		CompressionAlgo:              derive.CompressionAlgo(ctx.String(flags.CompressionAlgoFlag.Name)),
+		Stopped:                      ctx.Bool(flags.StoppedFlag.Name),
+		WaitNodeSync:                 ctx.Bool(flags.WaitNodeSyncFlag.Name),
+		CheckRecentTxsDepth:          ctx.Int(flags.CheckRecentTxsDepthFlag.Name),
+		BatchType:                    ctx.Uint(flags.BatchTypeFlag.Name),
+		DataAvailabilityType:         flags.DataAvailabilityType(ctx.String(flags.DataAvailabilityTypeFlag.Name)),
+		ActiveSequencerCheckDuration: ctx.Duration(flags.ActiveSequencerCheckDurationFlag.Name),
+		TxMgrConfig:                  txmgr.ReadCLIConfig(ctx),
+		LogConfig:                    oplog.ReadCLIConfig(ctx),
+		MetricsConfig:                opmetrics.ReadCLIConfig(ctx),
+		PprofConfig:                  oppprof.ReadCLIConfig(ctx),
+		RPC:                          oprpc.ReadCLIConfig(ctx),
+		AltDA:                        altda.ReadCLIConfig(ctx),
+		ThrottleConfig: ThrottleConfig{
+			AdditionalEndpoints: ctx.StringSlice(flags.AdditionalThrottlingEndpointsFlag.Name),
+			TxSizeLowerLimit:    ctx.Uint64(flags.ThrottleTxSizeLowerLimitFlag.Name),
+			TxSizeUpperLimit:    ctx.Uint64(flags.ThrottleTxSizeUpperLimitFlag.Name),
+			BlockSizeLowerLimit: ctx.Uint64(flags.ThrottleBlockSizeLowerLimitFlag.Name),
+			BlockSizeUpperLimit: ctx.Uint64(flags.ThrottleBlockSizeUpperLimitFlag.Name),
+			ControllerType:      config.ThrottleControllerType(ctx.String(flags.ThrottleControllerTypeFlag.Name)),
+			LowerThreshold:      ctx.Uint64(flags.ThrottleUsafeDABytesLowerThresholdFlag.Name),
+			UpperThreshold:      ctx.Uint64(flags.ThrottleUsafeDABytesUpperThresholdFlag.Name),
+			PidKp:               ctx.Float64(flags.ThrottlePidKpFlag.Name),
+			PidKi:               ctx.Float64(flags.ThrottlePidKiFlag.Name),
+			PidKd:               ctx.Float64(flags.ThrottlePidKdFlag.Name),
+			PidIntegralMax:      ctx.Float64(flags.ThrottlePidIntegralMaxFlag.Name),
+			PidOutputMax:        ctx.Float64(flags.ThrottlePidOutputMaxFlag.Name),
+			PidSampleTime:       ctx.Duration(flags.ThrottlePidSampleTimeFlag.Name),
+		},
 	}
 }

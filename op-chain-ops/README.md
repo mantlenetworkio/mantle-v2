@@ -1,33 +1,81 @@
-# op-chain-ops
+# `op-chain-ops`
 
-This package performs state surgery. It takes the following input:
+Issues: [monorepo](https://github.com/ethereum-optimism/optimism/issues?q=is%3Aissue%20state%3Aopen%20label%3AA-op-chain-ops)
 
-1. A v0 database
-2. A partial `genesis.json`
-3. A list of addresses that transacted on the network prior to this past regenesis.
-4. A list of addresses that performed approvals on prior versions of the OVM ETH contract.
+Pull requests: [monorepo](https://github.com/ethereum-optimism/optimism/pulls?q=is%3Aopen+is%3Apr+label%3AA-op-chain-ops)
 
-It creates an initialized Bedrock Geth database as output. It does this by performing the following steps:
+This is an OP Stack utils package for chain operations,
+ranging from EVM tooling to chain generation.
 
-1. Iterates over the old state.
-2. For each account in the old state, add that account and its storage to the new state after copying its balance from the OVM_ETH contract.
-3. Iterates over the pre-allocated accounts in the genesis file and adds them to the new state.
-4. Imports any accounts that have OVM ETH balances but aren't in state.
-5. Configures a genesis block in the new state using `genesis.json`.
+Packages:
+- `clients`: utils for chain checker tools.
+- `cmd`: upgrade validation tools, debug tools, attributes formatting tools.
+- `crossdomain`: utils to interact with L1 <> L2 cross-domain messages.
+- `devkeys`: generate OP-Stack development keys from a common source.
+- `foundry`: utils to read foundry artifacts.
+- `genesis`: OP Stack genesis-configs generation, pre OPCM.
+- `interopgen`: interop test-chain genesis config generation.
+- `script`: foundry-like solidity scripting environment in Go.
+- `solc`: utils to read solidity compiler artifacts data.
+- `srcmap`: utils for solidity source-maps loaded from foundry-artifacts.
 
-It performs the following integrity checks:
+## Usage
 
-1. OVM ETH storage slots must be completely accounted for.
-2. The total supply of OVM ETH migrated must match the total supply of the OVM ETH contract.
+Upgrade checks and chain utilities can be found in `./cmd`:
+these are not officially published in OP-Stack monorepo releases,
+but can be built from source.
 
-This process takes about two hours on mainnet.
+Utils:
+```text
+cmd/
+├── check-canyon                  - Checks for Canyon network upgrade
+├── check-delta                   - Checks for Delta network upgrade
+├── check-deploy-config           - Checks of the (legacy) Deploy Config
+├── check-derivation              - Check that transactions can be confirmed and safety can be consolidated
+├── check-ecotone                 - Checks for Ecotone network upgrade
+├── check-fjord                   - Checks for Fjord network upgrade
+├── check-prestate                - Checks a fault proof absolute prestate's chain compatibility. e.g: go run cmd/check-prestate --prestate-hash <HASH>
+├── deposit-hash                  - Determine the L2 deposit tx hash, based on log event(s) emitted by a L1 tx.
+├── ecotone-scalar                - Translate between serialized and human-readable L1 fee scalars (introduced in Ecotone upgrade).
+├── op-simulate                   - Simulate a remote transaction in a local Geth EVM for block-processing debugging.
+├── protocol-version              - Translate between serialized and human-readable protocol versions.
+├── receipt-reference-builder     - Receipt data collector for pre-Canyon deposit-nonce metadata.
+└── unclaimed-credits             - Utility to inspect credits of resolved fault-proof games.
+```
 
-Unlike previous iterations of our state surgery scripts, this one does not write results to a `genesis.json` file. This is for the following reasons:
+## Product
 
-1. **Performance**. It's much faster to write binary to LevelDB than it is to write strings to a JSON file.
-2. **State Size**. There are nearly 1MM accounts on mainnet, which would create a genesis file several gigabytes in size. This is impossible for Geth to import without a large amount of memory, since the entire JSON gets buffered into memory. Importing the entire state database will be much faster, and can be done with fewer resources.
+### Optimization target
 
-## Compilation
+Provide tools for chain-setup and inspection tools for deployment, upgrades, and testing.
+This includes `op-deployer`, OP-Contracts-Manager (OPCM), upgrade-check scripts, and `op-e2e` testing.
 
-Run `make op-migrate`.
+### Vision
 
+- Upgrade checking scripts should become more extensible, and maybe be bundled in a single check-script CLI tool.
+- Serve chain inspection/processing building-blocks for test setups and tooling like op-deployer.
+- `interopgen` is meant to be temporary, and consolidate with `op-deployer`.
+  This change depends largely on the future of `op-e2e`,
+  where system tests may be replaced in favor of tests set up by `op-e2e`.
+- `script` is a Go version of `forge` script, with hooks and customization options,
+  for better integration into tooling such as `op-deployer`.
+  This package should evolve to serve testing and `op-deployer` as best as possible,
+  it is not a full `forge` replacement.
+- `genesis` will shrink over time, as more of the genesis responsibilities are automated away into
+  the protocol through system-transactions, and tooling such as `op-deployer` and OPCM.
+
+## Design principles
+
+- Provide high-quality bindings to accelerate testing and tooling development.
+- Minimal introspection into fragile solidity details.
+
+There is a trade-off here in how minimal the tooling is:
+generally we aim to provide dedicated functionality in Go for better integration,
+if the target tool is significant Go service of its own.
+If not, then `op-chain-ops` should not be extended, and the design of the target tool should be adjusted instead.
+
+## Testing
+
+- Upgrade checks are tested against live devnet/testnet upgrades, before testing against mainnet.
+  Testing here is aimed to expand to end-to-end testing, for better integrated test feedback of these tools.
+- Utils have unit-test coverage of their own, and are used widely in end-to-end testing itself.

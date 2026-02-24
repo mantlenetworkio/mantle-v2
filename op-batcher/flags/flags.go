@@ -2,116 +2,163 @@ package flags
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/urfave/cli/v2"
 
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
-	"github.com/ethereum-optimism/optimism/op-batcher/rpc"
+	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
-	"github.com/ethereum-optimism/optimism/op-service/eigenda"
+	openum "github.com/ethereum-optimism/optimism/op-service/enum"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
-	oppprof "github.com/ethereum-optimism/optimism/op-service/pprof"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	oprpc "github.com/ethereum-optimism/optimism/op-service/rpc"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
-const EnvVarPrefix = "OP_BATCHER"
+const (
+	EnvVarPrefix = "OP_BATCHER"
+)
+
+func prefixEnvVars(name string) []string {
+	return opservice.PrefixEnvVar(EnvVarPrefix, name)
+}
 
 var (
 	// Required flags
 	L1EthRpcFlag = &cli.StringFlag{
 		Name:    "l1-eth-rpc",
 		Usage:   "HTTP provider URL for L1",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "L1_ETH_RPC"),
+		EnvVars: prefixEnvVars("L1_ETH_RPC"),
 	}
-	L2EthRpcFlag = &cli.StringFlag{
+	L2EthRpcFlag = &cli.StringSliceFlag{
 		Name:    "l2-eth-rpc",
-		Usage:   "HTTP provider URL for L2 execution engine",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "L2_ETH_RPC"),
+		Usage:   "HTTP provider URL for L2 execution engine. A comma-separated list enables the active L2 endpoint provider. Such a list needs to match the number of rollup-rpcs provided.",
+		EnvVars: prefixEnvVars("L2_ETH_RPC"),
 	}
-	RollupRpcFlag = &cli.StringFlag{
+	RollupRpcFlag = &cli.StringSliceFlag{
 		Name:    "rollup-rpc",
-		Usage:   "HTTP provider URL for Rollup node",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_RPC"),
+		Usage:   "HTTP provider URL for Rollup node. A comma-separated list enables the active L2 endpoint provider. Such a list needs to match the number of l2-eth-rpcs provided.",
+		EnvVars: prefixEnvVars("ROLLUP_RPC"),
 	}
 	// Optional flags
-	DisperserSocketFlag = &cli.StringFlag{
-		Name:    "disperser-socket",
-		Usage:   "Websocket for MantleDA disperser",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_SOCKET"),
-	}
-	DataStoreDurationFlag = &cli.Uint64Flag{
-		Name:    "datastore-duration",
-		Usage:   "Duration to store blob",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "DATA_STORE_DURATION"),
-	}
-	DisperserTimeoutFlag = &cli.DurationFlag{
-		Name:    "disperser-timeout",
-		Usage:   "disperser timeout",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "DISPERSER_TIMEOUT"),
-	}
-	GraphPollingDurationFlag = &cli.DurationFlag{
-		Name:    "graph-polling-duration",
-		Usage:   "polling duration for fetch data from da graph node",
-		Value:   1200 * time.Millisecond,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_POLLING_DURATION"),
-	}
-	GraphProviderFlag = &cli.StringFlag{
-		Name:    "graph-node-provider",
-		Usage:   "graph node url of MantleDA graph node",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "GRAPH_PROVIDER"),
-	}
-	RollUpMaxSizeFlag = &cli.Uint64Flag{
-		Name:    "rollup-max-size",
-		Usage:   "Each rollup data to MantleDa maximum limit, rollup data can not be greater than the value, otherwise the rollup failure",
-		Value:   31600, // ktz for order is 3000
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "ROLLUP_MAX_SIZE"),
-	}
-
 	SubSafetyMarginFlag = &cli.Uint64Flag{
 		Name: "sub-safety-margin",
 		Usage: "The batcher tx submission safety margin (in #L1-blocks) to subtract " +
 			"from a channel's timeout and sequencing window, to guarantee safe inclusion " +
 			"of a channel on L1.",
 		Value:   10,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "SUB_SAFETY_MARGIN"),
+		EnvVars: prefixEnvVars("SUB_SAFETY_MARGIN"),
 	}
 	PollIntervalFlag = &cli.DurationFlag{
 		Name:    "poll-interval",
 		Usage:   "How frequently to poll L2 for new blocks",
 		Value:   6 * time.Second,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "POLL_INTERVAL"),
+		EnvVars: prefixEnvVars("POLL_INTERVAL"),
 	}
 	MaxPendingTransactionsFlag = &cli.Uint64Flag{
 		Name:    "max-pending-tx",
 		Usage:   "The maximum number of pending transactions. 0 for no limit.",
 		Value:   1,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "MAX_PENDING_TX"),
+		EnvVars: prefixEnvVars("MAX_PENDING_TX"),
 	}
 	MaxChannelDurationFlag = &cli.Uint64Flag{
 		Name:    "max-channel-duration",
 		Usage:   "The maximum duration of L1-blocks to keep a channel open. 0 to disable.",
 		Value:   0,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "MAX_CHANNEL_DURATION"),
+		EnvVars: prefixEnvVars("MAX_CHANNEL_DURATION"),
 	}
 	MaxL1TxSizeBytesFlag = &cli.Uint64Flag{
 		Name:    "max-l1-tx-size-bytes",
-		Usage:   "The maximum size of a batch tx submitted to L1.",
-		Value:   120_000,
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "MAX_L1_TX_SIZE_BYTES"),
+		Usage:   "The maximum size of a batch tx submitted to L1. Ignored for blobs, where max blob size will be used.",
+		Value:   120_000, // will be overwritten to max for blob da-type
+		EnvVars: prefixEnvVars("MAX_L1_TX_SIZE_BYTES"),
+	}
+	MaxBlocksPerSpanBatch = &cli.IntFlag{
+		Name:    "max-blocks-per-span-batch",
+		Usage:   "Maximum number of blocks to add to a span batch. Default is 0 - no maximum.",
+		EnvVars: prefixEnvVars("MAX_BLOCKS_PER_SPAN_BATCH"),
+	}
+	TargetNumFramesFlag = &cli.IntFlag{
+		Name:    "target-num-frames",
+		Usage:   "The target number of frames to create per channel. Controls number of blobs per blob tx, if using Blob DA.",
+		Value:   1,
+		EnvVars: prefixEnvVars("TARGET_NUM_FRAMES"),
+	}
+	ApproxComprRatioFlag = &cli.Float64Flag{
+		Name:    "approx-compr-ratio",
+		Usage:   "The approximate compression ratio (<= 1.0). Only relevant for ratio compressor.",
+		Value:   0.6,
+		EnvVars: prefixEnvVars("APPROX_COMPR_RATIO"),
+	}
+	CompressorFlag = &cli.StringFlag{
+		Name:    "compressor",
+		Usage:   "The type of compressor. Valid options: " + strings.Join(compressor.KindKeys, ", "),
+		EnvVars: prefixEnvVars("COMPRESSOR"),
+		Value:   compressor.ShadowKind,
+		Action: func(_ *cli.Context, s string) error {
+			if !slices.Contains(compressor.KindKeys, s) {
+				return fmt.Errorf("unsupported compressor: %s", s)
+			}
+			return nil
+		},
+	}
+	CompressionAlgoFlag = &cli.GenericFlag{
+		Name:    "compression-algo",
+		Usage:   "The compression algorithm to use. Valid options: " + openum.EnumString(derive.CompressionAlgos),
+		EnvVars: prefixEnvVars("COMPRESSION_ALGO"),
+		Value: func() *derive.CompressionAlgo {
+			out := derive.Zlib
+			return &out
+		}(),
 	}
 	StoppedFlag = &cli.BoolFlag{
 		Name:    "stopped",
 		Usage:   "Initialize the batcher in a stopped state. The batcher can be started using the admin_startBatcher RPC",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "STOPPED"),
+		EnvVars: prefixEnvVars("STOPPED"),
 	}
-	SkipEigenDaRpcFlag = &cli.BoolFlag{
-		Name:    "skip-eigenda-da-rpc",
-		Usage:   "skip eigenDA rpc and submit da data to ethereum blob transaction when mantle_da_switch is open",
-		EnvVars: opservice.PrefixEnvVar(EnvVarPrefix, "SKIP_EIGENDA_DA_RPC"),
+	BatchTypeFlag = &cli.UintFlag{
+		Name:        "batch-type",
+		Usage:       "The batch type. 0 for SingularBatch and 1 for SpanBatch.",
+		Value:       0,
+		EnvVars:     prefixEnvVars("BATCH_TYPE"),
+		DefaultText: "singular",
 	}
+	DataAvailabilityTypeFlag = &cli.GenericFlag{
+		Name: "data-availability-type",
+		Usage: "The data availability type to use for submitting batches to the L1. Valid options: " +
+			openum.EnumString(DataAvailabilityTypes),
+		Value: func() *DataAvailabilityType {
+			out := CalldataType
+			return &out
+		}(),
+		EnvVars: prefixEnvVars("DATA_AVAILABILITY_TYPE"),
+	}
+	ActiveSequencerCheckDurationFlag = &cli.DurationFlag{
+		Name:    "active-sequencer-check-duration",
+		Usage:   "The duration between checks to determine the active sequencer endpoint.",
+		Value:   5 * time.Second,
+		EnvVars: prefixEnvVars("ACTIVE_SEQUENCER_CHECK_DURATION"),
+	}
+	CheckRecentTxsDepthFlag = &cli.IntFlag{
+		Name: "check-recent-txs-depth",
+		Usage: "Indicates how many blocks back the batcher should look during startup for a recent batch tx on L1. This can " +
+			"speed up waiting for node sync. It should be set to the verifier confirmation depth of the sequencer (e.g. 4).",
+		Value:   0,
+		EnvVars: prefixEnvVars("CHECK_RECENT_TXS_DEPTH"),
+	}
+	WaitNodeSyncFlag = &cli.BoolFlag{
+		Name: "wait-node-sync",
+		Usage: "Indicates if, during startup, the batcher should wait for a recent batcher tx on L1 to " +
+			"finalize (via more block confirmations). This should help avoid duplicate batcher txs.",
+		Value:   false,
+		EnvVars: prefixEnvVars("WAIT_NODE_SYNC"),
+	}
+
 	// Legacy Flags
 	SequencerHDPathFlag = txmgr.SequencerHDPathFlag
 )
@@ -123,31 +170,33 @@ var requiredFlags = []cli.Flag{
 }
 
 var optionalFlags = []cli.Flag{
+	WaitNodeSyncFlag,
+	CheckRecentTxsDepthFlag,
 	SubSafetyMarginFlag,
 	PollIntervalFlag,
 	MaxPendingTransactionsFlag,
 	MaxChannelDurationFlag,
 	MaxL1TxSizeBytesFlag,
+	MaxBlocksPerSpanBatch,
+	TargetNumFramesFlag,
+	ApproxComprRatioFlag,
+	CompressorFlag,
 	StoppedFlag,
-	SkipEigenDaRpcFlag,
 	SequencerHDPathFlag,
-	DisperserTimeoutFlag,
-	DisperserSocketFlag,
-	DataStoreDurationFlag,
-	GraphPollingDurationFlag,
-	GraphProviderFlag,
-	RollUpMaxSizeFlag,
+	BatchTypeFlag,
+	DataAvailabilityTypeFlag,
+	ActiveSequencerCheckDurationFlag,
+	CompressionAlgoFlag,
 }
 
 func init() {
+	optionalFlags = append(optionalFlags, ThrottleFlags...)
 	optionalFlags = append(optionalFlags, oprpc.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, opmetrics.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
-	optionalFlags = append(optionalFlags, rpc.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, txmgr.CLIFlags(EnvVarPrefix)...)
-	optionalFlags = append(optionalFlags, compressor.CLIFlags(EnvVarPrefix)...)
-	optionalFlags = append(optionalFlags, eigenda.CLIFlags(EnvVarPrefix)...)
+	optionalFlags = append(optionalFlags, altda.CLIFlags(EnvVarPrefix, "")...)
 
 	Flags = append(requiredFlags, optionalFlags...)
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum-optimism/optimism/op-bindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-node/bindings"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,9 +15,9 @@ import (
 var (
 	SentMessageEventABI               = "SentMessage(address,address,bytes,uint256)"
 	SentMessageEventABIHash           = crypto.Keccak256Hash([]byte(SentMessageEventABI))
-	SentMessageExtension1EventABI     = "SentMessage(address,uint256,uint256)"
+	SentMessageExtension1EventABI     = "SentMessage(address,uint256)"
 	SentMessageExtension1EventABIHash = crypto.Keccak256Hash([]byte(SentMessageExtension1EventABI))
-	MessagePassedEventABI             = "MessagePassed(uint256,address,address,uint256,uint256,uint256,bytes,bytes32)"
+	MessagePassedEventABI             = "MessagePassed(uint256,address,address,uint256,uint256,bytes,bytes32)"
 	MessagePassedEventABIHash         = crypto.Keccak256Hash([]byte(MessagePassedEventABI))
 )
 
@@ -28,8 +28,7 @@ type Withdrawal struct {
 	Nonce    *big.Int        `json:"nonce"`
 	Sender   *common.Address `json:"sender"`
 	Target   *common.Address `json:"target"`
-	MNTValue *big.Int        `json:"mntValue"`
-	ETHValue *big.Int        `json:"ethValue"`
+	Value    *big.Int        `json:"value"`
 	GasLimit *big.Int        `json:"gasLimit"`
 	Data     hexutil.Bytes   `json:"data"`
 }
@@ -38,17 +37,16 @@ type Withdrawal struct {
 func NewWithdrawal(
 	nonce *big.Int,
 	sender, target *common.Address,
-	mntValue, ethValue, gasLimit *big.Int,
+	value, gasLimit *big.Int,
 	data []byte,
 ) *Withdrawal {
 	return &Withdrawal{
 		Nonce:    nonce,
 		Sender:   sender,
 		Target:   target,
-		MNTValue: mntValue,
-		ETHValue: ethValue,
+		Value:    value,
 		GasLimit: gasLimit,
-		Data:     data,
+		Data:     hexutil.Bytes(data),
 	}
 }
 
@@ -58,12 +56,11 @@ func (w *Withdrawal) Encode() ([]byte, error) {
 		{Name: "nonce", Type: Uint256Type},
 		{Name: "sender", Type: AddressType},
 		{Name: "target", Type: AddressType},
-		{Name: "mntValue", Type: Uint256Type},
-		{Name: "ethValue", Type: Uint256Type},
+		{Name: "value", Type: Uint256Type},
 		{Name: "gasLimit", Type: Uint256Type},
 		{Name: "data", Type: BytesType},
 	}
-	enc, err := args.Pack(w.Nonce, w.Sender, w.Target, w.MNTValue, w.ETHValue, w.GasLimit, []byte(w.Data))
+	enc, err := args.Pack(w.Nonce, w.Sender, w.Target, w.Value, w.GasLimit, []byte(w.Data))
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode withdrawal: %w", err)
 	}
@@ -76,8 +73,7 @@ func (w *Withdrawal) Decode(data []byte) error {
 		{Name: "nonce", Type: Uint256Type},
 		{Name: "sender", Type: AddressType},
 		{Name: "target", Type: AddressType},
-		{Name: "mntValue", Type: Uint256Type},
-		{Name: "ethValue", Type: Uint256Type},
+		{Name: "value", Type: Uint256Type},
 		{Name: "gasLimit", Type: Uint256Type},
 		{Name: "data", Type: BytesType},
 	}
@@ -98,19 +94,15 @@ func (w *Withdrawal) Decode(data []byte) error {
 	if !ok {
 		return errors.New("cannot abi decode target")
 	}
-	mntValue, ok := decoded[3].(*big.Int)
+	value, ok := decoded[3].(*big.Int)
 	if !ok {
-		return errors.New("cannot abi decode mntValue")
+		return errors.New("cannot abi decode value")
 	}
-	ethValue, ok := decoded[4].(*big.Int)
-	if !ok {
-		return errors.New("cannot abi decode ethValue")
-	}
-	gasLimit, ok := decoded[5].(*big.Int)
+	gasLimit, ok := decoded[4].(*big.Int)
 	if !ok {
 		return errors.New("cannot abi decode gasLimit")
 	}
-	msgData, ok := decoded[6].([]byte)
+	msgData, ok := decoded[5].([]byte)
 	if !ok {
 		return errors.New("cannot abi decode data")
 	}
@@ -118,8 +110,7 @@ func (w *Withdrawal) Decode(data []byte) error {
 	w.Nonce = nonce
 	w.Sender = &sender
 	w.Target = &target
-	w.MNTValue = mntValue
-	w.ETHValue = ethValue
+	w.Value = value
 	w.GasLimit = gasLimit
 	w.Data = hexutil.Bytes(msgData)
 	return nil
@@ -159,8 +150,7 @@ func (w *Withdrawal) WithdrawalTransaction() bindings.TypesWithdrawalTransaction
 		Nonce:    w.Nonce,
 		Sender:   *w.Sender,
 		Target:   *w.Target,
-		MntValue: w.MNTValue,
-		EthValue: w.ETHValue,
+		Value:    w.Value,
 		GasLimit: w.GasLimit,
 		Data:     []byte(w.Data),
 	}

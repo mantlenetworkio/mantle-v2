@@ -1,23 +1,13 @@
-FROM --platform=$BUILDPLATFORM golang:1.24.7-alpine3.22 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.10-alpine3.21 as builder
 
 ARG VERSION=v0.0.0
 
-RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash
+RUN apk add --no-cache make gcc musl-dev linux-headers git jq bash just
 
 # build op-batcher with the shared go.mod & go.sum files
-COPY ./op-batcher /app/op-batcher
-COPY ./op-bindings /app/op-bindings
-COPY ./op-node /app/op-node
-COPY ./op-chain-ops /app/op-chain-ops
-COPY ./op-service /app/op-service
-COPY ./op-signer /app/op-signer
-COPY ./go.mod /app/go.mod
-COPY ./go.sum /app/go.sum
-COPY ./.git /app/.git
+COPY . /app
 
 WORKDIR /app/op-batcher
-
-RUN go mod tidy
 
 RUN go mod download
 
@@ -29,4 +19,4 @@ FROM alpine:3.21
 
 COPY --from=builder /app/op-batcher/bin/op-batcher /usr/local/bin
 
-ENTRYPOINT ["op-batcher"]
+CMD ["op-batcher"]

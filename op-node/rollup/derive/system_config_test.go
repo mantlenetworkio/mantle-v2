@@ -4,17 +4,21 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 var (
 	// ABI encoding helpers
 	dynBytes, _ = abi.NewType("bytes", "", nil)
 	address, _  = abi.NewType("address", "", nil)
+	uint16T, _  = abi.NewType("uint16", "", nil)
 	uint256T, _ = abi.NewType("uint256", "", nil)
 	addressArgs = abi.Arguments{
 		{Type: address},
@@ -26,9 +30,15 @@ var (
 		{Type: uint256T},
 		{Type: uint256T},
 	}
+	oneUint16 = abi.Arguments{
+		{Type: uint16T},
+	}
 	oneUint256 = abi.Arguments{
 		{Type: uint256T},
 	}
+	eip1559Params     = []byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}
+	operatorFeeParams = []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x0, 0x0, 0x0, 0x0, 0x0, 0x7, 0xd, 0x8}
+	minBaseFee        = uint64(1e9)
 )
 
 // TestProcessSystemConfigUpdateLogEvent tests the parsing of an event and mutating the
@@ -42,11 +52,14 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 		config eth.SystemConfig
 		hook   func(*testing.T, *types.Log) *types.Log
 		err    bool
+		// forks (optional)
+		ecotoneTime *uint64
+		l1Time      uint64
 	}{
 		{
 			// The log data is ignored by consensus and no modifications to the
 			// system config occur.
-			name: "SystemConfigUpdateUnsafeBlockSigner",
+			name: "UnsafeBlockSigner",
 			log: &types.Log{
 				Topics: []common.Hash{
 					ConfigUpdateEventABIHash,
@@ -66,7 +79,7 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 		},
 		{
 			// The batcher address should be updated.
-			name: "SystemConfigUpdateBatcher",
+			name: "Batcher",
 			log: &types.Log{
 				Topics: []common.Hash{
 					ConfigUpdateEventABIHash,
@@ -90,12 +103,12 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 		},
 		{
 			// The overhead and the scalar should be updated.
-			name: "SystemConfigUpdateGasConfig",
+			name: "GasConfig",
 			log: &types.Log{
 				Topics: []common.Hash{
 					ConfigUpdateEventABIHash,
 					ConfigUpdateEventVersion0,
-					SystemConfigUpdateGasConfig,
+					SystemConfigUpdateFeeScalars,
 				},
 			},
 			hook: func(t *testing.T, log *types.Log) *types.Log {
@@ -116,7 +129,7 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 		},
 		{
 			// The gas limit should be updated.
-			name: "SystemConfigUpdateGasLimit",
+			name: "GasLimit",
 			log: &types.Log{
 				Topics: []common.Hash{
 					ConfigUpdateEventABIHash,
@@ -139,7 +152,59 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 			err: false,
 		},
 		{
-			name: "SystemConfigOneTopic",
+			// The base fee should be updated.
+			name: "SystemConfigUpdateBaseFee",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateBaseFee,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				baseFee := big.NewInt(1000000000) // 1 Gwei
+				numberData, err := oneUint256.Pack(baseFee)
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				BaseFee: big.NewInt(1000000000),
+			},
+			err: false,
+		},
+		{
+			// The ecotone scalars should be updated
+			name: "GasConfigEcotone",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateFeeScalars,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				scalarData := common.Hash{0: 1, 24 + 3: 0xb3, 28 + 3: 0xbb}
+				scalar := scalarData.Big()
+				overhead := big.NewInt(0xff)
+				numberData, err := twoUint256.Pack(overhead, scalar)
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				Scalar: eth.Bytes32{0: 1, 24 + 3: 0xb3, 28 + 3: 0xbb},
+			},
+			err:         false,
+			ecotoneTime: new(uint64), // activate ecotone
+			l1Time:      200,
+		},
+		{
+			name: "OneTopic",
 			log: &types.Log{
 				Topics: []common.Hash{
 					ConfigUpdateEventABIHash,
@@ -151,14 +216,106 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 			config: eth.SystemConfig{},
 			err:    true,
 		},
+		{
+			name: "EIP1559Params",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateEIP1559Params,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				numberData, err := oneUint256.Pack(new(big.Int).SetBytes(eip1559Params))
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				EIP1559Params: eth.Bytes8(eip1559Params),
+			},
+			err: false,
+		},
+		{
+			name: "OperatorFeeParams",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateOperatorFeeParams,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				numberData, err := oneUint256.Pack(new(big.Int).SetBytes(operatorFeeParams))
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				OperatorFeeParams: eth.Bytes32(operatorFeeParams),
+			},
+			err: false,
+		},
+		{
+			name: "UpdateMinBaseFee",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateMinBaseFee,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				numberData, err := oneUint256.Pack(new(big.Int).SetUint64(minBaseFee))
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				MinBaseFee: minBaseFee,
+			},
+			err: false,
+		},
+		{
+			name: "DAFootprintGasScalar",
+			log: &types.Log{
+				Topics: []common.Hash{
+					ConfigUpdateEventABIHash,
+					ConfigUpdateEventVersion0,
+					SystemConfigUpdateDAFootprintGasScalar,
+				},
+			},
+			hook: func(t *testing.T, log *types.Log) *types.Log {
+				numberData, err := oneUint16.Pack(uint16(100))
+				require.NoError(t, err)
+				data, err := bytesArgs.Pack(numberData)
+				require.NoError(t, err)
+				log.Data = data
+				return log
+			},
+			config: eth.SystemConfig{
+				DAFootprintGasScalar: 100,
+			},
+			err: false,
+		},
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			config := eth.SystemConfig{}
+			// In Mantle, Ecotone fork maps to MantleArsia, so we need to set MantleArsiaTime
+			rollupCfg := rollup.Config{
+				EcotoneTime:     test.ecotoneTime,
+				MantleArsiaTime: test.ecotoneTime,
+			}
 
-			err := ProcessSystemConfigUpdateLogEvent(&config, test.hook(t, test.log))
+			err := ProcessSystemConfigUpdateLogEvent(&config, test.hook(t, test.log), &rollupCfg, test.l1Time)
 			if test.err {
 				require.Error(t, err)
 			} else {
@@ -167,4 +324,243 @@ func TestProcessSystemConfigUpdateLogEvent(t *testing.T) {
 			require.Equal(t, config, test.config)
 		})
 	}
+}
+
+func TestUpdateSystemConfigWithL1Receipts_Atomicity(t *testing.T) {
+	t.Run("applies all updates when all receipts well-formed", func(t *testing.T) {
+		sysCfg := eth.SystemConfig{}
+		l1Addr := common.Address{19: 0x42}
+		cfg := rollup.Config{
+			L1SystemConfigAddress: l1Addr,
+		}
+		// Build a well-formed Batcher update
+		newBatcher := common.Address{19: 0xaa}
+		addrData, err := addressArgs.Pack(&newBatcher)
+		require.NoError(t, err)
+		batcherData, err := bytesArgs.Pack(addrData)
+		require.NoError(t, err)
+		batcherLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateBatcher,
+			},
+			Data: batcherData,
+		}
+		// Build a well-formed GasLimit update
+		gasLimit := big.NewInt(0xbb)
+		gasDataEnc, err := oneUint256.Pack(gasLimit)
+		require.NoError(t, err)
+		gasData, err := bytesArgs.Pack(gasDataEnc)
+		require.NoError(t, err)
+		gasLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateGasLimit,
+			},
+			Data: gasData,
+		}
+		receipts := []*types.Receipt{
+			{
+				Status: types.ReceiptStatusSuccessful,
+				Logs:   []*types.Log{batcherLog},
+			},
+			{
+				Status: types.ReceiptStatusSuccessful,
+				Logs:   []*types.Log{gasLog},
+			},
+		}
+		err = UpdateSystemConfigWithL1Receipts(&sysCfg, receipts, &cfg, 0)
+		require.NoError(t, err)
+		require.Equal(t, newBatcher, sysCfg.BatcherAddr)
+		require.Equal(t, uint64(0xbb), sysCfg.GasLimit)
+	})
+
+	t.Run("all valid updates apply, any invalid updates are not applied and return errors", func(t *testing.T) {
+		// Start with a non-zero initial config so we can detect accidental partial updates
+		initial := eth.SystemConfig{
+			BatcherAddr: common.Address{19: 0x11},
+			GasLimit:    0x1234,
+		}
+		sysCfg := initial
+		l1Addr := common.Address{19: 0x43}
+		cfg := rollup.Config{
+			L1SystemConfigAddress: l1Addr,
+		}
+		// Well-formed Batcher update (would change value if applied)
+		newBatcher := common.Address{19: 0xaa}
+		addrData, err := addressArgs.Pack(&newBatcher)
+		require.NoError(t, err)
+		batcherData, err := bytesArgs.Pack(addrData)
+		require.NoError(t, err)
+		batcherLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateBatcher,
+			},
+			Data: batcherData,
+		}
+		// Malformed GasLimit update (invalid data to trigger parse failure)
+		malformedGasLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateGasLimit,
+			},
+			Data: []byte{0x00}, // insufficient bytes for pointer/length -> parse error
+		}
+		receipts := []*types.Receipt{
+			{
+				Status: types.ReceiptStatusSuccessful,
+				Logs:   []*types.Log{batcherLog},
+			},
+			{
+				Status: types.ReceiptStatusSuccessful,
+				Logs:   []*types.Log{malformedGasLog},
+			},
+		}
+		err = UpdateSystemConfigWithL1Receipts(&sysCfg, receipts, &cfg, 0)
+		// Error should be returned due to malformed update, but valid updates should apply
+		require.Error(t, err)
+		// Confirm valid update applied
+		require.Equal(t, newBatcher, sysCfg.BatcherAddr)
+		// Confirm invalid update did not apply; GasLimit remains unchanged
+		require.Equal(t, initial.GasLimit, sysCfg.GasLimit)
+	})
+
+	t.Run("applies multiple updates within a single receipt", func(t *testing.T) {
+		sysCfg := eth.SystemConfig{}
+		l1Addr := common.Address{19: 0x44}
+		cfg := rollup.Config{
+			L1SystemConfigAddress: l1Addr,
+		}
+		// Build well-formed Batcher update
+		newBatcher := common.Address{19: 0xbb}
+		addrData, err := addressArgs.Pack(&newBatcher)
+		require.NoError(t, err)
+		batcherData, err := bytesArgs.Pack(addrData)
+		require.NoError(t, err)
+		batcherLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateBatcher,
+			},
+			Data: batcherData,
+		}
+		// Build well-formed GasLimit update
+		gasLimit := big.NewInt(0xcc)
+		gasDataEnc, err := oneUint256.Pack(gasLimit)
+		require.NoError(t, err)
+		gasData, err := bytesArgs.Pack(gasDataEnc)
+		require.NoError(t, err)
+		gasLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateGasLimit,
+			},
+			Data: gasData,
+		}
+		receipts := []*types.Receipt{
+			{
+				Status: types.ReceiptStatusSuccessful,
+				Logs:   []*types.Log{batcherLog, gasLog},
+			},
+		}
+		err = UpdateSystemConfigWithL1Receipts(&sysCfg, receipts, &cfg, 0)
+		require.NoError(t, err)
+		require.Equal(t, newBatcher, sysCfg.BatcherAddr)
+		require.Equal(t, uint64(0xcc), sysCfg.GasLimit)
+	})
+
+	t.Run("applies updates across multiple receipts within the same block", func(t *testing.T) {
+		sysCfg := eth.SystemConfig{}
+		l1Addr := common.Address{19: 0x45}
+		cfg := rollup.Config{
+			L1SystemConfigAddress: l1Addr,
+		}
+		blockHash := common.Hash{0: 0xaa}
+		blockNumber := big.NewInt(12345)
+		// Build well-formed Batcher update (tx 0)
+		newBatcher := common.Address{19: 0xcc}
+		addrData, err := addressArgs.Pack(&newBatcher)
+		require.NoError(t, err)
+		batcherData, err := bytesArgs.Pack(addrData)
+		require.NoError(t, err)
+		batcherLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateBatcher,
+			},
+			Data: batcherData,
+		}
+		// Build well-formed GasLimit update (tx 1)
+		gasLimit := big.NewInt(0xdd)
+		gasDataEnc, err := oneUint256.Pack(gasLimit)
+		require.NoError(t, err)
+		gasData, err := bytesArgs.Pack(gasDataEnc)
+		require.NoError(t, err)
+		gasLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateGasLimit,
+			},
+			Data: gasData,
+		}
+		// Build well-formed MinBaseFee update (tx 2)
+		minBaseFeeEnc, err := oneUint256.Pack(new(big.Int).SetUint64(minBaseFee))
+		require.NoError(t, err)
+		minBaseFeeData, err := bytesArgs.Pack(minBaseFeeEnc)
+		require.NoError(t, err)
+		minBaseFeeLog := &types.Log{
+			Address: l1Addr,
+			Topics: []common.Hash{
+				ConfigUpdateEventABIHash,
+				ConfigUpdateEventVersion0,
+				SystemConfigUpdateMinBaseFee,
+			},
+			Data: minBaseFeeData,
+		}
+		receipts := []*types.Receipt{
+			{
+				Status:           types.ReceiptStatusSuccessful,
+				BlockHash:        blockHash,
+				BlockNumber:      blockNumber,
+				TransactionIndex: 0,
+				Logs:             []*types.Log{batcherLog},
+			},
+			{
+				Status:           types.ReceiptStatusSuccessful,
+				BlockHash:        blockHash,
+				BlockNumber:      blockNumber,
+				TransactionIndex: 1,
+				Logs:             []*types.Log{gasLog},
+			},
+			{
+				Status:           types.ReceiptStatusSuccessful,
+				BlockHash:        blockHash,
+				BlockNumber:      blockNumber,
+				TransactionIndex: 2,
+				Logs:             []*types.Log{minBaseFeeLog},
+			},
+		}
+		err = UpdateSystemConfigWithL1Receipts(&sysCfg, receipts, &cfg, 0)
+		require.NoError(t, err)
+		require.Equal(t, newBatcher, sysCfg.BatcherAddr)
+		require.Equal(t, uint64(0xdd), sysCfg.GasLimit)
+		require.Equal(t, minBaseFee, sysCfg.MinBaseFee)
+	})
 }

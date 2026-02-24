@@ -1,28 +1,21 @@
-package sync_test
+package sync
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum-optimism/optimism/op-node/metrics"
-	"github.com/ethereum-optimism/optimism/op-node/rollup/sync"
-	smetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
-
-	"github.com/ethereum-optimism/optimism/op-node/client"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
-	"github.com/ethereum-optimism/optimism/op-node/sources"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/stretchr/testify/require"
 )
+
+var _ L1Chain = (*testutils.FakeChainSource)(nil)
+var _ L2Chain = (*testutils.FakeChainSource)(nil)
 
 // generateFakeL2 creates a fake L2 chain with the following conditions:
 // - The L2 chain is based off of the L1 chain
@@ -33,7 +26,7 @@ func (c *syncStartTestCase) generateFakeL2(t *testing.T) (*testutils.FakeChainSo
 	log := testlog.Logger(t, log.LevelError)
 	chain := testutils.NewFakeChainSource([]string{c.L1, c.NewL1}, []string{c.L2}, int(c.GenesisL1Num), log)
 	chain.SetL2Head(len(c.L2) - 1)
-	genesis := testutils.FakeGenesis(c.GenesisL1, c.GenesisL2, int(c.GenesisL1Num))
+	genesis := testutils.FakeGenesis(c.GenesisL1, c.GenesisL2, c.GenesisL1Num)
 	chain.ReorgL1()
 	for i := 0; i < len(c.NewL1)-1; i++ {
 		chain.AdvanceL1()
@@ -82,7 +75,7 @@ func (c *syncStartTestCase) Run(t *testing.T) {
 		SeqWindowSize: c.SeqWindowSize,
 	}
 	lgr := log.NewLogger(log.DiscardHandler())
-	result, err := sync.FindL2Heads(context.Background(), cfg, chain, chain, lgr, &sync.Config{})
+	result, err := FindL2Heads(context.Background(), cfg, chain, chain, lgr, &Config{})
 	if c.ExpectedErr != nil {
 		require.ErrorIs(t, err, c.ExpectedErr, "expected error")
 		return
@@ -113,6 +106,23 @@ func TestFindSyncStart(t *testing.T) {
 			SeqWindowSize:  2,
 			SafeL2Head:     'A',
 			ExpectedErr:    nil,
+		},
+		{
+			Name:           "already synced with safe head after genesis",
+			GenesisL1Num:   0,
+			L1:             "abcdefghijkj",
+			L2:             "ABCDEFGHIJKJ",
+			NewL1:          "abcdefghijkj",
+			PreFinalizedL2: 'B',
+			PreSafeL2:      'D',
+			GenesisL1:      'a',
+			GenesisL2:      'A',
+			UnsafeL2Head:   'J',
+			SeqWindowSize:  2,
+			// Important this steps back at least one safe block so the safedb is sent the latest safe head
+			// again - we may be resetting because the safedb failed to write the previous entry
+			SafeL2Head:  'C',
+			ExpectedErr: nil,
 		},
 		{
 			Name:           "small reorg long chain",
@@ -231,7 +241,7 @@ func TestFindSyncStart(t *testing.T) {
 			GenesisL2:      'A',
 			UnsafeL2Head:   0,
 			SeqWindowSize:  2,
-			ExpectedErr:    sync.WrongChainErr,
+			ExpectedErr:    WrongChainErr,
 		},
 		{
 			Name:           "unexpected L2 chain",
@@ -245,7 +255,7 @@ func TestFindSyncStart(t *testing.T) {
 			GenesisL2:      'X',
 			UnsafeL2Head:   0,
 			SeqWindowSize:  2,
-			ExpectedErr:    sync.WrongChainErr,
+			ExpectedErr:    WrongChainErr,
 		},
 		{
 			Name:           "offset L2 genesis",
@@ -290,7 +300,7 @@ func TestFindSyncStart(t *testing.T) {
 			UnsafeL2Head:   0,
 			SeqWindowSize:  2,
 			SafeL2Head:     'D',
-			ExpectedErr:    sync.WrongChainErr,
+			ExpectedErr:    WrongChainErr,
 		},
 		{
 			// FindL2Heads() keeps walking back to safe head after finding canonical unsafe head
@@ -321,140 +331,11 @@ func TestFindSyncStart(t *testing.T) {
 			GenesisL1:      'a',
 			GenesisL2:      'A',
 			SeqWindowSize:  1,
-			ExpectedErr:    sync.TooDeepReorgErr,
+			ExpectedErr:    TooDeepReorgErr,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, testCase.Run)
-	}
-}
-
-var rcfgData = `
-{
-	"genesis": {
-	  "l1": {
-		"hash": "0x4b77c36e36d655483cdbf0c7119dfff3ff21e415b93831184f264189d34c4413",
-		"number": 5485455
-	  },
-	  "l2": {
-		"hash": "0xf658f235e93299bb391c179ac2c62fcbda1b91f087034ee4757c29c7c2b70929",
-		"number": 4983
-	  },
-	  "l2_time": 1710436356,
-	  "system_config": {
-		"batcherAddr": "0x10eb1276305f45ff0e89f81d0d304eb2a64b82ee",
-		"overhead": "0x0000000000000000000000000000000000000000000000000000000000000834",
-		"scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
-		"gasLimit": 1125899906842624,
-		"baseFee": 1000000000
-	  }
-	},
-	"block_time": 2,
-	"max_sequencer_drift": 600,
-	"seq_window_size": 3600,
-	"channel_timeout": 300,
-	"l1_chain_id": 11155111,
-	"l2_chain_id": 5003003,
-	"regolith_time": 0,
-	"batch_inbox_address": "0x16fcf349b60262C4A87350757085784E39804810",
-	"deposit_contract_address": "0xc54a00a4abeba64e6fdbea4b6521e79a4ae5722a",
-	"l1_system_config_address": "0xd5e98bb1c7df7515c73dacb293cc1fcb219a66f4",
-	"mantle_da_switch": true,
-	"datalayr_service_manager_addr": "0x0185eBB3Fc4c101eCdDB753aB6Eb38252882E62a"
-  }
-`
-
-func TestFindL2Heads(t *testing.T) {
-	type args struct {
-		ctx     context.Context
-		cfg     *rollup.Config
-		l1      sync.L1Chain
-		l2      sync.L2Chain
-		lgr     log.Logger
-		syncCfg *sync.Config
-	}
-
-	rcfg := &rollup.Config{}
-	ctx := context.Background()
-	log := log.New("t1")
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	registry.MustRegister(collectors.NewGoCollector())
-	factory := smetrics.With(registry)
-	m := metrics.NewMetrics("default")
-
-	L1SourceCache := metrics.NewCacheMetrics(factory, "t1", "l1_source_cache", "L1 Source cache")
-	L2SourceCache := metrics.NewCacheMetrics(factory, "t1", "l2_source_cache", "L2 Source cache")
-	l1ClientCfg := &sources.L1ClientConfig{
-		EthClientConfig: sources.EthClientConfig{
-			MaxRequestsPerBatch:   1000,
-			MaxConcurrentRequests: 100,
-			ReceiptsCacheSize:     1000,
-			TransactionsCacheSize: 1000,
-			HeadersCacheSize:      1000,
-			PayloadsCacheSize:     1000,
-			TrustRPC:              true,
-			RPCProviderKind:       sources.RPCKindAny,
-		},
-		L1BlockRefsCacheSize: 1000,
-	}
-	l2ClientCfg := &sources.EngineClientConfig{
-		L2ClientConfig: sources.L2ClientConfig{
-			EthClientConfig: sources.EthClientConfig{
-				MaxRequestsPerBatch:   1000,
-				MaxConcurrentRequests: 100,
-				ReceiptsCacheSize:     1000,
-				TransactionsCacheSize: 1000,
-				HeadersCacheSize:      1000,
-				PayloadsCacheSize:     1000,
-				TrustRPC:              true,
-				RPCProviderKind:       sources.RPCKindAny,
-			},
-			L2BlockRefsCacheSize: 1000,
-			L1ConfigsCacheSize:   1000,
-			RollupCfg:            rcfg,
-		},
-	}
-	fmt.Println("rollup config", json.Unmarshal([]byte(rcfgData), rcfg))
-
-	l1Rpc, err := client.NewRPC(ctx, log, "http://127.0.0.1:9875")
-	fmt.Println("new rpc", l1Rpc, err)
-	l2Rpc, err := client.NewRPC(ctx, log, "http://127.0.0.1:9874")
-	fmt.Println("new rpc", l2Rpc, err)
-
-	l1, err := sources.NewL1Client(
-		client.NewInstrumentedRPC(l1Rpc, m), log, L1SourceCache, l1ClientCfg)
-	l2, err := sources.NewEngineClient(
-		client.NewInstrumentedRPC(l2Rpc, m), log, L2SourceCache, l2ClientCfg)
-
-	tests := []struct {
-		name       string
-		args       args
-		wantResult *sync.FindHeadsResult
-		wantErr    bool
-	}{
-		{
-			name: "test",
-			args: args{
-				ctx:     ctx,
-				cfg:     rcfg,
-				l1:      l1,
-				l2:      l2,
-				lgr:     log,
-				syncCfg: &sync.Config{},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotResult, err := sync.FindL2Heads(tt.args.ctx, tt.args.cfg, tt.args.l1, tt.args.l2, tt.args.lgr, tt.args.syncCfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FindL2Heads() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			fmt.Println(gotResult)
-		})
 	}
 }

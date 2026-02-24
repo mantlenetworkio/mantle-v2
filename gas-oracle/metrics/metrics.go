@@ -32,3 +32,39 @@ func InitAndRegisterStats(r metrics.Registry) {
 	GasOracleStats.FeeScalarGauge = metrics.NewRegisteredGauge("fee_scalar", r)
 	GasOracleStats.L1GasPriceGauge = metrics.NewRegisteredGauge("l1_gas_price", r)
 }
+
+func UpdateTokenRatio(tokenRatio float64) {
+	if metrics.Enabled() {
+		GasOracleStats.TokenRatioGauge.Update(tokenRatio)
+	}
+}
+
+func UpdateTokenRatioWithScalar(tokenRatio float64) {
+	if metrics.Enabled() {
+		GasOracleStats.TokenRatioWithScalarGauge.Update(tokenRatio)
+	}
+}
+
+func UpdateTokenRatioOnchain(tokenRatio float64) {
+	if metrics.Enabled() {
+		GasOracleStats.TokenRatioOnchainGauge.Update(tokenRatio)
+	}
+}
+
+func UpdateL1BaseFee(l1BaseFee int64) {
+	if metrics.Enabled() {
+		GasOracleStats.L1BaseFeeGauge.Update(l1BaseFee)
+	}
+}
+
+func UpdateFeeScalar(feeScalar int64) {
+	if metrics.Enabled() {
+		GasOracleStats.FeeScalarGauge.Update(feeScalar)
+	}
+}
+
+func UpdateL1GasPrice(l1GasPrice int64) {
+	if metrics.Enabled() {
+		GasOracleStats.L1GasPriceGauge.Update(l1GasPrice)
+	}
+}

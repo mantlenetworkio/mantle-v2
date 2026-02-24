@@ -23,23 +23,16 @@ func GenerateDeposit(sourceHash common.Hash, rng *rand.Rand) *types.DepositTx {
 	if rng.Intn(2) == 0 {
 		mint = RandomETH(rng, 200)
 	}
-	var ethValue *big.Int
-	if rng.Intn(2) == 0 {
-		ethValue = RandomETH(rng, 200)
-	}
 
-	value := RandomETH(rng, 200)
 	dep := &types.DepositTx{
 		SourceHash:          sourceHash,
 		From:                RandomAddress(rng),
 		To:                  to,
-		Value:               value,
+		Value:               RandomETH(rng, 200),
 		Gas:                 uint64(rng.Int63n(10 * 1e6)), // 10 M gas max
 		Data:                data,
 		Mint:                mint,
 		IsSystemTransaction: false,
-		EthValue:            ethValue,
-		EthTxValue:          nil,
 	}
 	return dep
 }

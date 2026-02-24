@@ -1,19 +1,30 @@
 package derive
 
 import (
+	"bytes"
+	crand "crypto/rand"
+	"encoding/binary"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testutils"
 )
 
-var _ eth.BlockInfo = (*testutils.MockBlockInfo)(nil)
+var (
+	MockDepositContractAddr               = common.HexToAddress("0xdeadbeefdeadbeefdeadbeefdeadbeef00000000")
+	_                       eth.BlockInfo = (*testutils.MockBlockInfo)(nil)
+)
 
 type infoTest struct {
 	name    string
@@ -31,7 +42,17 @@ func randomL1Cfg(rng *rand.Rand, l1Info eth.BlockInfo) eth.SystemConfig {
 	}
 }
 
-var MockDepositContractAddr = common.HexToAddress("0xdeadbeefdeadbeefdeadbeefdeadbeef00000000")
+func extractDAFootprintGasScalar(data []byte) (uint16, error) {
+	if len(data) < L1InfoJovianLen {
+		return 0, fmt.Errorf("L1 attributes transaction data too short for DA footprint gas scalar: %d", len(data))
+	}
+	// Future forks need to be added here
+	if !bytes.Equal(data[0:4], L1InfoFuncJovianBytes4) {
+		return 0, fmt.Errorf("L1 attributes transaction data does not have Jovian selector")
+	}
+	daFootprintGasScalar := binary.BigEndian.Uint16(data[L1InfoJovianLen-2 : L1InfoJovianLen])
+	return daFootprintGasScalar, nil
+}
 
 func TestParseL1InfoDepositTxData(t *testing.T) {
 	randomSeqNr := func(rng *rand.Rand) uint64 {
@@ -58,15 +79,16 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 			return 0
 		}},
 	}
+	var rollupCfg rollup.Config
 	for i, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			rng := rand.New(rand.NewSource(int64(1234 + i)))
 			info := testCase.mkInfo(rng)
 			l1Cfg := testCase.mkL1Cfg(rng, info)
 			seqNr := testCase.seqNr(rng)
-			depTx, err := L1InfoDeposit(seqNr, info, l1Cfg, false)
+			depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, l1Cfg, seqNr, info, 0)
 			require.NoError(t, err)
-			res, err := L1InfoDepositTxData(depTx.Data)
+			res, err := L1BlockInfoFromBytes(&rollupCfg, info.Time(), depTx.Data)
 			require.NoError(t, err, "expected valid deposit info")
 			assert.Equal(t, res.Number, info.NumberU64())
 			assert.Equal(t, res.Time, info.Time())
@@ -80,33 +102,220 @@ func TestParseL1InfoDepositTxData(t *testing.T) {
 		})
 	}
 	t.Run("no data", func(t *testing.T) {
-		_, err := L1InfoDepositTxData(nil)
+		_, err := L1BlockInfoFromBytes(&rollupCfg, 0, nil)
 		assert.Error(t, err)
 	})
 	t.Run("not enough data", func(t *testing.T) {
-		_, err := L1InfoDepositTxData([]byte{1, 2, 3, 4})
+		_, err := L1BlockInfoFromBytes(&rollupCfg, 0, []byte{1, 2, 3, 4})
 		assert.Error(t, err)
 	})
 	t.Run("too much data", func(t *testing.T) {
-		_, err := L1InfoDepositTxData(make([]byte, 4+32+32+32+32+32+1))
+		_, err := L1BlockInfoFromBytes(&rollupCfg, 0, make([]byte, 4+32+32+32+32+32+1))
 		assert.Error(t, err)
 	})
 	t.Run("invalid selector", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
 		info := testutils.MakeBlockInfo(nil)(rng)
-		depTx, err := L1InfoDeposit(randomSeqNr(rng), info, randomL1Cfg(rng, info), false)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, 0)
 		require.NoError(t, err)
-		_, err = rand.Read(depTx.Data[0:4])
+		_, err = crand.Read(depTx.Data[0:4])
 		require.NoError(t, err)
-		_, err = L1InfoDepositTxData(depTx.Data)
+		_, err = L1BlockInfoFromBytes(&rollupCfg, info.Time(), depTx.Data)
 		require.ErrorContains(t, err, "function signature")
 	})
 	t.Run("regolith", func(t *testing.T) {
 		rng := rand.New(rand.NewSource(1234))
 		info := testutils.MakeBlockInfo(nil)(rng)
-		depTx, err := L1InfoDeposit(randomSeqNr(rng), info, randomL1Cfg(rng, info), true)
+		rollupCfg := rollup.Config{}
+		rollupCfg.ActivateAtGenesis(forks.Regolith)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, 0)
 		require.NoError(t, err)
 		require.False(t, depTx.IsSystemTransaction)
 		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+	})
+	t.Run("ecotone", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Ecotone)
+		// run 1 block after ecotone transition
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
+	})
+	t.Run("activation-block ecotone", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Delta)
+		ecotoneTime := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime // activate ecotone just after genesis
+		rollupCfg.EcotoneTime = &ecotoneTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, ecotoneTime)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoBedrockLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncBedrockBytes4, depTx.Data[:4])
+	})
+	t.Run("genesis-block ecotone", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Ecotone)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, rollupCfg.Genesis.L2Time)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
+	})
+	t.Run("isthmus", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Isthmus)
+		// run 1 block after isthmus transition
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+	})
+	t.Run("activation-block isthmus", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Holocene)
+		isthmusTime := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime // activate isthmus just after genesis
+		rollupCfg.IsthmusTime = &isthmusTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, isthmusTime)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		// Isthmus activation block still uses previous format
+		// In Mantle, Granite also maps to MantleArsia, so it uses Isthmus format with Arsia signature
+		require.Equal(t, L1InfoEcotoneLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncEcotoneBytes4, depTx.Data[:4])
+	})
+	t.Run("genesis-block isthmus", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Isthmus)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, rollupCfg.Genesis.L2Time)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+	})
+	t.Run("jovian", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
+		// run 1 block after Jovian transition
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+		dafgs, err := extractDAFootprintGasScalar(depTx.Data)
+		require.NoError(t, err)
+		// randomL1Cfg has scalar 0, which should be translated to the default value.
+		require.Equal(t, uint16(DAFootprintGasScalarDefault), dafgs)
+	})
+	t.Run("activation-block jovian", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Isthmus)
+		jovianTime := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime // activate jovian just after genesis
+		rollupCfg.InteropTime = &jovianTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, jovianTime)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		// Jovian activates, but Isthmus L1 info is still used at this upgrade block
+		require.Equal(t, L1InfoIsthmusLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncIsthmusBytes4, depTx.Data[:4])
+	})
+	t.Run("genesis-block jovian", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, rollupCfg.Genesis.L2Time)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+	})
+	t.Run("interop", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Interop)
+		// run 1 block after interop transition
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data), "the length is same in interop")
+	})
+	t.Run("activation-block interop", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
+		interopTime := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime // activate interop just after genesis
+		rollupCfg.InteropTime = &interopTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, interopTime)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+		require.Equal(t, L1InfoFuncJovianBytes4, depTx.Data[:4])
+	})
+	t.Run("genesis-block interop", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Interop)
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, rollupCfg.Genesis.L2Time)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+	})
+	t.Run("arsia uses jovian format with arsia signature", func(t *testing.T) {
+		rng := rand.New(rand.NewSource(1234))
+		info := testutils.MakeBlockInfo(nil)(rng)
+		rollupCfg := rollup.Config{BlockTime: 2, Genesis: rollup.Genesis{L2Time: 1000}}
+		rollupCfg.ActivateAtGenesis(forks.Jovian)
+		rollupCfg.MantleActivateAtGenesis(forks.MantleArsia)
+		// Arsia timestamp - one block after genesis to avoid activation block
+		timestamp := rollupCfg.Genesis.L2Time + rollupCfg.BlockTime
+		depTx, err := L1InfoDeposit(&rollupCfg, params.MergedTestChainConfig, randomL1Cfg(rng, info), randomSeqNr(rng), info, timestamp)
+		require.NoError(t, err)
+		require.False(t, depTx.IsSystemTransaction)
+		require.Equal(t, depTx.Gas, uint64(RegolithSystemTxGas))
+		// Arsia (via Jovian) uses same data length as Jovian
+		require.Equal(t, L1InfoJovianLen, len(depTx.Data))
+		// Mantle's Arsia fork includes Isthmus features but uses Arsia function signature
+		// Since Isthmus maps to MantleArsia, the signature should be Arsia
+		require.Equal(t, L1InfoFuncArsiaBytes4, depTx.Data[:4], "Jovian activation should use Arsia signature for Mantle")
+
+		// Verify it can be decoded back
+		res, err := L1BlockInfoFromBytes(&rollupCfg, timestamp, depTx.Data)
+		require.NoError(t, err, "should decode Arsia format")
+		assert.Equal(t, res.Number, info.NumberU64())
+		assert.Equal(t, res.Time, info.Time())
 	})
 }

@@ -17,6 +17,8 @@ type WrappedResponseWriter struct {
 	UpgradeAttempt bool
 }
 
+var _ http.Hijacker = (*WrappedResponseWriter)(nil)
+
 func NewWrappedResponseWriter(w http.ResponseWriter) *WrappedResponseWriter {
 	return &WrappedResponseWriter{
 		StatusCode: 200,
