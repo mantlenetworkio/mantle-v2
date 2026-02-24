@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -450,7 +451,7 @@ func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
 		hdPath = cfg.L2OutputHDPath
 	}
 
-	signerFactory, from, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig, cfg.EnableHsm, cfg.HsmCreden, cfg.HsmAddress, cfg.HsmAPIName)
+	signerFactory, from, signerCloser, err := opcrypto.SignerFactoryFromConfig(l, cfg.PrivateKey, cfg.Mnemonic, hdPath, cfg.SignerCLIConfig, cfg.EnableHsm, cfg.HsmCreden, cfg.HsmAddress, cfg.HsmAPIName)
 	if err != nil {
 		return nil, fmt.Errorf("could not init signer: %w", err)
 	}
@@ -490,10 +491,11 @@ func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
 	cellProofTime := fallbackToOsakaCellProofTimeIfKnown(chainID, cfg.CellProofTime)
 
 	res := Config{
-		Backend: l1,
-		ChainID: chainID,
-		Signer:  signerFactory(chainID),
-		From:    from,
+		Backend:      l1,
+		ChainID:      chainID,
+		Signer:       signerFactory(chainID),
+		From:         from,
+		SignerCloser: signerCloser,
 
 		TxSendTimeout:              cfg.TxSendTimeout,
 		TxNotInMempoolTimeout:      cfg.TxNotInMempoolTimeout,
@@ -608,6 +610,10 @@ type Config struct {
 	// Signer is used to sign transactions when the gas price is increased.
 	Signer opcrypto.SignerFn
 	From   common.Address
+
+	// SignerCloser holds the lifecycle handle for the signer backend (e.g. KMS gRPC client).
+	// It is closed when the tx manager shuts down.
+	SignerCloser io.Closer
 
 	// GasPriceEstimatorFn is used to estimate the gas price for a transaction.
 	// If nil, DefaultGasPriceEstimatorFn is used.

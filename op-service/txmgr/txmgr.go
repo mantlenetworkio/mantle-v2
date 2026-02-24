@@ -205,6 +205,9 @@ func (m *SimpleTxManager) API() rpc.API {
 // once closed, the tx manager will refuse to send any new transactions, and may abandon pending ones.
 func (m *SimpleTxManager) Close() {
 	m.backend.Close()
+	if m.cfg.SignerCloser != nil {
+		m.cfg.SignerCloser.Close()
+	}
 	m.closed.Store(true)
 }
 
