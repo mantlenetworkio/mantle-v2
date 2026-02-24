@@ -101,14 +101,14 @@ func (s *SyncClient) RequestL2Range(ctx context.Context, start, end eth.L2BlockR
 
 	endNum := end.Number
 	if end == (eth.L2BlockRef{}) {
-		n, err := s.rollupCfg.TargetBlockNumber(uint64(time.Now().Unix()))
+		unsafeHead, err := s.L2BlockRefByLabel(ctx, eth.Unsafe)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query backup RPC for latest unsafe head: %w", err)
 		}
-		if n <= start.Number {
+		if unsafeHead.Number <= start.Number {
 			return nil
 		}
-		endNum = n
+		endNum = unsafeHead.Number
 	}
 
 	// TODO(CLI-3635): optimize the by-range fetching with the Engine API payloads-by-range method.
