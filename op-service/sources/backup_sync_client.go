@@ -59,6 +59,9 @@ func SyncClientDefaultConfig(config *rollup.Config, trustRPC bool) *SyncClientCo
 }
 
 func NewSyncClient(receiver receivePayload, client client.RPC, log log.Logger, metrics caching.Metrics, config *SyncClientConfig) (*SyncClient, error) {
+	if receiver == nil {
+		return nil, ErrNoUnsafeL2PayloadChannel
+	}
 	l2Client, err := NewL2Client(client, log, metrics, &config.L2ClientConfig)
 	if err != nil {
 		return nil, err
