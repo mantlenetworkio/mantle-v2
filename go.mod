@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.24.0
 
-toolchain go1.24.10
+toolchain go1.24.13
 
 require (
 	cloud.google.com/go/kms v1.20.1
@@ -15,7 +15,7 @@ require (
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/coder/websocket v1.8.13
-	github.com/consensys/gnark-crypto v0.18.0
+	github.com/consensys/gnark-crypto v0.18.1
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
