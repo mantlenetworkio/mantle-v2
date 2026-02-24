@@ -81,7 +81,7 @@ func (d *UpgradeScheduleDeployConfig) SolidityMantleForkNumber(genesisTime uint6
 			return int64(i - 4)
 		}
 	}
-	panic("should never reach here")
+	panic("SolidityMantleForkNumber: no Mantle fork (ProxyOwnerUpgrade or later) is active at genesis; check that at least one fork offset is set to 0 in the deploy config")
 }
 
 func DefaultMantleHardforkSchedule() *UpgradeScheduleDeployConfig {
