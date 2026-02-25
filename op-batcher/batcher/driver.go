@@ -186,7 +186,7 @@ func (l *BatchSubmitter) StartBatchSubmitting() error {
 
 	l.wg.Add(3)
 	go l.receiptsLoop(l.wg, receiptsCh)                                           // ranges over receiptsCh channel
-	go l.publishingLoop(l.killCtx, l.wg, receiptsCh, publishSignal)               // ranges over publishSignal, spawns routines which send on receiptsCh. Closes receiptsCh when done.
+	go l.publishingLoop(l.killCtx, l.wg, receiptsCh)                              // ranges over publishSignal, spawns routines which send on receiptsCh. Closes receiptsCh when done.
 	go l.blockLoadingLoop(l.shutdownCtx, l.wg, unsafeBytesUpdated, publishSignal) // sends on unsafeBytesUpdated (if throttling enabled), and publishSignal. Closes them both when done
 
 	l.Log.Info("Batch Submitter started")
@@ -487,7 +487,7 @@ func (l *BatchSubmitter) syncAndPrune(syncStatus *eth.SyncStatus) *inclusiveBloc
 // -  waits for a signal that blocks have been loaded
 // -  drives the creation of channels and frames
 // -  sends transactions to the DA layer
-func (l *BatchSubmitter) publishingLoop(ctx context.Context, wg *sync.WaitGroup, receiptsCh chan txmgr.TxReceipt[txRef], publishSignal chan pubInfo) {
+func (l *BatchSubmitter) publishingLoop(ctx context.Context, wg *sync.WaitGroup, receiptsCh chan txmgr.TxReceipt[txRef]) {
 	defer close(receiptsCh)
 	defer wg.Done()
 
