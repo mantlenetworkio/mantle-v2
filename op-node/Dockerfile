@@ -33,7 +33,7 @@ RUN <<-EOF
     tar -xzf "${DOWNLOAD_PATH}" -C /usr/local/bin forge
 EOF
 
-FROM --platform=$BUILDPLATFORM golang:1.24.10-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.13-bookworm AS builder
 
 ARG VERSION=v0.0.0
 
