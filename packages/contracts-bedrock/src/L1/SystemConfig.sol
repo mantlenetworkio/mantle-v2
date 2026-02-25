@@ -51,6 +51,13 @@ contract SystemConfig is OwnableUpgradeable, Semver {
     bytes32 public constant UNSAFE_BLOCK_SIGNER_SLOT = keccak256("systemconfig.unsafeblocksigner");
 
     /**
+     * @notice The maximum gas limit that can be set for L2 blocks. This limit is used to enforce
+     *         that the blocks on L2 are not too large to process and prove. Over time, this value
+     *         can be increased as various optimizations and improvements are made to the system.
+     */
+    uint64 internal constant MAX_GAS_LIMIT = 500_000_000;
+
+    /**
      * @notice Fixed L2 gas overhead. Used as part of the L2 fee calculation.
      */
     uint256 public overhead;
@@ -202,6 +209,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
         _setUnsafeBlockSigner(_unsafeBlockSigner);
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
+        require(_gasLimit <= maximumGasLimit(), "SystemConfig: gas limit too high");
     }
 
     /**
@@ -215,6 +223,17 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      */
     function minimumGasLimit() public view returns (uint64) {
         return uint64(_resourceConfig.maxResourceLimit) + uint64(_resourceConfig.systemTxMaxGas);
+    }
+
+    /**
+     * @notice Returns the maximum L2 gas limit that can be safely set for the system to
+     *         operate. This bound is used to prevent the gas limit from being set too high
+     *         and causing the system to be unable to process and/or prove L2 blocks.
+     *
+     * @return uint64 Maximum gas limit.
+     */
+    function maximumGasLimit() public pure returns (uint64) {
+        return MAX_GAS_LIMIT;
     }
 
     /**
@@ -279,6 +298,7 @@ contract SystemConfig is OwnableUpgradeable, Semver {
      */
     function setGasLimit(uint64 _gasLimit) external onlyOwner {
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
+        require(_gasLimit <= maximumGasLimit(), "SystemConfig: gas limit too high");
         gasLimit = _gasLimit;
 
         bytes memory data = abi.encode(_gasLimit);
