@@ -17,7 +17,7 @@ ARG UBUNTU_TARGET_BASE_IMAGE=ubuntu:22.04
 ARG KONA_VERSION=none
 
 # builder_foundry does not need to be built on $BUILDPLATFORM, as foundry produces static binaries.
-FROM alpine:3.21 AS builder_foundry
+FROM alpine:3.22 AS builder_foundry
 
 # Build args are only-available in top-level by default, so we'll need to declare it inside the stage too
 ARG TARGETARCH
@@ -53,7 +53,7 @@ EOF
 RUN forge --version
 
 # We may be cross-building for another platform. Specify which platform we need as builder.
-FROM --platform=$BUILDPLATFORM golang:1.24.13-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.13-alpine3.22 AS builder
 
 RUN apk add --no-cache curl tar gzip make gcc musl-dev linux-headers git jq yq-go bash just
 
