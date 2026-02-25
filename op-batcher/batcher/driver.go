@@ -975,7 +975,7 @@ func (l *BatchSubmitter) sendTransaction(txdata txData, queue *txmgr.Queue[txRef
 			// likely result in the chain spending more in gas fees than it is tuned for, so best
 			// to just fail. We do not expect this error to trigger unless there is a serious bug
 			// or configuration issue.
-			return fmt.Errorf("could not create blob tx candidate: %w", err)
+			l.Log.Crit("Could not create blob tx candidate", "err", err)
 		}
 	} else {
 		// sanity check

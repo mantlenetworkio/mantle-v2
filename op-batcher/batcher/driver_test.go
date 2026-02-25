@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +17,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-batcher/batcher/throttler"
 	"github.com/ethereum-optimism/optimism/op-batcher/config"
 	"github.com/ethereum-optimism/optimism/op-batcher/metrics"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-service/dial"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
@@ -336,4 +340,83 @@ func TestBatchSubmitter_ThrottlingEndpoints(t *testing.T) {
 	t.Run("two normal endpoints", testThrottlingEndpoints(2, 0))
 	t.Run("two failing endpoints", testThrottlingEndpoints(0, 2))
 	t.Run("one normal endpoint, one failing endpoint", testThrottlingEndpoints(1, 1))
+}
+
+// critCatcher implements testlog.Testing to intercept Log.Crit calls without
+// failing the real test. Crit calls t.FailNow() which invokes runtime.Goexit(),
+// so the function under test must run in a separate goroutine.
+type critCatcher struct {
+	t          *testing.T
+	critCalled bool
+	mu         sync.Mutex
+}
+
+func (c *critCatcher) Logf(format string, args ...any) { c.t.Helper(); c.t.Logf(format, args...) }
+func (c *critCatcher) Helper()                          {}
+func (c *critCatcher) FailNow() {
+	c.mu.Lock()
+	c.critCalled = true
+	c.mu.Unlock()
+	runtime.Goexit()
+}
+func (c *critCatcher) Name() string    { return c.t.Name() }
+func (c *critCatcher) Cleanup(f func()) { c.t.Cleanup(f) }
+
+// TestBatchSubmitter_BlobTxCandidateErrorCrits verifies that the batcher
+// exits (via Log.Crit) when blobTxCandidate returns an error, rather than
+// silently dropping the tx data.
+func TestBatchSubmitter_BlobTxCandidateErrorCrits(t *testing.T) {
+	catcher := &critCatcher{t: t}
+	lgr, logs := testlog.CaptureLogger(catcher, log.LevelDebug)
+
+	arsiaTime := uint64(0) // activate Mantle Arsia so Blobs() path is used
+	rollupCfg := &rollup.Config{
+		Genesis:         rollup.Genesis{L2: eth.BlockID{Number: 0}},
+		L2ChainID:       big.NewInt(1234),
+		MantleArsiaTime: &arsiaTime,
+	}
+
+	bs := NewBatchSubmitter(DriverSetup{
+		Log:          lgr,
+		Metr:         metrics.NoopMetrics,
+		RollupConfig: rollupCfg,
+		Config: BatcherConfig{
+			ThrottleParams: config.ThrottleParams{
+				ControllerType: config.StepControllerType,
+			},
+		},
+		ChannelConfig:    defaultTestChannelConfig(),
+		EndpointProvider: newEndpointProvider(),
+	})
+
+	// Create txdata with asBlob=true and a frame larger than MaxBlobDataSize
+	// so that Blobs() → blob.FromData() fails with ErrBlobInputTooLarge.
+	oversizedFrame := frameData{data: make([]byte, eth.MaxBlobDataSize+1)}
+	td := txData{
+		frames: []frameData{oversizedFrame},
+		asBlob: true,
+	}
+
+	q := txmgr.NewQueue[txRef](context.Background(), nil, 0)
+	receiptsCh := make(chan txmgr.TxReceipt[txRef], 1)
+
+	// Run sendTransaction in a goroutine because Log.Crit calls
+	// runtime.Goexit() which terminates the calling goroutine.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = bs.sendTransaction(td, q, receiptsCh, nil)
+	}()
+	<-done
+
+	catcher.mu.Lock()
+	wasCrit := catcher.critCalled
+	catcher.mu.Unlock()
+
+	require.True(t, wasCrit, "expected Log.Crit to be called when blobTxCandidate fails")
+	rec := logs.FindLog(
+		testlog.NewLevelFilter(slog.Level(log.LevelCrit)),
+		testlog.NewMessageFilter("Could not create blob tx candidate"),
+	)
+	require.NotNil(t, rec, "expected Crit log message about blob tx candidate failure")
 }
