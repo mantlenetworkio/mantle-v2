@@ -292,15 +292,27 @@ func (bs *BatcherService) initChannelConfig(cfg *CLIConfig) error {
 
 	cc.InitCompressorConfig(cfg.ApproxComprRatio, cfg.Compressor, cfg.CompressionAlgo)
 
-	if cc.UseBlobs && !bs.RollupConfig.IsEcotone(uint64(time.Now().Unix())) && !bs.RollupConfig.IsMantleEverest(uint64(time.Now().Unix())) {
+	ctx, cancel := context.WithTimeout(context.Background(), bs.NetworkTimeout)
+	defer cancel()
+	l2Client, err := bs.EndpointProvider.EthClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get L2 client: %w", err)
+	}
+	l2Head, err := l2Client.BlockByNumber(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to query L2 head: %w", err)
+	}
+	headTime := l2Head.Time()
+
+	if cc.UseBlobs && !bs.RollupConfig.IsEcotone(headTime) && !bs.RollupConfig.IsMantleEverest(headTime) {
 		return errors.New("cannot use Blobs before Ecotone or MantleEverest")
 	}
-	if !cc.UseBlobs && bs.RollupConfig.IsEcotone(uint64(time.Now().Unix())) {
+	if !cc.UseBlobs && bs.RollupConfig.IsEcotone(headTime) {
 		bs.Log.Warn("Ecotone upgrade is active, but batcher is not configured to use Blobs!")
 	}
 
 	// Checking for brotli compression only post Fjord
-	if cc.CompressorConfig.CompressionAlgo.IsBrotli() && !bs.RollupConfig.IsFjord(uint64(time.Now().Unix())) {
+	if cc.CompressorConfig.CompressionAlgo.IsBrotli() && !bs.RollupConfig.IsFjord(headTime) {
 		return errors.New("cannot use brotli compression before Fjord")
 	}
 
