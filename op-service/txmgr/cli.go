@@ -424,7 +424,7 @@ func ReadCLIConfig(ctx cliiface.Context) CLIConfig {
 	}
 }
 
-func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
+func NewConfig(cfg CLIConfig, l log.Logger) (_ *Config, err error) {
 	if err := cfg.Check(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
@@ -455,6 +455,11 @@ func NewConfig(cfg CLIConfig, l log.Logger) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not init signer: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			signerCloser.Close()
+		}
+	}()
 
 	feeLimitThreshold, err := eth.GweiToWei(cfg.FeeLimitThresholdGwei)
 	if err != nil {
