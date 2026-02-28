@@ -78,6 +78,7 @@ func GenerateMantleL2Genesis(pEnv *Env, intent *state.Intent, bundle ArtifactsBu
 		SequencerFeeVaultRecipient:  thisIntent.SequencerFeeVaultRecipient,
 		OperatorFeeVaultRecipient:   thisIntent.OperatorFeeVaultRecipient,
 		GasPriceOracleOwner:         thisIntent.GasPriceOracleOwner,
+		GasPriceOracleTokenRatio:    new(big.Int).SetUint64(thisIntent.GasPriceOracleTokenRatio),
 		MantleFork:                  big.NewInt(schedule.SolidityMantleForkNumber(1)),
 		FundDevAccounts:             overrides.FundDevAccounts,
 	}); err != nil {
@@ -170,6 +171,7 @@ func DefaultMantleL2GenesisStates(logger log.Logger, deployer common.Address, co
 		SequencerFeeVaultRecipient:  config.SequencerFeeVaultRecipient,
 		OperatorFeeVaultRecipient:   config.OperatorFeeVaultRecipient,
 		GasPriceOracleOwner:         config.GasPriceOracleOwner,
+		GasPriceOracleTokenRatio:    new(big.Int).SetUint64(config.GasPriceOracleTokenRatio),
 		MantleFork:                  big.NewInt(config.SolidityMantleForkNumber(1)),
 		FundDevAccounts:             config.FundDevAccounts,
 	}); err != nil {

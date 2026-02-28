@@ -87,8 +87,9 @@ type ChainIntent struct {
 	// Optional. For development purposes only. Only enabled if the operation mode targets a genesis-file output.
 	L2DevGenesisParams *L2DevGenesisParams `json:"l2DevGenesisParams,omitempty" toml:"l2DevGenesisParams,omitempty"`
 
-	L1MNT               common.Address `json:"l1MNT,omitempty" toml:"l1MNT,omitempty"`
-	GasPriceOracleOwner common.Address `json:"gasPriceOracleOwner,omitempty" toml:"gasPriceOracleOwner,omitempty"`
+	L1MNT                    common.Address `json:"l1MNT,omitempty" toml:"l1MNT,omitempty"`
+	GasPriceOracleOwner      common.Address `json:"gasPriceOracleOwner,omitempty" toml:"gasPriceOracleOwner,omitempty"`
+	GasPriceOracleTokenRatio uint64         `json:"gasPriceOracleTokenRatio,omitempty" toml:"gasPriceOracleTokenRatio,omitempty"`
 }
 
 type ChainRoles struct {

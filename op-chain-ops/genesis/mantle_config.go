@@ -2,12 +2,10 @@ package genesis
 
 import (
 	"fmt"
-	"math/big"
 	"reflect"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
-	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	op_service "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -131,19 +129,6 @@ func BuildMantleGenesis(config *DeployConfig, dump *foundry.ForgeAllocs, l1Start
 		// Use config values instead of hardcoded defaults
 		genesis.ExtraData = eip1559.EncodeMinBaseFeeExtraData(uint64(eip1559Denom), uint64(eip1559Elasticity), 0)
 	}
-
-	if config.GasPriceOracleTokenRatio != 0 {
-		tokenRatioSlot := common.BigToHash(big.NewInt(0))
-		gpoAccount := genesis.Alloc[predeploys.GasPriceOracleAddr]
-		if gpoAccount.Storage == nil {
-			gpoAccount.Storage = map[common.Hash]common.Hash{}
-		}
-		gpoAccount.Storage[tokenRatioSlot] = common.BigToHash(new(big.Int).SetUint64(config.GasPriceOracleTokenRatio))
-		genesis.Alloc[predeploys.GasPriceOracleAddr] = gpoAccount
-	}
-
-	// ExtraData is already set by NewL2Genesis based on config values
-	// Do not override it here with hardcoded MinBaseFeeExtraData
 
 	return genesis, nil
 }

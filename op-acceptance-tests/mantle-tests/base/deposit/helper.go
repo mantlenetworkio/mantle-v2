@@ -29,16 +29,16 @@ Other notes
 package deposit
 
 import (
-	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"testing"
 	"time"
+
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl/contract"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
-	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/errutil"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -151,7 +151,7 @@ func runETHDepositCase(t devtest.T, sys *presets.MantleMinimal, l1User *dsl.EOA,
 }
 
 func runMNTDepositCase(t devtest.T, sys *presets.MantleMinimal, l1User *dsl.EOA, l2User *dsl.EOA, path depositPath, amount, msgValue eth.ETH) {
-	l1MNTAddr := sysgo.DefaultL1MNT
+	l1MNTAddr := sys.L2Chain.Escape().Deployment().L1MNTAddr()
 	fundMNT(t, sys, l1User, amount)
 	initial := l2User.GetBalance()
 
@@ -224,13 +224,14 @@ func fundMNT(t devtest.T, sys *presets.MantleMinimal, to *dsl.EOA, amount eth.ET
 	if amount == eth.ZeroWei {
 		return
 	}
-	holderPriv := sys.L2Chain.Escape().Keys().Secret(devkeys.UserKey(0))
+	holderPriv := sys.L2Chain.Escape().Keys().Secret(devkeys.L1MNTFaucet)
 	holder := dsl.NewKey(t, holderPriv).User(sys.L1EL)
 	sys.FunderL1.FundAtLeast(holder, eth.OneTenthEther)
 
-	mntFunder := dsl.NewMNTFunder(t, sysgo.DefaultL1MNT, holder)
+	l1MNTAddr := sys.L2Chain.Escape().Deployment().L1MNTAddr()
+	mntFunder := dsl.NewMNTFunder(t, l1MNTAddr, holder)
 	mntFunder.FundAtLeast(to, amount)
-	to.WaitForTokenBalance(sysgo.DefaultL1MNT, amount)
+	to.WaitForTokenBalance(l1MNTAddr, amount)
 }
 
 func setupERC20Bridge(t devtest.T, sys *presets.MantleMinimal, l1User *dsl.EOA, l2User *dsl.EOA, amount eth.ETH) (common.Address, common.Address) {
@@ -266,6 +267,8 @@ func writeDepositTxAllowError(t devtest.T, user *dsl.EOA, call bindings.TypedCal
 	if msgValue != eth.ZeroWei {
 		opts = append(opts, txplan.WithValue(msgValue))
 	}
+	// double the gas estimation result to minimize the chance of the deposit failing due to out of gas.
+	opts = append(opts, txplan.WithGasRatio(2.0))
 	opts = append(opts, txplan.WithRetryInclusion(call.Client(), 10, retry.Exponential()))
 	tx := txplan.NewPlannedTx(plan, txplan.Combine(opts...))
 

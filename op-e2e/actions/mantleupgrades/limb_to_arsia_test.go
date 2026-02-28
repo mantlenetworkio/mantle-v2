@@ -40,6 +40,7 @@ func TestLimbToArsiaUpgrade(gt *testing.T) {
 	// Use MakeMantleDeployParams for Mantle-specific configuration
 	dp := e2eutils.MakeMantleDeployParams(t, testParams)
 	dp.DeployConfig.L2BlockTime = 2
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
 
 	// Limb activates at genesis (offset 0)
 	// Arsia activates later (offset 48 = 4 L2 blocks * 12s block time)
@@ -638,7 +639,8 @@ func TestLimbToArsiaUpgradeWithTransactions(gt *testing.T) {
 
 	// Use MakeMantleDeployParams for Mantle-specific configuration
 	dp := e2eutils.MakeMantleDeployParams(t, testParams)
-
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
+	dp.DeployConfig.L2GenesisBlockGasLimit = 300000000
 	// Limb at genesis, Arsia at offset 36
 	limbOffset := hexutil.Uint64(0)
 	arsiaOffset := hexutil.Uint64(36)

@@ -164,6 +164,11 @@ func testSetCodeTxSupportedBeforeArsia(gt *testing.T, testCfg *helpers.TestCfg[a
 	// - Limb activates at genesis (offset=0)
 	// - Arsia activates 100 seconds after genesis (offset=100)
 	env := helpers.NewL2ProofEnv(t, testCfg, tp, helpers.NewBatcherCfg(), func(dc *genesis.DeployConfig) {
+		// Set tokenRatio to 1 to avoid gas calculation issues in MantleLimb
+		dc.GasPriceOracleTokenRatio = 1
+		// Set very large block gas limit to handle high L1 costs in MantleLimb (scalar=1,000,000)
+		dc.L2GenesisBlockGasLimit = 3000000000000
+
 		// Activate Limb at genesis
 		limbOffset := hexutil.Uint64(0)
 		dc.L2GenesisMantleLimbTimeOffset = &limbOffset
@@ -213,7 +218,7 @@ func testSetCodeTxSupportedBeforeArsia(gt *testing.T, testCfg *helpers.TestCfg[a
 		ChainID:   uint256.MustFromBig(chainID),
 		Nonce:     0,
 		To:        env.Bob.Address(),
-		Gas:       100000,
+		Gas:       2000000000000, // Set very large gas limit to handle high L1 costs in MantleLimb (scalar=1,000,000)
 		GasFeeCap: uint256.NewInt(1000000000),
 		GasTipCap: uint256.NewInt(2),
 		AuthList:  []types.SetCodeAuthorization{auth1},

@@ -65,6 +65,8 @@ type L2Deployment interface {
 	DisputeGameFactoryProxyAddr() common.Address
 	L1StandardBridgeProxyAddr() common.Address
 	// Other addresses will be added here later
+
+	L1MNTAddr() common.Address
 }
 
 type Keys interface {

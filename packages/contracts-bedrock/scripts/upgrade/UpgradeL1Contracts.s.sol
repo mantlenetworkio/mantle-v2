@@ -12,152 +12,76 @@ import { ResourceMetering } from "src/L1/ResourceMetering.sol";
 /// @dev This script only upgrades SystemConfig (1.3.0 → 1.4.0)
 ///      L2OutputOracle and OptimismPortal remain unchanged as their versions are the same
 contract UpgradeL1Contracts is Script {
-    /// @notice Deploys new SystemConfig implementation and upgrades proxy (all-in-one with default params)
+    /// @notice Deploys new SystemConfig implementation and upgrades proxy
     /// @param proxyAdmin Address of the ProxyAdmin contract
-    /// @param systemConfigProxy Address of the SystemConfig proxy to read current config
-    /// @dev Constructor values default to 0. Use setter methods (setBaseFee, setGasConfigArsia) after upgrade to set
-    /// actual values and emit ConfigUpdate events for op-node.
+    /// @param systemConfigProxy Address of the SystemConfig proxy
     function run(address proxyAdmin, address systemConfigProxy) public {
-        // Use default values (0) - setter methods should be called after upgrade
-        run(proxyAdmin, systemConfigProxy, 0, 0, 0);
+        // Deploy implementation and upgrade in order
+        address impl = deployImplementation();
+        upgrade(proxyAdmin, systemConfigProxy, impl);
     }
 
-    /// @notice Deploys new SystemConfig implementation and upgrades proxy (all-in-one with custom params)
-    /// @param proxyAdmin Address of the ProxyAdmin contract
-    /// @param systemConfigProxy Address of the SystemConfig proxy to read current config
-    /// @param baseFeeScalar Base fee scalar for Arsia (default: 0, should be set via setGasConfigArsia after upgrade)
-    /// @param blobBaseFeeScalar Blob base fee scalar for Arsia (default: 0, should be set via setGasConfigArsia after
-    /// upgrade)
-    /// @param baseFee Initial base fee in wei (default: 0, should be set via setBaseFee after upgrade)
-    /// @dev Note: Constructor values are stored but do not emit ConfigUpdate events.
-    ///      Call setBaseFee() and setGasConfigArsia() after upgrade to emit events for op-node to detect changes.
-    function run(
-        address proxyAdmin,
-        address systemConfigProxy,
-        uint32 baseFeeScalar,
-        uint32 blobBaseFeeScalar,
-        uint256 baseFee
-    )
-        public
-    {
-        require(proxyAdmin != address(0), "UpgradeL1Contracts: Invalid ProxyAdmin address");
-        require(systemConfigProxy != address(0), "UpgradeL1Contracts: Invalid SystemConfig proxy");
-
-        console.log("=== Mantle Limb to Arsia L1 Contract Upgrade (All-in-One) ===");
-        console.log("ProxyAdmin:", proxyAdmin);
-        console.log("SystemConfig Proxy:", systemConfigProxy);
-        console.log("");
-
-        // Read current configuration from the proxy
-        SystemConfig currentConfig = SystemConfig(systemConfigProxy);
-
-        address owner = currentConfig.owner();
-        bytes32 batcherHash = currentConfig.batcherHash();
-        uint64 gasLimit = currentConfig.gasLimit();
-        address unsafeBlockSigner = currentConfig.unsafeBlockSigner();
-        ResourceMetering.ResourceConfig memory resourceConfig = currentConfig.resourceConfig();
-
-        console.log("Current Configuration:");
-        console.log("  owner:", owner);
-        console.log("  batcherHash:", uint256(batcherHash));
-        console.log("  gasLimit:", gasLimit);
-        console.log("  unsafeBlockSigner:", unsafeBlockSigner);
-        console.log("");
-
-        console.log("Arsia Configuration (constructor values):");
-        console.log("  baseFeeScalar:", baseFeeScalar);
-        console.log("  blobBaseFeeScalar:", blobBaseFeeScalar);
-        console.log("  baseFee:", baseFee);
-        if (baseFeeScalar == 0 && blobBaseFeeScalar == 0 && baseFee == 0) {
-            console.log(
-                "  Note: Values are 0. Call setBaseFee() and setGasConfigArsia() after upgrade to set actual values and emit ConfigUpdate events."
-            );
-        }
-        console.log("  ResourceConfig: Preserved from current configuration");
-        console.log("");
+    /// @notice Deploys new SystemConfig implementation with minimal values
+    /// @return impl Address of the deployed implementation
+    /// @dev Implementation storage is never used by proxy (delegatecall uses proxy's storage).
+    ///      Uses minimal values to satisfy validation and minimize deployment gas cost.
+    function deployImplementation() public returns (address impl) {
+        console.log("=== Deploy SystemConfig Implementation ===");
 
         vm.startBroadcast();
 
-        // Deploy new SystemConfig implementation
-        console.log("Deploying new SystemConfig implementation...");
+        // Deploy with minimal values that satisfy constructor requirements:
+        // - baseFeeMaxChangeDenominator > 1 (min: 2)
+        // - elasticityMultiplier > 0 (min: 1)
         SystemConfig newImpl = new SystemConfig({
-            _owner: owner,
-            _basefeeScalar: baseFeeScalar,
-            _blobbasefeeScalar: blobBaseFeeScalar,
-            _batcherHash: batcherHash,
-            _gasLimit: gasLimit,
-            _baseFee: baseFee,
-            _unsafeBlockSigner: unsafeBlockSigner,
-            _config: resourceConfig
+            _owner: address(1),
+            _basefeeScalar: 0,
+            _blobbasefeeScalar: 0,
+            _batcherHash: bytes32(0),
+            _gasLimit: 0,
+            _baseFee: 0,
+            _unsafeBlockSigner: address(0),
+            _config: ResourceMetering.ResourceConfig({
+                maxResourceLimit: 0,
+                elasticityMultiplier: 1,
+                baseFeeMaxChangeDenominator: 2,
+                minimumBaseFee: 0,
+                systemTxMaxGas: 0,
+                maximumBaseFee: 0
+            })
         });
 
-        console.log("New SystemConfig Implementation:", address(newImpl));
-        console.log("");
-
-        // Upgrade the proxy
-        IProxyAdmin admin = IProxyAdmin(proxyAdmin);
-        address oldImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
-        console.log("Old Implementation:", oldImpl);
-        console.log("Upgrading proxy to new implementation...");
-        admin.upgrade(payable(systemConfigProxy), address(newImpl));
-        console.log("SystemConfig upgraded successfully!");
+        impl = address(newImpl);
+        console.log("New SystemConfig Implementation:", impl);
 
         vm.stopBroadcast();
-
-        console.log("");
-        console.log("=== Upgrade Complete ===");
-        console.log("Note: L2OutputOracle and OptimismPortal were NOT upgraded (versions unchanged)");
-        console.log("");
-        console.log("Important: Constructor values are stored but do not emit ConfigUpdate events.");
-        console.log("To make op-node detect the changes, call setter methods after upgrade:");
-        console.log("  - systemConfig.setBaseFee(<value>)");
-        console.log("  - systemConfig.setGasConfigArsia(<baseFeeScalar>, <blobBaseFeeScalar>)");
-        console.log("");
-
-        // Verify upgrade
-        address actualImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
-        string memory version = currentConfig.version();
-
-        console.log("Verification:");
-        console.log("  New Implementation:", actualImpl);
-        console.log("  Expected:", address(newImpl));
-        console.log("  Version:", version);
-
-        if (actualImpl == address(newImpl)) {
-            console.log("  Status: SUCCESS");
-        } else {
-            console.log("  Status: FAILED");
-            revert("UpgradeL1Contracts: Implementation mismatch after upgrade");
-        }
     }
 
-    /// @notice Upgrades SystemConfig implementation through ProxyAdmin (existing implementation)
+    /// @notice Upgrades SystemConfig proxy to new implementation
     /// @param proxyAdmin Address of the ProxyAdmin contract
     /// @param systemConfigProxy Address of the SystemConfig proxy
     /// @param systemConfigImpl Address of the new SystemConfig implementation
-    function run(address proxyAdmin, address systemConfigProxy, address systemConfigImpl) public {
-        // Validate inputs
+    function upgrade(address proxyAdmin, address systemConfigProxy, address systemConfigImpl) public {
         require(proxyAdmin != address(0), "UpgradeL1Contracts: Invalid ProxyAdmin address");
         require(systemConfigProxy != address(0), "UpgradeL1Contracts: Invalid SystemConfig proxy");
         require(systemConfigImpl != address(0), "UpgradeL1Contracts: Invalid SystemConfig impl");
 
-        console.log("=== Mantle Limb to Arsia L1 Contract Upgrade ===");
+        console.log("=== Upgrade SystemConfig Proxy ===");
         console.log("ProxyAdmin:", proxyAdmin);
         console.log("SystemConfig Proxy:", systemConfigProxy);
         console.log("SystemConfig New Impl:", systemConfigImpl);
         console.log("");
 
         // Query old implementation before upgrade
-        IProxyAdmin admin = IProxyAdmin(proxyAdmin);
         address oldImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
         console.log("SystemConfig Old Impl:", oldImpl);
         console.log("");
 
         vm.startBroadcast();
 
-        // Only upgrade SystemConfig (1.3.0 -> 1.4.0)
+        // Upgrade SystemConfig (1.3.0 -> 1.4.0)
         console.log("Upgrading SystemConfig...");
-        admin.upgrade(payable(systemConfigProxy), systemConfigImpl);
+        IProxyAdmin(proxyAdmin).upgrade(payable(systemConfigProxy), systemConfigImpl);
         console.log("SystemConfig upgraded successfully!");
 
         vm.stopBroadcast();
@@ -168,12 +92,23 @@ contract UpgradeL1Contracts is Script {
         console.log("");
 
         // Verify upgrade
-        address newImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
-        console.log("Verification:");
-        console.log("  New Implementation:", newImpl);
-        console.log("  Expected:", systemConfigImpl);
+        _verifyUpgrade(proxyAdmin, systemConfigProxy, systemConfigImpl);
+    }
 
-        if (newImpl == systemConfigImpl) {
+    /// @notice Verifies the upgrade was successful
+    /// @param proxyAdmin Address of the ProxyAdmin contract
+    /// @param systemConfigProxy Address of the SystemConfig proxy
+    /// @param expectedImpl Expected implementation address
+    function _verifyUpgrade(address proxyAdmin, address systemConfigProxy, address expectedImpl) internal view {
+        address actualImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
+        string memory version = SystemConfig(systemConfigProxy).version();
+
+        console.log("Verification:");
+        console.log("  New Implementation:", actualImpl);
+        console.log("  Expected:", expectedImpl);
+        console.log("  Version:", version);
+
+        if (actualImpl == expectedImpl) {
             console.log("  Status: SUCCESS");
         } else {
             console.log("  Status: FAILED");

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -80,7 +81,10 @@ func Test_ProgramAction_ArsiaBatches(gt *testing.T) {
 
 	runArsiaDerivationTest := func(gt *testing.T, testCfg *helpers.TestCfg[testCase]) {
 		t := actionsHelpers.NewDefaultTesting(gt)
-		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg())
+		env := helpers.NewL2ProofEnv(t, testCfg, helpers.NewTestParams(), helpers.NewBatcherCfg(), func(dc *genesis.DeployConfig) {
+			// Set tokenRatio to 1 to avoid gas calculation issues in MantleLimb
+			dc.GasPriceOracleTokenRatio = 1
+		})
 
 		includeBatchTx := func() {
 			// Include the last transaction submitted by the batcher.
@@ -108,14 +112,14 @@ func Test_ProgramAction_ArsiaBatches(gt *testing.T) {
 			gasTipCap := big.NewInt(2 * params.GWei)
 			gasFeeCap := new(big.Int).Add(gasTipCap, new(big.Int).Mul(latestHeader.BaseFee, big.NewInt(2)))
 
-			// Send an L2 tx with fixed gas limit of 50000
+			// Send an L2 tx with fixed gas limit
 			toAddr := env.Dp.Addresses.Bob
 			tx := types.MustSignNewTx(env.Alice.L2.Secret(), env.Alice.L2.Signer(), &types.DynamicFeeTx{
 				ChainID:   env.Alice.L2.Signer().ChainID(),
 				Nonce:     nonce,
 				GasTipCap: gasTipCap,
 				GasFeeCap: gasFeeCap,
-				Gas:       50_000, // Manually set gas limit to avoid estimation
+				Gas:       55_000, // Increased to cover L1 cost in pre-Arsia blocks
 				To:        &toAddr,
 				Value:     big.NewInt(0),
 				Data:      []byte{},

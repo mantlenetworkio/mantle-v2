@@ -60,6 +60,8 @@ func L2Sequencer_SequencerDrift(gt *testing.T, forksname rollup.MantleForkName) 
 	dp := e2eutils.MakeMantleDeployParams(t, p)
 
 	dp.DeployConfig.ActivateMantleForkAtGenesis(forksname)
+	// Set TokenRatio to 1 (1:1 ratio) for proper gas calculation in MantleLimb
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
 	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
 	log := testlog.Logger(t, log.LevelDebug)
 	miner, engine, sequencer := helpers.SetupSequencerTest(t, sd, log)
@@ -77,7 +79,7 @@ func L2Sequencer_SequencerDrift(gt *testing.T, forksname rollup.MantleForkName) 
 			Nonce:     n,
 			GasTipCap: big.NewInt(2 * params.GWei),
 			GasFeeCap: new(big.Int).Add(miner.L1Chain().CurrentBlock().BaseFee, big.NewInt(2*params.GWei)),
-			Gas:       params.TxGas,
+			Gas:       params.TxGas + 5000, // Add buffer for L1 cost in MantleLimb
 			To:        &dp.Addresses.Bob,
 			Value:     e2eutils.Ether(2),
 		})
@@ -130,6 +132,8 @@ func L2Sequencer_SequencerOnlyReorg(gt *testing.T, forksname rollup.MantleForkNa
 	dp := e2eutils.MakeMantleDeployParams(t, helpers.DefaultRollupTestParams())
 
 	dp.DeployConfig.ActivateMantleForkAtGenesis(forksname)
+	// Set TokenRatio to 1 (1:1 ratio) for proper gas calculation in MantleLimb
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
 	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
 	log := testlog.Logger(t, log.LevelDebug)
 	miner, _, sequencer := helpers.SetupSequencerTest(t, sd, log)
@@ -196,6 +200,8 @@ func L2SequencerAPI(gt *testing.T, forksname rollup.MantleForkName) {
 	dp := e2eutils.MakeMantleDeployParams(t, helpers.DefaultRollupTestParams())
 
 	dp.DeployConfig.ActivateMantleForkAtGenesis(forksname)
+	// Set TokenRatio to 1 (1:1 ratio) for proper gas calculation in MantleLimb
+	dp.DeployConfig.GasPriceOracleTokenRatio = 1
 	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
 	logger, logCapt := testlog.CaptureLogger(t, log.LevelDebug)
 

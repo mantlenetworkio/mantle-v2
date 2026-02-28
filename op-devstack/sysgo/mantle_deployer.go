@@ -42,6 +42,15 @@ func WithOperatorFeeVaultRecipient(recipient common.Address) DeployerPipelineOpt
 	}
 }
 
+func WithGasPriceOracleTokenRatio(tokenRatio uint64) DeployerPipelineOption {
+	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {
+		cfg.Logger.New("stage", "set-up-mantle-env").Info("Setting GasPriceOracleTokenRatio", "tokenRatio", tokenRatio)
+		for _, l2 := range intent.Chains {
+			l2.GasPriceOracleTokenRatio = tokenRatio
+		}
+	}
+}
+
 // WithMantlePortalPaused sets the OptimismPortalPaused override (defaults to true in Mantle artifacts).
 func WithMantlePortalPaused(paused bool) DeployerPipelineOption {
 	return func(_ *worldBuilder, intent *state.Intent, cfg *deployer.ApplyPipelineOpts) {

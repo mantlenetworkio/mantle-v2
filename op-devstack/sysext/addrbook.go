@@ -15,6 +15,7 @@ const (
 	SystemConfigAddressName   = "systemConfigProxy"
 	DisputeGameFactoryName    = "disputeGameFactoryProxy"
 	L1StandardBridgeProxyName = "l1StandardBridgeProxy"
+	L1MNTAddressName          = "l1MantleTokenProxy"
 )
 
 type l1AddressBook struct {
@@ -41,6 +42,7 @@ type l2AddressBook struct {
 	systemConfig       common.Address
 	disputeGameFactory common.Address
 	l1StandardBridge   common.Address
+	l1MNT              common.Address
 }
 
 func newL2AddressBook(l1Addresses descriptors.AddressMap) *l2AddressBook {
@@ -48,6 +50,7 @@ func newL2AddressBook(l1Addresses descriptors.AddressMap) *l2AddressBook {
 		systemConfig:       l1Addresses[SystemConfigAddressName],
 		disputeGameFactory: l1Addresses[DisputeGameFactoryName],
 		l1StandardBridge:   l1Addresses[L1StandardBridgeProxyName],
+		l1MNT:              l1Addresses[L1MNTAddressName],
 	}
 }
 
@@ -61,6 +64,10 @@ func (a *l2AddressBook) DisputeGameFactoryProxyAddr() common.Address {
 
 func (a *l2AddressBook) L1StandardBridgeProxyAddr() common.Address {
 	return a.l1StandardBridge
+}
+
+func (a *l2AddressBook) L1MNTAddr() common.Address {
+	return a.l1MNT
 }
 
 var _ stack.L2Deployment = (*l2AddressBook)(nil)
