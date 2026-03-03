@@ -9,8 +9,8 @@ import (
 	"math/big"
 
 	kms "cloud.google.com/go/kms/apiv1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	btcecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 
 	// lots of poor naming in go-ethereum 👾
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
