@@ -19,6 +19,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+var (
+	secp256k1N     = new(big.Int).Set(crypto.S256().Params().N)
+	secp256k1HalfN = new(big.Int).Rsh(secp256k1N, 1)
+)
+
 // ManagedKey represents a key from the Key Management Service (KMS).
 type ManagedKey struct {
 	// KMS uses a slash-separated path for identification.
@@ -100,6 +105,10 @@ func (mk *ManagedKey) SignHash(ctx context.Context, hash common.Hash) ([]byte, e
 		rLen = (params.R.BitLen() + 7) / 8
 	}
 	if params.S != nil {
+		// Enforce low-s canonicalization (EIP-2) to prevent signature malleability.
+		if params.S.Cmp(secp256k1HalfN) > 0 {
+			params.S.Sub(secp256k1N, params.S)
+		}
 		sLen = (params.S.BitLen() + 7) / 8
 	}
 	if rLen == 0 || rLen > 32 || sLen == 0 || sLen > 32 {
