@@ -920,12 +920,15 @@ func TestTokenRatioInBlockChange(t *testing.T) {
 	baseFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000019")
 	seqFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000011")
 	l1FeeVault := common.HexToAddress("0x420000000000000000000000000000000000001a")
+	opFeeVault := common.HexToAddress("0x420000000000000000000000000000000000001b")
 
 	baseFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), baseFeeVault, nil)
 	require.NoError(gt, err)
 	seqFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), seqFeeVault, nil)
 	require.NoError(gt, err)
 	l1FeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), l1FeeVault, nil)
+	require.NoError(gt, err)
+	opFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), opFeeVault, nil)
 	require.NoError(gt, err)
 
 	// Start a new L2 block that will contain 4 transactions
@@ -987,6 +990,8 @@ func TestTokenRatioInBlockChange(t *testing.T) {
 	seqFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), seqFeeVault, nil)
 	require.NoError(gt, err)
 	l1FeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), l1FeeVault, nil)
+	require.NoError(gt, err)
+	opFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), opFeeVault, nil)
 	require.NoError(gt, err)
 
 	// Verify tokenRatio is updated in contract
@@ -1157,39 +1162,44 @@ func TestTokenRatioInBlockChange(t *testing.T) {
 		aliceActualL1Fees.String(), aliceReceiptL1Fees.String())
 
 	// ========== Verify Vault Balances (Arsia Mode) ==========
+	// Calculate vault increases (independent data source from blockchain)
 	baseFeeVaultIncrease := new(big.Int).Sub(baseFeeVaultAfter, baseFeeVaultBefore)
 	seqFeeVaultIncrease := new(big.Int).Sub(seqFeeVaultAfter, seqFeeVaultBefore)
 	l1FeeVaultIncrease := new(big.Int).Sub(l1FeeVaultAfter, l1FeeVaultBefore)
+	opFeeVaultIncrease := new(big.Int).Sub(opFeeVaultAfter, opFeeVaultBefore)
+
+	gt.Logf("Vault verification:")
 
 	// In Arsia: L1FeeVault should receive the sum of all L1Fees
 	totalL1Fee := new(big.Int).Add(receipt1.L1Fee, receipt2.L1Fee)
 	totalL1Fee.Add(totalL1Fee, receipt3.L1Fee)
 	totalL1Fee.Add(totalL1Fee, receipt4.L1Fee)
 
-	gt.Logf("Vault verification:")
 	gt.Logf("  L1FeeVault: expected=%s, actual=%s", totalL1Fee.String(), l1FeeVaultIncrease.String())
-
 	require.Equal(gt, totalL1Fee.String(), l1FeeVaultIncrease.String(),
-		"[Arsia] L1FeeVault should receive exactly the sum of all L1Fees. "+
-			"Expected=%s, Actual=%s", totalL1Fee.String(), l1FeeVaultIncrease.String())
+		"[Arsia] L1FeeVault should receive exactly the sum of all L1Fees")
 
-	// Verify total vault increase matches total user deductions
-	totalUserDeduction := new(big.Int).Add(aliceActualDeduction, bobActualDeduction)
-	totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
-	totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
-
-	// Note: OpFee goes to sequencer address, not vaults, so we need to account for that
+	// Verify OperatorFeeVault received the sum of all OpFees
 	totalOpFee := new(big.Int).Add(tx1OperatorFee, tx2OperatorFee)
 	totalOpFee.Add(totalOpFee, bobOperatorFee) // tx3
 	totalOpFee.Add(totalOpFee, tx4OperatorFee)
 
-	totalVaultPlusOpFee := new(big.Int).Add(totalVaultIncrease, totalOpFee)
+	gt.Logf("  OperatorFeeVault: expected=%s, actual=%s", totalOpFee.String(), opFeeVaultIncrease.String())
+	require.Equal(gt, totalOpFee.String(), opFeeVaultIncrease.String(),
+		"[Arsia] OperatorFeeVault should receive exactly the sum of all OpFees")
 
-	gt.Logf("  Total: UserDeduction=%s, VaultPlusOpFee=%s", totalUserDeduction.String(), totalVaultPlusOpFee.String())
+	// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+	// This uses two independent data sources to prevent false positives
+	totalUserDeduction := new(big.Int).Add(aliceActualDeduction, bobActualDeduction)
+	totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
+	totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
+	totalVaultIncrease.Add(totalVaultIncrease, opFeeVaultIncrease)
 
-	require.Equal(gt, totalUserDeduction.String(), totalVaultPlusOpFee.String(),
-		"[Arsia] Total vault + OpFee should equal total user deduction. "+
-			"UserDeduction=%s, VaultPlusOpFee=%s", totalUserDeduction.String(), totalVaultPlusOpFee.String())
+	gt.Logf("  Total UserDeduction (blockchain): %s", totalUserDeduction.String())
+	gt.Logf("  Total VaultIncrease (blockchain): %s", totalVaultIncrease.String())
+
+	require.Equal(gt, totalUserDeduction.String(), totalVaultIncrease.String(),
+		"[Arsia] Total vault increase should equal total user deduction")
 
 	gt.Log(" TestTokenRatioInBlockChange passed!")
 
@@ -1328,6 +1338,21 @@ func TestMultipleTokenRatioChangesInBlock(t *testing.T) {
 	malloryBalanceBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), dp.Addresses.Mallory, nil)
 	require.NoError(gt, err)
 
+	// Record vault balances before (for verification)
+	baseFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000019")
+	seqFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000011")
+	l1FeeVault := common.HexToAddress("0x420000000000000000000000000000000000001a")
+	opFeeVault := common.HexToAddress("0x420000000000000000000000000000000000001b")
+
+	baseFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), baseFeeVault, nil)
+	require.NoError(gt, err)
+	seqFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), seqFeeVault, nil)
+	require.NoError(gt, err)
+	l1FeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), l1FeeVault, nil)
+	require.NoError(gt, err)
+	opFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), opFeeVault, nil)
+	require.NoError(gt, err)
+
 	// ========== Build block with 6 transactions ==========
 	sequencer.ActL2StartBlock(gt)
 
@@ -1422,6 +1447,16 @@ func TestMultipleTokenRatioChangesInBlock(t *testing.T) {
 	bobBalanceAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), dp.Addresses.Bob, nil)
 	require.NoError(gt, err)
 	malloryBalanceAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), dp.Addresses.Mallory, nil)
+	require.NoError(gt, err)
+
+	// Record vault balances after
+	baseFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), baseFeeVault, nil)
+	require.NoError(gt, err)
+	seqFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), seqFeeVault, nil)
+	require.NoError(gt, err)
+	l1FeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), l1FeeVault, nil)
+	require.NoError(gt, err)
+	opFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(gt.Ctx(), opFeeVault, nil)
 	require.NoError(gt, err)
 
 	// Helper: compute expected fee for a receipt
@@ -1524,6 +1559,56 @@ func TestMultipleTokenRatioChangesInBlock(t *testing.T) {
 		"Alice (Tx1+Tx2+Tx4): actual balance deduction must match receipt fees. "+
 			"Actual=%s, Expected=%s",
 		aliceActualDeduction.String(), aliceExpectedFee.String())
+
+	// ========== Verify Vault Balances (Arsia Mode) ==========
+	// Calculate vault increases (independent data source from blockchain)
+	baseFeeVaultIncrease := new(big.Int).Sub(baseFeeVaultAfter, baseFeeVaultBefore)
+	seqFeeVaultIncrease := new(big.Int).Sub(seqFeeVaultAfter, seqFeeVaultBefore)
+	l1FeeVaultIncrease := new(big.Int).Sub(l1FeeVaultAfter, l1FeeVaultBefore)
+	opFeeVaultIncrease := new(big.Int).Sub(opFeeVaultAfter, opFeeVaultBefore)
+
+	gt.Log("========== Vault Verification ==========")
+
+	// Calculate total L1Fees from all receipts
+	totalL1Fee := big.NewInt(0)
+	for i := 0; i < 6; i++ {
+		totalL1Fee.Add(totalL1Fee, receipts[i].L1Fee)
+	}
+
+	// Calculate total OpFees from all receipts
+	totalOpFee := big.NewInt(0)
+	for i := 0; i < 6; i++ {
+		opFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipts[i].GasUsed))
+		require.NoError(gt, err)
+		totalOpFee.Add(totalOpFee, opFee)
+	}
+
+	// Verify L1FeeVault received the sum of all L1Fees
+	gt.Logf("  L1FeeVault: expected=%s, actual=%s", totalL1Fee.String(), l1FeeVaultIncrease.String())
+	require.Equal(gt, totalL1Fee.String(), l1FeeVaultIncrease.String(),
+		"[Arsia] L1FeeVault should receive exactly the sum of all L1Fees")
+
+	// Verify OperatorFeeVault received the sum of all OpFees
+	gt.Logf("  OperatorFeeVault: expected=%s, actual=%s", totalOpFee.String(), opFeeVaultIncrease.String())
+	require.Equal(gt, totalOpFee.String(), opFeeVaultIncrease.String(),
+		"[Arsia] OperatorFeeVault should receive exactly the sum of all OpFees")
+
+	// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+	// This uses two independent data sources to prevent false positives
+	totalUserDeduction := new(big.Int).Add(aliceActualDeduction, bobActualDeduction)
+	totalUserDeduction.Add(totalUserDeduction, malloryActualDeduction)
+
+	totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
+	totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
+	totalVaultIncrease.Add(totalVaultIncrease, opFeeVaultIncrease)
+
+	gt.Logf("  Total UserDeduction (blockchain): %s", totalUserDeduction.String())
+	gt.Logf("  Total VaultIncrease (blockchain): %s", totalVaultIncrease.String())
+
+	require.Equal(gt, totalUserDeduction.String(), totalVaultIncrease.String(),
+		"[Arsia] Total vault increase should equal total user deductions")
+
+	gt.Log(" TestMultipleTokenRatioChangesInBlock passed!")
 }
 
 // ============================================================================
@@ -1813,12 +1898,15 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 	baseFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000019")
 	seqFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000011")
 	l1FeeVault := common.HexToAddress("0x420000000000000000000000000000000000001a")
+	opFeeVault := common.HexToAddress("0x420000000000000000000000000000000000001b")
 
 	baseFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), baseFeeVault, nil)
 	require.NoError(t, err)
 	seqFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	alice.ActMakeTx(t)
@@ -1836,6 +1924,8 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 	seqFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	// Verify fee params are now updated in L2
@@ -1862,12 +1952,13 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 	receipt := alice.LastTxReceipt(t)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-	// Calculate vault balance changes
+	// Calculate vault balance changes (independent data source from blockchain)
 	baseFeeVaultIncrease := new(big.Int).Sub(baseFeeVaultAfter, baseFeeVaultBefore)
 	seqFeeVaultIncrease := new(big.Int).Sub(seqFeeVaultAfter, seqFeeVaultBefore)
 	l1FeeVaultIncrease := new(big.Int).Sub(l1FeeVaultAfter, l1FeeVaultBefore)
+	opFeeVaultIncrease := new(big.Int).Sub(opFeeVaultAfter, opFeeVaultBefore)
 
-	// Compute actual deduction from user
+	// Compute actual deduction from user (independent data source from blockchain)
 	actualDeduction := new(big.Int).Sub(aliceBalanceBefore, aliceBalanceAfter)
 
 	// Get current block header to check base fee
@@ -1880,20 +1971,21 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 	gt.Logf("[%s] Receipt EffectiveGasPrice: %s", forkName, receipt.EffectiveGasPrice.String())
 	gt.Logf("[%s] Block BaseFee: %s", forkName, baseFee.String())
 	gt.Logf("[%s] Receipt L1Fee (display): %s", forkName, receipt.L1Fee.String())
-	gt.Logf("[%s] User balance deduction: %s", forkName, actualDeduction.String())
+	gt.Logf("[%s] User balance deduction (blockchain): %s", forkName, actualDeduction.String())
 	gt.Logf("[%s] BaseFeeVault increase: %s", forkName, baseFeeVaultIncrease.String())
 	gt.Logf("[%s] SeqFeeVault increase: %s", forkName, seqFeeVaultIncrease.String())
 	gt.Logf("[%s] L1FeeVault increase: %s", forkName, l1FeeVaultIncrease.String())
+	gt.Logf("[%s] OperatorFeeVault increase: %s", forkName, opFeeVaultIncrease.String())
 
 	if isLimb {
 		// ========== Limb Mode Verification ==========
-		// In Limb: L1 cost is embedded in gasUsed (through l1Gas inflation)
+		// In Limb: L1 cost and OpFee are embedded in gasUsed (through l1Gas inflation)
 		// Total fee = gasUsed * gasPrice (no separate L1Fee or OpFee)
-		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault receives nothing
+		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault and OperatorFeeVault receive nothing
 
 		expectedL2Fee := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
 
-		// Verify user deduction matches L2 fee
+		// Verify user deduction matches L2 fee (from receipt data)
 		require.Equal(t, expectedL2Fee.String(), actualDeduction.String(),
 			"[Limb] User deduction should equal gasUsed * gasPrice (L1 cost embedded in gas)")
 
@@ -1901,8 +1993,14 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 		require.Equal(t, "0", l1FeeVaultIncrease.String(),
 			"[Limb] L1FeeVault should not receive anything (L1 cost embedded in gas)")
 
-		// Verify total vault increase equals user deduction
+		// Verify OperatorFeeVault didn't receive anything
+		require.Equal(t, "0", opFeeVaultIncrease.String(),
+			"[Limb] OperatorFeeVault should not receive anything (OpFee embedded in gas)")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == User deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
 		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
+		gt.Logf("[Limb] Total VaultIncrease (blockchain): %s", totalVaultIncrease.String())
 		require.Equal(t, actualDeduction.String(), totalVaultIncrease.String(),
 			"[Limb] Total vault increase should equal user deduction")
 
@@ -1968,7 +2066,7 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 		// ========== Arsia Mode Verification ==========
 		// In Arsia: L1Fee and OpFee are separately deducted
 		// Total fee = gasUsed * gasPrice + L1Fee + OpFee
-		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee
+		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee, OperatorFeeVault receives OpFee
 
 		l2Fee := new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), receipt.EffectiveGasPrice)
 		opFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt.GasUsed))
@@ -1977,7 +2075,7 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 		expectedTotalFee := new(big.Int).Add(l2Fee, receipt.L1Fee)
 		expectedTotalFee.Add(expectedTotalFee, opFee)
 
-		// Verify user deduction matches total fee
+		// Verify user deduction (from blockchain) matches total fee (from receipt)
 		require.Equal(t, expectedTotalFee.String(), actualDeduction.String(),
 			"[Arsia] User deduction should equal gasUsed * gasPrice + L1Fee + OpFee")
 
@@ -1985,13 +2083,23 @@ func testFeeParamsInBlockChange(gt *testing.T, forkName string) {
 		require.Equal(t, receipt.L1Fee.String(), l1FeeVaultIncrease.String(),
 			"[Arsia] L1FeeVault should receive exactly receipt.L1Fee")
 
-		// Verify total collected equals user deduction
+		// Verify OperatorFeeVault received the OpFee
+		gt.Logf("[Arsia] OperatorFeeVault: expected=%s, actual=%s", opFee.String(), opFeeVaultIncrease.String())
+		require.Equal(t, opFee.String(), opFeeVaultIncrease.String(),
+			"[Arsia] OperatorFeeVault should receive exactly the OpFee")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == User deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
 		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
 		totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
-		totalVaultIncrease.Add(totalVaultIncrease, opFee) // OpFee goes somewhere (need to find where)
+		totalVaultIncrease.Add(totalVaultIncrease, opFeeVaultIncrease)
 
 		gt.Logf("[Arsia] L2 Fee: %s, L1Fee: %s, OpFee: %s", l2Fee.String(), receipt.L1Fee.String(), opFee.String())
-		gt.Logf("[Arsia]  Fee structure verified: L1Fee and OpFee separately deducted")
+		gt.Logf("[Arsia] Total VaultIncrease (blockchain): %s", totalVaultIncrease.String())
+		require.Equal(t, actualDeduction.String(), totalVaultIncrease.String(),
+			"[Arsia] Total vault increase should equal user deduction")
+
+		gt.Logf("[Arsia]  Fee structure verified: L1Fee and OpFee separately deducted, all vaults match")
 	}
 
 	// Note: We don't verify L1Fee ratio here because L1BaseFee changes dynamically
@@ -2162,12 +2270,15 @@ func testTokenRatioInBlockChange_Forks(gt *testing.T, forkName string) {
 	baseFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000019")
 	seqFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000011")
 	l1FeeVault := common.HexToAddress("0x420000000000000000000000000000000000001a")
+	opFeeVault := common.HexToAddress("0x420000000000000000000000000000000000001b")
 
 	baseFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), baseFeeVault, nil)
 	require.NoError(t, err)
 	seqFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	sequencer.ActL2StartBlock(t)
@@ -2218,6 +2329,8 @@ func testTokenRatioInBlockChange_Forks(gt *testing.T, forkName string) {
 	seqFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	// Verify tokenRatio is updated
@@ -2323,26 +2436,35 @@ func testTokenRatioInBlockChange_Forks(gt *testing.T, forkName string) {
 	}
 
 	// ========== Verify Vault Balances ==========
+	// Calculate vault increases (independent data source from blockchain)
 	baseFeeVaultIncrease := new(big.Int).Sub(baseFeeVaultAfter, baseFeeVaultBefore)
 	seqFeeVaultIncrease := new(big.Int).Sub(seqFeeVaultAfter, seqFeeVaultBefore)
 	l1FeeVaultIncrease := new(big.Int).Sub(l1FeeVaultAfter, l1FeeVaultBefore)
+	opFeeVaultIncrease := new(big.Int).Sub(opFeeVaultAfter, opFeeVaultBefore)
 
 	if isLimb {
 		// ========== Limb Mode Vault Verification ==========
-		// In Limb: L1 cost is embedded in gasUsed (through l1Gas inflation)
-		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault receives nothing
+		// In Limb: L1 cost and OpFee are embedded in gasUsed (through l1Gas inflation)
+		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault and OperatorFeeVault receive nothing
 
 		gt.Logf("[%s] Vault verification:", forkName)
 		gt.Logf("[%s]   L1FeeVault increase: %s (expected: 0)", forkName, l1FeeVaultIncrease.String())
+		gt.Logf("[%s]   OperatorFeeVault increase: %s (expected: 0)", forkName, opFeeVaultIncrease.String())
 
 		// Verify L1FeeVault didn't receive anything
 		require.Equal(t, "0", l1FeeVaultIncrease.String(),
 			"[Limb] L1FeeVault should not receive anything (L1 cost embedded in gas)")
 
-		// Verify total vault increase equals total user deductions (Alice + Bob)
+		// Verify OperatorFeeVault didn't receive anything
+		require.Equal(t, "0", opFeeVaultIncrease.String(),
+			"[Limb] OperatorFeeVault should not receive anything (OpFee embedded in gas)")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
 		totalUserDeduction := new(big.Int).Add(aliceTotalDeduction, bobDeduction)
 		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
-		gt.Logf("[%s]   Total UserDeduction: %s, VaultIncrease: %s", forkName, totalUserDeduction.String(), totalVaultIncrease.String())
+		gt.Logf("[%s]   Total UserDeduction (blockchain): %s", forkName, totalUserDeduction.String())
+		gt.Logf("[%s]   Total VaultIncrease (blockchain): %s", forkName, totalVaultIncrease.String())
 		require.Equal(t, totalUserDeduction.String(), totalVaultIncrease.String(),
 			"[Limb] Total vault increase should equal total user deductions")
 
@@ -2410,16 +2532,44 @@ func testTokenRatioInBlockChange_Forks(gt *testing.T, forkName string) {
 	} else {
 		// ========== Arsia Mode Vault Verification ==========
 		// In Arsia: L1Fee and OpFee are separately deducted
-		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee
+		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee, OperatorFeeVault receives OpFee
 
-		// Verify L1FeeVault received the sum of all L1Fees
+		gt.Logf("[%s] Vault verification:", forkName)
+
+		// Calculate expected L1Fees and OpFees from receipts
 		totalL1Fee := new(big.Int).Add(receipt1.L1Fee, receipt2.L1Fee)
 		totalL1Fee.Add(totalL1Fee, receipt3.L1Fee)
-		gt.Logf("[%s] Vault verification:", forkName)
+
+		tx1OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt1.GasUsed))
+		require.NoError(t, err)
+		tx2OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt2.GasUsed))
+		require.NoError(t, err)
+		tx3OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt3.GasUsed))
+		require.NoError(t, err)
+		totalOpFee := new(big.Int).Add(tx1OpFee, tx2OpFee)
+		totalOpFee.Add(totalOpFee, tx3OpFee)
+
+		// Verify L1FeeVault received the sum of all L1Fees
 		gt.Logf("[%s]   L1FeeVault: expected=%s, actual=%s", forkName, totalL1Fee.String(), l1FeeVaultIncrease.String())
 		require.Equal(t, totalL1Fee.String(), l1FeeVaultIncrease.String(),
 			"[Arsia] L1FeeVault should receive sum of all L1Fees")
 
+		// Verify OperatorFeeVault received the sum of all OpFees
+		gt.Logf("[%s]   OperatorFeeVault: expected=%s, actual=%s", forkName, totalOpFee.String(), opFeeVaultIncrease.String())
+		require.Equal(t, totalOpFee.String(), opFeeVaultIncrease.String(),
+			"[Arsia] OperatorFeeVault should receive sum of all OpFees")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
+		totalUserDeduction := new(big.Int).Add(aliceTotalDeduction, bobDeduction)
+		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
+		totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
+		totalVaultIncrease.Add(totalVaultIncrease, opFeeVaultIncrease)
+
+		gt.Logf("[%s]   Total UserDeduction (blockchain): %s", forkName, totalUserDeduction.String())
+		gt.Logf("[%s]   Total VaultIncrease (blockchain): %s", forkName, totalVaultIncrease.String())
+		require.Equal(t, totalUserDeduction.String(), totalVaultIncrease.String(),
+			"[Arsia] Total vault increase should equal total user deductions")
 	}
 
 	gt.Logf("[%s]  Scenario B test passed!", forkName)
@@ -2669,12 +2819,15 @@ func testFeeParamsAndRatioInBlockChange(gt *testing.T, forkName string) {
 	baseFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000019")
 	seqFeeVault := common.HexToAddress("0x4200000000000000000000000000000000000011")
 	l1FeeVault := common.HexToAddress("0x420000000000000000000000000000000000001a")
+	opFeeVault := common.HexToAddress("0x420000000000000000000000000000000000001b")
 
 	baseFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), baseFeeVault, nil)
 	require.NoError(t, err)
 	seqFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultBefore, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	// Build L2 block: Tx1(L1BlockInfo deposit) → Tx2(Alice user tx) → Tx3(SetTokenRatio) → Tx4(Bob user tx)
@@ -2726,6 +2879,8 @@ func testFeeParamsAndRatioInBlockChange(gt *testing.T, forkName string) {
 	seqFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), seqFeeVault, nil)
 	require.NoError(t, err)
 	l1FeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), l1FeeVault, nil)
+	require.NoError(t, err)
+	opFeeVaultAfter, err := seqEngine.EthClient().BalanceAt(t.Ctx(), opFeeVault, nil)
 	require.NoError(t, err)
 
 	// Verify fee params and tokenRatio are updated
@@ -2841,30 +2996,39 @@ func testFeeParamsAndRatioInBlockChange(gt *testing.T, forkName string) {
 			"Expected=%s, Actual=%s", forkName, tx4ExpectedFee.String(), bobDeduction.String())
 
 	// ========== Verify Vault Balances ==========
+	// Calculate vault increases (independent data source from blockchain)
 	baseFeeVaultIncrease := new(big.Int).Sub(baseFeeVaultAfter, baseFeeVaultBefore)
 	seqFeeVaultIncrease := new(big.Int).Sub(seqFeeVaultAfter, seqFeeVaultBefore)
 	l1FeeVaultIncrease := new(big.Int).Sub(l1FeeVaultAfter, l1FeeVaultBefore)
+	opFeeVaultIncrease := new(big.Int).Sub(opFeeVaultAfter, opFeeVaultBefore)
 
 	if isLimb {
 		// ========== Limb Mode Vault Verification ==========
-		// In Limb: L1 cost is embedded in gasUsed (through l1Gas inflation)
-		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault receives nothing
+		// In Limb: L1 cost and OpFee are embedded in gasUsed (through l1Gas inflation)
+		// Vaults: BaseFeeVault + SeqFeeVault receive all fees, L1FeeVault and OperatorFeeVault receive nothing
 
 		gt.Logf("[%s] Vault verification:", forkName)
 		gt.Logf("[%s]   L1FeeVault increase: %s (expected: 0)", forkName, l1FeeVaultIncrease.String())
+		gt.Logf("[%s]   OperatorFeeVault increase: %s (expected: 0)", forkName, opFeeVaultIncrease.String())
 
 		// Verify L1FeeVault didn't receive anything
 		require.Equal(t, "0", l1FeeVaultIncrease.String(),
 			"[Limb] L1FeeVault should not receive anything (L1 cost embedded in gas)")
 
-		// Verify total vault increase equals total user deductions (Alice + Bob)
+		// Verify OperatorFeeVault didn't receive anything
+		require.Equal(t, "0", opFeeVaultIncrease.String(),
+			"[Limb] OperatorFeeVault should not receive anything (OpFee embedded in gas)")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
 		totalUserDeduction := new(big.Int).Add(aliceTotalDeduction, bobDeduction)
 		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
-		gt.Logf("[%s]   Total UserDeduction: %s, VaultIncrease: %s", forkName, totalUserDeduction.String(), totalVaultIncrease.String())
+		gt.Logf("[%s]   Total UserDeduction (blockchain): %s", forkName, totalUserDeduction.String())
+		gt.Logf("[%s]   Total VaultIncrease (blockchain): %s", forkName, totalVaultIncrease.String())
 		require.Equal(t, totalUserDeduction.String(), totalVaultIncrease.String(),
 			"[Limb] Total vault increase should equal total user deductions")
 
-		gt.Logf("[Limb]  Vault verification passed: L1FeeVault=0, Total vaults = User deductions")
+		gt.Logf("[Limb]  Vault verification passed: L1FeeVault=0, OperatorFeeVault=0, Total vaults = User deductions")
 
 		// ========== Manually Calculate and Verify L1 Cost for Transactions ==========
 		// Get current fee params (after all updates - new params)
@@ -2939,15 +3103,53 @@ func testFeeParamsAndRatioInBlockChange(gt *testing.T, forkName string) {
 	} else {
 		// ========== Arsia Mode Vault Verification ==========
 		// In Arsia: L1Fee and OpFee are separately deducted
-		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee
+		// Vaults: BaseFeeVault + SeqFeeVault receive L2 fee, L1FeeVault receives L1Fee, OperatorFeeVault receives OpFee
 
-		// Verify L1FeeVault received the sum of all L1Fees
+		// Verify Tx4/Tx2 L1Fee ratio is roughly 1.5x (fee params same, but tokenRatio 1.5x)
+		if receipt2.L1Fee.Sign() > 0 && receipt4.L1Fee.Sign() > 0 {
+			ratio := new(big.Float).Quo(
+				new(big.Float).SetInt(receipt4.L1Fee),
+				new(big.Float).SetInt(receipt2.L1Fee),
+			)
+			gt.Logf("[Arsia] Tx4/Tx2 L1Fee ratio: %s (expected ~1.5 due to tokenRatio increase)", ratio.String())
+		}
+
+		gt.Logf("[%s] Vault verification:", forkName)
+
+		// Calculate expected L1Fees and OpFees from receipts
 		totalL1Fee := new(big.Int).Add(receipt2.L1Fee, receipt3.L1Fee)
 		totalL1Fee.Add(totalL1Fee, receipt4.L1Fee)
-		gt.Logf("[%s] Vault verification:", forkName)
+
+		tx2OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt2.GasUsed))
+		require.NoError(t, err)
+		tx3OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt3.GasUsed))
+		require.NoError(t, err)
+		tx4OpFee, err := gpoContract.GetOperatorFee(&bind.CallOpts{}, new(big.Int).SetUint64(receipt4.GasUsed))
+		require.NoError(t, err)
+		totalOpFee := new(big.Int).Add(tx2OpFee, tx3OpFee)
+		totalOpFee.Add(totalOpFee, tx4OpFee)
+
+		// Verify L1FeeVault received the sum of all L1Fees
 		gt.Logf("[%s]   L1FeeVault: expected=%s, actual=%s", forkName, totalL1Fee.String(), l1FeeVaultIncrease.String())
 		require.Equal(t, totalL1Fee.String(), l1FeeVaultIncrease.String(),
 			"[Arsia] L1FeeVault should receive sum of all L1Fees")
+
+		// Verify OperatorFeeVault received the sum of all OpFees
+		gt.Logf("[%s]   OperatorFeeVault: expected=%s, actual=%s", forkName, totalOpFee.String(), opFeeVaultIncrease.String())
+		require.Equal(t, totalOpFee.String(), opFeeVaultIncrease.String(),
+			"[Arsia] OperatorFeeVault should receive sum of all OpFees")
+
+		// CRITICAL VERIFICATION: Total vault increase (from blockchain) == Total user deduction (from blockchain)
+		// This uses two independent data sources to prevent false positives
+		totalUserDeduction := new(big.Int).Add(aliceTotalDeduction, bobDeduction)
+		totalVaultIncrease := new(big.Int).Add(baseFeeVaultIncrease, seqFeeVaultIncrease)
+		totalVaultIncrease.Add(totalVaultIncrease, l1FeeVaultIncrease)
+		totalVaultIncrease.Add(totalVaultIncrease, opFeeVaultIncrease)
+
+		gt.Logf("[%s]   Total UserDeduction (blockchain): %s", forkName, totalUserDeduction.String())
+		gt.Logf("[%s]   Total VaultIncrease (blockchain): %s", forkName, totalVaultIncrease.String())
+		require.Equal(t, totalUserDeduction.String(), totalVaultIncrease.String(),
+			"[Arsia] Total vault increase should equal total user deductions")
 	}
 
 	gt.Logf("[%s]  Scenario C test passed!", forkName)
