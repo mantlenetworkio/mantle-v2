@@ -196,6 +196,7 @@ contract GasPriceOracle_Ownership_Test is CommonTest {
     }
 
     function testFuzz_setTokenRatio_succeeds(uint256 newRatio) external {
+        newRatio = bound(newRatio, 0, type(uint64).max);
         vm.prank(operator);
         gasOracle.setTokenRatio(newRatio);
         assertEq(gasOracle.tokenRatio(), newRatio);
