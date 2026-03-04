@@ -117,6 +117,7 @@ contract GasPriceOracle is Semver {
      */
     // slither-disable-next-line external-function
     function setTokenRatio(uint256 _tokenRatio) external onlyOperator {
+        require(_tokenRatio <= type(uint64).max, "GasPriceOracle: token ratio must be less than 2^64");
         uint256 previousTokenRatio = tokenRatio;
         tokenRatio = _tokenRatio;
         emit TokenRatioUpdated(previousTokenRatio, tokenRatio);
