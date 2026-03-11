@@ -1,6 +1,16 @@
 GITCOMMIT := $(shell git rev-parse HEAD)
 GITDATE := $(shell git show -s --format='%ct')
-VERSION := v0.0.0
+VERSION := $(shell tags=$$(git tag --points-at $(GITCOMMIT) | grep '^v' | sort -V); \
+             preferred_tag=$$(echo "$$tags" | grep -v -- '-rc' | tail -n 1); \
+             if [ -z "$$preferred_tag" ]; then \
+                 if [ -z "$$tags" ]; then \
+                     echo "untagged"; \
+                 else \
+                     echo "$$tags" | tail -n 1; \
+                 fi \
+             else \
+                 echo $$preferred_tag; \
+             fi)
 
 LDFLAGSSTRING +=-X main.GitCommit=$(GITCOMMIT)
 LDFLAGSSTRING +=-X main.GitDate=$(GITDATE)

@@ -741,13 +741,13 @@ jobs:
             tags_at_commit=$(git tag --points-at $GIT_COMMIT)
             echo "Tags at commit:\n$tags_at_commit"
 
-            filtered_tags=$(echo "$tags_at_commit" | grep "^<<parameters.docker_name>>/" || true)
+            filtered_tags=$(echo "$tags_at_commit" | grep "^v" || true)
             echo "Filtered tags: $filtered_tags"
 
             if [ -z "$filtered_tags" ]; then
               export GIT_VERSION="untagged"
             else
-              sorted_tags=$(echo "$filtered_tags" | sed "s/<<parameters.docker_name>>\///" | sort -V)
+              sorted_tags=$(echo "$filtered_tags" | sort -V)
               echo "Sorted tags: $sorted_tags"
 
               # prefer full release tag over "-rc" release candidate tag if both exist
