@@ -15,7 +15,7 @@
   "l1MantleToken": "0x65e37B558F64E2Be5768DB46DF22F93d85741A9E",
   "l2OutputOracleProposer": "EOA_proposer",
   "l2OutputOracleChallenger": "EOA_deployer",
-  "l2GenesisBlockGasLimit": "0x4000000000000",
+  "l2GenesisBlockGasLimit": "0x2625a00",
   "l1BlockTime": 12,
   "cliqueSignerAddress": "0x0000000000000000000000000000000000000000",
   "baseFeeVaultRecipient": "EOA_feewallet",
