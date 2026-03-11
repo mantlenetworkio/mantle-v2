@@ -2,9 +2,8 @@ package node
 
 import (
 	"flag"
-	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-devstack/presets"
+	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	node_utils "github.com/ethereum-optimism/optimism/rust/kona/tests/node/utils"
 )
 
@@ -15,11 +14,8 @@ var (
 	initNumAccounts       = flag.Int("init-num-accounts", 10, "initial number of accounts to fund")
 )
 
-// TestMain creates the test-setups against the shared backend
-func TestMain(m *testing.M) {
-	flag.Parse()
-
-	presets.DoMain(m, node_utils.WithMixedOpKona(node_utils.L2NodeConfig{
+func newLongRunningPreset(t devtest.T) *node_utils.MixedOpKonaPreset {
+	return node_utils.NewMixedOpKonaForConfig(t, node_utils.L2NodeConfig{
 		OpSequencerNodesWithGeth:   0,
 		OpSequencerNodesWithReth:   0,
 		KonaSequencerNodesWithGeth: 1,
@@ -28,5 +24,5 @@ func TestMain(m *testing.M) {
 		OpNodesWithReth:            1,
 		KonaNodesWithGeth:          1,
 		KonaNodesWithReth:          1,
-	}))
+	})
 }
