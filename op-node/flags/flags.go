@@ -450,6 +450,7 @@ var (
 		EnvVars:  prefixEnvVars("IGNORE_MISSING_PECTRA_BLOB_SCHEDULE"),
 		Category: RollupCategory,
 		Hidden:   true,
+		Value:    true,
 	}
 
 	ExperimentalOPStackAPI = &cli.BoolFlag{
