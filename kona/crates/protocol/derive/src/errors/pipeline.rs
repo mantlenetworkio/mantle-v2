@@ -356,6 +356,17 @@ pub enum ResetError {
     /// The blob provider returned fewer blobs than expected (under-fill).
     #[error("Blob provider under-fill: {0}")]
     BlobsUnderFill(BlobProviderError),
+    /// The blob provider returned more blobs than were requested (over-fill).
+    /// Can occur with buggy blob providers or in rare L1 reorg scenarios.
+    #[error(
+        "Blob provider over-fill: filled {filled} blob placeholders but provider returned {returned} blobs"
+    )]
+    BlobsOverFill {
+        /// The number of blob placeholders that were filled.
+        filled: usize,
+        /// The total number of blobs returned by the provider.
+        returned: usize,
+    },
 }
 
 impl ResetError {
@@ -449,6 +460,7 @@ mod tests {
                 expected: 0,
                 actual: 0,
             }),
+            ResetError::BlobsOverFill { filled: 0, returned: 0 },
         ];
         for error in reset_errors {
             let expected = PipelineErrorKind::Reset(error.clone());
