@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 
 // Interfaces
-// import { ISemver } from "interfaces/universal/ISemver.sol";
 import { Semver } from "src/universal/Semver.sol";
 import { L1Block } from "src/L2/L1Block.sol";
 
