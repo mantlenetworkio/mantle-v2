@@ -40,8 +40,20 @@ func (m *MockDataSource) OpenData(ctx context.Context, ref eth.L1BlockRef, batch
 	return out[0].(DataIter), nil
 }
 
+func (m *MockDataSource) Reset() error {
+	out := m.Mock.MethodCalled("Reset")
+	if out[0] == nil {
+		return nil
+	}
+	return out[0].(error)
+}
+
 func (m *MockDataSource) ExpectOpenData(ref eth.L1BlockRef, iter DataIter, batcherAddr common.Address) {
 	m.Mock.On("OpenData", ref, batcherAddr).Return(iter)
+}
+
+func (m *MockDataSource) ExpectReset() {
+	m.Mock.On("Reset").Return(nil)
 }
 
 var _ DataAvailabilitySource = (*MockDataSource)(nil)
@@ -89,12 +101,13 @@ func TestL1RetrievalReset(t *testing.T) {
 		BatcherAddr: common.Address{42},
 	}
 
+	dataSrc.ExpectReset()
 	dataSrc.ExpectOpenData(a, &fakeDataIter{}, l1Cfg.BatcherAddr)
 	defer dataSrc.AssertExpectations(t)
 
 	l1r := NewL1Retrieval(testlog.Logger(t, log.LevelError), dataSrc, nil)
 
-	// We assert that it opens up the correct data on a reset
+	// We assert that it resets the data source then opens up the correct data on a reset
 	_ = l1r.Reset(context.Background(), a, l1Cfg)
 }
 

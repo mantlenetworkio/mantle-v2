@@ -13,6 +13,7 @@ import (
 
 type DataAvailabilitySource interface {
 	OpenData(ctx context.Context, ref eth.L1BlockRef, batcherAddr common.Address) (DataIter, error)
+	Reset() error
 }
 
 type NextBlockProvider interface {
@@ -77,6 +78,9 @@ func (l1r *L1Retrieval) NextData(ctx context.Context) ([]byte, error) {
 // internal invariants that later propagate up the derivation pipeline.
 func (l1r *L1Retrieval) Reset(ctx context.Context, base eth.L1BlockRef, sysCfg eth.SystemConfig) error {
 	var err error
+	if err = l1r.dataSrc.Reset(); err != nil {
+		return fmt.Errorf("failed to reset data source: %w", err)
+	}
 	if l1r.datas, err = l1r.dataSrc.OpenData(ctx, base, sysCfg.BatcherAddr); err != nil {
 		return fmt.Errorf("failed to open data source: %w", err)
 	}

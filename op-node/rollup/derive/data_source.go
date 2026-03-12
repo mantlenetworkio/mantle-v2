@@ -96,6 +96,12 @@ func (ds *DataSourceFactory) OpenData(ctx context.Context, ref eth.L1BlockRef, b
 	return src, nil
 }
 
+// Reset clears the blob source toggle so that the next OpenData can choose the appropriate source from scratch.
+func (ds *DataSourceFactory) Reset() error {
+	ds.blobSourceChanged = false
+	return nil
+}
+
 // DataSourceConfig regroups the mandatory rollup.Config fields needed for DataFromEVMTransactions.
 type DataSourceConfig struct {
 	l1Signer          types.Signer
