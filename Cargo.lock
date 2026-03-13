@@ -4454,7 +4454,11 @@ version = "7.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "765c9198f173dd59ce26ff9f95ef0aafd0a0fe01fb9d72841bc5066a4c06511d"
 dependencies = [
+ "base64 0.21.7",
  "byteorder",
+ "crossbeam-channel",
+ "flate2",
+ "nom",
  "num-traits",
 ]
 
@@ -7841,7 +7845,10 @@ name = "op-reth"
 version = "1.11.3"
 dependencies = [
  "clap",
+ "eyre",
  "reth-cli-util",
+ "reth-db",
+ "reth-node-builder",
  "reth-optimism-chainspec",
  "reth-optimism-cli",
  "reth-optimism-consensus",
@@ -7852,6 +7859,22 @@ dependencies = [
  "reth-optimism-primitives",
  "reth-optimism-rpc",
  "tracing",
+]
+
+[[package]]
+name = "op-reth-proof-bench"
+version = "1.11.0"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "clap",
+ "futures",
+ "hdrhistogram",
+ "reqwest 0.13.2",
+ "reth-cli-runner",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -9254,6 +9277,8 @@ dependencies = [
  "log",
  "percent-encoding",
  "pin-project-lite",
+ "serde",
+ "serde_json",
  "sync_wrapper",
  "tokio",
  "tower 0.5.3",
