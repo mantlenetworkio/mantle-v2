@@ -1,0 +1,571 @@
+name: ci-main (migrated from CircleCI)
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-main-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts-bedrock-build:
+    name: contracts-bedrock-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Build contracts (ci profile)
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: ci
+        run: |
+          just forge-build --deny-warnings --skip test
+      - name: Copy artifacts into op-deployer
+        working-directory: op-deployer
+        run: just copy-contract-artifacts
+
+  contracts-bedrock-tests-heavy-fuzz-modified:
+    name: contracts-bedrock-tests-heavy-fuzz-modified (${{ matrix.features }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - main
+          - OPTIMISM_PORTAL_INTEROP
+          - OPCM_V2
+          - CUSTOM_GAS_TOKEN
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Set feature environment variables
+        env:
+          FEATURES: ${{ matrix.features }}
+        run: |
+          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
+          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
+            IFS=',' read -r -a feature_array <<< "$FEATURES"
+            for feature in "${feature_array[@]}"; do
+              feature="$(echo "$feature" | xargs)"
+              [ -z "$feature" ] && continue
+              [ "${feature,,}" = "main" ] && continue
+              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
+                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              else
+                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              fi
+            done
+          fi
+      - name: Run heavy fuzz tests for modified test files
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: ciheavy
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          TEST_FILES=$(git diff origin/main...HEAD --name-only --diff-filter=AM -- 'packages/contracts-bedrock/test/**/*.t.sol' | sed 's|packages/contracts-bedrock/||')
+          if [ -z "$TEST_FILES" ]; then
+            echo "No modified contract test files found, skipping."
+            exit 0
+          fi
+          TEST_FILES=$(echo "$TEST_FILES" | sed 's|^test/||')
+          MATCH_PATH="./test/{$(echo "$TEST_FILES" | paste -sd "," -)}"
+          forge test --match-path "$MATCH_PATH"
+      - name: Print failed test traces
+        if: failure()
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: ciheavy
+        run: just test-rerun
+      - name: Lint forge test names
+        working-directory: packages/contracts-bedrock
+        run: just lint-forge-tests-check-no-build
+
+  contracts-bedrock-tests:
+    name: contracts-bedrock-tests (${{ matrix.features }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - main
+          - OPTIMISM_PORTAL_INTEROP
+          - OPCM_V2
+          - CUSTOM_GAS_TOKEN
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Set feature environment variables
+        env:
+          FEATURES: ${{ matrix.features }}
+        run: |
+          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
+          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
+            IFS=',' read -r -a feature_array <<< "$FEATURES"
+            for feature in "${feature_array[@]}"; do
+              feature="$(echo "$feature" | xargs)"
+              [ -z "$feature" ] && continue
+              [ "${feature,,}" = "main" ] && continue
+              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
+                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              else
+                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              fi
+            done
+          fi
+      - name: Build go-ffi
+        working-directory: packages/contracts-bedrock
+        run: just build-go-ffi
+      - name: Run contracts tests
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: ci
+        run: forge test --match-path "./test/**/*.t.sol"
+      - name: Print failed test traces
+        if: failure()
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: ci
+        run: just test-rerun
+      - name: Lint forge test names
+        working-directory: packages/contracts-bedrock
+        run: just lint-forge-tests-check-no-build
+
+  contracts-bedrock-coverage:
+    name: contracts-bedrock-coverage (${{ matrix.features }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - main
+          - OPTIMISM_PORTAL_INTEROP
+          - OPCM_V2
+          - CUSTOM_GAS_TOKEN
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: |
+          git submodule update --init --recursive --force -j 8
+          for version in 0.8.15 0.8.19 0.8.25 0.8.28; do
+            svm which "$version" || svm install "$version"
+          done
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+      - name: Set feature environment variables
+        env:
+          FEATURES: ${{ matrix.features }}
+        run: |
+          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
+          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
+            IFS=',' read -r -a feature_array <<< "$FEATURES"
+            for feature in "${feature_array[@]}"; do
+              feature="$(echo "$feature" | xargs)"
+              [ -z "$feature" ] && continue
+              [ "${feature,,}" = "main" ] && continue
+              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
+                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              else
+                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
+              fi
+            done
+          fi
+      - name: Build contract sources
+        working-directory: packages/contracts-bedrock
+        run: |
+          just build-go-ffi
+          just build-source
+      - name: Run coverage tests
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: cicoverage
+          ETH_RPC_URL: https://ci-mainnet-l1-archive.optimism.io
+        run: just coverage-lcov-all
+      - name: Print failed test traces
+        if: failure()
+        working-directory: packages/contracts-bedrock
+        env:
+          FOUNDRY_PROFILE: cicoverage
+          ETH_RPC_URL: https://ci-mainnet-l1-archive.optimism.io
+        run: just test-rerun | tee failed-test-traces.log
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contracts-bedrock-lcov-${{ matrix.features }}
+          path: packages/contracts-bedrock/lcov-all.info
+
+  contracts-bedrock-checks:
+    name: contracts-bedrock-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs:
+      - contracts-bedrock-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Print forge version
+        working-directory: packages/contracts-bedrock
+        run: forge --version
+      - name: Run contracts checks
+        run: |
+          checks=(
+            check-kontrol-summaries-unchanged
+            semgrep-test-validity-check
+            semgrep
+            semver-lock-no-build
+            semver-diff-check-no-build
+            validate-deploy-configs
+            lint
+            snapshots-check-no-build
+            interfaces-check-no-build
+            reinitializer-check-no-build
+            size-check
+            unused-imports-check-no-build
+            strict-pragma-check-no-build
+            validate-spacers-no-build
+            opcm-upgrade-checks-no-build
+          )
+
+          for check in "${checks[@]}"; do
+            echo "Running contracts check: $check"
+            git reset --hard
+            git clean -df
+            (
+              cd packages/contracts-bedrock
+              FOUNDRY_PROFILE=ci just "$check"
+            )
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Repository changed after check: $check"
+              git status --porcelain
+              exit 1
+            fi
+          done
+
+  contracts-bedrock-upload:
+    name: contracts-bedrock-upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs:
+      - contracts-bedrock-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Update selectors
+        working-directory: packages/contracts-bedrock
+        run: just update-selectors
+
+  diff-fetcher-forge-artifacts:
+    name: diff-fetcher-forge-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs:
+      - contracts-bedrock-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Build contracts for op-fetcher
+        working-directory: op-fetcher
+        run: just build-contracts
+      - name: Compare forge artifacts
+        run: |
+          if ! diff -qr "packages/contracts-bedrock/forge-artifacts/FetchChainInfo.s.sol" \
+                       "op-fetcher/pkg/fetcher/fetch/forge-artifacts/FetchChainInfo.s.sol"; then
+            echo "ERROR: The checked-in forge artifacts for FetchChainInfo.s.sol do not match the CI build."
+            echo "Please run 'just build-contracts' in the op-fetcher directory and commit the changes."
+            exit 1
+          fi
+
+          echo "Checked-in forge artifacts match the CI build"
+
+  op-deployer-forge-version:
+    name: op-deployer-forge-version
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Check forge version in op-deployer
+        working-directory: op-deployer
+        run: just check-forge-version
+
+  semgrep-scan-local:
+    name: semgrep-scan-local
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run semgrep local rules
+        run: semgrep scan --timeout=100 --config .semgrep/rules/ --error .
+
+  semgrep-test:
+    name: semgrep-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run semgrep tests
+        run: semgrep scan --test --config .semgrep/rules/ .semgrep/tests/
+
+  go-lint:
+    name: go-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Run Go lint
+        run: make lint-go
+
+  fuzz-golang:
+    name: fuzz-golang-${{ matrix.package_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        package_name:
+          - op-node
+          - op-service
+          - op-chain-ops
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Run Go fuzz target
+        working-directory: ${{ matrix.package_name }}
+        run: make fuzz
+      - name: Collect fuzz artifacts
+        if: always()
+        run: |
+          mkdir -p fuzzdata
+          find "./${{ matrix.package_name }}" -type d -name "fuzz" -exec sh -c 'cp -r "{}"/* fuzzdata/ 2>/dev/null || true' \;
+      - name: Upload fuzz artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzdata-${{ matrix.package_name }}
+          path: fuzzdata
+
+  go-tests-short:
+    name: go-tests-short
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.ref_name != 'main'
+    needs:
+      - contracts-bedrock-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Run short Go tests
+        env:
+          TEST_TIMEOUT: 20m
+          PARALLEL: "12"
+        run: make go-tests-short
+
+  go-tests-full:
+    name: go-tests-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    if: github.ref_name == 'main'
+    needs:
+      - contracts-bedrock-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Run full Go tests
+        env:
+          TEST_TIMEOUT: 90m
+          PARALLEL: "12"
+        run: make go-tests
+
+  check-generated-mocks-op-node:
+    name: check-generated-mocks-op-node
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Check generated mocks for op-node
+        run: make generate-mocks-op-node && git diff --exit-code
+
+  check-generated-mocks-op-service:
+    name: check-generated-mocks-op-service
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Check generated mocks for op-service
+        run: make generate-mocks-op-service && git diff --exit-code
+
+  todo-issues-check:
+    name: todo-issues-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Check TODO issues
+        run: ./ops/scripts/todo-checker.sh --verbose --strict
+
+  shell-check:
+    name: shell-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Run shellcheck + shfmt validation
+        run: just shellcheck
+
+  docker-build:
+    name: docker-build (${{ matrix.image_name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: gas-oracle
+            dockerfile: gas-oracle/Dockerfile
+          - image_name: op-batcher
+            dockerfile: op-batcher/Dockerfile
+          - image_name: op-node
+            dockerfile: op-node/Dockerfile
+          - image_name: op-proposer
+            dockerfile: op-proposer/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          provenance: false
+          tags: mantle-ci/${{ matrix.image_name }}:${{ github.sha }}
+          build-args: |
+            VERSION=${{ github.sha }}
+
+  main-ci-summary:
+    name: main-ci-summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - contracts-bedrock-build
+      - contracts-bedrock-tests-heavy-fuzz-modified
+      - contracts-bedrock-tests
+      - contracts-bedrock-coverage
+      - contracts-bedrock-checks
+      - contracts-bedrock-upload
+      - diff-fetcher-forge-artifacts
+      - op-deployer-forge-version
+      - semgrep-scan-local
+      - semgrep-test
+      - go-lint
+      - fuzz-golang
+      - go-tests-short
+      - go-tests-full
+      - check-generated-mocks-op-node
+      - check-generated-mocks-op-service
+      - todo-issues-check
+      - shell-check
+      - docker-build
+    steps:
+      - name: Validate job statuses
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: |
+          echo "$NEEDS_JSON" | jq .
+          echo "$NEEDS_JSON" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' >/dev/null
