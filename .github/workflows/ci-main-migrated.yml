@@ -77,9 +77,17 @@ jobs:
             fi
           }
 
-          echo "contracts_bedrock=$(has_match '^(\\.github/workflows/ci-main-migrated\\.yml|packages/contracts-bedrock/|op-node/)')" >> "$GITHUB_OUTPUT"
-          echo "contracts_bedrock_fetcher=$(has_match '^(\\.github/workflows/ci-main-migrated\\.yml|packages/contracts-bedrock/|op-fetcher/)')" >> "$GITHUB_OUTPUT"
-          echo "main_go=$(has_match '^(go\\.(mod|sum)$|gas-oracle/|op-batcher/|op-node/|op-proposer/|op-service/)')" >> "$GITHUB_OUTPUT"
+          contracts_bedrock="$(has_match '^(\.github/workflows/ci-main-migrated\.yml|packages/contracts-bedrock/|op-node/)')"
+          contracts_bedrock_fetcher="$(has_match '^(\.github/workflows/ci-main-migrated\.yml|packages/contracts-bedrock/|op-fetcher/)')"
+          main_go="$(has_match '^(go\.(mod|sum)$|gas-oracle/|op-batcher/|op-node/|op-proposer/|op-service/)')"
+
+          echo "contracts_bedrock=$contracts_bedrock"
+          echo "contracts_bedrock_fetcher=$contracts_bedrock_fetcher"
+          echo "main_go=$main_go"
+
+          echo "contracts_bedrock=$contracts_bedrock" >> "$GITHUB_OUTPUT"
+          echo "contracts_bedrock_fetcher=$contracts_bedrock_fetcher" >> "$GITHUB_OUTPUT"
+          echo "main_go=$main_go" >> "$GITHUB_OUTPUT"
 
           if [ -d packages/contracts-bedrock/scripts/go-ffi ] \
             && [ -d packages/contracts-bedrock/scripts/differential-testing ] \
@@ -476,6 +484,7 @@ jobs:
       - name: Run semgrep local rules
         run: |
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
             git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
             CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRTUXB "origin/$GITHUB_BASE_REF...HEAD")"
 
