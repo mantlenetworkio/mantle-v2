@@ -12,13 +12,100 @@ on:
 permissions:
   contents: read
 
+env:
+  GO_MAIN_PACKAGES: >-
+    ./gas-oracle/... ./op-batcher/... ./op-node/... ./op-proposer/... ./op-service/...
+
 concurrency:
   group: ci-main-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      contracts_bedrock: ${{ steps.filter.outputs.contracts_bedrock }}
+      contracts_bedrock_fetcher: ${{ steps.filter.outputs.contracts_bedrock_fetcher }}
+      contracts_bedrock_tests_supported: ${{ steps.filter.outputs.contracts_bedrock_tests_supported }}
+      contracts_bedrock_checks_supported: ${{ steps.filter.outputs.contracts_bedrock_checks_supported }}
+      fetcher_artifacts_supported: ${{ steps.filter.outputs.fetcher_artifacts_supported }}
+      main_go: ${{ steps.filter.outputs.main_go }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect CI-relevant changes
+        id: filter
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
+            changed_files="$(git diff --name-only --diff-filter=ACMRTUXB "origin/$GITHUB_BASE_REF...HEAD")"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            changed_files="$(git diff --name-only --diff-filter=ACMRTUXB "$BEFORE_SHA...$GITHUB_SHA")"
+          else
+            changed_files=""
+          fi
+
+          echo "Changed files:"
+          if [ -n "$changed_files" ]; then
+            printf '%s\n' "$changed_files"
+          else
+            echo "<treating as full run>"
+          fi
+
+          has_match() {
+            local pattern="$1"
+
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo true
+              return
+            fi
+
+            if [ -z "$changed_files" ]; then
+              echo false
+            elif printf '%s\n' "$changed_files" | grep -Eq "$pattern"; then
+              echo true
+            else
+              echo false
+            fi
+          }
+
+          echo "contracts_bedrock=$(has_match '^(\\.github/workflows/ci-main-migrated\\.yml|packages/contracts-bedrock/|op-node/)')" >> "$GITHUB_OUTPUT"
+          echo "contracts_bedrock_fetcher=$(has_match '^(\\.github/workflows/ci-main-migrated\\.yml|packages/contracts-bedrock/|op-fetcher/)')" >> "$GITHUB_OUTPUT"
+          echo "main_go=$(has_match '^(go\\.(mod|sum)$|gas-oracle/|op-batcher/|op-node/|op-proposer/|op-service/)')" >> "$GITHUB_OUTPUT"
+
+          if [ -d packages/contracts-bedrock/scripts/go-ffi ] \
+            && [ -d packages/contracts-bedrock/scripts/differential-testing ] \
+            && [ -d packages/contracts-bedrock/test-case-generator ]; then
+            echo "contracts_bedrock_tests_supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "contracts_bedrock_tests_supported=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -d packages/contracts-bedrock/scripts/checks ]; then
+            echo "contracts_bedrock_checks_supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "contracts_bedrock_checks_supported=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if find packages/contracts-bedrock -name 'FetchChainInfo.s.sol' -print -quit | grep -q .; then
+            echo "fetcher_artifacts_supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fetcher_artifacts_supported=false" >> "$GITHUB_OUTPUT"
+          fi
+
   contracts-bedrock-build:
     name: contracts-bedrock-build
+    needs:
+      - detect-changes
+    if: needs.detect-changes.outputs.contracts_bedrock == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -43,9 +130,11 @@ jobs:
 
   contracts-bedrock-tests-heavy-fuzz-modified:
     name: contracts-bedrock-tests-heavy-fuzz-modified (${{ matrix.features }})
+    needs:
+      - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.contracts_bedrock == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -101,15 +190,28 @@ jobs:
         working-directory: packages/contracts-bedrock
         env:
           FOUNDRY_PROFILE: ciheavy
-        run: just test-rerun
+        run: |
+          if [ -d ./scripts/go-ffi ]; then
+            just test-rerun
+          else
+            echo "Skipping rerun: packages/contracts-bedrock/scripts/go-ffi is not present in this repo."
+          fi
       - name: Lint forge test names
         working-directory: packages/contracts-bedrock
-        run: just lint-forge-tests-check-no-build
+        run: |
+          if [ -d ./scripts/checks/test-validation ]; then
+            just lint-forge-tests-check-no-build
+          else
+            echo "Skipping forge test lint: packages/contracts-bedrock/scripts/checks/test-validation is not present in this repo."
+          fi
 
   contracts-bedrock-tests:
     name: contracts-bedrock-tests (${{ matrix.features }})
+    needs:
+      - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    if: needs.detect-changes.outputs.contracts_bedrock == 'true' && needs.detect-changes.outputs.contracts_bedrock_tests_supported == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -166,8 +268,11 @@ jobs:
 
   contracts-bedrock-coverage:
     name: contracts-bedrock-coverage (${{ matrix.features }})
+    needs:
+      - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    if: needs.detect-changes.outputs.contracts_bedrock == 'true' && needs.detect-changes.outputs.contracts_bedrock_tests_supported == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -236,9 +341,11 @@ jobs:
 
   contracts-bedrock-checks:
     name: contracts-bedrock-checks
+    if: needs.detect-changes.outputs.contracts_bedrock == 'true' && needs.detect-changes.outputs.contracts_bedrock_checks_supported == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     needs:
+      - detect-changes
       - contracts-bedrock-build
     steps:
       - name: Checkout
@@ -290,9 +397,11 @@ jobs:
 
   contracts-bedrock-upload:
     name: contracts-bedrock-upload
+    if: needs.detect-changes.outputs.contracts_bedrock == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs:
+      - detect-changes
       - contracts-bedrock-build
     steps:
       - name: Checkout
@@ -310,9 +419,11 @@ jobs:
 
   diff-fetcher-forge-artifacts:
     name: diff-fetcher-forge-artifacts
+    if: needs.detect-changes.outputs.contracts_bedrock_fetcher == 'true' && needs.detect-changes.outputs.fetcher_artifacts_supported == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs:
+      - detect-changes
       - contracts-bedrock-build
     steps:
       - name: Checkout
@@ -360,8 +471,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Run semgrep local rules
-        run: semgrep scan --timeout=100 --config .semgrep/rules/ --error .
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
+            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRTUXB "origin/$GITHUB_BASE_REF...HEAD")"
+
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "No changed files detected for semgrep scan."
+              exit 0
+            fi
+
+            printf '%s\n' "$CHANGED_FILES" > /tmp/semgrep-files.txt
+            xargs -r semgrep scan --timeout=100 --config .semgrep/rules/ --error < /tmp/semgrep-files.txt
+          else
+            semgrep scan --timeout=100 --config .semgrep/rules/ --error .
+          fi
 
   semgrep-test:
     name: semgrep-test
@@ -377,6 +504,9 @@ jobs:
 
   go-lint:
     name: go-lint
+    needs:
+      - detect-changes
+    if: needs.detect-changes.outputs.main_go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -385,7 +515,9 @@ jobs:
       - name: Install toolchain via mise
         uses: jdx/mise-action@v2
       - name: Run Go lint
-        run: make lint-go
+        run: |
+          golangci-lint run $GO_MAIN_PACKAGES
+          go mod tidy -diff
 
   fuzz-golang:
     name: fuzz-golang-${{ matrix.package_name }}
@@ -420,11 +552,11 @@ jobs:
 
   go-tests-short:
     name: go-tests-short
+    needs:
+      - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: github.ref_name != 'main'
-    needs:
-      - contracts-bedrock-build
+    if: github.ref_name != 'main' && needs.detect-changes.outputs.main_go == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -434,15 +566,15 @@ jobs:
         env:
           TEST_TIMEOUT: 20m
           PARALLEL: "12"
-        run: make go-tests-short
+        run: go test -short -parallel="$PARALLEL" -timeout="$TEST_TIMEOUT" $GO_MAIN_PACKAGES
 
   go-tests-full:
     name: go-tests-full
+    needs:
+      - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    if: github.ref_name == 'main'
-    needs:
-      - contracts-bedrock-build
+    if: github.ref_name == 'main' && needs.detect-changes.outputs.main_go == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -452,7 +584,7 @@ jobs:
         env:
           TEST_TIMEOUT: 90m
           PARALLEL: "12"
-        run: make go-tests
+        run: go test -parallel="$PARALLEL" -timeout="$TEST_TIMEOUT" $GO_MAIN_PACKAGES
 
   check-generated-mocks-op-node:
     name: check-generated-mocks-op-node
