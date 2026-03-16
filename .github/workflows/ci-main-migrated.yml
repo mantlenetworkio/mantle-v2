@@ -137,20 +137,12 @@ jobs:
         run: just copy-contract-artifacts
 
   contracts-bedrock-tests-heavy-fuzz-modified:
-    name: contracts-bedrock-tests-heavy-fuzz-modified (${{ matrix.features }})
+    name: contracts-bedrock-tests-heavy-fuzz-modified
     needs:
       - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
     if: github.event_name == 'pull_request' && needs.detect-changes.outputs.contracts_bedrock == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - main
-          - OPTIMISM_PORTAL_INTEROP
-          - OPCM_V2
-          - CUSTOM_GAS_TOKEN
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -161,24 +153,6 @@ jobs:
         uses: jdx/mise-action@v2
       - name: Install contracts dependencies
         run: git submodule update --init --recursive --force -j 8
-      - name: Set feature environment variables
-        env:
-          FEATURES: ${{ matrix.features }}
-        run: |
-          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
-          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
-            IFS=',' read -r -a feature_array <<< "$FEATURES"
-            for feature in "${feature_array[@]}"; do
-              feature="$(echo "$feature" | xargs)"
-              [ -z "$feature" ] && continue
-              [ "${feature,,}" = "main" ] && continue
-              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
-                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              else
-                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              fi
-            done
-          fi
       - name: Run heavy fuzz tests for modified test files
         working-directory: packages/contracts-bedrock
         env:
@@ -214,20 +188,12 @@ jobs:
           fi
 
   contracts-bedrock-tests:
-    name: contracts-bedrock-tests (${{ matrix.features }})
+    name: contracts-bedrock-tests
     needs:
       - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
     if: needs.detect-changes.outputs.contracts_bedrock == 'true' && needs.detect-changes.outputs.contracts_bedrock_tests_supported == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - main
-          - OPTIMISM_PORTAL_INTEROP
-          - OPCM_V2
-          - CUSTOM_GAS_TOKEN
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -238,24 +204,6 @@ jobs:
         uses: jdx/mise-action@v2
       - name: Install contracts dependencies
         run: git submodule update --init --recursive --force -j 8
-      - name: Set feature environment variables
-        env:
-          FEATURES: ${{ matrix.features }}
-        run: |
-          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
-          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
-            IFS=',' read -r -a feature_array <<< "$FEATURES"
-            for feature in "${feature_array[@]}"; do
-              feature="$(echo "$feature" | xargs)"
-              [ -z "$feature" ] && continue
-              [ "${feature,,}" = "main" ] && continue
-              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
-                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              else
-                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              fi
-            done
-          fi
       - name: Build go-ffi
         working-directory: packages/contracts-bedrock
         run: just build-go-ffi
@@ -275,20 +223,12 @@ jobs:
         run: just lint-forge-tests-check-no-build
 
   contracts-bedrock-coverage:
-    name: contracts-bedrock-coverage (${{ matrix.features }})
+    name: contracts-bedrock-coverage
     needs:
       - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 120
     if: needs.detect-changes.outputs.contracts_bedrock == 'true' && needs.detect-changes.outputs.contracts_bedrock_tests_supported == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - main
-          - OPTIMISM_PORTAL_INTEROP
-          - OPCM_V2
-          - CUSTOM_GAS_TOKEN
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -305,24 +245,6 @@ jobs:
           done
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
-      - name: Set feature environment variables
-        env:
-          FEATURES: ${{ matrix.features }}
-        run: |
-          SYSTEM_FEATURES="CUSTOM_GAS_TOKEN"
-          if [ -n "$FEATURES" ] && [ "${FEATURES,,}" != "main" ]; then
-            IFS=',' read -r -a feature_array <<< "$FEATURES"
-            for feature in "${feature_array[@]}"; do
-              feature="$(echo "$feature" | xargs)"
-              [ -z "$feature" ] && continue
-              [ "${feature,,}" = "main" ] && continue
-              if echo "$SYSTEM_FEATURES" | tr ',' '\n' | grep -Fxq "$feature"; then
-                echo "SYS_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              else
-                echo "DEV_FEATURE__${feature}=true" >> "$GITHUB_ENV"
-              fi
-            done
-          fi
       - name: Build contract sources
         working-directory: packages/contracts-bedrock
         run: |
@@ -344,7 +266,7 @@ jobs:
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: contracts-bedrock-lcov-${{ matrix.features }}
+          name: contracts-bedrock-lcov
           path: packages/contracts-bedrock/lcov-all.info
 
   contracts-bedrock-checks:
