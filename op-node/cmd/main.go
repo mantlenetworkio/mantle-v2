@@ -87,17 +87,18 @@ func RollupNodeMain(ctx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.
 	}
 	cfg.Cancel = closeApp
 
+	// Mantle features
+	// Check mantle forks and align Optimism forks with them.
+	// Do this before printing the config so logged OP fork times reflect any Mantle-driven overrides.
+	if err := cfg.Rollup.AlignOpWithMantle(); err != nil {
+		return nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
+	}
+
 	// Only pretty-print the banner if it is a terminal log. Otherwise log it as key-value pairs.
 	if logCfg.Format == "terminal" {
 		log.Info("rollup config:\n" + cfg.Rollup.Description(chaincfg.L2ChainIDToNetworkDisplayName))
 	} else {
 		cfg.Rollup.LogDescription(log, chaincfg.L2ChainIDToNetworkDisplayName)
-	}
-
-	// Mantle features
-	// Check mantle forks and align Optimism forks with them.
-	if err := cfg.Rollup.AlignOpWithMantle(); err != nil {
-		return nil, fmt.Errorf("failed to apply mantle overrides: %w", err)
 	}
 
 	n, err := node.New(ctx.Context, cfg, log, VersionWithMeta, m, nil)
