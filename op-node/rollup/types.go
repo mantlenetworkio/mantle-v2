@@ -878,6 +878,14 @@ func (c *Config) forEachFork(callback func(name string, logName string, time *ui
 	callback("Isthmus", "isthmus_time", c.IsthmusTime)
 	callback("Jovian", "jovian_time", c.JovianTime)
 	callback("Interop", "interop_time", c.InteropTime)
+
+	// Mantle forks
+	callback("MantleBaseFee", "mantle_base_fee_time", c.MantleBaseFeeTime)
+	callback("MantleEverest", "mantle_everest_time", c.MantleEverestTime)
+	callback("MantleEuboea", "mantle_euboea_time", c.MantleEuboeaTime)
+	callback("MantleSkadi", "mantle_skadi_time", c.MantleSkadiTime)
+	callback("MantleLimb", "mantle_limb_time", c.MantleLimbTime)
+	callback("MantleArsia", "mantle_arsia_time", c.MantleArsiaTime)
 }
 
 func (c *Config) ParseRollupConfig(in io.Reader) error {
