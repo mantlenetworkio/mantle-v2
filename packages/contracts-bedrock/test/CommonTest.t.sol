@@ -487,16 +487,17 @@ contract FFIInterface is Test {
         external
         returns (bytes32, bytes32, bytes32, bytes32, bytes[] memory)
     {
-        string[] memory cmds = new string[](9);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "getProveWithdrawalTransactionInputs";
-        cmds[2] = vm.toString(_tx.nonce);
-        cmds[3] = vm.toString(_tx.sender);
-        cmds[4] = vm.toString(_tx.target);
-        cmds[5] = vm.toString(_tx.mntValue);
-        cmds[6] = vm.toString(_tx.ethValue);
-        cmds[7] = vm.toString(_tx.gasLimit);
-        cmds[8] = vm.toString(_tx.data);
+        string[] memory cmds = new string[](10);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "getProveWithdrawalTransactionInputs";
+        cmds[3] = vm.toString(_tx.nonce);
+        cmds[4] = vm.toString(_tx.sender);
+        cmds[5] = vm.toString(_tx.target);
+        cmds[6] = vm.toString(_tx.mntValue);
+        cmds[7] = vm.toString(_tx.ethValue);
+        cmds[8] = vm.toString(_tx.gasLimit);
+        cmds[9] = vm.toString(_tx.data);
 
         bytes memory result = vm.ffi(cmds);
         (
@@ -522,16 +523,17 @@ contract FFIInterface is Test {
         external
         returns (bytes32)
     {
-        string[] memory cmds = new string[](9);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "hashCrossDomainMessage";
-        cmds[2] = vm.toString(_nonce);
-        cmds[3] = vm.toString(_sender);
-        cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_mntValue);
-        cmds[6] = vm.toString(_ethValue);
-        cmds[7] = vm.toString(_gasLimit);
-        cmds[8] = vm.toString(_data);
+        string[] memory cmds = new string[](10);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "hashCrossDomainMessage";
+        cmds[3] = vm.toString(_nonce);
+        cmds[4] = vm.toString(_sender);
+        cmds[5] = vm.toString(_target);
+        cmds[6] = vm.toString(_mntValue);
+        cmds[7] = vm.toString(_ethValue);
+        cmds[8] = vm.toString(_gasLimit);
+        cmds[9] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -549,16 +551,17 @@ contract FFIInterface is Test {
         external
         returns (bytes32)
     {
-        string[] memory cmds = new string[](9);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "hashWithdrawal";
-        cmds[2] = vm.toString(_nonce);
-        cmds[3] = vm.toString(_sender);
-        cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_mntValue);
-        cmds[6] = vm.toString(_ethValue);
-        cmds[7] = vm.toString(_gasLimit);
-        cmds[8] = vm.toString(_data);
+        string[] memory cmds = new string[](10);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "hashWithdrawal";
+        cmds[3] = vm.toString(_nonce);
+        cmds[4] = vm.toString(_sender);
+        cmds[5] = vm.toString(_target);
+        cmds[6] = vm.toString(_mntValue);
+        cmds[7] = vm.toString(_ethValue);
+        cmds[8] = vm.toString(_gasLimit);
+        cmds[9] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -573,13 +576,14 @@ contract FFIInterface is Test {
         external
         returns (bytes32)
     {
-        string[] memory cmds = new string[](6);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "hashOutputRootProof";
-        cmds[2] = Strings.toHexString(uint256(_version));
-        cmds[3] = Strings.toHexString(uint256(_stateRoot));
-        cmds[4] = Strings.toHexString(uint256(_messagePasserStorageRoot));
-        cmds[5] = Strings.toHexString(uint256(_latestBlockhash));
+        string[] memory cmds = new string[](7);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "hashOutputRootProof";
+        cmds[3] = Strings.toHexString(uint256(_version));
+        cmds[4] = Strings.toHexString(uint256(_stateRoot));
+        cmds[5] = Strings.toHexString(uint256(_messagePasserStorageRoot));
+        cmds[6] = Strings.toHexString(uint256(_latestBlockhash));
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
@@ -599,39 +603,41 @@ contract FFIInterface is Test {
         external
         returns (bytes32)
     {
-        string[] memory cmds = new string[](12);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "hashDepositTransaction";
-        cmds[2] = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        cmds[3] = vm.toString(_logIndex);
-        cmds[4] = vm.toString(_from);
-        cmds[5] = vm.toString(_to);
-        cmds[6] = vm.toString(_mntValue);
-        cmds[7] = vm.toString(_mntTxValue);
-        cmds[8] = vm.toString(_ethValue);
-        cmds[9] = vm.toString(_ethTxValue);
-        cmds[10] = vm.toString(_gas);
-        cmds[11] = vm.toString(_data);
+        string[] memory cmds = new string[](13);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "hashDepositTransaction";
+        cmds[3] = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        cmds[4] = vm.toString(_logIndex);
+        cmds[5] = vm.toString(_from);
+        cmds[6] = vm.toString(_to);
+        cmds[7] = vm.toString(_mntValue);
+        cmds[8] = vm.toString(_mntTxValue);
+        cmds[9] = vm.toString(_ethValue);
+        cmds[10] = vm.toString(_ethTxValue);
+        cmds[11] = vm.toString(_gas);
+        cmds[12] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes32));
     }
 
     function encodeDepositTransaction(Types.UserDepositTransaction calldata txn) external returns (bytes memory) {
-        string[] memory cmds = new string[](13);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "encodeDepositTransaction";
-        cmds[2] = vm.toString(txn.from);
-        cmds[3] = vm.toString(txn.to);
-        cmds[4] = vm.toString(txn.mntValue);
-        cmds[5] = vm.toString(txn.mntTxValue);
-        cmds[6] = vm.toString(txn.ethValue);
-        cmds[7] = vm.toString(txn.ethTxValue);
-        cmds[8] = vm.toString(txn.gasLimit);
-        cmds[9] = vm.toString(txn.isCreation);
-        cmds[10] = vm.toString(txn.data);
-        cmds[11] = vm.toString(txn.l1BlockHash);
-        cmds[12] = vm.toString(txn.logIndex);
+        string[] memory cmds = new string[](14);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "encodeDepositTransaction";
+        cmds[3] = vm.toString(txn.from);
+        cmds[4] = vm.toString(txn.to);
+        cmds[5] = vm.toString(txn.mntValue);
+        cmds[6] = vm.toString(txn.mntTxValue);
+        cmds[7] = vm.toString(txn.ethValue);
+        cmds[8] = vm.toString(txn.ethTxValue);
+        cmds[9] = vm.toString(txn.gasLimit);
+        cmds[10] = vm.toString(txn.isCreation);
+        cmds[11] = vm.toString(txn.data);
+        cmds[12] = vm.toString(txn.l1BlockHash);
+        cmds[13] = vm.toString(txn.logIndex);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));
@@ -649,26 +655,28 @@ contract FFIInterface is Test {
         external
         returns (bytes memory)
     {
-        string[] memory cmds = new string[](9);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "encodeCrossDomainMessage";
-        cmds[2] = vm.toString(_nonce);
-        cmds[3] = vm.toString(_sender);
-        cmds[4] = vm.toString(_target);
-        cmds[5] = vm.toString(_mntValue);
-        cmds[6] = vm.toString(_ethValue);
-        cmds[7] = vm.toString(_gasLimit);
-        cmds[8] = vm.toString(_data);
+        string[] memory cmds = new string[](10);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "encodeCrossDomainMessage";
+        cmds[3] = vm.toString(_nonce);
+        cmds[4] = vm.toString(_sender);
+        cmds[5] = vm.toString(_target);
+        cmds[6] = vm.toString(_mntValue);
+        cmds[7] = vm.toString(_ethValue);
+        cmds[8] = vm.toString(_gasLimit);
+        cmds[9] = vm.toString(_data);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (bytes));
     }
 
     function decodeVersionedNonce(uint256 nonce) external returns (uint256, uint256) {
-        string[] memory cmds = new string[](3);
-        cmds[0] = "scripts/differential-testing/differential-testing";
-        cmds[1] = "decodeVersionedNonce";
-        cmds[2] = vm.toString(nonce);
+        string[] memory cmds = new string[](4);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "diff";
+        cmds[2] = "decodeVersionedNonce";
+        cmds[3] = vm.toString(nonce);
 
         bytes memory result = vm.ffi(cmds);
         return abi.decode(result, (uint256, uint256));
@@ -678,12 +686,10 @@ contract FFIInterface is Test {
         external
         returns (bytes32, bytes memory, bytes memory, bytes[] memory)
     {
-        string[] memory cmds = new string[](5);
-        cmds[0] = "./test-case-generator/fuzz";
-        cmds[1] = "-m";
-        cmds[2] = "trie";
-        cmds[3] = "-v";
-        cmds[4] = variant;
+        string[] memory cmds = new string[](3);
+        cmds[0] = "scripts/go-ffi/go-ffi";
+        cmds[1] = "trie";
+        cmds[2] = variant;
 
         return abi.decode(vm.ffi(cmds), (bytes32, bytes, bytes, bytes[]));
     }

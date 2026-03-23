@@ -18,26 +18,31 @@ contract RLPReader_readBytes_Test is CommonTest {
         assertEq(RLPReader.readBytes(hex"7f"), hex"7f");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readBytes_revertListItem_reverts() external {
         vm.expectRevert("RLPReader: decoded item type for bytes is not a data item");
         RLPReader.readBytes(hex"c7c0c1c0c3c0c1c0");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readBytes_invalidStringLength_reverts() external {
         vm.expectRevert("RLPReader: length of content must be > than length of string length (long string)");
         RLPReader.readBytes(hex"b9");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readBytes_invalidListLength_reverts() external {
         vm.expectRevert("RLPReader: length of content must be > than length of list length (long list)");
         RLPReader.readBytes(hex"ff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readBytes_invalidRemainder_reverts() external {
         vm.expectRevert("RLPReader: bytes value contains an invalid remainder");
         RLPReader.readBytes(hex"800a");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readBytes_invalidPrefix_reverts() external {
         vm.expectRevert("RLPReader: invalid prefix, single byte < 0x80 are not prefixed (short string)");
         RLPReader.readBytes(hex"810a");
@@ -101,6 +106,7 @@ contract RLPReader_readList_Test is CommonTest {
         }
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_listLongerThan32Elements_reverts() external {
         vm.expectRevert(stdError.indexOOBError);
         RLPReader.readList(hex"e1454545454545454545454545454545454545454545454545454545454545454545");
@@ -134,36 +140,43 @@ contract RLPReader_readList_Test is CommonTest {
         assertEq(RLPReader.readRawBytes(list[3]), hex"ca846b6579348476616c34");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_invalidShortList_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than list length (short list)");
         RLPReader.readList(hex"efdebd");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_longStringLength_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than list length (short list)");
         RLPReader.readList(hex"efb83600");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_notLongEnough_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than list length (short list)");
         RLPReader.readList(hex"efdebdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_int32Overflow_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long string)");
         RLPReader.readList(hex"bf0f000000000000021111");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_int32Overflow2_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long list)");
         RLPReader.readList(hex"ff0f000000000000021111");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_incorrectLengthInArray_reverts() external {
         vm.expectRevert("RLPReader: length of content must not have any leading zeros (long string)");
         RLPReader.readList(hex"b9002100dc2b275d0f74e8a53e6f4ec61b27f24278820be3f82ea2110e582081b0565df0");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_leadingZerosInLongLengthArray1_reverts() external {
         vm.expectRevert("RLPReader: length of content must not have any leading zeros (long string)");
         RLPReader.readList(
@@ -171,11 +184,13 @@ contract RLPReader_readList_Test is CommonTest {
         );
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_leadingZerosInLongLengthArray2_reverts() external {
         vm.expectRevert("RLPReader: length of content must not have any leading zeros (long string)");
         RLPReader.readList(hex"b800");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_leadingZerosInLongLengthList1_reverts() external {
         vm.expectRevert("RLPReader: length of content must not have any leading zeros (long list)");
         RLPReader.readList(
@@ -183,51 +198,61 @@ contract RLPReader_readList_Test is CommonTest {
         );
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_nonOptimalLongLengthArray1_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than 55 bytes (long string)");
         RLPReader.readList(hex"b81000112233445566778899aabbccddeeff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_nonOptimalLongLengthArray2_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than 55 bytes (long string)");
         RLPReader.readList(hex"b801ff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_invalidValue_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than string length (short string)");
         RLPReader.readList(hex"91");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_invalidRemainder_reverts() external {
         vm.expectRevert("RLPReader: list item has an invalid data remainder");
         RLPReader.readList(hex"c000");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_notEnoughContentForString1_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long string)");
         RLPReader.readList(hex"ba010000aabbccddeeff");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_notEnoughContentForString2_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long string)");
         RLPReader.readList(hex"b840ffeeddccbbaa99887766554433221100");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_notEnoughContentForList1_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long list)");
         RLPReader.readList(hex"f90180");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_notEnoughContentForList2_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than total length (long list)");
         RLPReader.readList(hex"ffffffffffffffffff0001020304050607");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_longStringLessThan56Bytes_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than 55 bytes (long string)");
         RLPReader.readList(hex"b80100");
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_readList_longListLessThan56Bytes_reverts() external {
         vm.expectRevert("RLPReader: length of content must be greater than 55 bytes (long list)");
         RLPReader.readList(hex"f80100");
