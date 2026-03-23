@@ -42,7 +42,7 @@ acceptance-test devnet="" gate="base":
 
     # Build dependencies for sysgo (in-process) mode if not in CI
     # In CI jobs already take care of this, so we skip it.
-    if [[ "$ORCHESTRATOR" == "sysgo" && -z "${CIRCLECI:-}" ]]; then
+    if [[ "$ORCHESTRATOR" == "sysgo" && -z "${CI:-}" ]]; then
         echo "Building contracts (local build)..."
         cd {{REPO_ROOT}}
         echo " - Updating submodules..."

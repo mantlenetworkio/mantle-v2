@@ -940,16 +940,16 @@ func (d *SuperchainL1DeployConfig) Check(log log.Logger) error {
 	// Superchain is not supported on Mantle
 	return nil
 
-	if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
-		log.Warn("RequiredProtocolVersion is empty")
-	}
-	if d.RecommendedProtocolVersion == (params.ProtocolVersion{}) {
-		log.Warn("RecommendedProtocolVersion is empty")
-	}
-	if d.SuperchainConfigGuardian == (common.Address{}) {
-		return fmt.Errorf("%w: SuperchainConfigGuardian cannot be address(0)", ErrInvalidDeployConfig)
-	}
-	return nil
+	// if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
+	// 	log.Warn("RequiredProtocolVersion is empty")
+	// }
+	// if d.RecommendedProtocolVersion == (params.ProtocolVersion{}) {
+	// 	log.Warn("RecommendedProtocolVersion is empty")
+	// }
+	// if d.SuperchainConfigGuardian == (common.Address{}) {
+	// 	return fmt.Errorf("%w: SuperchainConfigGuardian cannot be address(0)", ErrInvalidDeployConfig)
+	// }
+	// return nil
 }
 
 // OutputOracleDeployConfig configures the legacy OutputOracle deployment to L1.

@@ -906,7 +906,7 @@ func TestChannelManagerUnsafeBytes(t *testing.T) {
 			compressor:                    "shadow",
 			afterAddingToUnsafeBlockQueue: 3813,
 			afterAddingToChannel:          3813,
-			afterSealingChannel:           4754,
+			afterSealingChannel:           4753,
 		})
 	})
 
@@ -917,7 +917,7 @@ func TestChannelManagerUnsafeBytes(t *testing.T) {
 			compressor:                    "shadow",
 			afterAddingToUnsafeBlockQueue: 5794,
 			afterAddingToChannel:          5794,
-			afterSealingChannel:           7199,
+			afterSealingChannel:           7197,
 		})
 	})
 
@@ -939,7 +939,7 @@ func TestChannelManagerUnsafeBytes(t *testing.T) {
 			compressor:                    "shadow",
 			afterAddingToUnsafeBlockQueue: 5794,
 			afterAddingToChannel:          5794,
-			afterSealingChannel:           7199,
+			afterSealingChannel:           7197,
 		})
 	})
 
@@ -1027,7 +1027,7 @@ func TestChannelManagerUnsafeBytes(t *testing.T) {
 			compressor:                    "shadow",
 			afterAddingToUnsafeBlockQueue: 103070,
 			afterAddingToChannel:          103070,
-			afterSealingChannel:           128120,
+			afterSealingChannel:           128117,
 		})
 	})
 

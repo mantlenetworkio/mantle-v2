@@ -274,3 +274,7 @@ func (m *mockBlockType) HasOptimismWithdrawalsRoot(blkTime uint64) bool {
 func (m *mockBlockType) IsIsthmus(blkTime uint64) bool {
 	return false
 }
+
+func (m *mockBlockType) IsOptimismWithSkadi(blkTime uint64) bool {
+	return false
+}
