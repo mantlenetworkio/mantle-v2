@@ -14,7 +14,17 @@ permissions:
 
 env:
   GO_MAIN_PACKAGES: >-
-    ./gas-oracle/... ./op-batcher/... ./op-node/... ./op-proposer/... ./op-service/...
+    ./gas-oracle/...
+    ./op-batcher/...
+    ./op-chain-ops/...
+    ./op-node/...
+    ./op-proposer/...
+    ./op-service/...
+    ./op-e2e/mantleopgeth/...
+    ./op-e2e/actions/mantletests
+    ./op-e2e/actions/mantleupgrades
+    ./op-e2e/system/mantleda
+    ./op-e2e/system/mantlep2p
 
 concurrency:
   group: ci-main-${{ github.workflow }}-${{ github.ref }}
@@ -79,7 +89,7 @@ jobs:
 
           contracts_bedrock="$(has_match '^(\.github/workflows/ci-main-migrated\.yml|packages/contracts-bedrock/|op-node/)')"
           contracts_bedrock_fetcher="$(has_match '^(\.github/workflows/ci-main-migrated\.yml|packages/contracts-bedrock/|op-fetcher/)')"
-          main_go="$(has_match '^(go\.(mod|sum)$|gas-oracle/|op-batcher/|op-node/|op-proposer/|op-service/)')"
+          main_go="$(has_match '^(go\.(mod|sum)$|gas-oracle/|op-batcher/|op-chain-ops/|op-node/|op-proposer/|op-service/|op-e2e/mantleopgeth/|op-e2e/actions/mantletests/|op-e2e/actions/mantleupgrades/|op-e2e/system/mantleda/|op-e2e/system/mantlep2p/)')"
 
           echo "contracts_bedrock=$contracts_bedrock"
           echo "contracts_bedrock_fetcher=$contracts_bedrock_fetcher"
@@ -481,39 +491,21 @@ jobs:
           name: fuzzdata-${{ matrix.package_name }}
           path: fuzzdata
 
-  go-tests-short:
-    name: go-tests-short
+  go-tests:
+    name: go-tests
     needs:
       - detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: github.ref_name != 'main' && needs.detect-changes.outputs.main_go == 'true'
+    if: needs.detect-changes.outputs.main_go == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain via mise
         uses: jdx/mise-action@v2
-      - name: Run short Go tests
+      - name: Run Go tests
         env:
           TEST_TIMEOUT: 20m
-          PARALLEL: "12"
-        run: go test -short -parallel="$PARALLEL" -timeout="$TEST_TIMEOUT" $GO_MAIN_PACKAGES
-
-  go-tests-full:
-    name: go-tests-full
-    needs:
-      - detect-changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    if: github.ref_name == 'main' && needs.detect-changes.outputs.main_go == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain via mise
-        uses: jdx/mise-action@v2
-      - name: Run full Go tests
-        env:
-          TEST_TIMEOUT: 90m
           PARALLEL: "12"
         run: go test -parallel="$PARALLEL" -timeout="$TEST_TIMEOUT" $GO_MAIN_PACKAGES
 
@@ -618,8 +610,7 @@ jobs:
       - semgrep-test
       - go-lint
       - fuzz-golang
-      - go-tests-short
-      - go-tests-full
+      - go-tests
       - check-generated-mocks-op-node
       - check-generated-mocks-op-service
       - todo-issues-check
