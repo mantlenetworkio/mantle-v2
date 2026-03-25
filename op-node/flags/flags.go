@@ -378,7 +378,7 @@ var (
 		EnvVars: prefixEnvVars("L2_BACKUP_UNSAFE_SYNC_RPC"),
 		Hidden:  true,
 	}
-	BackupL2UnsafeSyncRPCTrustRPC = &cli.StringFlag{
+	BackupL2UnsafeSyncRPCTrustRPC = &cli.BoolFlag{
 		Name: "l2.backup-unsafe-sync-rpc.trustrpc",
 		Usage: "Like l1.trustrpc, configure if response data from the RPC needs to be verified, e.g. blockhash computation." +
 			"This does not include checks if the blockhash is part of the canonical chain.",

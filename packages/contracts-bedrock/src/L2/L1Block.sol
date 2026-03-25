@@ -6,9 +6,6 @@ import { Constants } from "src/libraries/Constants.sol";
 
 import { Semver } from "../universal/Semver.sol";
 
-// // Interfaces
-// import { ISemver } from "interfaces/universal/ISemver.sol";
-
 /**
  * @custom:proxied
  * @custom:predeploy 0x4200000000000000000000000000000000000015

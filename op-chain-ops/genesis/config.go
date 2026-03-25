@@ -217,6 +217,8 @@ func (d *L2VaultsDeployConfig) Check(log log.Logger) error {
 	if d.OperatorFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: OperatorFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
 	}
+	// At present, all fee vaults on Mantle have the same withdrawal network: L1.
+	// We temporarily comment out this check and keep it for future reference.
 	// if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
 	// 	return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
 	// }

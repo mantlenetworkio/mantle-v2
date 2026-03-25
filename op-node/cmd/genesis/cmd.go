@@ -168,11 +168,16 @@ var Subcommands = cli.Commands{
 			// MANTLE_FEATURES
 			// SystemConfig contract has not yet upgraded to have startBlock() method,
 			// so we need to fetch the L1 start block from the L1 starting block tag.
+			if config.L1StartingBlockTag == nil {
+				return fmt.Errorf("L1StartingBlockTag is required but not set in deploy config")
+			}
 			var l1StartBlock *types.Block
 			if config.L1StartingBlockTag.BlockHash != nil {
 				l1StartBlock, err = client.BlockByHash(context.Background(), *config.L1StartingBlockTag.BlockHash)
 			} else if config.L1StartingBlockTag.BlockNumber != nil {
 				l1StartBlock, err = client.BlockByNumber(context.Background(), big.NewInt(config.L1StartingBlockTag.BlockNumber.Int64()))
+			} else {
+				return fmt.Errorf("L1StartingBlockTag must specify either a block hash or block number")
 			}
 			if err != nil {
 				return fmt.Errorf("error getting l1 start block: %w", err)

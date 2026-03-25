@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.24.10-alpine3.21 as builder
+FROM --platform=$BUILDPLATFORM golang:1.24.13-alpine3.22 as builder
 
 ARG VERSION
 ARG GIT_COMMIT
@@ -23,7 +23,7 @@ RUN GITCOMMIT="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || true)}" && \
       just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" GOOS=$TARGETOS GOARCH=$TARGETARCH op-proposer; \
     fi
 
-FROM alpine:3.21
+FROM alpine:3.22
 
 COPY --from=builder /app/op-proposer/bin/op-proposer /usr/local/bin
 
