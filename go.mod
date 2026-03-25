@@ -1,8 +1,6 @@
 module github.com/ethereum-optimism/optimism
 
-go 1.24.0
-
-toolchain go1.24.13
+go 1.25.0
 
 require (
 	cloud.google.com/go/kms v1.20.1
@@ -67,13 +65,13 @@ require (
 	github.com/urfave/cli/v2 v2.27.6
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/trace v1.34.0
-	golang.org/x/crypto v0.36.0
+	golang.org/x/crypto v0.48.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	golang.org/x/mod v0.22.0
+	golang.org/x/mod v0.33.0
 	golang.org/x/oauth2 v0.25.0
-	golang.org/x/sync v0.14.0
-	golang.org/x/term v0.30.0
-	golang.org/x/text v0.25.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/term v0.40.0
+	golang.org/x/text v0.35.0
 	golang.org/x/time v0.11.0
 	gonum.org/v1/plot v0.16.0
 	google.golang.org/api v0.215.0
@@ -308,9 +306,10 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/image v0.25.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
