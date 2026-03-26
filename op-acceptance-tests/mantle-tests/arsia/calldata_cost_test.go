@@ -2,12 +2,13 @@ package arsia
 
 import (
 	"crypto/rand"
+	"testing"
+
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txplan"
 	"github.com/ethereum/go-ethereum/common"
-	"testing"
 )
 
 func TestCalldataCost(gt *testing.T) {

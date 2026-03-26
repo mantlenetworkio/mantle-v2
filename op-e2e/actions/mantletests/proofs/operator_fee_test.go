@@ -261,8 +261,6 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			require.Equal(t, uint64(21784), rUnset.GasUsed)
 
 		case DepositTx:
-			aliceInitialBalance, l1FeeVaultInitialBalance, baseFeeVaultInitialBalance, sequencerFeeVaultInitialBalance, operatorFeeVaultInitialBalance = getCurrentBalances()
-
 			// Mantle-specific deposit transaction (6 parameters)
 			// Get portal address from deploy config
 			portalAddr := env.Dp.DeployConfig.OptimismPortalProxy

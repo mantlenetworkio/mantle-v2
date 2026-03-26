@@ -149,9 +149,7 @@ func (p *MantleL2Proposer) sendMantleTx(t Testing, data []byte) {
 	nonce, err := p.l1.NonceAt(t.Ctx(), p.address, nil)
 	require.NoError(t, err)
 
-	var addr common.Address
-
-	addr = *p.l2OutputOracleAddr
+	var addr common.Address = *p.l2OutputOracleAddr
 
 	gasLimit, err := estimateGasPending(t.Ctx(), p.l1, ethereum.CallMsg{
 		From:      p.address,

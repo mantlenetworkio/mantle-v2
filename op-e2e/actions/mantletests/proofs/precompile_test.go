@@ -1,40 +1,15 @@
 package proofs
 
 import (
-	"strings"
-	"sync"
 	"testing"
 
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/contracts/bindings/invoker"
-	"github.com/ethereum-optimism/optimism/op-program/client/l1"
-	hostcommon "github.com/ethereum-optimism/optimism/op-program/host/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/stretchr/testify/require"
 )
-
-type precompileHintCounter struct {
-	sync.RWMutex
-	count int
-	hostcommon.Prefetcher
-}
-
-func (p *precompileHintCounter) Hint(hint string) error {
-	p.RWMutex.Lock()
-	defer p.RWMutex.Unlock()
-	if strings.HasPrefix(hint, l1.HintL1Precompile) || strings.HasPrefix(hint, l1.HintL1PrecompileV2) {
-		p.count++
-	}
-	return p.Prefetcher.Hint(hint)
-}
-
-func (p *precompileHintCounter) GetCount() int {
-	p.RWMutex.RLock()
-	defer p.RWMutex.RUnlock()
-	return p.count
-}
 
 func Test_ProgramAction_Precompiles(gt *testing.T) {
 	matrix := helpers.NewMatrix[PrecompileTestFixture]()

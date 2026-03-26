@@ -49,9 +49,7 @@ func runProposerTest(gt *testing.T, isSpanBatch bool, allocType config.AllocType
 			rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
 	}
 
-	var proposer *actionsHelpers.MantleL2Proposer
-
-	proposer = actionsHelpers.NewMantleL2Proposer(t, log, &actionsHelpers.MantleProposerCfg{
+	var proposer *actionsHelpers.MantleL2Proposer = actionsHelpers.NewMantleL2Proposer(t, log, &actionsHelpers.MantleProposerCfg{
 		OutputOracleAddr:      &sd.DeploymentsL1.L2OutputOracleProxy,
 		ProposerKey:           dp.Secrets.Proposer,
 		ProposalRetryInterval: 3 * time.Second,

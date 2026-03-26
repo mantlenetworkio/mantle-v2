@@ -11,11 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-// u64Ptr is a helper function to create a pointer to uint64
-func u64Ptr(v uint64) *uint64 {
-	return &v
-}
-
 // TestMantleActivations tests the activation condition of the various Mantle upgrades.
 func TestMantleActivations(t *testing.T) {
 	for _, test := range []struct {

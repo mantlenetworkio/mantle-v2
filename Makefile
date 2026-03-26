@@ -20,13 +20,28 @@ build-contracts:
 	(cd packages/contracts-bedrock && just build)
 .PHONY: build-contracts
 
+LINT_PKGS := \
+	./devnet-sdk/... \
+	./gas-oracle/... \
+	./op-acceptance-tests/... \
+	./op-batcher/... \
+	./op-chain-ops/... \
+	./op-core/... \
+	./op-deployer/... \
+	./op-devstack/... \
+	./op-e2e/... \
+	./op-node/... \
+	./op-proposer/... \
+	./op-service/... \
+	./op-sync-tester/...
+
 lint-go: ## Lints Go code with specific linters
-	golangci-lint run ./...
+	golangci-lint run $(LINT_PKGS)
 	go mod tidy -diff
 .PHONY: lint-go
 
 lint-go-fix: ## Lints Go code with specific linters and fixes reported issues
-	golangci-lint run ./... --fix
+	golangci-lint run $(LINT_PKGS) --fix
 .PHONY: lint-go-fix
 
 golang-docker: ## Builds Docker images for Go components using buildx

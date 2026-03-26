@@ -21,10 +21,10 @@ env:
     ./op-proposer/...
     ./op-service/...
     ./op-e2e/mantleopgeth/...
-    ./op-e2e/actions/mantletests
-    ./op-e2e/actions/mantleupgrades
-    ./op-e2e/system/mantleda
-    ./op-e2e/system/mantlep2p
+    ./op-e2e/actions/mantletests/...
+    ./op-e2e/actions/mantleupgrades/...
+    ./op-e2e/system/mantleda/...
+    ./op-e2e/system/mantlep2p/...
 
 concurrency:
   group: ci-main-${{ github.workflow }}-${{ github.ref }}
@@ -316,10 +316,13 @@ jobs:
         uses: actions/checkout@v4
       - name: Install toolchain via mise
         uses: jdx/mise-action@v2
+      - name: Restore golangci-lint cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-v1-${{ hashFiles('.golangci.yaml') }}
       - name: Run Go lint
-        run: |
-          golangci-lint run $GO_MAIN_PACKAGES
-          go mod tidy -diff
+        run: make lint-go
 
   fuzz-golang:
     name: fuzz-golang-${{ matrix.package_name }}
