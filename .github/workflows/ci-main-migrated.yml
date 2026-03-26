@@ -110,6 +110,7 @@ jobs:
           path: |
             packages/contracts-bedrock/forge-artifacts
             packages/contracts-bedrock/cache
+            op-deployer/pkg/deployer/artifacts/forge-artifacts
           key: forge-artifacts-${{ github.sha }}
 
   contracts-bedrock-tests-heavy-fuzz-modified:
@@ -300,8 +301,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install toolchain via mise
         uses: jdx/mise-action@v2
+      - name: Restore forge artifacts from cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/contracts-bedrock/forge-artifacts
+            packages/contracts-bedrock/cache
+            op-deployer/pkg/deployer/artifacts/forge-artifacts
+          key: forge-artifacts-${{ github.sha }}
+      - name: Build contract artifacts on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          cd packages/contracts-bedrock && just build-no-tests
+          cd ../../op-deployer && just copy-contract-artifacts
       - name: Restore golangci-lint cache
         uses: actions/cache@v4
         with:
@@ -353,8 +370,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install toolchain via mise
         uses: jdx/mise-action@v2
+      - name: Restore forge artifacts from cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/contracts-bedrock/forge-artifacts
+            packages/contracts-bedrock/cache
+            op-deployer/pkg/deployer/artifacts/forge-artifacts
+          key: forge-artifacts-${{ github.sha }}
+      - name: Build contract artifacts on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          cd packages/contracts-bedrock && just build-no-tests
+          cd ../../op-deployer && just copy-contract-artifacts
       - name: Run Go tests
         env:
           TEST_TIMEOUT: 20m
