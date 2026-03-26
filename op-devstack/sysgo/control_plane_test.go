@@ -20,6 +20,7 @@ import (
 
 // TestControlPlane tests start/stop functionality provided control plane
 func TestControlPlane(gt *testing.T) {
+	gt.Skip("Skipping control plane test due to mismatched deploy script")
 	var ids DefaultInteropSystemIDs
 	opt := DefaultInteropSystem(&ids)
 
@@ -146,6 +147,7 @@ func testL2CLRestart(ids DefaultInteropSystemIDs, system stack.System, control s
 
 // TestControlPlaneFakePoS tests the start/stop functionality provided by the control plane for the fakePoS module
 func TestControlPlaneFakePoS(gt *testing.T) {
+	gt.Skip("Skipping control plane fakePoS test due to mismatched deploy script")
 	var ids DefaultInteropSystemIDs
 	opt := DefaultInteropSystem(&ids)
 

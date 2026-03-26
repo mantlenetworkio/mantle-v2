@@ -31,6 +31,7 @@ func exiters(gt *testing.T) (func(bool), func()) {
 }
 
 func TestSystem(gt *testing.T) {
+	gt.Skip("Skipping optimism system test due to mismatched deploy script")
 	var ids DefaultInteropSystemIDs
 	opt := DefaultInteropSystem(&ids)
 

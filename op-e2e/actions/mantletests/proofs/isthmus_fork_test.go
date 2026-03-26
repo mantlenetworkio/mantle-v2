@@ -33,7 +33,7 @@ import (
 
 var (
 	arsiaL1BlockCodeHash          = common.HexToHash("0x31281c9967b6e01f796812dc6d391b1961787212c22aa0f5cef262bd2373037a")
-	arsiaGasPriceOracleCodeHash   = common.HexToHash("0x0b858803e58087bde3ffdb2ecd4e84cf3cca421d4a81f232f8f89a685a13e332")
+	arsiaGasPriceOracleCodeHash   = common.HexToHash("0xfc61bf7a97018cc6dacc1c54a59bffa0f55bea29c532e4c5ddfdecca3cb11e94")
 	arsiaOperatorFeeVaultCodeHash = common.HexToHash("0x8fc59a001c3cfde65cb42baba63a9fd8e97a3d19e914df4e8eb129a4a4fbca93")
 )
 

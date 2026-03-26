@@ -1,18 +1,45 @@
 package tokenratio
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+// Integration tests require external services (Bybit CEX API + Ethereum mainnet RPC for Uniswap).
+// Set TOKEN_RATIO_RPC_URL to an Ethereum mainnet RPC endpoint to enable Uniswap tests.
+// Set TOKEN_RATIO_CEX_URL to a Bybit API endpoint to enable CEX tests (defaults to https://api.bybit.com).
+// Example:
+//
+//	TOKEN_RATIO_RPC_URL=https://mainnet.infura.io/v3/<key> go test ./gas-oracle/tokenratio/...
+
+func cexURL(t *testing.T) string {
+	t.Helper()
+	if url := os.Getenv("TOKEN_RATIO_CEX_URL"); url != "" {
+		return url
+	}
+	return "https://api.bybit.com"
+}
+
+func rpcURL(t *testing.T) string {
+	t.Helper()
+	url := os.Getenv("TOKEN_RATIO_RPC_URL")
+	if url == "" {
+		t.Skip("TOKEN_RATIO_RPC_URL not set, skipping test that requires Ethereum mainnet RPC")
+	}
+	return url
+}
+
 func TestGetTokenPrice(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
-	ethPrice, err := tokenPricer.query("ETHUSDT")
+	rpc := rpcURL(t)
+	tokenPricer := NewClient(cexURL(t), rpc, 3)
+
+	ethPrice, err := tokenPricer.queryV5("ETHUSDT")
 	require.NoError(t, err)
 	t.Logf("ETH price:%v", ethPrice)
 
-	mntPrice, err := tokenPricer.query("MNTUSDT")
+	mntPrice, err := tokenPricer.queryV5("MNTUSDT")
 	require.NoError(t, err)
 	t.Logf("MNT price:%v", mntPrice)
 
@@ -32,7 +59,8 @@ func TestGetTokenPrice(t *testing.T) {
 }
 
 func TestGetTokenPriceWithRealTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
+	rpc := rpcURL(t)
+	tokenPricer := NewClient(cexURL(t), rpc, 3)
 
 	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
@@ -40,9 +68,10 @@ func TestGetTokenPriceWithRealTokenRatioMode(t *testing.T) {
 }
 
 func TestGetTokenPriceWithOneDollarTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
+	rpc := rpcURL(t)
+	tokenPricer := NewClient(cexURL(t), rpc, 3)
 
-	ethPrice, err := tokenPricer.query("ETHUSDT")
+	ethPrice, err := tokenPricer.queryV5("ETHUSDT")
 	require.NoError(t, err)
 	t.Logf("ETH price:%v", ethPrice)
 
@@ -52,7 +81,8 @@ func TestGetTokenPriceWithOneDollarTokenRatioMode(t *testing.T) {
 }
 
 func TestGetTokenPriceWithOneDollarTokenRatioMode2(t *testing.T) {
-	tokenPricer := NewClient("", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
+	rpc := rpcURL(t)
+	tokenPricer := NewClient("", rpc, 3)
 
 	_, ethPrice := tokenPricer.getTokenPricesFromUniswap()
 	t.Logf("ETH price:%v", ethPrice)
@@ -62,17 +92,11 @@ func TestGetTokenPriceWithOneDollarTokenRatioMode2(t *testing.T) {
 	t.Logf("ratio:%v", ratio)
 }
 
+// TestGetTokenPriceWithOneDollarTokenRatioMode3 tests fallback when both CEX and RPC URLs are invalid.
+// When all price sources fail, tokenRatio() falls back to lastEthPrice/lastMntPrice = DefaultTokenRatio.
+// Does not require real endpoints.
 func TestGetTokenPriceWithOneDollarTokenRatioMode3(t *testing.T) {
 	tokenPricer := NewClient("", "https://mainnet.infura.io/v3", 3)
-
-	ratio, err := tokenPricer.tokenRatio()
-	require.NoError(t, err)
-	require.Equal(t, DefaultETHPrice, ratio)
-	t.Logf("ratio:%v", ratio)
-}
-
-func TestGetTokenPriceWithDefaultTokenRatioMode(t *testing.T) {
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
 
 	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
@@ -80,6 +104,18 @@ func TestGetTokenPriceWithDefaultTokenRatioMode(t *testing.T) {
 	t.Logf("ratio:%v", ratio)
 }
 
+func TestGetTokenPriceWithDefaultTokenRatioMode(t *testing.T) {
+	rpc := rpcURL(t)
+	tokenPricer := NewClient(cexURL(t), rpc, 3)
+
+	ratio, err := tokenPricer.tokenRatio()
+	require.NoError(t, err)
+	require.Equal(t, DefaultTokenRatio, ratio)
+	t.Logf("ratio:%v", ratio)
+}
+
+// TestGetTokenPriceWithNoSource tests fallback when both sources are invalid.
+// Does not require real endpoints.
 func TestGetTokenPriceWithNoSource(t *testing.T) {
 	// source url are both invalid, so can not access correct prices
 	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3)
@@ -91,8 +127,8 @@ func TestGetTokenPriceWithNoSource(t *testing.T) {
 }
 
 func TestGetTokenPriceWithOnlySource1(t *testing.T) {
-	// uniswapURL is invalid, so can not access correct prices
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3)
+	// uniswapURL is invalid, so can not access correct prices from Uniswap
+	tokenPricer := NewClient(cexURL(t), "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c232", 3)
 
 	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
@@ -100,8 +136,9 @@ func TestGetTokenPriceWithOnlySource1(t *testing.T) {
 }
 
 func TestGetTokenPriceWithOnlySource2(t *testing.T) {
+	rpc := rpcURL(t)
 	// only uniswapURL is valid
-	tokenPricer := NewClient("https://api.bybit.co", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
+	tokenPricer := NewClient("https://api.bybit.co", rpc, 3)
 
 	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
@@ -109,8 +146,8 @@ func TestGetTokenPriceWithOnlySource2(t *testing.T) {
 }
 
 func TestGetTokenPriceWithMNT(t *testing.T) {
-	// only uniswapURL is valid
-	tokenPricer := NewClient("https://api.bybit.com", "https://mainnet.infura.io/v3/4f4692085f1340c2a645ae04d36c2321", 3)
+	rpc := rpcURL(t)
+	tokenPricer := NewClient(cexURL(t), rpc, 3)
 
 	ratio, err := tokenPricer.tokenRatio()
 	require.NoError(t, err)
