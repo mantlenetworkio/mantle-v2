@@ -1010,7 +1010,7 @@ func (l *BatchSubmitter) sendTx(txdata txData, isCancel bool, candidate *txmgr.T
 func (l *BatchSubmitter) blobTxCandidate(data txData) (*txmgr.TxCandidate, error) {
 	var blobs []*eth.Blob
 	var err error
-	if !l.channelMgr.rollupCfg.IsMantleArsia(uint64(time.Now().Unix())) {
+	if !l.channelMgr.rollupCfg.IsMantleArsia(l.prevCurrentL1.Time) {
 		blobs, err = data.MantleBlobs()
 		if err != nil {
 			return nil, fmt.Errorf("generating mantle blobs for tx data: %w", err)

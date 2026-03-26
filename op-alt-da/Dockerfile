@@ -2,7 +2,7 @@ ARG OP_STACK_GO_BUILDER=us-docker.pkg.dev/oplabs-tools-artifacts/images/op-stack
 FROM $OP_STACK_GO_BUILDER AS builder
 # See "make golang-docker" and /ops/docker/op-stack-go
 
-FROM alpine:3.20
+FROM alpine:3.22
 
 COPY --from=builder /usr/local/bin/da-server /usr/local/bin/da-server
 

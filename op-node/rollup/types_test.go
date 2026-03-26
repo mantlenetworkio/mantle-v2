@@ -222,6 +222,30 @@ func TestRandomConfigDescription(t *testing.T) {
 		require.Contains(t, out, fmt.Sprintf("Jovian: @ %d ~ ", j))
 		require.Contains(t, out, fmt.Sprintf("Interop: @ %d ~ ", it))
 	})
+	t.Run("mantle forks check, date", func(t *testing.T) {
+		config := randConfig()
+		bf := uint64(1677119344)
+		config.MantleBaseFeeTime = &bf
+		ev := uint64(1677119345)
+		config.MantleEverestTime = &ev
+		eu := uint64(1677119346)
+		config.MantleEuboeaTime = &eu
+		sk := uint64(1677119347)
+		config.MantleSkadiTime = &sk
+		li := uint64(1677119348)
+		config.MantleLimbTime = &li
+		ar := uint64(1677119349)
+		config.MantleArsiaTime = &ar
+
+		out := config.Description(nil)
+		// Don't check human-readable part of the date, it's timezone-dependent.
+		require.Contains(t, out, fmt.Sprintf("MantleBaseFee: @ %d ~ ", bf))
+		require.Contains(t, out, fmt.Sprintf("MantleEverest: @ %d ~ ", ev))
+		require.Contains(t, out, fmt.Sprintf("MantleEuboea: @ %d ~ ", eu))
+		require.Contains(t, out, fmt.Sprintf("MantleSkadi: @ %d ~ ", sk))
+		require.Contains(t, out, fmt.Sprintf("MantleLimb: @ %d ~ ", li))
+		require.Contains(t, out, fmt.Sprintf("MantleArsia: @ %d ~ ", ar))
+	})
 }
 
 // TestConfig_ActivationTime tests that all getters and setters for all scheduleable forks are

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"strings"
 
@@ -55,14 +56,17 @@ type SignerFactory func(chainID *big.Int) SignerFn
 // SignerFactoryFromConfig considers three ways that signers are created & then creates single factory from those config options.
 // It can either take a remote signer (via opsigner.CLIConfig) or it can be provided either a mnemonic + derivation path or a private key.
 // It prefers the remote signer, then the mnemonic or private key (only one of which can be provided).
-func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, signerConfig opsigner.CLIConfig, enableHsm bool, hsmCreden, hsmAddress, hsmAPIName string) (SignerFactory, common.Address, error) {
+// The returned io.Closer must be called during shutdown to release resources (e.g. KMS gRPC connections).
+func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, signerConfig opsigner.CLIConfig, enableHsm bool, hsmCreden, hsmAddress, hsmAPIName string) (SignerFactory, common.Address, io.Closer, error) {
 	var signer SignerFactory
 	var fromAddress common.Address
+	var closer io.Closer
+	closer = io.NopCloser(nil)
 	if signerConfig.Enabled() {
 		signerClient, err := opsigner.NewSignerClientFromConfig(l, signerConfig)
 		if err != nil {
 			l.Error("Unable to create Signer Client", "error", err)
-			return nil, common.Address{}, fmt.Errorf("failed to create the signer client: %w", err)
+			return nil, common.Address{}, nil, fmt.Errorf("failed to create the signer client: %w", err)
 		}
 		fromAddress = common.HexToAddress(signerConfig.Address)
 		signer = func(chainID *big.Int) SignerFn {
@@ -76,12 +80,12 @@ func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, 
 	} else if enableHsm {
 		proBytes, err := hex.DecodeString(hsmCreden)
 		if err != nil {
-			return nil, common.Address{}, err
+			return nil, common.Address{}, nil, err
 		}
 		apikey := option.WithCredentialsJSON(proBytes)
 		client, err := kms.NewKeyManagementClient(context.Background(), apikey)
 		if err != nil {
-			return nil, common.Address{}, err
+			return nil, common.Address{}, nil, err
 		}
 		mk := &hsm.ManagedKey{
 			KeyName:      hsmAPIName,
@@ -99,18 +103,19 @@ func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, 
 		}
 
 		log.Info("tx-mgr", "enable-hsm", true)
+		closer = client
 	} else {
 		var privKey *ecdsa.PrivateKey
 		var err error
 
 		if privateKey != "" && mnemonic != "" {
-			return nil, common.Address{}, errors.New("cannot specify both a private key and a mnemonic")
+			return nil, common.Address{}, nil, errors.New("cannot specify both a private key and a mnemonic")
 		}
 		if privateKey == "" {
 			// Parse l2output wallet private key and L2OO contract address.
 			wallet, err := hdwallet.NewFromMnemonic(mnemonic)
 			if err != nil {
-				return nil, common.Address{}, fmt.Errorf("failed to parse mnemonic: %w", err)
+				return nil, common.Address{}, nil, fmt.Errorf("failed to parse mnemonic: %w", err)
 			}
 
 			privKey, err = wallet.PrivateKey(accounts.Account{
@@ -119,12 +124,12 @@ func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, 
 				},
 			})
 			if err != nil {
-				return nil, common.Address{}, fmt.Errorf("failed to create a wallet: %w", err)
+				return nil, common.Address{}, nil, fmt.Errorf("failed to create a wallet: %w", err)
 			}
 		} else {
 			privKey, err = crypto.HexToECDSA(strings.TrimPrefix(privateKey, "0x"))
 			if err != nil {
-				return nil, common.Address{}, fmt.Errorf("failed to parse the private key: %w", err)
+				return nil, common.Address{}, nil, fmt.Errorf("failed to parse the private key: %w", err)
 			}
 		}
 		// we force the curve to Geth's instance, because Geth does an equality check in the nocgo version:
@@ -139,5 +144,5 @@ func SignerFactoryFromConfig(l log.Logger, privateKey, mnemonic, hdPath string, 
 		}
 	}
 
-	return signer, fromAddress, nil
+	return signer, fromAddress, closer, nil
 }
