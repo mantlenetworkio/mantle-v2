@@ -9,17 +9,18 @@ import (
 
 // Integration tests require external services (Bybit CEX API + Ethereum mainnet RPC for Uniswap).
 // Set TOKEN_RATIO_RPC_URL to an Ethereum mainnet RPC endpoint to enable Uniswap tests.
-// Set TOKEN_RATIO_CEX_URL to a Bybit API endpoint to enable CEX tests (defaults to https://api.bybit.com).
+// Set TOKEN_RATIO_CEX_URL to a Bybit API endpoint to enable CEX tests.
 // Example:
 //
 //	TOKEN_RATIO_RPC_URL=https://mainnet.infura.io/v3/<key> go test ./gas-oracle/tokenratio/...
 
 func cexURL(t *testing.T) string {
 	t.Helper()
-	if url := os.Getenv("TOKEN_RATIO_CEX_URL"); url != "" {
-		return url
+	url := os.Getenv("TOKEN_RATIO_CEX_URL")
+	if url == "" {
+		t.Skip("TOKEN_RATIO_CEX_URL not set, skipping test that requires Bybit CEX API")
 	}
-	return "https://api.bybit.com"
+	return url
 }
 
 func rpcURL(t *testing.T) string {
