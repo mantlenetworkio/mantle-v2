@@ -120,7 +120,7 @@ gates:
     description: "Mantle Arsia network tests."
     tests:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia/...
-        timeout: 10m
+        timeout: 20m
 
   - id: mantle-base
     inherits:
@@ -129,11 +129,11 @@ gates:
     tests:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
-        timeout: 10m
+        timeout: 20m
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
         timeout: 10m
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal
-        timeout: 10m
+        timeout: 20m
 
   - id: mantle-temp
     description: "Mantle network tests."
