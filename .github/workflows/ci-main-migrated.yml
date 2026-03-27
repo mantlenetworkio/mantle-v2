@@ -479,11 +479,12 @@ jobs:
 
   op-acceptance-tests:
     name: op-acceptance-tests
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 150
     needs:
+      - detect-changes
       - contracts-bedrock-build
+    if: needs.detect-changes.outputs.main_go == 'true'
     env:
       GOFLAGS: "-mod=mod"
       GO111MODULE: "on"
@@ -499,15 +500,19 @@ jobs:
       - name: Install contracts dependencies
         run: git submodule update --init --recursive --force -j 8
       - name: Restore forge artifacts from cache
+        id: cache-restore
         uses: actions/cache/restore@v4
         with:
           path: |
             packages/contracts-bedrock/forge-artifacts
             packages/contracts-bedrock/cache
+            op-deployer/pkg/deployer/artifacts/forge-artifacts
           key: forge-artifacts-${{ github.sha }}
-      - name: Copy artifacts into op-deployer
-        working-directory: op-deployer
-        run: just copy-contract-artifacts
+      - name: Build contract artifacts on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          cd packages/contracts-bedrock && just build-no-tests
+          cd ../../op-deployer && just copy-contract-artifacts
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -520,18 +525,10 @@ jobs:
         working-directory: op-acceptance-tests
         run: go mod download
 
-      - name: Lint/Vet/Build op-acceptance-tests/cmd
-        working-directory: op-acceptance-tests
-        run: just cmd-check
-
-      - name: Prepare test environment (compile tests)
-        working-directory: op-acceptance-tests
-        run: go test -v -c -o /dev/null $(go list -f '{{if .TestGoFiles}}{{.ImportPath}}{{end}}' ./tests/...)
-
-      - name: Run acceptance tests (base gate)
+      - name: Run mantle-base acceptance tests (sysgo)
         working-directory: op-acceptance-tests
         timeout-minutes: 60
-        run: LOG_LEVEL=info just acceptance-test "" "base"
+        run: LOG_LEVEL=info just acceptance-test "" "mantle-base"
 
       - name: Print results (summary)
         if: always()
