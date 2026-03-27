@@ -78,8 +78,7 @@ contract RelayActor is StdUtils {
         }
         try xdm.relayMessage{ gas: gas, value: _ethValue }(
             Encoding.encodeVersionedNonce(0, _version), sender, target, _mntValue, _ethValue, minGasLimit, _message
-        ) { }
-        catch {
+        ) { } catch {
             // If any of these calls revert, set `reverted` to true to fail the invariant test.
             // NOTE: This is to get around forge's invariant fuzzer ignoring reverted calls
             // to this function.

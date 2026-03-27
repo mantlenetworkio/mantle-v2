@@ -97,7 +97,7 @@ contract L2ToL1MessagePasser is Semver {
      */
     function burn() external {
         uint256 balance = address(this).balance;
-        (bool success, ) = address(0).call{value: balance}("");
+        (bool success,) = address(0).call{ value: balance }("");
         require(success, "Failed to burn MNT");
         emit WithdrawerBalanceBurnt(balance);
     }
@@ -115,7 +115,10 @@ contract L2ToL1MessagePasser is Semver {
         address _target,
         uint256 _gasLimit,
         bytes memory _data
-    ) public payable {
+    )
+        public
+        payable
+    {
         require(_target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         if (_ethValue != 0) {
             OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
@@ -135,16 +138,7 @@ contract L2ToL1MessagePasser is Semver {
 
         sentMessages[withdrawalHash] = true;
 
-        emit MessagePassed(
-            messageNonce(),
-            msg.sender,
-            _target,
-            msg.value,
-            _ethValue,
-            _gasLimit,
-            _data,
-            withdrawalHash
-        );
+        emit MessagePassed(messageNonce(), msg.sender, _target, msg.value, _ethValue, _gasLimit, _data, withdrawalHash);
 
         unchecked {
             ++msgNonce;

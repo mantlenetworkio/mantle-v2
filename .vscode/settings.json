@@ -3,5 +3,8 @@
   "files.trimTrailingWhitespace": true,
   "openInGitHub.defaultBranch": "develop",
   "openInGitHub.alwaysUseDefaultBranch": false,
-  "openInGitHub.excludeCurrentRevision": true
+  "openInGitHub.excludeCurrentRevision": true,
+  "[solidity]": {
+    "editor.formatOnSave": false
+  }
 }

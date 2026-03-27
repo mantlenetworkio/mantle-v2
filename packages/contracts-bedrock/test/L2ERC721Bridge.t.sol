@@ -17,7 +17,10 @@ contract TestERC721 is ERC721 {
 }
 
 contract TestMintableERC721 is OptimismMintableERC721 {
-    constructor(address _bridge, address _remoteToken)
+    constructor(
+        address _bridge,
+        address _remoteToken
+    )
         OptimismMintableERC721(_bridge, 1, _remoteToken, "Test", "TST")
     { }
 

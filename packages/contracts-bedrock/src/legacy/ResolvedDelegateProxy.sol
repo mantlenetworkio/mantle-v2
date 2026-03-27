@@ -42,9 +42,7 @@ contract ResolvedDelegateProxy {
      */
     // solhint-disable-next-line no-complex-fallback
     fallback() external payable {
-        address target = addressManager[address(this)].getAddress(
-            (implementationName[address(this)])
-        );
+        address target = addressManager[address(this)].getAddress((implementationName[address(this)]));
 
         require(target != address(0), "ResolvedDelegateProxy: target address must be initialized");
 

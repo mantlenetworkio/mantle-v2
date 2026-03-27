@@ -28,7 +28,11 @@ library SecureMerkleTrie {
         bytes memory _value,
         bytes[] memory _proof,
         bytes32 _root
-    ) internal pure returns (bool) {
+    )
+        internal
+        pure
+        returns (bool)
+    {
         bytes memory key = _getSecureKey(_key);
         return MerkleTrie.verifyInclusionProof(key, _value, _proof, _root);
     }
@@ -42,11 +46,7 @@ library SecureMerkleTrie {
      *
      * @return Value of the key if it exists.
      */
-    function get(
-        bytes memory _key,
-        bytes[] memory _proof,
-        bytes32 _root
-    ) internal pure returns (bytes memory) {
+    function get(bytes memory _key, bytes[] memory _proof, bytes32 _root) internal pure returns (bytes memory) {
         bytes memory key = _getSecureKey(_key);
         return MerkleTrie.get(key, _proof, _root);
     }

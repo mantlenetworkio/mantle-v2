@@ -572,6 +572,33 @@ jobs:
           name: acceptance-test-logs
           path: op-acceptance-tests/logs
 
+  solidity-fmt-check:
+    name: solidity-fmt-check
+    needs:
+      - detect-changes
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.contracts_bedrock == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+      - name: Check forge fmt on changed .sol files
+        working-directory: packages/contracts-bedrock
+        run: |
+          git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
+          CHANGED_SOL=$(git diff --name-only --diff-filter=ACMR "origin/$GITHUB_BASE_REF...HEAD" -- '*.sol' | grep '^packages/contracts-bedrock/' | sed 's|^packages/contracts-bedrock/||' || true)
+          if [ -z "$CHANGED_SOL" ]; then
+            echo "No changed .sol files, skipping."
+            exit 0
+          fi
+          echo "Checking formatting for:"
+          echo "$CHANGED_SOL"
+          echo "$CHANGED_SOL" | xargs forge fmt --check
+
   main-ci-summary:
     name: main-ci-summary
     runs-on: ubuntu-latest
@@ -590,6 +617,7 @@ jobs:
       - check-generated-mocks-op-node
       - check-generated-mocks-op-service
       - todo-issues-check
+      - solidity-fmt-check
       - shell-check
       - docker-build
       - op-acceptance-tests

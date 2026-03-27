@@ -19,7 +19,7 @@ contract L1BlockNumber is Semver {
     /**
      * @custom:semver 1.0.0
      */
-    constructor() Semver(1, 0, 0) {}
+    constructor() Semver(1, 0, 0) { }
 
     /**
      * @notice Returns the L1 block number.

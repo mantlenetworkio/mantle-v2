@@ -13,13 +13,12 @@ import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
  *         the Bedrock upgrade. Functions within this contract that mutate state were already
  *         disabled as part of the EVM equivalence upgrade.
  */
+
 contract LegacyERC20MNT is OptimismMintableERC20 {
     /**
      * @notice Initializes the contract as an Optimism Mintable ERC20.
      */
-    constructor(address _l1mnt)
-        OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT")
-    {}
+    constructor(address _l1mnt) OptimismMintableERC20(Predeploys.L2_STANDARD_BRIDGE, _l1mnt, "Mantle Token", "MNT") { }
 
     /**
      * @notice Returns the MNT balance of the target account. Overrides the base behavior of the
@@ -70,11 +69,7 @@ contract LegacyERC20MNT is OptimismMintableERC20 {
      * @custom:blocked
      * @notice Transfers funds from some sender account.
      */
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public virtual override returns (bool) {
+    function transferFrom(address, address, uint256) public virtual override returns (bool) {
         revert("LegacyERC20MNT: transferFrom is disabled");
     }
 

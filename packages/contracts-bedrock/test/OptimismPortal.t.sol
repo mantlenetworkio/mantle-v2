@@ -409,7 +409,13 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
     constructor() {
         super.setUp();
         _defaultTx = Types.WithdrawalTransaction({
-            nonce: 0, sender: alice, target: bob, mntValue: 0, ethValue: 100, gasLimit: 100_000, data: hex""
+            nonce: 0,
+            sender: alice,
+            target: bob,
+            mntValue: 0,
+            ethValue: 100,
+            gasLimit: 100_000,
+            data: hex""
         });
         // Get withdrawal proof data we can use for testing.
         (_stateRoot, _storageRoot, _outputRoot, _withdrawalHash, _withdrawalProof) =
@@ -560,10 +566,9 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         // Propose the same output root again, creating the same output at a different index + l2BlockNumber.
         vm.startPrank(op.L2_ORACLE().PROPOSER());
-        op.L2_ORACLE()
-            .proposeL2Output(
-                proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
-            );
+        op.L2_ORACLE().proposeL2Output(
+            proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
+        );
         vm.stopPrank();
 
         // Warp ahead 1 second
@@ -786,7 +791,13 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // This number was identified through trial and error.
         uint256 gasLimit = 150_000;
         Types.WithdrawalTransaction memory insufficientGasTx = Types.WithdrawalTransaction({
-            nonce: 0, sender: alice, target: bob, mntValue: 100, ethValue: 0, gasLimit: gasLimit, data: hex""
+            nonce: 0,
+            sender: alice,
+            target: bob,
+            mntValue: 100,
+            ethValue: 0,
+            gasLimit: gasLimit,
+            data: hex""
         });
 
         // Get updated proof inputs.

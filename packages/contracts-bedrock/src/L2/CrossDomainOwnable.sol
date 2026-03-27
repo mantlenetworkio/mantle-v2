@@ -18,8 +18,7 @@ abstract contract CrossDomainOwnable is Ownable {
      */
     function _checkOwner() internal view override {
         require(
-            owner() == AddressAliasHelper.undoL1ToL2Alias(msg.sender),
-            "CrossDomainOwnable: caller is not the owner"
+            owner() == AddressAliasHelper.undoL1ToL2Alias(msg.sender), "CrossDomainOwnable: caller is not the owner"
         );
     }
 }

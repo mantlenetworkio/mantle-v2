@@ -20,7 +20,7 @@ contract LegacyMessagePasser is Semver {
     /**
      * @custom:semver 1.0.0
      */
-    constructor() Semver(1, 0, 0) {}
+    constructor() Semver(1, 0, 0) { }
 
     /**
      * @notice Passes a message to L1.

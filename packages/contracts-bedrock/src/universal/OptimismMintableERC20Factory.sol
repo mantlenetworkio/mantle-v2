@@ -37,11 +37,7 @@ contract OptimismMintableERC20Factory is Semver {
      * @param remoteToken Address of the corresponding token on the remote chain.
      * @param deployer    Address of the account that deployed the token.
      */
-    event OptimismMintableERC20Created(
-        address indexed localToken,
-        address indexed remoteToken,
-        address deployer
-    );
+    event OptimismMintableERC20Created(address indexed localToken, address indexed remoteToken, address deployer);
 
     /**
      * @custom:semver 1.1.0
@@ -71,7 +67,10 @@ contract OptimismMintableERC20Factory is Semver {
         address _remoteToken,
         string memory _name,
         string memory _symbol
-    ) external returns (address) {
+    )
+        external
+        returns (address)
+    {
         return createOptimismMintableERC20(_remoteToken, _name, _symbol);
     }
 
@@ -88,15 +87,13 @@ contract OptimismMintableERC20Factory is Semver {
         address _remoteToken,
         string memory _name,
         string memory _symbol
-    ) public returns (address) {
-        require(
-            _remoteToken != address(0),
-            "OptimismMintableERC20Factory: must provide remote token address"
-        );
+    )
+        public
+        returns (address)
+    {
+        require(_remoteToken != address(0), "OptimismMintableERC20Factory: must provide remote token address");
 
-        address localToken = address(
-            new OptimismMintableERC20(BRIDGE, _remoteToken, _name, _symbol)
-        );
+        address localToken = address(new OptimismMintableERC20(BRIDGE, _remoteToken, _name, _symbol));
 
         // Emit the old event too for legacy support.
         emit StandardL2TokenCreated(_remoteToken, localToken);

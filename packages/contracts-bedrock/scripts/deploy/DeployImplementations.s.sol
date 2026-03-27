@@ -157,8 +157,7 @@ contract DeployImplementations is Script {
                 _name: "L1StandardBridge",
                 _args: DeployUtils.encodeConstructor(
                     abi.encodeCall(
-                        IL1StandardBridge.__constructor__,
-                        (payable(address(_input.l1CrossDomainMessenger)), _input.l1MNT)
+                        IL1StandardBridge.__constructor__, (payable(address(_input.l1CrossDomainMessenger)), _input.l1MNT)
                     )
                 )
             })

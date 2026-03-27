@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *         schedule.
  */
 contract GovernanceToken is ERC20Burnable, ERC20Votes, Ownable {
-    constructor() ERC20("Optimism", "OP") ERC20Permit("Optimism") {}
+    constructor() ERC20("Optimism", "OP") ERC20Permit("Optimism") { }
 
     /**
      * @notice Allows the owner to mint tokens.
@@ -34,11 +34,7 @@ contract GovernanceToken is ERC20Burnable, ERC20Votes, Ownable {
      * @param to     The account receiving tokens.
      * @param amount The amount of tokens being transfered.
      */
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override(ERC20, ERC20Votes) {
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal override(ERC20, ERC20Votes) {
         super._afterTokenTransfer(from, to, amount);
     }
 

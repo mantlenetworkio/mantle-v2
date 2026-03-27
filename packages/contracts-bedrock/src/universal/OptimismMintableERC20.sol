@@ -62,7 +62,10 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
         address _remoteToken,
         string memory _name,
         string memory _symbol
-    ) ERC20(_name, _symbol) Semver(1, 0, 0) {
+    )
+        ERC20(_name, _symbol)
+        Semver(1, 0, 0)
+    {
         REMOTE_TOKEN = _remoteToken;
         BRIDGE = _bridge;
     }
@@ -73,7 +76,10 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
      * @param _to     Address to mint tokens to.
      * @param _amount Amount of tokens to mint.
      */
-    function mint(address _to, uint256 _amount)
+    function mint(
+        address _to,
+        uint256 _amount
+    )
         external
         virtual
         override(IOptimismMintableERC20, ILegacyMintableERC20)
@@ -89,7 +95,10 @@ contract OptimismMintableERC20 is IOptimismMintableERC20, ILegacyMintableERC20, 
      * @param _from   Address to burn tokens from.
      * @param _amount Amount of tokens to burn.
      */
-    function burn(address _from, uint256 _amount)
+    function burn(
+        address _from,
+        uint256 _amount
+    )
         external
         virtual
         override(IOptimismMintableERC20, ILegacyMintableERC20)

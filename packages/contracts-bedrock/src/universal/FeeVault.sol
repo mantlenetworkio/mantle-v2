@@ -51,7 +51,7 @@ abstract contract FeeVault {
     /**
      * @notice Allow the contract to receive ETH.
      */
-    receive() external payable {}
+    receive() external payable { }
 
     /**
      * @notice Triggers a withdrawal of funds to the L1 fee wallet.
@@ -68,9 +68,7 @@ abstract contract FeeVault {
         emit Withdrawal(value, RECIPIENT, msg.sender);
 
         L2StandardBridge(payable(Predeploys.L2_STANDARD_BRIDGE)).bridgeMNTTo{ value: value }(
-            RECIPIENT,
-            WITHDRAWAL_MIN_GAS,
-            bytes("")
+            RECIPIENT, WITHDRAWAL_MIN_GAS, bytes("")
         );
     }
 }
