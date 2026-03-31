@@ -4,9 +4,7 @@ import { Test } from "forge-std/Test.sol";
 import { Bytes } from "src/libraries/Bytes.sol";
 
 contract Bytes_slice_Test is Test {
-    /**
-     * @notice Tests that the `slice` function works as expected when starting from index 0.
-     */
+    /// @notice Tests that the `slice` function works as expected when starting from index 0.
     function test_slice_fromZeroIdx_works() public pure {
         bytes memory input = hex"11223344556677889900";
 
@@ -24,10 +22,8 @@ contract Bytes_slice_Test is Test {
         assertEq(Bytes.slice(input, 0, 10), hex"11223344556677889900");
     }
 
-    /**
-     * @notice Tests that the `slice` function works as expected when starting from indices [1, 9]
-     *         with lengths [1, 9], in reverse order.
-     */
+    /// @notice Tests that the `slice` function works as expected when starting from indices [1, 9]
+    ///         with lengths [1, 9], in reverse order.
     function test_slice_fromNonZeroIdx_works() public pure {
         bytes memory input = hex"11223344556677889900";
 
@@ -44,11 +40,9 @@ contract Bytes_slice_Test is Test {
         assertEq(Bytes.slice(input, 1, 9), hex"223344556677889900");
     }
 
-    /**
-     * @notice Tests that the `slice` function works as expected when slicing between multiple words
-     *         in memory. In this case, we test that a 2 byte slice between the 32nd byte of the
-     *         first word and the 1st byte of the second word is correct.
-     */
+    /// @notice Tests that the `slice` function works as expected when slicing between multiple words
+    ///         in memory. In this case, we test that a 2 byte slice between the 32nd byte of the
+    ///         first word and the 1st byte of the second word is correct.
     function test_slice_acrossWords_works() public pure {
         bytes memory input =
             hex"00000000000000000000000000000000000000000000000000000000000000112200000000000000000000000000000000000000000000000000000000000000";
@@ -56,11 +50,9 @@ contract Bytes_slice_Test is Test {
         assertEq(Bytes.slice(input, 31, 2), hex"1122");
     }
 
-    /**
-     * @notice Tests that the `slice` function works as expected when slicing between multiple
-     *         words in memory. In this case, we test that a 34 byte slice between 3 separate words
-     *         returns the correct result.
-     */
+    /// @notice Tests that the `slice` function works as expected when slicing between multiple
+    ///         words in memory. In this case, we test that a 34 byte slice between 3 separate words
+    ///         returns the correct result.
     function test_slice_acrossMultipleWords_works() public pure {
         bytes memory input =
             hex"000000000000000000000000000000000000000000000000000000000000001122FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1100000000000000000000000000000000000000000000000000000000000000";
@@ -69,10 +61,8 @@ contract Bytes_slice_Test is Test {
         assertEq(Bytes.slice(input, 31, 34), expected);
     }
 
-    /**
-     * @notice Tests that, when given an input bytes array of length `n`, the `slice` function will
-     *         always revert if `_start + _length > n`.
-     */
+    /// @notice Tests that, when given an input bytes array of length `n`, the `slice` function will
+    ///         always revert if `_start + _length > n`.
     /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_slice_outOfBounds_reverts(bytes memory _input, uint256 _start, uint256 _length) public {
         // We want a valid start index and a length that will not overflow.
@@ -84,10 +74,8 @@ contract Bytes_slice_Test is Test {
         Bytes.slice(_input, _start, _length);
     }
 
-    /**
-     * @notice Tests that, when given a length `n` that is greater than `type(uint256).max - 31`,
-     *         the `slice` function reverts.
-     */
+    /// @notice Tests that, when given a length `n` that is greater than `type(uint256).max - 31`,
+    ///         the `slice` function reverts.
     /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_slice_lengthOverflows_reverts(bytes memory _input, uint256 _start, uint256 _length) public {
         // Ensure that the `_length` will overflow if a number >= 31 is added to it.
@@ -97,10 +85,8 @@ contract Bytes_slice_Test is Test {
         Bytes.slice(_input, _start, _length);
     }
 
-    /**
-     * @notice Tests that, when given a start index `n` that is greater than
-     *         `type(uint256).max - n`, the `slice` function reverts.
-     */
+    /// @notice Tests that, when given a start index `n` that is greater than
+    ///         `type(uint256).max - n`, the `slice` function reverts.
     /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_slice_rangeOverflows_reverts(bytes memory _input, uint256 _start, uint256 _length) public {
         // Ensure that `_length` is a realistic length of a slice. This is to make sure
@@ -114,10 +100,8 @@ contract Bytes_slice_Test is Test {
         Bytes.slice(_input, _start, _length);
     }
 
-    /**
-     * @notice Tests that the `slice` function correctly updates the free memory pointer depending
-     *         on the length of the slice.
-     */
+    /// @notice Tests that the `slice` function correctly updates the free memory pointer depending
+    ///         on the length of the slice.
     function testFuzz_slice_memorySafety_succeeds(bytes memory _input, uint256 _start, uint256 _length) public {
         // The start should never be more than the length of the input bytes array - 1
         vm.assume(_start < _input.length);
@@ -169,13 +153,11 @@ contract Bytes_slice_Test is Test {
 }
 
 contract Bytes_toNibbles_Test is Test {
-    /**
-     * @notice Diffs the test Solidity version of `toNibbles` against the Yul version.
-     *
-     * @param _bytes The `bytes` array to convert to nibbles.
-     *
-     * @return Yul version of `toNibbles` applied to `_bytes`.
-     */
+    /// @notice Diffs the test Solidity version of `toNibbles` against the Yul version.
+    ///
+    /// @param _bytes The `bytes` array to convert to nibbles.
+    ///
+    /// @return Yul version of `toNibbles` applied to `_bytes`.
     function _toNibblesYul(bytes memory _bytes) internal pure returns (bytes memory) {
         // Allocate memory for the `nibbles` array.
         bytes memory nibbles = new bytes(_bytes.length << 1);
@@ -208,10 +190,8 @@ contract Bytes_toNibbles_Test is Test {
         return nibbles;
     }
 
-    /**
-     * @notice Tests that, given an input of 5 bytes, the `toNibbles` function returns an array of
-     *         10 nibbles corresponding to the input data.
-     */
+    /// @notice Tests that, given an input of 5 bytes, the `toNibbles` function returns an array of
+    ///         10 nibbles corresponding to the input data.
     function test_toNibbles_expectedResult5Bytes_works() public pure {
         bytes memory input = hex"1234567890";
         bytes memory expected = hex"01020304050607080900";
@@ -222,11 +202,9 @@ contract Bytes_toNibbles_Test is Test {
         assertEq(actual, expected);
     }
 
-    /**
-     * @notice Tests that, given an input of 128 bytes, the `toNibbles` function returns an array
-     *         of 256 nibbles corresponding to the input data. This test exists to ensure that,
-     *         given a large input, the `toNibbles` function works as expected.
-     */
+    /// @notice Tests that, given an input of 128 bytes, the `toNibbles` function returns an array
+    ///         of 256 nibbles corresponding to the input data. This test exists to ensure that,
+    ///         given a large input, the `toNibbles` function works as expected.
     function test_toNibbles_expectedResult128Bytes_works() public pure {
         bytes memory input =
             hex"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f";
@@ -239,10 +217,8 @@ contract Bytes_toNibbles_Test is Test {
         assertEq(actual, expected);
     }
 
-    /**
-     * @notice Tests that, given an input of 0 bytes, the `toNibbles` function returns a zero
-     *         length array.
-     */
+    /// @notice Tests that, given an input of 0 bytes, the `toNibbles` function returns a zero
+    ///         length array.
     function test_toNibbles_zeroLengthInput_works() public pure {
         bytes memory input = hex"";
         bytes memory expected = hex"";
@@ -254,24 +230,20 @@ contract Bytes_toNibbles_Test is Test {
         assertEq(actual, expected);
     }
 
-    /**
-     * @notice Test that the `toNibbles` function in the `Bytes` library is equivalent to the Yul
-     *         implementation.
-     */
+    /// @notice Test that the `toNibbles` function in the `Bytes` library is equivalent to the Yul
+    ///         implementation.
     function testDiff_toNibbles_succeeds(bytes memory _input) public pure {
         assertEq(Bytes.toNibbles(_input), _toNibblesYul(_input));
     }
 }
 
 contract Bytes_equal_Test is Test {
-    /**
-     * @notice Manually checks equality of two dynamic `bytes` arrays in memory.
-     *
-     * @param _a The first `bytes` array to compare.
-     * @param _b The second `bytes` array to compare.
-     *
-     * @return True if the two `bytes` arrays are equal in memory.
-     */
+    /// @notice Manually checks equality of two dynamic `bytes` arrays in memory.
+    ///
+    /// @param _a The first `bytes` array to compare.
+    /// @param _b The second `bytes` array to compare.
+    ///
+    /// @return True if the two `bytes` arrays are equal in memory.
     function manualEq(bytes memory _a, bytes memory _b) internal pure returns (bool) {
         bool _eq;
         assembly {
@@ -287,19 +259,15 @@ contract Bytes_equal_Test is Test {
         return _eq;
     }
 
-    /**
-     * @notice Tests that the `equal` function in the `Bytes` library returns `false` if given two
-     *         non-equal byte arrays.
-     */
+    /// @notice Tests that the `equal` function in the `Bytes` library returns `false` if given two
+    ///         non-equal byte arrays.
     function testFuzz_equal_notEqual_works(bytes memory _a, bytes memory _b) public pure {
         vm.assume(!manualEq(_a, _b));
         assertFalse(Bytes.equal(_a, _b));
     }
 
-    /**
-     * @notice Test whether or not the `equal` function in the `Bytes` library is equivalent to
-     *         manually checking equality of the two dynamic `bytes` arrays in memory.
-     */
+    /// @notice Test whether or not the `equal` function in the `Bytes` library is equivalent to
+    ///         manually checking equality of the two dynamic `bytes` arrays in memory.
     function testDiff_equal_works(bytes memory _a, bytes memory _b) public pure {
         assertEq(Bytes.equal(_a, _b), manualEq(_a, _b));
     }

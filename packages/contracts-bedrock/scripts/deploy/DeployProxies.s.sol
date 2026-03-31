@@ -123,6 +123,7 @@ contract DeployProxies is Script {
     }
 
     function deployAddressManager() private returns (address addressManager_) {
-        addressManager_ = DeployUtils.create1({ _name: "AddressManager", _args: new bytes(0) });
+        addressManager_ =
+            DeployUtils.create1({ _name: "AddressManager", _args: DeployUtils.encodeConstructor(new bytes(0)) });
     }
 }

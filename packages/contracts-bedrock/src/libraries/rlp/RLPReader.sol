@@ -1,53 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-/**
- * @custom:attribution https://github.com/hamdiallam/Solidity-RLP
- * @title RLPReader
- * @notice RLPReader is a library for parsing RLP-encoded byte arrays into Solidity types. Adapted
- *         from Solidity-RLP (https://github.com/hamdiallam/Solidity-RLP) by Hamdi Allam with
- *         various tweaks to improve readability.
- */
+/// @custom:attribution https://github.com/hamdiallam/Solidity-RLP
+/// @title RLPReader
+/// @notice RLPReader is a library for parsing RLP-encoded byte arrays into Solidity types. Adapted
+///         from Solidity-RLP (https://github.com/hamdiallam/Solidity-RLP) by Hamdi Allam with
+///         various tweaks to improve readability.
 library RLPReader {
-    /**
-     * Custom pointer type to avoid confusion between pointers and uint256s.
-     */
+    /// Custom pointer type to avoid confusion between pointers and uint256s.
     type MemoryPointer is uint256;
 
-    /**
-     * @notice RLP item types.
-     *
-     * @custom:value DATA_ITEM Represents an RLP data item (NOT a list).
-     * @custom:value LIST_ITEM Represents an RLP list item.
-     */
+    /// @notice RLP item types.
+    ///
+    /// @custom:value DATA_ITEM Represents an RLP data item (NOT a list).
+    /// @custom:value LIST_ITEM Represents an RLP list item.
     enum RLPItemType {
         DATA_ITEM,
         LIST_ITEM
     }
 
-    /**
-     * @notice Struct representing an RLP item.
-     *
-     * @custom:field length Length of the RLP item.
-     * @custom:field ptr    Pointer to the RLP item in memory.
-     */
+    /// @notice Struct representing an RLP item.
+    ///
+    /// @custom:field length Length of the RLP item.
+    /// @custom:field ptr    Pointer to the RLP item in memory.
     struct RLPItem {
         uint256 length;
         MemoryPointer ptr;
     }
 
-    /**
-     * @notice Max list length that this library will accept.
-     */
+    /// @notice Max list length that this library will accept.
     uint256 internal constant MAX_LIST_LENGTH = 32;
 
-    /**
-     * @notice Converts bytes to a reference to memory position and length.
-     *
-     * @param _in Input bytes to convert.
-     *
-     * @return Output memory reference.
-     */
+    /// @notice Converts bytes to a reference to memory position and length.
+    ///
+    /// @param _in Input bytes to convert.
+    ///
+    /// @return Output memory reference.
     function toRLPItem(bytes memory _in) internal pure returns (RLPItem memory) {
         // Empty arrays are not RLP items.
         require(_in.length > 0, "RLPReader: length of an RLP item must be greater than zero to be decodable");
@@ -60,13 +48,11 @@ library RLPReader {
         return RLPItem({ length: _in.length, ptr: ptr });
     }
 
-    /**
-     * @notice Reads an RLP list value into a list of RLP items.
-     *
-     * @param _in RLP list value.
-     *
-     * @return Decoded RLP list items.
-     */
+    /// @notice Reads an RLP list value into a list of RLP items.
+    ///
+    /// @param _in RLP list value.
+    ///
+    /// @return Decoded RLP list items.
     function readList(RLPItem memory _in) internal pure returns (RLPItem[] memory) {
         (uint256 listOffset, uint256 listLength, RLPItemType itemType) = _decodeLength(_in);
 
@@ -106,24 +92,20 @@ library RLPReader {
         return out;
     }
 
-    /**
-     * @notice Reads an RLP list value into a list of RLP items.
-     *
-     * @param _in RLP list value.
-     *
-     * @return Decoded RLP list items.
-     */
+    /// @notice Reads an RLP list value into a list of RLP items.
+    ///
+    /// @param _in RLP list value.
+    ///
+    /// @return Decoded RLP list items.
     function readList(bytes memory _in) internal pure returns (RLPItem[] memory) {
         return readList(toRLPItem(_in));
     }
 
-    /**
-     * @notice Reads an RLP bytes value into bytes.
-     *
-     * @param _in RLP bytes value.
-     *
-     * @return Decoded bytes.
-     */
+    /// @notice Reads an RLP bytes value into bytes.
+    ///
+    /// @param _in RLP bytes value.
+    ///
+    /// @return Decoded bytes.
     function readBytes(RLPItem memory _in) internal pure returns (bytes memory) {
         (uint256 itemOffset, uint256 itemLength, RLPItemType itemType) = _decodeLength(_in);
 
@@ -134,37 +116,31 @@ library RLPReader {
         return _copy(_in.ptr, itemOffset, itemLength);
     }
 
-    /**
-     * @notice Reads an RLP bytes value into bytes.
-     *
-     * @param _in RLP bytes value.
-     *
-     * @return Decoded bytes.
-     */
+    /// @notice Reads an RLP bytes value into bytes.
+    ///
+    /// @param _in RLP bytes value.
+    ///
+    /// @return Decoded bytes.
     function readBytes(bytes memory _in) internal pure returns (bytes memory) {
         return readBytes(toRLPItem(_in));
     }
 
-    /**
-     * @notice Reads the raw bytes of an RLP item.
-     *
-     * @param _in RLP item to read.
-     *
-     * @return Raw RLP bytes.
-     */
+    /// @notice Reads the raw bytes of an RLP item.
+    ///
+    /// @param _in RLP item to read.
+    ///
+    /// @return Raw RLP bytes.
     function readRawBytes(RLPItem memory _in) internal pure returns (bytes memory) {
         return _copy(_in.ptr, 0, _in.length);
     }
 
-    /**
-     * @notice Decodes the length of an RLP item.
-     *
-     * @param _in RLP item to decode.
-     *
-     * @return Offset of the encoded data.
-     * @return Length of the encoded data.
-     * @return RLP item type (LIST_ITEM or DATA_ITEM).
-     */
+    /// @notice Decodes the length of an RLP item.
+    ///
+    /// @param _in RLP item to decode.
+    ///
+    /// @return Offset of the encoded data.
+    /// @return Length of the encoded data.
+    /// @return RLP item type (LIST_ITEM or DATA_ITEM).
     function _decodeLength(RLPItem memory _in) private pure returns (uint256, uint256, RLPItemType) {
         // Short-circuit if there's nothing to decode, note that we perform this check when
         // the user creates an RLP item via toRLPItem, but it's always possible for them to bypass
@@ -274,15 +250,13 @@ library RLPReader {
         }
     }
 
-    /**
-     * @notice Copies the bytes from a memory location.
-     *
-     * @param _src    Pointer to the location to read from.
-     * @param _offset Offset to start reading from.
-     * @param _length Number of bytes to read.
-     *
-     * @return Copied bytes.
-     */
+    /// @notice Copies the bytes from a memory location.
+    ///
+    /// @param _src    Pointer to the location to read from.
+    /// @param _offset Offset to start reading from.
+    /// @param _length Number of bytes to read.
+    ///
+    /// @return Copied bytes.
     function _copy(MemoryPointer _src, uint256 _offset, uint256 _length) private pure returns (bytes memory) {
         bytes memory out = new bytes(_length);
         if (_length == 0) {

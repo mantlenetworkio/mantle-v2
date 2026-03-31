@@ -13,19 +13,19 @@ import { ResourceMetering } from "src/L1/ResourceMetering.sol";
 ///      L2OutputOracle and OptimismPortal remain unchanged as their versions are the same
 contract UpgradeL1Contracts is Script {
     /// @notice Deploys new SystemConfig implementation and upgrades proxy
-    /// @param proxyAdmin Address of the ProxyAdmin contract
-    /// @param systemConfigProxy Address of the SystemConfig proxy
-    function run(address proxyAdmin, address systemConfigProxy) public {
+    /// @param _proxyAdmin Address of the ProxyAdmin contract
+    /// @param _systemConfigProxy Address of the SystemConfig proxy
+    function run(address _proxyAdmin, address _systemConfigProxy) public {
         // Deploy implementation and upgrade in order
         address impl = deployImplementation();
-        upgrade(proxyAdmin, systemConfigProxy, impl);
+        upgrade(_proxyAdmin, _systemConfigProxy, impl);
     }
 
     /// @notice Deploys new SystemConfig implementation with minimal values
-    /// @return impl Address of the deployed implementation
+    /// @return impl_ Address of the deployed implementation
     /// @dev Implementation storage is never used by proxy (delegatecall uses proxy's storage).
     ///      Uses minimal values to satisfy validation and minimize deployment gas cost.
-    function deployImplementation() public returns (address impl) {
+    function deployImplementation() public returns (address impl_) {
         console.log("=== Deploy SystemConfig Implementation ===");
 
         vm.startBroadcast();
@@ -51,29 +51,29 @@ contract UpgradeL1Contracts is Script {
             })
         });
 
-        impl = address(newImpl);
-        console.log("New SystemConfig Implementation:", impl);
+        impl_ = address(newImpl);
+        console.log("New SystemConfig Implementation:", impl_);
 
         vm.stopBroadcast();
     }
 
     /// @notice Upgrades SystemConfig proxy to new implementation
-    /// @param proxyAdmin Address of the ProxyAdmin contract
-    /// @param systemConfigProxy Address of the SystemConfig proxy
-    /// @param systemConfigImpl Address of the new SystemConfig implementation
-    function upgrade(address proxyAdmin, address systemConfigProxy, address systemConfigImpl) public {
-        require(proxyAdmin != address(0), "UpgradeL1Contracts: Invalid ProxyAdmin address");
-        require(systemConfigProxy != address(0), "UpgradeL1Contracts: Invalid SystemConfig proxy");
-        require(systemConfigImpl != address(0), "UpgradeL1Contracts: Invalid SystemConfig impl");
+    /// @param _proxyAdmin Address of the ProxyAdmin contract
+    /// @param _systemConfigProxy Address of the SystemConfig proxy
+    /// @param _systemConfigImpl Address of the new SystemConfig implementation
+    function upgrade(address _proxyAdmin, address _systemConfigProxy, address _systemConfigImpl) public {
+        require(_proxyAdmin != address(0), "UpgradeL1Contracts: Invalid ProxyAdmin address");
+        require(_systemConfigProxy != address(0), "UpgradeL1Contracts: Invalid SystemConfig proxy");
+        require(_systemConfigImpl != address(0), "UpgradeL1Contracts: Invalid SystemConfig impl");
 
         console.log("=== Upgrade SystemConfig Proxy ===");
-        console.log("ProxyAdmin:", proxyAdmin);
-        console.log("SystemConfig Proxy:", systemConfigProxy);
-        console.log("SystemConfig New Impl:", systemConfigImpl);
+        console.log("ProxyAdmin:", _proxyAdmin);
+        console.log("SystemConfig Proxy:", _systemConfigProxy);
+        console.log("SystemConfig New Impl:", _systemConfigImpl);
         console.log("");
 
         // Query old implementation before upgrade
-        address oldImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
+        address oldImpl = _getProxyImplementation(_proxyAdmin, _systemConfigProxy);
         console.log("SystemConfig Old Impl:", oldImpl);
         console.log("");
 
@@ -81,7 +81,7 @@ contract UpgradeL1Contracts is Script {
 
         // Upgrade SystemConfig (1.3.0 -> 1.4.0)
         console.log("Upgrading SystemConfig...");
-        IProxyAdmin(proxyAdmin).upgrade(payable(systemConfigProxy), systemConfigImpl);
+        IProxyAdmin(_proxyAdmin).upgrade(payable(_systemConfigProxy), _systemConfigImpl);
         console.log("SystemConfig upgraded successfully!");
 
         vm.stopBroadcast();
@@ -92,23 +92,23 @@ contract UpgradeL1Contracts is Script {
         console.log("");
 
         // Verify upgrade
-        _verifyUpgrade(proxyAdmin, systemConfigProxy, systemConfigImpl);
+        _verifyUpgrade(_proxyAdmin, _systemConfigProxy, _systemConfigImpl);
     }
 
     /// @notice Verifies the upgrade was successful
-    /// @param proxyAdmin Address of the ProxyAdmin contract
-    /// @param systemConfigProxy Address of the SystemConfig proxy
-    /// @param expectedImpl Expected implementation address
-    function _verifyUpgrade(address proxyAdmin, address systemConfigProxy, address expectedImpl) internal view {
-        address actualImpl = _getProxyImplementation(proxyAdmin, systemConfigProxy);
-        string memory version = SystemConfig(systemConfigProxy).version();
+    /// @param _proxyAdmin Address of the ProxyAdmin contract
+    /// @param _systemConfigProxy Address of the SystemConfig proxy
+    /// @param _expectedImpl Expected implementation address
+    function _verifyUpgrade(address _proxyAdmin, address _systemConfigProxy, address _expectedImpl) internal view {
+        address actualImpl = _getProxyImplementation(_proxyAdmin, _systemConfigProxy);
+        string memory version = SystemConfig(_systemConfigProxy).version();
 
         console.log("Verification:");
         console.log("  New Implementation:", actualImpl);
-        console.log("  Expected:", expectedImpl);
+        console.log("  Expected:", _expectedImpl);
         console.log("  Version:", version);
 
-        if (actualImpl == expectedImpl) {
+        if (actualImpl == _expectedImpl) {
             console.log("  Status: SUCCESS");
         } else {
             console.log("  Status: FAILED");
@@ -118,20 +118,20 @@ contract UpgradeL1Contracts is Script {
 
     /// @notice Internal helper to get proxy implementation address via ProxyAdmin
     /// @param _proxyAdmin Address of the ProxyAdmin contract
-    /// @param proxy Address of the proxy
-    /// @return impl Address of the current implementation
-    function _getProxyImplementation(address _proxyAdmin, address proxy) internal view returns (address impl) {
+    /// @param _proxy Address of the proxy
+    /// @return impl_ Address of the current implementation
+    function _getProxyImplementation(address _proxyAdmin, address _proxy) internal view returns (address impl_) {
         // Try to get implementation through ProxyAdmin first (more reliable)
         IProxyAdmin admin = IProxyAdmin(_proxyAdmin);
 
         // ProxyAdmin has getProxyImplementation(address) function
-        try admin.getProxyImplementation(proxy) returns (address implementation) {
-            return implementation;
+        try admin.getProxyImplementation(_proxy) returns (address implementation_) {
+            return implementation_;
         } catch {
             // Fallback: Try ERC1967 implementation slot
             bytes32 slot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
             assembly {
-                impl := sload(slot)
+                impl_ := sload(slot)
             }
         }
     }

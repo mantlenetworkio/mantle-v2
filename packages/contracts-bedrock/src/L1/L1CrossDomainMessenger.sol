@@ -14,30 +14,22 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { L2CrossDomainMessenger } from "../L2/L2CrossDomainMessenger.sol";
 
-/**
- * @custom:proxied
- * @title L1CrossDomainMessenger
- * @notice The L1CrossDomainMessenger is a message passing interface between L1 and L2 responsible
- *         for sending and receiving data on the L1 side. Users are encouraged to use this
- *         interface instead of interacting with lower-level contracts directly.
- */
+/// @custom:proxied
+/// @title L1CrossDomainMessenger
+/// @notice The L1CrossDomainMessenger is a message passing interface between L1 and L2 responsible
+///         for sending and receiving data on the L1 side. Users are encouraged to use this
+///         interface instead of interacting with lower-level contracts directly.
 contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
     using SafeERC20 for IERC20;
-    /**
-     * @notice Address of the OptimismPortal.
-     */
+    /// @notice Address of the OptimismPortal.
 
     OptimismPortal public immutable PORTAL;
 
-    /**
-     * @notice Address of the Mantle Token on L1.
-     */
+    /// @notice Address of the Mantle Token on L1.
     address public immutable L1_MNT_ADDRESS;
-    /**
-     * @custom:semver 1.5.0
-     *
-     * @param _portal Address of the OptimismPortal contract on this network.
-     */
+    /// @custom:semver 1.5.0
+    ///
+    /// @param _portal Address of the OptimismPortal contract on this network.
 
     constructor(
         OptimismPortal _portal,
@@ -51,23 +43,17 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         initialize();
     }
 
-    /**
-     * @notice Initializer.
-     */
+    /// @notice Initializer.
     function initialize() public initializer {
         __CrossDomainMessenger_init();
     }
 
-    /**
-     * @inheritdoc CrossDomainMessenger
-     */
+    /// @inheritdoc CrossDomainMessenger
     function _sendMessage(uint256 _mntAmount, address _to, uint64 _gasLimit, bytes memory _data) internal override {
         PORTAL.depositTransaction{ value: msg.value }(msg.value, _mntAmount, _to, _mntAmount, _gasLimit, false, _data);
     }
 
-    /**
-     * @inheritdoc CrossDomainMessenger
-     */
+    /// @inheritdoc CrossDomainMessenger
     function sendMessage(
         uint256 _mntAmount,
         address _target,
@@ -115,9 +101,7 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
     }
 
-    /**
-     * @inheritdoc CrossDomainMessenger
-     */
+    /// @inheritdoc CrossDomainMessenger
     function sendMessage(address _target, bytes calldata _message, uint32 _minGasLimit) external payable override {
         require(_target != tx.origin || msg.value == 0, "once target is an EOA, msg.value must be zero");
         require(_target != Predeploys.BVM_ETH, "target must not be BVM_ETH on L2");
@@ -150,19 +134,17 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
     }
 
-    /**
-     * @notice Relays a message that was sent by the other CrossDomainMessenger contract. Can only
-     *         be executed via cross-chain call from the other messenger OR if the message was
-     *         already received once and is currently being replayed.
-     *
-     * @param _nonce       Nonce of the message being relayed.
-     * @param _sender      Address of the user who sent the message.
-     * @param _target      Address that the message is targeted at.
-     * @param _mntValue    MNT value to send with the message.
-     * @param _ethValue    ETH value to send with the message.
-     * @param _minGasLimit Minimum amount of gas that the message can be executed with.
-     * @param _message     Message to send to the target.
-     */
+    /// @notice Relays a message that was sent by the other CrossDomainMessenger contract. Can only
+    ///         be executed via cross-chain call from the other messenger OR if the message was
+    ///         already received once and is currently being replayed.
+    ///
+    /// @param _nonce       Nonce of the message being relayed.
+    /// @param _sender      Address of the user who sent the message.
+    /// @param _target      Address that the message is targeted at.
+    /// @param _mntValue    MNT value to send with the message.
+    /// @param _ethValue    ETH value to send with the message.
+    /// @param _minGasLimit Minimum amount of gas that the message can be executed with.
+    /// @param _message     Message to send to the target.
     function relayMessage(
         uint256 _nonce,
         address _sender,
@@ -265,16 +247,12 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, Semver {
         }
     }
 
-    /**
-     * @inheritdoc CrossDomainMessenger
-     */
+    /// @inheritdoc CrossDomainMessenger
     function _isOtherMessenger() internal view override returns (bool) {
         return msg.sender == address(PORTAL) && PORTAL.l2Sender() == OTHER_MESSENGER;
     }
 
-    /**
-     * @inheritdoc CrossDomainMessenger
-     */
+    /// @inheritdoc CrossDomainMessenger
     function _isUnsafeTarget(address _target) internal view override returns (bool) {
         return _target == address(this) || _target == address(PORTAL);
     }

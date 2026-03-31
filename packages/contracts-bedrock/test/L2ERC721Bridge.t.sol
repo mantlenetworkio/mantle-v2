@@ -125,7 +125,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
     function test_bridgeERC721_localTokenZeroAddress_reverts() external {
         // Bridge the token.
         vm.prank(alice);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         bridge.bridgeERC721(address(0), address(remoteToken), tokenId, 1234, hex"5678");
 
         // Token is not locked in the bridge.
@@ -186,7 +186,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
     function test_bridgeERC721To_localTokenZeroAddress_reverts() external {
         // Bridge the token.
         vm.prank(alice);
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         bridge.bridgeERC721To(address(0), address(remoteToken), bob, tokenId, 1234, hex"5678");
 
         // Token is not locked in the bridge.
@@ -225,7 +225,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         // Finalize a withdrawal.
         vm.mockCall(
             address(L2Messenger),
-            abi.encodeWithSelector(L2Messenger.xDomainMessageSender.selector),
+            abi.encodeCall(IL2CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(otherBridge)
         );
         vm.prank(address(L2Messenger));
@@ -247,7 +247,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         // to be compliant with the `IOptimismMintableERC721` interface.
         vm.mockCall(
             address(L2Messenger),
-            abi.encodeWithSelector(L2Messenger.xDomainMessageSender.selector),
+            abi.encodeCall(IL2CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(otherBridge)
         );
         vm.prank(address(L2Messenger));
@@ -267,7 +267,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
     function test_finalizeBridgeERC721_notFromRemoteMessenger_reverts() external {
         // Finalize a withdrawal.
         vm.mockCall(
-            address(L2Messenger), abi.encodeWithSelector(L2Messenger.xDomainMessageSender.selector), abi.encode(alice)
+            address(L2Messenger), abi.encodeCall(IL2CrossDomainMessenger.xDomainMessageSender, ()), abi.encode(alice)
         );
         vm.prank(address(L2Messenger));
         vm.expectRevert("ERC721Bridge: function can only be called from the other bridge");
@@ -278,7 +278,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         // Finalize a withdrawal.
         vm.mockCall(
             address(L2Messenger),
-            abi.encodeWithSelector(L2Messenger.xDomainMessageSender.selector),
+            abi.encodeCall(IL2CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(otherBridge)
         );
         vm.prank(address(L2Messenger));
@@ -290,7 +290,7 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
         // Finalize a withdrawal.
         vm.mockCall(
             address(L2Messenger),
-            abi.encodeWithSelector(L2Messenger.xDomainMessageSender.selector),
+            abi.encodeCall(IL2CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(otherBridge)
         );
         vm.prank(address(L2Messenger));
@@ -299,12 +299,10 @@ contract L2ERC721Bridge_Test is Messenger_Initializer {
     }
 }
 
-/**
- * @dev A non-compliant ERC721 token that does not implement the full ERC721 interface.
- *
- * This is used to test that the bridge will revert if the token does not claim to support
- * the ERC721 interface.
- */
+/// @dev A non-compliant ERC721 token that does not implement the full ERC721 interface.
+///
+/// This is used to test that the bridge will revert if the token does not claim to support
+/// the ERC721 interface.
 contract NonCompliantERC721 {
     address internal immutable owner;
 
@@ -338,4 +336,6 @@ interface IL2CrossDomainMessenger {
     )
         external
         payable;
+
+    function xDomainMessageSender() external view returns (address);
 }

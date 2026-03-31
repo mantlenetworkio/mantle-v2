@@ -41,11 +41,9 @@ contract MeterUser is ResourceMetering {
     }
 }
 
-/**
- * @title ResourceConfig
- * @notice The tests are based on the default config values. It is expected that
- *         the config values used in these tests are ran in production.
- */
+/// @title ResourceConfig
+/// @notice The tests are based on the default config values. It is expected that
+///         the config values used in these tests are ran in production.
 contract ResourceMetering_Test is Test {
     MeterUser internal meter;
     uint64 initialBlockNum;
@@ -132,15 +130,13 @@ contract ResourceMetering_Test is Test {
         assertEq(postBaseFee, 2125000000);
     }
 
-    /**
-     * @notice This tests that the metered modifier reverts if
-     *         the ResourceConfig baseFeeMaxChangeDenominator
-     *         is set to 1.
-     *         Since the metered modifier internally calls
-     *         solmate's powWad function, it will revert
-     *         with the error string "UNDEFINED" since the
-     *         first parameter will be computed as 0.
-     */
+    /// @notice This tests that the metered modifier reverts if
+    ///         the ResourceConfig baseFeeMaxChangeDenominator
+    ///         is set to 1.
+    ///         Since the metered modifier internally calls
+    ///         solmate's powWad function, it will revert
+    ///         with the error string "UNDEFINED" since the
+    ///         first parameter will be computed as 0.
     function test_meter_denominatorEq1_reverts() external {
         ResourceMetering.ResourceConfig memory rcfg = meter.resourceConfig();
         uint64 target = uint64(rcfg.maxResourceLimit) / uint64(rcfg.elasticityMultiplier);
@@ -184,11 +180,9 @@ contract ResourceMetering_Test is Test {
     }
 }
 
-/**
- * @title CustomMeterUser
- * @notice A simple wrapper around `ResourceMetering` that allows the initial
- *         params to be set in the constructor.
- */
+/// @title CustomMeterUser
+/// @notice A simple wrapper around `ResourceMetering` that allows the initial
+///         params to be set in the constructor.
 contract CustomMeterUser is ResourceMetering {
     uint256 public startGas;
     uint256 public endGas;
@@ -212,15 +206,13 @@ contract CustomMeterUser is ResourceMetering {
     }
 }
 
-/**
- * @title ArtifactResourceMetering_Test
- * @notice A table test that sets the state of the ResourceParams and then requests
- *         various amounts of gas. This test ensures that a wide range of values
- *         can safely be used with the `ResourceMetering` contract.
- *         It also writes a CSV file to disk that includes useful information
- *         about how much gas is used and how expensive it is in USD terms to
- *         purchase the deposit gas.
- */
+/// @title ArtifactResourceMetering_Test
+/// @notice A table test that sets the state of the ResourceParams and then requests
+///         various amounts of gas. This test ensures that a wide range of values
+///         can safely be used with the `ResourceMetering` contract.
+///         It also writes a CSV file to disk that includes useful information
+///         about how much gas is used and how expensive it is in USD terms to
+///         purchase the deposit gas.
 contract ArtifactResourceMetering_Test is Test {
     uint128 internal minimumBaseFee;
     uint128 internal maximumBaseFee;
@@ -237,10 +229,8 @@ contract ArtifactResourceMetering_Test is Test {
     // keccak256(hex"")
     bytes32 internal emptyReturnData = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
-    /**
-     * @notice Sets up the tests by getting constants from the ResourceMetering
-     *         contract.
-     */
+    /// @notice Sets up the tests by getting constants from the ResourceMetering
+    ///         contract.
     function setUp() public {
         vm.roll(1_000_000);
 
@@ -255,11 +245,9 @@ contract ArtifactResourceMetering_Test is Test {
         try vm.removeFile(outfile) { } catch { }
     }
 
-    /**
-     * @notice Generate a CSV file. The call to `meter` should be called with at
-     *         most the L1 block gas limit. Without specifying the amount of
-     *         gas, it can take very long to execute.
-     */
+    /// @notice Generate a CSV file. The call to `meter` should be called with at
+    ///         most the L1 block gas limit. Without specifying the amount of
+    ///         gas, it can take very long to execute.
     function test_meter_generateArtifact_succeeds() external {
         vm.writeLine(
             outfile,
@@ -331,8 +319,8 @@ contract ArtifactResourceMetering_Test is Test {
                                 // Call the metering code and catch the various
                                 // types of errors.
                                 uint256 gasConsumed = 0;
-                                try meter.use{ gas: 30_000_000 }(requestedGas) returns (uint256 _gasConsumed) {
-                                    gasConsumed = _gasConsumed;
+                                try meter.use{ gas: 30_000_000 }(requestedGas) returns (uint256 gasConsumed_) {
+                                    gasConsumed = gasConsumed_;
                                 } catch (bytes memory err) {
                                     bytes32 hash = keccak256(err);
                                     if (hash == cannotBuyMoreGas) {

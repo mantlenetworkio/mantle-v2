@@ -225,7 +225,7 @@ contract Portal_Initializer is BVMETH_Initializer {
 
         Proxy proxy = new Proxy(multisig);
         vm.prank(multisig);
-        proxy.upgradeToAndCall(address(opImpl), abi.encodeWithSelector(OptimismPortal.initialize.selector, false));
+        proxy.upgradeToAndCall(address(opImpl), abi.encodeCall(OptimismPortal.initialize, (false)));
         op = OptimismPortal(payable(address(proxy)));
         vm.label(address(op), "OptimismPortal");
     }
@@ -384,7 +384,7 @@ contract Bridge_Initializer is Messenger_Initializer {
         // Deploy the L1 bridge and initialize it with the address of the
         // L1CrossDomainMessenger
         L1ChugSplashProxy proxy = new L1ChugSplashProxy(multisig);
-        vm.mockCall(multisig, abi.encodeWithSelector(IL1ChugSplashDeployer.isUpgrading.selector), abi.encode(true));
+        vm.mockCall(multisig, abi.encodeCall(IL1ChugSplashDeployer.isUpgrading, ()), abi.encode(true));
         vm.startPrank(multisig);
         proxy.setCode(address(new L1StandardBridge(payable(address(L1Messenger)), address(l1MNT))).code);
         vm.clearMockedCalls();
@@ -740,9 +740,7 @@ contract ConfigurableCaller {
 
     event WhatHappened(bool success, bytes returndata);
 
-    /**
-     * @notice Call the configured target with the configured payload OR revert.
-     */
+    /// @notice Call the configured target with the configured payload OR revert.
     function call() external {
         if (doRevert) {
             revert("ConfigurableCaller: revert");
@@ -757,31 +755,23 @@ contract ConfigurableCaller {
         }
     }
 
-    /**
-     * @notice Set whether or not to have `call` revert.
-     */
+    /// @notice Set whether or not to have `call` revert.
     function setDoRevert(bool _doRevert) external {
         doRevert = _doRevert;
     }
 
-    /**
-     * @notice Set the target for the call made in `call`.
-     */
+    /// @notice Set the target for the call made in `call`.
     function setTarget(address _target) external {
         target = _target;
     }
 
-    /**
-     * @notice Set the payload for the call made in `call`.
-     */
+    /// @notice Set the payload for the call made in `call`.
     function setPayload(bytes calldata _payload) external {
         payload = _payload;
     }
 
-    /**
-     * @notice Fallback function that reverts if `doRevert` is true.
-     *         Otherwise, it does nothing.
-     */
+    /// @notice Fallback function that reverts if `doRevert` is true.
+    ///         Otherwise, it does nothing.
     fallback() external {
         if (doRevert) {
             revert("ConfigurableCaller: revert");

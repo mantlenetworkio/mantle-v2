@@ -6,10 +6,16 @@ import { GasPriceOracle } from "src/L2/GasPriceOracle.sol";
 import { L1Block } from "src/L2/L1Block.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 
+/// @notice Legacy GasPriceOracle interface for functions removed in bedrock.
+interface ILegacyGasPriceOracle {
+    function setGasPrice(uint256 _gasPrice) external;
+    function setL1BaseFee(uint256 _baseFee) external;
+}
+
 contract GasPriceOracle_Test is CommonTest {
-    event OverheadUpdated(uint256);
-    event ScalarUpdated(uint256);
-    event DecimalsUpdated(uint256);
+    event OverheadUpdated(uint256 overhead);
+    event ScalarUpdated(uint256 scalar);
+    event DecimalsUpdated(uint256 decimals);
 
     GasPriceOracle gasOracle;
     L1Block l1Block;
@@ -91,7 +97,7 @@ contract GasPriceOracle_Test is CommonTest {
     // Removed in bedrock
     function test_setGasPrice_doesNotExist_reverts() external {
         (bool success, bytes memory returndata) =
-            address(gasOracle).call(abi.encodeWithSignature("setGasPrice(uint256)", 1));
+            address(gasOracle).call(abi.encodeCall(ILegacyGasPriceOracle.setGasPrice, (1)));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
@@ -100,7 +106,7 @@ contract GasPriceOracle_Test is CommonTest {
     // Removed in bedrock
     function test_setL1BaseFee_doesNotExist_reverts() external {
         (bool success, bytes memory returndata) =
-            address(gasOracle).call(abi.encodeWithSignature("setL1BaseFee(uint256)", 1));
+            address(gasOracle).call(abi.encodeCall(ILegacyGasPriceOracle.setL1BaseFee, (1)));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
@@ -241,7 +247,7 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(l1Block).call(abi.encodePacked(l1Block.setL1BlockValuesArsia.selector, data));
-        require(success, "L1Block setup failed");
+        require(success, "GasPriceOracle: L1Block setup failed");
 
         // Enable Arsia using depositor account
         vm.prank(depositor);

@@ -59,15 +59,15 @@ library ChainAssertions {
         IProxyAdmin admin = IProxyAdmin(_contracts.ProxyAdmin);
         console.log("Running chain assertions on the ProxyAdmin %s", address(admin));
 
-        require(address(admin) != address(0), "CHECK-PROXY-ADMIN-10");
-        require(address(admin.addressManager()) == _contracts.AddressManager, "CHECK-PROXY-ADMIN-20");
+        require(address(admin) != address(0), "CHECK-PROXYADMIN-10");
+        require(address(admin.addressManager()) == _contracts.AddressManager, "CHECK-PROXYADMIN-20");
         require(
             keccak256(abi.encodePacked(admin.implementationName(_contracts.L1CrossDomainMessenger)))
                 == keccak256(abi.encodePacked("BVM_L1CrossDomainMessenger")),
-            "CHECK-PROXY-ADMIN-30"
+            "CHECK-PROXYADMIN-30"
         );
-        require(uint8(admin.proxyType(_contracts.L1CrossDomainMessenger)) == 2, "CHECK-PROXY-ADMIN-40");
-        require(uint8(admin.proxyType(_contracts.L1StandardBridge)) == 1, "CHECK-PROXY-ADMIN-50");
+        require(uint8(admin.proxyType(_contracts.L1CrossDomainMessenger)) == 2, "CHECK-PROXYADMIN-40");
+        require(uint8(admin.proxyType(_contracts.L1StandardBridge)) == 1, "CHECK-PROXYADMIN-50");
     }
 
     /// @notice Asserts that the AddressManager is setup correctly
@@ -75,7 +75,7 @@ library ChainAssertions {
         IAddressManager manager = IAddressManager(_contracts.AddressManager);
         console.log("Running chain assertions on the AddressManager %s", address(manager));
 
-        require(address(manager) != address(0), "CHECK-ADDR-MGR-10");
+        require(address(manager) != address(0), "CHECK-ADDRMGR-10");
     }
 
     /// @notice Asserts that the SystemConfig is setup correctly
