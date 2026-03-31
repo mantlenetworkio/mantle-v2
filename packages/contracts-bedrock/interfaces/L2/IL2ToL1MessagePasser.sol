@@ -18,7 +18,12 @@ interface IL2ToL1MessagePasser {
 
     function MESSAGE_VERSION() external view returns (uint16);
     function burn() external;
-    function initiateWithdrawal(uint256 _ethValue, address _target, uint256 _gasLimit, bytes memory _data)
+    function initiateWithdrawal(
+        uint256 _ethValue,
+        address _target,
+        uint256 _gasLimit,
+        bytes memory _data
+    )
         external
         payable;
     function messageNonce() external view returns (uint256);

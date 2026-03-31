@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import { Script } from "forge-std/Script.sol";
-import { console2 as console } from "forge-std/console2.sol";
-import { IProxy } from "interfaces/universal/IProxy.sol";
-import { IProxyAdmin } from "interfaces/universal/IProxyAdmin.sol";
-import { IResolvedDelegateProxy } from "interfaces/legacy/IResolvedDelegateProxy.sol";
-import { IL1ChugSplashProxy } from "interfaces/legacy/IL1ChugSplashProxy.sol";
-import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
-import { IL2OutputOracle } from "interfaces/L1/IL2OutputOracle.sol";
-import { IL1CrossDomainMessenger } from "interfaces/L1/IL1CrossDomainMessenger.sol";
-import { IOptimismPortal } from "interfaces/L1/IOptimismPortal.sol";
-import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
-import { IL1ERC721Bridge } from "interfaces/L1/IL1ERC721Bridge.sol";
-import { ISystemConfig } from "interfaces/L1/ISystemConfig.sol";
-import { IOwnable } from "interfaces/universal/IOwnable.sol";
-import { IAddressManager } from "interfaces/legacy/IAddressManager.sol";
-import { DeployUtils } from "scripts/libraries/DeployUtils.sol";
+import {Script} from "forge-std/Script.sol";
+import {console2 as console} from "forge-std/console2.sol";
+import {IProxy} from "interfaces/universal/IProxy.sol";
+import {IProxyAdmin} from "interfaces/universal/IProxyAdmin.sol";
+import {IResolvedDelegateProxy} from "interfaces/legacy/IResolvedDelegateProxy.sol";
+import {IL1ChugSplashProxy} from "interfaces/legacy/IL1ChugSplashProxy.sol";
+import {IL1StandardBridge} from "interfaces/L1/IL1StandardBridge.sol";
+import {IL2OutputOracle} from "interfaces/L1/IL2OutputOracle.sol";
+import {IL1CrossDomainMessenger} from "interfaces/L1/IL1CrossDomainMessenger.sol";
+import {IOptimismPortal} from "interfaces/L1/IOptimismPortal.sol";
+import {IOptimismMintableERC20Factory} from "interfaces/universal/IOptimismMintableERC20Factory.sol";
+import {IL1ERC721Bridge} from "interfaces/L1/IL1ERC721Bridge.sol";
+import {ISystemConfig} from "interfaces/L1/ISystemConfig.sol";
+import {IOwnable} from "interfaces/universal/IOwnable.sol";
+import {IAddressManager} from "interfaces/legacy/IAddressManager.sol";
+import {DeployUtils} from "scripts/libraries/DeployUtils.sol";
 
 contract DeployProxies is Script {
     struct Output {
@@ -107,10 +107,7 @@ contract DeployProxies is Script {
         });
     }
 
-    function deployResolvedDelegateProxy(
-        IAddressManager _addressManager,
-        string memory _implementationName
-    )
+    function deployResolvedDelegateProxy(IAddressManager _addressManager, string memory _implementationName)
         private
         returns (address proxy_)
     {
@@ -123,7 +120,9 @@ contract DeployProxies is Script {
     }
 
     function deployAddressManager() private returns (address addressManager_) {
-        addressManager_ =
-            DeployUtils.create1({ _name: "AddressManager", _args: DeployUtils.encodeConstructor(new bytes(0)) });
+        addressManager_ = DeployUtils.create1({
+            _name: "AddressManager",
+            _args: DeployUtils.encodeConstructor(abi.encodeCall(IAddressManager.__constructor__, ()))
+        });
     }
 }
