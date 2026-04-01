@@ -138,8 +138,11 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  Extend chain
 	//  Chain head was updated
+	attempts := 3
 	targetNum = startNum + 2
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValid()
+	// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
+	// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
 	// Head advanced, canonical head bumped
@@ -187,8 +190,6 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// In practice, after peers are established, one or two FCU calls
 	// typically observe VALID — though this depends on the EL’s sync progress
 	// and network conditions.
-	attempts := 3
-
 	// Retry a few times until the first EL Sync is complete
 	sys.L2ELB.FinishedELSync(sys.L2EL, targetNum, 0, 0)
 
@@ -205,7 +206,8 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  "Restarting sync cycle" reason="chain gapped, head: 4, newHead: 6"
 	targetNum = startNum + 6
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	// Use more attempts here since this triggers a fresh EL sync cycle (needs time to download+validate)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(10)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
 	// head advanced
@@ -215,7 +217,8 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  "Restarting sync cycle" reason="chain gapped, head: 6, newHead: 8"
 	targetNum = startNum + 8
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	// Use more attempts here since this triggers a fresh EL sync cycle (needs time to download+validate)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(10)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
 	// head advanced
@@ -325,7 +328,10 @@ func TestSafeDoesNotAdvanceWhenUnsafeIsSyncing_NoELP2P(gt *testing.T) {
 
 	// FCU to advance unsafe and safe normally, promoting non canonical chain to canonical
 	logger.Info("ForkchoiceUpdate", "target", targetNum)
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, targetNum, 0, nil).IsValid()
+	attempts := 5
+	// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
+	// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, targetNum, 0, nil).WaitUntilValid(attempts)
 	sys.L2ELB.UnsafeHead().NumEqualTo(targetNum)
 	sys.L2ELB.SafeHead().NumEqualTo(targetNum)
 	logger.Info("Canonical chain advanced for unsafe and safe", "number", targetNum)
@@ -337,7 +343,6 @@ func TestSafeDoesNotAdvanceWhenUnsafeIsSyncing_NoELP2P(gt *testing.T) {
 
 	// FCU safe normally, but target unsafe which cannot be synced because of the gap
 	unsafeTargetNum := safeTargetNum + 5
-	attempts := 5
 	logger.Info("ForkchoiceUpdate", "safeTarget", safeTargetNum, "unsafeTarget", unsafeTargetNum)
 	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, unsafeTargetNum, safeTargetNum, 0, nil).Retry(attempts).ResultAllSyncing()
 	sys.L2ELB.UnsafeHead().NumEqualTo(targetNum)

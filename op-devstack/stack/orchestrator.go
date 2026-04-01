@@ -28,6 +28,13 @@ type ControlPlane interface {
 	OPRBuilderNodeState(id OPRBuilderNodeID, action ControlAction)
 }
 
+// WipeableControlPlane is an optional extension of ControlPlane that supports wiping the data
+// directory of an L2 EL node (resetting it to genesis). Only sysgo with reth nodes implements this;
+// sysext nodes are remote and cannot be wiped.
+type WipeableControlPlane interface {
+	L2ELNodeWipe(id L2ELNodeID)
+}
+
 // Orchestrator is the base interface for all system orchestrators.
 // It imposes some common things across all orchestrators, but may also have optional extensions, that not every type of backend might support.
 type Orchestrator interface {

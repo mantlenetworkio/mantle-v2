@@ -33,8 +33,9 @@ type OpReth struct {
 	authProxy *tcpproxy.Proxy
 	userProxy *tcpproxy.Proxy
 
-	execPath string
-	args     []string
+	execPath    string
+	args        []string
+	dataDirPath string // path to the data directory; used by Wipe()
 	// Each entry is of the form "key=value".
 	env []string
 
@@ -166,9 +167,24 @@ func (n *OpReth) Start() {
 func (n *OpReth) Stop() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	if n.sub == nil {
+		n.p.Logger().Warn("op-reth already stopped; ignoring Stop() call")
+		return
+	}
 	err := n.sub.Stop(true)
 	n.p.Require().NoError(err, "Must stop")
 	n.sub = nil
+}
+
+// Wipe removes and recreates the data directory, effectively resetting the chain state to genesis.
+// Must be called when the node is stopped (after Stop(), before Start()).
+func (n *OpReth) Wipe() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.p.Require().NotEmpty(n.dataDirPath, "dataDirPath not set; cannot wipe")
+	n.p.Require().Nil(n.sub, "node must be stopped before wiping")
+	n.p.Require().NoError(os.RemoveAll(n.dataDirPath), "failed to remove data dir")
+	n.p.Require().NoError(os.MkdirAll(n.dataDirPath, 0o755), "failed to recreate data dir")
 }
 
 func (n *OpReth) UserRPC() string {
@@ -220,7 +236,7 @@ func WithOpReth(id stack.L2ELNodeID, opts ...L2ELOption) stack.Option[*Orchestra
 		// and to global user-cache by default, rather than the datadir.
 		// So we customize this to temp-dir too, to not pollute the user-cache dir.
 		logDirPath := filepath.Join(tempDir, "logs")
-		p.Require().NoError(os.MkdirAll(dataDirPath, 0o755), "must create logs dir")
+		p.Require().NoError(os.MkdirAll(logDirPath, 0o755), "must create logs dir")
 
 		tempP2PPath := filepath.Join(tempDir, "p2pkey.txt")
 
@@ -285,6 +301,7 @@ func WithOpReth(id stack.L2ELNodeID, opts ...L2ELOption) stack.Option[*Orchestra
 			userRPC:            "",
 			execPath:           execPath,
 			args:               args,
+			dataDirPath:        dataDirPath,
 			env:                []string{},
 			p:                  orch.p,
 			l2MetricsRegistrar: orch,

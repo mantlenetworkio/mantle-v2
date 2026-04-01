@@ -23,6 +23,7 @@ func TestUnsafeOnly_VerifierUnsafeGapClosed(gt *testing.T) {
 	sys.L2ELB.DisconnectPeerWith(sys.L2EL)
 	// Wipe EL to genesis
 	sys.L2ELB.Stop()
+	sys.L2ELB.Wipe()
 	sys.L2ELB.Start()
 	// Check EL rewinded to genesis. Unsafe gap introduced
 	sys.L2ELB.UnsafeHead().IsGenesis()

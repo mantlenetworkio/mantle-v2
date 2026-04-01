@@ -58,6 +58,7 @@ func TestCLUnsafeNotRewoundOnInvalidDuringELSync(gt *testing.T) {
 	sys.L2CLB.Stop()
 	// Wipe out L2ELB state to start from genesis
 	sys.L2ELB.Stop()
+	sys.L2ELB.Wipe()
 	sys.L2ELB.Start()
 	sys.L2CLB.Start()
 

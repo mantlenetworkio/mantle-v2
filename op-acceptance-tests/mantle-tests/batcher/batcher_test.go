@@ -57,6 +57,12 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 		sys.TestSequencer.SequenceBlock(t, sys.L1Network.ChainID(), common.Hash{})
 	}
 
+	// Wait for reth's async pipeline to finish processing all manually-sequenced blocks
+	// before calling StartSequencer, so op-node picks up the correct EL head.
+	// On geth (synchronous pipeline) this is an instant no-op; on reth it prevents
+	// a "L1 origin break" where op-node reads a stale EL head and builds on the wrong parent.
+	lastBlockNum := sys.L2EL.BlockRefByHash(parent).Number
+	sys.L2EL.Reached(eth.Unsafe, lastBlockNum, 60)
 	sys.L2CL.StartSequencer()
 
 	l.Info("Current L1 unsafe block", "currentL1Unsafe", sys.L1EL.BlockRefByLabel(eth.Unsafe))

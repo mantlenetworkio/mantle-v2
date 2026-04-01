@@ -19,6 +19,7 @@ func TestVerifierManualSync(gt *testing.T) {
 	logger := t.Logger()
 
 	delta := uint64(7)
+	attempts := 10
 	sys.L2CL.Advanced(types.LocalUnsafe, delta, 30)
 
 	// Disable Derivation
@@ -45,9 +46,10 @@ func TestVerifierManualSync(gt *testing.T) {
 		// Now fetchable by hash
 		require.Equal(blockNum, sys.L2ELB.BlockRefByHash(block.Hash).Number)
 
-		// FCU
+		// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
+		// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up)
 		logger.Info("ForkchoiceUpdate", "target", blockNum)
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, blockNum, 0, 0, nil).IsValid()
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, blockNum, 0, 0, nil).WaitUntilValid(attempts)
 		// Payload valid and canonicalized
 		require.Equal(block.Hash, sys.L2ELB.BlockRefByNumber(blockNum).Hash)
 		require.Equal(blockNum, sys.L2ELB.BlockRefByHash(block.Hash).Number)
