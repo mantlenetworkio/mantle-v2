@@ -263,21 +263,8 @@ jobs:
           fetch-depth: 0
       - name: Run semgrep local rules
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            git config --global --add safe.directory "$GITHUB_WORKSPACE"
-            git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
-            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRTUXB "origin/$GITHUB_BASE_REF...HEAD")"
-
-            if [ -z "$CHANGED_FILES" ]; then
-              echo "No changed files detected for semgrep scan."
-              exit 0
-            fi
-
-            printf '%s\n' "$CHANGED_FILES" > /tmp/semgrep-files.txt
-            xargs -r semgrep scan --timeout=100 --config .semgrep/rules/ --error < /tmp/semgrep-files.txt
-          else
-            semgrep scan --timeout=100 --config .semgrep/rules/ --error .
-          fi
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          semgrep scan --timeout=100 --config .semgrep/rules/ --error .
 
   semgrep-test:
     name: semgrep-test
