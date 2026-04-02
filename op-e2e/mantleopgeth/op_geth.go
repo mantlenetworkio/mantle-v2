@@ -82,7 +82,7 @@ func NewOpGeth(t testing.TB, ctx context.Context, cfg *e2esys.SystemConfig) (*Op
 	var node services.EthInstance
 	gethNode, err := geth.InitL2("l2", l2Genesis, cfg.JWTFilePath)
 	require.NoError(t, err)
-	require.NoError(t, gethNode.Node.Start())
+	require.NoError(t, gethNode.Start()) // use EthInstance.Start() interface
 	node = gethNode
 
 	auth := rpc.WithHTTPAuth(gn.NewJWTAuth(cfg.JWTSecret))
@@ -141,15 +141,13 @@ func (d *OpGeth) AddL2Block(ctx context.Context, txs ...*types.Transaction) (*et
 	}
 
 	envelope, err := d.l2Engine.GetPayload(ctx, eth.PayloadInfo{ID: *res.PayloadID, Timestamp: uint64(attrs.Timestamp)})
-	payload := envelope.ExecutionPayload
-
 	if err != nil {
 		return nil, fmt.Errorf("get payload: %w", err)
 	}
+	payload := envelope.ExecutionPayload
 	if !reflect.DeepEqual(payload.Transactions, attrs.Transactions) {
 		return nil, errors.New("required transactions were not included")
 	}
-	fmt.Printf("payload timestamp %d\n", payload.Timestamp)
 
 	status, err := d.l2Engine.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
 	if err != nil {
@@ -227,7 +225,6 @@ func (d *OpGeth) CreatePayloadAttributes(txs ...*types.Transaction) (*eth.Payloa
 
 	var withdrawals *types.Withdrawals
 	if d.L2ChainConfig.IsCanyon(uint64(timestamp)) || d.L2ChainConfig.IsMantleSkadi(uint64(timestamp)) {
-		println("withdrawals is not nil")
 		withdrawals = &types.Withdrawals{}
 	}
 

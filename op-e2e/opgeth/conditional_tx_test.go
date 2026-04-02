@@ -1,3 +1,11 @@
+//go:build ignore
+// +build ignore
+
+// This file tests the eth_sendRawTransactionConditional API which depends on
+// op-geth-specific extensions (RollupSequencerTxConditionalEnabled,
+// types.TransactionConditional, etc.) not present in the Mantle go-ethereum
+// fork. It is excluded from normal builds until those extensions are available.
+
 package opgeth
 
 import (

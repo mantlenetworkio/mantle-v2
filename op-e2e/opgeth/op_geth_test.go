@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	op_e2e "github.com/ethereum-optimism/optimism/op-e2e"
+	"github.com/ethereum-optimism/optimism/op-e2e/enginetest"
 	"github.com/ethereum-optimism/optimism/op-e2e/system/e2esys"
 	"github.com/ethereum-optimism/optimism/op-node/rollup"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
@@ -197,7 +198,7 @@ func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 		HeadBlockHash: opGeth.L2Head.BlockHash,
 		SafeBlockHash: opGeth.L2Head.BlockHash,
 	}
-	res, err := opGeth.l2Engine.ForkchoiceUpdate(ctx, &fc, attrs)
+	res, err := opGeth.Engine().ForkchoiceUpdate(ctx, &fc, attrs)
 	require.NoError(t, err)
 
 	checkPending("building", 0)
@@ -209,7 +210,7 @@ func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 	time.Sleep(time.Second * 4) // conservatively wait 4 seconds, CI might lag during block building.
 
 	// retrieve the block
-	envelope, err := opGeth.l2Engine.GetPayload(ctx, eth.PayloadInfo{ID: *res.PayloadID, Timestamp: uint64(attrs.Timestamp)})
+	envelope, err := opGeth.Engine().GetPayload(ctx, eth.PayloadInfo{ID: *res.PayloadID, Timestamp: uint64(attrs.Timestamp)})
 	require.NoError(t, err)
 
 	payload := envelope.ExecutionPayload
@@ -218,7 +219,7 @@ func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 	checkPendingBalance()
 
 	// process the block
-	status, err := opGeth.l2Engine.NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
+	status, err := opGeth.Engine().NewPayload(ctx, payload, envelope.ParentBeaconBlockRoot)
 	require.NoError(t, err)
 	require.Equal(t, eth.ExecutionValid, status.Status)
 	checkPending("processed", 0)
@@ -229,7 +230,7 @@ func TestGethOnlyPendingBlockIsLatest(t *testing.T) {
 		HeadBlockHash: payload.BlockHash,
 		SafeBlockHash: payload.BlockHash,
 	}
-	res, err = opGeth.l2Engine.ForkchoiceUpdate(ctx, &fc, nil)
+	res, err = opGeth.Engine().ForkchoiceUpdate(ctx, &fc, nil)
 	require.NoError(t, err)
 	require.Equal(t, eth.ExecutionValid, res.PayloadStatus.Status)
 	checkPending("canonical", 1)
@@ -419,10 +420,10 @@ func TestRegolith(t *testing.T) {
 	tests := []struct {
 		name             string
 		regolithTime     hexutil.Uint64
-		activateRegolith func(ctx context.Context, t *testing.T, opGeth *OpGeth)
+		activateRegolith func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine)
 	}{
-		{name: "ActivateAtGenesis", regolithTime: 0, activateRegolith: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}},
-		{name: "ActivateAfterGenesis", regolithTime: 2, activateRegolith: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {
+		{name: "ActivateAtGenesis", regolithTime: 0, activateRegolith: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}},
+		{name: "ActivateAfterGenesis", regolithTime: 2, activateRegolith: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {
 			_, err := opGeth.AddL2Block(ctx)
 			require.NoError(t, err)
 		}},
@@ -602,7 +603,7 @@ func TestRegolith(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = opGeth.AddL2Block(ctx, types.NewTx(systemTx))
-			require.ErrorIs(t, err, ErrNewPayloadNotValid, "should reject blocks containing system tx")
+			require.ErrorIs(t, err, enginetest.ErrNewPayloadNotValid, "should reject blocks containing system tx")
 		})
 
 		t.Run("IncludeGasRefunds_"+test.name, func(t *testing.T) {
@@ -795,10 +796,10 @@ func TestCanyon(t *testing.T) {
 	tests := []struct {
 		name           string
 		canyonTime     hexutil.Uint64
-		activateCanyon func(ctx context.Context, t *testing.T, opGeth *OpGeth)
+		activateCanyon func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine)
 	}{
-		{name: "ActivateAtGenesis", canyonTime: 0, activateCanyon: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}},
-		{name: "ActivateAfterGenesis", canyonTime: 2, activateCanyon: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {
+		{name: "ActivateAtGenesis", canyonTime: 0, activateCanyon: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}},
+		{name: "ActivateAfterGenesis", canyonTime: 2, activateCanyon: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {
 			// Adding this block advances us to the fork time.
 			_, err := opGeth.AddL2Block(ctx)
 			require.NoError(t, err)
@@ -931,10 +932,10 @@ func TestEcotone(t *testing.T) {
 	tests := []struct {
 		name            string
 		ecotoneTime     hexutil.Uint64
-		activateEcotone func(ctx context.Context, t *testing.T, opGeth *OpGeth)
+		activateEcotone func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine)
 	}{
-		{name: "ActivateAtGenesis", ecotoneTime: 0, activateEcotone: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}},
-		{name: "ActivateAfterGenesis", ecotoneTime: 2, activateEcotone: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {
+		{name: "ActivateAtGenesis", ecotoneTime: 0, activateEcotone: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}},
+		{name: "ActivateAfterGenesis", ecotoneTime: 2, activateEcotone: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {
 			//	Adding this block advances us to the fork time.
 			_, err := opGeth.AddL2Block(ctx)
 			require.NoError(t, err)
@@ -1054,10 +1055,10 @@ func TestFjord(t *testing.T) {
 	tests := []struct {
 		name          string
 		fjordTime     hexutil.Uint64
-		activateFjord func(ctx context.Context, t *testing.T, opGeth *OpGeth)
+		activateFjord func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine)
 	}{
-		{name: "ActivateAtGenesis", fjordTime: 0, activateFjord: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}},
-		{name: "ActivateAfterGenesis", fjordTime: 2, activateFjord: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {
+		{name: "ActivateAtGenesis", fjordTime: 0, activateFjord: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}},
+		{name: "ActivateAfterGenesis", fjordTime: 2, activateFjord: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {
 			//	Adding this block advances us to the fork time.
 			_, err := opGeth.AddL2Block(ctx)
 			require.NoError(t, err)
@@ -1104,13 +1105,13 @@ func TestIsthmus(t *testing.T) {
 	tests := []struct {
 		name            string
 		isthmusTime     hexutil.Uint64
-		activateIsthmus func(ctx context.Context, t *testing.T, opGeth *OpGeth)
+		activateIsthmus func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine)
 		// expectEmpty is true if calling the precompiles should result in an 0x1 success (default for empty contract)
 		expectEmpty bool
 	}{
-		{name: "BeforeActivation", isthmusTime: 2, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}, expectEmpty: true},
-		{name: "ActivateAtGenesis", isthmusTime: 0, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {}, expectEmpty: false},
-		{name: "ActivateAfterGenesis", isthmusTime: 2, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *OpGeth) {
+		{name: "BeforeActivation", isthmusTime: 2, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}, expectEmpty: true},
+		{name: "ActivateAtGenesis", isthmusTime: 0, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {}, expectEmpty: false},
+		{name: "ActivateAfterGenesis", isthmusTime: 2, activateIsthmus: func(ctx context.Context, t *testing.T, opGeth *enginetest.OpEngine) {
 			//	Adding this block advances us to the fork time.
 			_, err := opGeth.AddL2Block(ctx)
 			require.NoError(t, err)
