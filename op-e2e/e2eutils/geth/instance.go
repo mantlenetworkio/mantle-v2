@@ -15,6 +15,10 @@ type GethInstance struct {
 
 var _ services.EthInstance = (*GethInstance)(nil)
 
+func (gi *GethInstance) Start() error {
+	return gi.Node.Start()
+}
+
 func (gi *GethInstance) UserRPC() endpoint.RPC {
 	fallback := endpoint.WsOrHttpRPC{
 		WsURL:   gi.Node.WSEndpoint(),

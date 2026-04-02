@@ -11,6 +11,7 @@ import (
 // EthInstance is either an in process Geth or external process exposing its
 // endpoints over the network
 type EthInstance interface {
+	Start() error
 	UserRPC() endpoint.RPC
 	AuthRPC() endpoint.RPC
 	Close() error

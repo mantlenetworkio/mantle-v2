@@ -55,6 +55,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/blobstore"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/fakebeacon"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/geth"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/l2backend"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/reth"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/opnode"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/services"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/setuputils"
@@ -191,6 +193,7 @@ func DefaultSystemConfig(t testing.TB, opts ...SystemConfigOpt) SystemConfig {
 			"da-server": testlog.Logger(t, log.LevelInfo).New("role", "da-server"),
 		},
 		GethOptions:                   map[string][]geth.GethOption{},
+		RethOptions:                   map[string][]reth.RethOption{},
 		P2PTopology:                   nil, // no P2P connectivity by default
 		NonFinalizedProposals:         false,
 		DataAvailabilityType:          batcherFlags.CalldataType,
@@ -304,9 +307,12 @@ type SystemConfig struct {
 	Nodes          map[string]*config2.Config // Per node config. Don't use populate rollup.Config
 	Loggers        map[string]log.Logger
 	GethOptions    map[string][]geth.GethOption
+	RethOptions    map[string][]reth.RethOption
 	ProposerLogger log.Logger
 	BatcherLogger  log.Logger
 
+	// Deprecated: unused. Use l2backend.InitL2Backend() with OP_E2E_L2_CLIENT env var instead.
+	// TODO(op-e2e): remove this field in the next breaking change cycle.
 	ExternalL2Shim string
 
 	// map of outbound connections to other nodes. Node names prefixed with "~" are unconnected but linked.
@@ -786,21 +792,24 @@ func (cfg SystemConfig) Start(t *testing.T, startOpts ...StartOption) (*System, 
 	for _, name := range l2Nodes {
 		var ethClient services.EthInstance
 		if name != RoleSeq && !cfg.DisableTxForwarder {
+			seqURL := sys.EthInstances[RoleSeq].UserRPC().RPC()
 			cfg.GethOptions[name] = append(cfg.GethOptions[name], func(ethCfg *ethconfig.Config, nodeCfg *node.Config) error {
-				ethCfg.RollupSequencerHTTP = sys.EthInstances[RoleSeq].UserRPC().RPC()
+				ethCfg.RollupSequencerHTTP = seqURL
 				return nil
 			})
+			cfg.RethOptions[name] = append(cfg.RethOptions[name], reth.WithSequencerHTTP(seqURL))
 		}
 
-		l2Geth, err := geth.InitL2(name, l2Genesis, cfg.JWTFilePath, cfg.GethOptions[name]...)
+		l2Node, err := l2backend.InitL2Backend(t, name, l2Genesis, cfg.JWTFilePath,
+			cfg.GethOptions[name], cfg.RethOptions[name])
 		if err != nil {
 			return nil, err
 		}
-		if err := l2Geth.Node.Start(); err != nil {
+		if err := l2Node.Start(); err != nil {
 			return nil, err
 		}
 
-		ethClient = l2Geth
+		ethClient = l2Node
 
 		sys.EthInstances[name] = ethClient
 	}
@@ -1378,21 +1387,24 @@ func (cfg SystemConfig) StartMantle(t *testing.T, startOpts ...StartOption) (*Sy
 	for _, name := range l2Nodes {
 		var ethClient services.EthInstance
 		if name != RoleSeq && !cfg.DisableTxForwarder {
+			seqURL := sys.EthInstances[RoleSeq].UserRPC().RPC()
 			cfg.GethOptions[name] = append(cfg.GethOptions[name], func(ethCfg *ethconfig.Config, nodeCfg *node.Config) error {
-				ethCfg.RollupSequencerHTTP = sys.EthInstances[RoleSeq].UserRPC().RPC()
+				ethCfg.RollupSequencerHTTP = seqURL
 				return nil
 			})
+			cfg.RethOptions[name] = append(cfg.RethOptions[name], reth.WithSequencerHTTP(seqURL))
 		}
 
-		l2Geth, err := geth.InitL2(name, l2Genesis, cfg.JWTFilePath, cfg.GethOptions[name]...)
+		l2Node, err := l2backend.InitL2Backend(t, name, l2Genesis, cfg.JWTFilePath,
+			cfg.GethOptions[name], cfg.RethOptions[name])
 		if err != nil {
 			return nil, err
 		}
-		if err := l2Geth.Node.Start(); err != nil {
+		if err := l2Node.Start(); err != nil {
 			return nil, err
 		}
 
-		ethClient = l2Geth
+		ethClient = l2Node
 
 		sys.EthInstances[name] = ethClient
 	}
