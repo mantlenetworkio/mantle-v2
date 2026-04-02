@@ -34,27 +34,13 @@ test-http: pre-test
 # Run engine-API tests against op-reth.
 # Requires OP_E2E_L2_BIN to point to an op-reth binary.
 # Example:
-#   make test-opreth OP_E2E_L2_BIN=/path/to/op-reth
-test-opreth: pre-test
-	@if [ -z "$(OP_E2E_L2_BIN)" ]; then \
-		echo "ERROR: OP_E2E_L2_BIN must be set to the op-reth binary path" >&2; \
-		exit 1; \
-	fi
-	OP_E2E_L2_BIN=$(OP_E2E_L2_BIN) $(go_test) $(go_test_flags) ./opreth/...
-.PHONY: test-opreth
-
-# Run Mantle-specific engine-API tests against op-reth.
-# Requires OP_E2E_L2_BIN to point to an op-reth binary.
-test-mantleopreth: pre-test
+#   make test-reth OP_E2E_L2_BIN=/path/to/op-reth
+test-reth: pre-test
 	@if [ -z "$(OP_E2E_L2_BIN)" ]; then \
 		echo "ERROR: OP_E2E_L2_BIN must be set to the op-reth binary path" >&2; \
 		exit 1; \
 	fi
 	OP_E2E_L2_BIN=$(OP_E2E_L2_BIN) $(go_test) $(go_test_flags) ./mantleopreth/...
-.PHONY: test-mantleopreth
-
-# Run all reth engine-API tests (opreth + mantleopreth).
-test-reth: test-opreth test-mantleopreth
 .PHONY: test-reth
 
 test-cannon: pre-test
