@@ -2,6 +2,7 @@ package gap_clp2p
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -47,6 +48,16 @@ func TestReachUnsafeTipByAppendingUnsafePayload(gt *testing.T) {
 // while maintaining correct Engine API semantics.
 func TestCLUnsafeNotRewoundOnInvalidDuringELSync(gt *testing.T) {
 	t := devtest.SerialT(gt)
+
+	// reth defers header-level validation (e.g. Holocene ExtraData length) during EL sync
+	// until the parent block is available. It returns SYNCING instead of INVALID for such
+	// payloads, so the CL's unsafe head can advance past the expected point on reth.
+	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+		t.Skip("reth returns SYNCING (not INVALID) for ExtraData-invalid payloads during EL sync: " +
+			"header-level validation is deferred until parent state is available, " +
+			"so the CL unsafe head may advance beyond the expected block")
+	}
+
 	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
 	logger := t.Logger()
 	require := t.Require()

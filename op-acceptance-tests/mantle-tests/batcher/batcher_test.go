@@ -47,7 +47,14 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 			sequenceBlockWithL1Origin(t, ts_L2, parent, l1Origin, alice, cathrine, nonce)
 			nonce++
 
-			parent = sys.L2CL.HeadBlockRef(types.LocalUnsafe).Hash
+			clHead := sys.L2CL.HeadBlockRef(types.LocalUnsafe)
+			// Wait for reth's async pipeline to commit the block to DB before using
+			// it as the parent for the next block. Without this wait, op-node may
+			// read a stale EL head (L1 origin 0) from reth's DB during a reset and
+			// reject the next build with "L1 origin break" error.
+			// On geth (synchronous pipeline) Reached() is an instant no-op.
+			sys.L2EL.Reached(eth.Unsafe, clHead.Number, 10)
+			parent = clHead.Hash
 
 			sys.AdvanceTime(time.Second * 2)
 			time.Sleep(20 * time.Millisecond) // failed to force-include tx: type: 2 sender; err: nonce too high

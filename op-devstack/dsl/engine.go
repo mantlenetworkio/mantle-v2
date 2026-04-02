@@ -34,6 +34,19 @@ func (r *NewPayloadResult) IsValid() *NewPayloadResult {
 	return r
 }
 
+// IsValidOrSyncing accepts either VALID or SYNCING status.
+// VALID: geth when parent is in non-canonical chain (has parent state), reth after queuing+processing.
+// SYNCING: geth/reth when parent is genuinely unavailable.
+func (r *NewPayloadResult) IsValidOrSyncing() *NewPayloadResult {
+	r.T.Require().NoError(r.Err)
+	r.T.Require().NotNil(r.Status, "payload status nil")
+	r.T.Require().True(
+		r.Status.Status == eth.ExecutionValid || r.Status.Status == eth.ExecutionSyncing,
+		"expected VALID or SYNCING, got %s", r.Status.Status,
+	)
+	return r
+}
+
 func (r *NewPayloadResult) IsInvalid() *NewPayloadResult {
 	r.IsPayloadStatus(eth.ExecutionInvalid)
 	r.T.Require().NoError(r.Err)
@@ -60,6 +73,20 @@ func (r *ForkchoiceUpdateResult) IsForkchoiceUpdatedStatus(status eth.ExecutePay
 func (r *ForkchoiceUpdateResult) IsSyncing() *ForkchoiceUpdateResult {
 	r.IsForkchoiceUpdatedStatus(eth.ExecutionSyncing)
 	r.T.Require().NoError(r.Err)
+	return r
+}
+
+// IsValidOrSyncing accepts either VALID or SYNCING FCU status.
+// On geth, FCU to an unknown/unavailable head returns SYNCING.
+// On reth, the same FCU may return VALID if the block was previously buffered in the engine tree.
+func (r *ForkchoiceUpdateResult) IsValidOrSyncing() *ForkchoiceUpdateResult {
+	r.T.Require().NoError(r.Err)
+	r.T.Require().NotNil(r.Result, "fcu result nil")
+	status := r.Result.PayloadStatus.Status
+	r.T.Require().True(
+		status == eth.ExecutionValid || status == eth.ExecutionSyncing,
+		"expected VALID or SYNCING, got %s", status,
+	)
 	return r
 }
 

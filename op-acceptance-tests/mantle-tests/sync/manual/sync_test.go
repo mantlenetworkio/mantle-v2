@@ -40,14 +40,11 @@ func TestVerifierManualSync(gt *testing.T) {
 		// Insert payload
 		logger.Info("NewPayload", "target", blockNum)
 		sys.L2ELB.NewPayload(sys.L2EL, blockNum).IsValid()
-		// Payload valid but not canonicalized. Cannot fetch block by number
-		_, err = sys.L2ELB.Escape().EthClient().BlockRefByNumber(t.Ctx(), blockNum)
-		require.Error(err, ethereum.NotFound)
-		// Now fetchable by hash
-		require.Equal(blockNum, sys.L2ELB.BlockRefByHash(block.Hash).Number)
 
 		// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
-		// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up)
+		// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up).
+		// Note: on reth, engine_newPayload returns VALID before the block is committed to the DB,
+		// so any checks between NewPayload and ForkchoiceUpdate may race. We go straight to FCU.
 		logger.Info("ForkchoiceUpdate", "target", blockNum)
 		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, blockNum, 0, 0, nil).WaitUntilValid(attempts)
 		// Payload valid and canonicalized

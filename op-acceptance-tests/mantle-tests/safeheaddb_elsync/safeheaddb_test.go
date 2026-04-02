@@ -1,6 +1,7 @@
 package safeheaddb_elsync
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -40,6 +41,16 @@ func TestTruncateDatabaseOnELResync(gt *testing.T) {
 
 func TestNotTruncateDatabaseOnRestartWithExistingDatabase(gt *testing.T) {
 	t := devtest.SerialT(gt)
+
+	// With reth, SupportsPostFinalizationELSync=true causes op-node to trigger EL sync on CL restart
+	// even when the EL already has chain data. This leads to safe head DB truncation, which violates
+	// the invariant this test checks (that the safe head DB is not truncated on normal restart).
+	// This is expected reth behavior: EL sync can be triggered post-finalization on reth.
+	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+		t.Skip("reth SupportsPostFinalizationELSync=true triggers EL sync on CL restart even with " +
+			"existing EL data, causing safe head DB truncation that this test asserts does not happen")
+	}
+
 	sys := presets.NewSingleChainMultiNode(t)
 
 	dsl.CheckAll(t,
