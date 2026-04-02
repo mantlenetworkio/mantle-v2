@@ -56,12 +56,8 @@ func (ei *ExternalInstance) Start() error {
 		if err != nil {
 			return fmt.Errorf("reth %s: allocate ports: %w", ei.name, err)
 		}
-		ei.httpPort = httpPort
-		ei.wsPort = wsPort
-		ei.authPort = authPort
 
 		cmd := ei.buildCmd(httpPort, wsPort, authPort)
-		ei.cmd = cmd
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -81,32 +77,36 @@ func (ei *ExternalInstance) Start() error {
 
 		// Stream process output to test logger.
 		ctx, cancel := context.WithCancel(context.Background())
-		ei.logCancel = cancel
 		logger := testlog.Logger(ei.tb, log.LevelInfo)
 		prefix := fmt.Sprintf("[reth-%s] ", ei.name)
 		go streamToLog(ctx, logger, prefix, stdout)
-		go streamToLog(ctx, logger, prefix+"ERR ", stderr)
+		stderrDone := make(chan struct{})
+		go func() {
+			defer close(stderrDone)
+			streamToLog(ctx, logger, prefix+"ERR ", stderr)
+		}()
 
 		// Single cmd.Wait() goroutine — stored on the struct so Close() can drain it.
 		exitCh := make(chan error, 1)
-		ei.exitCh = exitCh
 		go func() { exitCh <- cmd.Wait() }()
 
 		select {
 		case exitErr := <-exitCh:
 			// Process exited quickly — check stderr for a port-conflict.
 			cancel()
-			// Give the stderr tee goroutine a moment to flush.
-			time.Sleep(100 * time.Millisecond)
+			// Wait for the stderr goroutine to finish draining before inspecting the
+			// buffer; this avoids the fragile time.Sleep(100ms) approach.
+			<-stderrDone
 			if isPortConflict(stderrBuf.String()) {
 				lastErr = exitErr
-				// Reset exitCh so the next attempt stores a fresh channel.
-				ei.exitCh = nil
+				// Do NOT write back to ei.cmd / ei.exitCh on a failed attempt so
+				// that Close() does not try to kill an already-exited process.
 				continue // retry with new ports
 			}
+			cancel() // no-op but keeps cancel reachable
 			return fmt.Errorf("reth %s: process exited during startup: %w", ei.name, exitErr)
 		case <-time.After(2 * time.Second):
-			// Process still running after 2s — proceed to readiness checks.
+			// Process still running after 2s — commit to this attempt.
 		}
 
 		// Wait for RPC to be ready.
@@ -114,15 +114,23 @@ func (ei *ExternalInstance) Start() error {
 		if err := waitForRPC(ctx, fmt.Sprintf("http://127.0.0.1:%d", httpPort), timeout); err != nil {
 			cancel()
 			_ = cmd.Process.Kill()
-			<-ei.exitCh // drain so Close() does not double-Wait
+			<-exitCh // drain so Close() does not double-Wait
 			return fmt.Errorf("reth %s: RPC not ready within %s: %w", ei.name, timeout, err)
 		}
 		if err := waitForAuthRPC(ctx, fmt.Sprintf("http://127.0.0.1:%d", authPort), timeout); err != nil {
 			cancel()
 			_ = cmd.Process.Kill()
-			<-ei.exitCh // drain so Close() does not double-Wait
+			<-exitCh // drain so Close() does not double-Wait
 			return fmt.Errorf("reth %s: Auth RPC not ready within %s: %w", ei.name, timeout, err)
 		}
+
+		// Success — commit to struct.
+		ei.httpPort = httpPort
+		ei.wsPort = wsPort
+		ei.authPort = authPort
+		ei.cmd = cmd
+		ei.logCancel = cancel
+		ei.exitCh = exitCh
 		return nil
 	}
 	return fmt.Errorf("reth %s: failed to start after %d attempts (last error: %w)", ei.name, maxRetries, lastErr)
@@ -233,7 +241,10 @@ func waitForRPC(ctx context.Context, url string, timeout time.Duration) error {
 	client := &http.Client{Timeout: 2 * time.Second}
 	body := `{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`
 	for time.Now().Before(deadline) {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err == nil {
@@ -257,7 +268,10 @@ func waitForAuthRPC(ctx context.Context, url string, timeout time.Duration) erro
 	client := &http.Client{Timeout: 2 * time.Second}
 	body := `{"jsonrpc":"2.0","method":"engine_exchangeCapabilities","params":[[]],"id":1}`
 	for time.Now().Before(deadline) {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err == nil {

@@ -70,7 +70,7 @@ type OpEngineConfig struct {
 // It creates the Engine API client and JSON-RPC client. The node must be started beforehand.
 func NewOpEngine(t testing.TB, ctx context.Context, cfg *e2esys.SystemConfig, ec OpEngineConfig) (*OpEngine, error) {
 	t.Helper()
-	logger := testlog.Logger(t, log.LevelCrit)
+	logger := testlog.Logger(t, log.LevelWarn)
 
 	auth := rpc.WithHTTPAuth(gn.NewJWTAuth(cfg.JWTSecret))
 	rpcNode, err := client.NewRPC(ctx, logger, ec.Node.AuthRPC().RPC(), client.WithGethRPCOptions(auth))

@@ -54,6 +54,12 @@ type OpGeth struct {
 	lgr           log.Logger
 }
 
+// NewOpGeth creates an OpGeth backed by an in-process geth node initialised
+// with a Mantle-specific genesis (Skadi/Limb/Arsia alloc modes).
+//
+// Unlike opgeth.NewOpGeth (which is deprecated in favour of enginetest.OpEngine),
+// this function returns a *OpGeth with Mantle-specific helpers.  New tests that
+// only need the Engine API should prefer NewRethEngine / enginetest.OpEngine.
 func NewOpGeth(t testing.TB, ctx context.Context, cfg *e2esys.SystemConfig) (*OpGeth, error) {
 	logger := testlog.Logger(t, log.LevelCrit)
 

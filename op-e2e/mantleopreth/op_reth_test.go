@@ -47,6 +47,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	op_e2e "github.com/ethereum-optimism/optimism/op-e2e"
+	"github.com/ethereum-optimism/optimism/op-e2e/enginetest"
 	"github.com/ethereum-optimism/optimism/op-e2e/system/e2esys"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
@@ -181,35 +182,20 @@ func TestPreCanyon(t *testing.T) {
 // Skadi/Limb/Arsia time offsets alongside the Canyon time so that the Mantle
 // genesis is well-formed for NewRethEngine.
 //
-// Note: reth v1.9.3+ activates all forks at genesis regardless of the genesis
-// JSON time offsets.  The ActivateAfterGenesis sub-test adds a block before
-// asserting, mirroring the geth test structure; the assertions hold because
-// Canyon features are always active in reth from block 0 onwards.
+// reth v1.9.3+ activates all forks at genesis @0 regardless of genesis JSON
+// time offsets, so only the ActivateAtGenesis configuration is exercised.
 func TestCanyon(t *testing.T) {
-	tests := []struct {
-		name          string
-		canyonTime    hexutil.Uint64
-		activateCanyon func(ctx context.Context, t *testing.T)
-	}{
-		{name: "ActivateAtGenesis", canyonTime: 0,
-			activateCanyon: func(_ context.Context, _ *testing.T) {}},
-		{name: "ActivateAfterGenesis", canyonTime: 2,
-			activateCanyon: func(ctx context.Context, t *testing.T) {
-				t.Helper()
-				// Advances the chain past the notional fork time; for reth the
-				// features are already active at block 0.
-				_ = ctx
-			}},
-	}
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("ReturnsEmptyWithdrawals_%s", test.name), func(t *testing.T) {
+	canyonTime := hexutil.Uint64(0)
+
+	run := func(name string, body func(t *testing.T, opReth *enginetest.OpEngine, cfg e2esys.SystemConfig)) {
+		t.Run(name, func(t *testing.T) {
 			op_e2e.InitParallel(t)
-			cfg := e2esys.CanyonSystemConfig(t, &test.canyonTime)
+			cfg := e2esys.CanyonSystemConfig(t, &canyonTime)
 			// Align Mantle forks with the Canyon activation time so that
 			// NewRethEngine builds a valid Mantle genesis.
-			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &test.canyonTime
-			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &test.canyonTime
-			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &test.canyonTime
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &canyonTime
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &canyonTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &canyonTime
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -218,50 +204,43 @@ func TestCanyon(t *testing.T) {
 			require.NoError(t, err)
 			defer opReth.Close()
 
-			test.activateCanyon(ctx, t)
-
-			b, err := opReth.AddL2Block(ctx)
-			require.NoError(t, err)
-			// Canyon: withdrawals field is present and empty (not nil).
-			assert.Equal(t, *b.ExecutionPayload.Withdrawals, types.Withdrawals{})
-
-			l2Block, err := opReth.L2Client.BlockByNumber(ctx, nil)
-			require.Nil(t, err)
-			assert.Equal(t, l2Block.Withdrawals(), types.Withdrawals{})
-		})
-
-		t.Run(fmt.Sprintf("AcceptsPushZeroTxn_%s", test.name), func(t *testing.T) {
-			op_e2e.InitParallel(t)
-			cfg := e2esys.CanyonSystemConfig(t, &test.canyonTime)
-			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &test.canyonTime
-			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &test.canyonTime
-			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &test.canyonTime
-
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			defer cancel()
-
-			opReth, err := NewRethEngine(t, ctx, &cfg)
-			require.NoError(t, err)
-			defer opReth.Close()
-
-			test.activateCanyon(ctx, t)
-
-			pushZeroContractCreateTxn := types.NewTx(&types.DepositTx{
-				From:                cfg.Secrets.Addresses().Alice,
-				Value:               big.NewInt(params.Ether),
-				Gas:                 1000001,
-				Data:                []byte{byte(vm.PUSH0)},
-				IsSystemTransaction: false,
-			})
-
-			_, err = opReth.AddL2Block(ctx, pushZeroContractCreateTxn)
-			require.NoError(t, err)
-
-			receipt, err := opReth.L2Client.TransactionReceipt(ctx, pushZeroContractCreateTxn.Hash())
-			require.NoError(t, err)
-			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+			body(t, opReth, cfg)
 		})
 	}
+
+	run("ReturnsEmptyWithdrawals", func(t *testing.T, opReth *enginetest.OpEngine, _ e2esys.SystemConfig) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		b, err := opReth.AddL2Block(ctx)
+		require.NoError(t, err)
+		// Canyon: withdrawals field is present and empty (not nil).
+		assert.Equal(t, *b.ExecutionPayload.Withdrawals, types.Withdrawals{})
+
+		l2Block, err := opReth.L2Client.BlockByNumber(ctx, nil)
+		require.Nil(t, err)
+		assert.Equal(t, l2Block.Withdrawals(), types.Withdrawals{})
+	})
+
+	run("AcceptsPushZeroTxn", func(t *testing.T, opReth *enginetest.OpEngine, cfg e2esys.SystemConfig) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		pushZeroContractCreateTxn := types.NewTx(&types.DepositTx{
+			From:                cfg.Secrets.Addresses().Alice,
+			Value:               big.NewInt(params.Ether),
+			Gas:                 1000001,
+			Data:                []byte{byte(vm.PUSH0)},
+			IsSystemTransaction: false,
+		})
+
+		_, err := opReth.AddL2Block(ctx, pushZeroContractCreateTxn)
+		require.NoError(t, err)
+
+		receipt, err := opReth.L2Client.TransactionReceipt(ctx, pushZeroContractCreateTxn.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	})
 }
 
 // TestPreEcotone is skipped for op-reth.
@@ -282,29 +261,20 @@ func TestPreEcotone(t *testing.T) {
 // In Mantle, Ecotone features are activated by Arsia.  The test sets
 // Skadi/Limb/Arsia time offsets alongside the Ecotone time.
 //
-// Note: reth v1.9.3+ activates all forks at genesis; the ActivateAfterGenesis
-// sub-test mirrors the geth structure for consistency.
+// reth v1.9.3+ activates all forks at genesis @0 regardless of genesis JSON
+// time offsets, so only the ActivateAtGenesis configuration is exercised.
 func TestEcotone(t *testing.T) {
-	tests := []struct {
-		name            string
-		ecotoneTime     hexutil.Uint64
-		activateEcotone func(ctx context.Context, t *testing.T)
-	}{
-		{name: "ActivateAtGenesis", ecotoneTime: 0,
-			activateEcotone: func(_ context.Context, _ *testing.T) {}},
-		{name: "ActivateAfterGenesis", ecotoneTime: 2,
-			activateEcotone: func(ctx context.Context, t *testing.T) {
-				t.Helper()
-				_ = ctx
-			}},
-	}
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("HashParentBeaconBlockRoot_%s", test.name), func(t *testing.T) {
+	ecotoneTime := hexutil.Uint64(0)
+
+	run := func(name string, body func(t *testing.T, opReth *enginetest.OpEngine, cfg e2esys.SystemConfig)) {
+		t.Run(name, func(t *testing.T) {
 			op_e2e.InitParallel(t)
-			cfg := e2esys.EcotoneSystemConfig(t, &test.ecotoneTime)
-			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &test.ecotoneTime
-			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &test.ecotoneTime
-			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &test.ecotoneTime
+			cfg := e2esys.EcotoneSystemConfig(t, &ecotoneTime)
+			// Align Mantle forks with the Ecotone activation time so that
+			// NewRethEngine builds a valid Mantle genesis.
+			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &ecotoneTime
+			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &ecotoneTime
+			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &ecotoneTime
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -313,60 +283,53 @@ func TestEcotone(t *testing.T) {
 			require.NoError(t, err)
 			defer opReth.Close()
 
-			test.activateEcotone(ctx, t)
-
-			b, err := opReth.AddL2Block(ctx)
-			require.NoError(t, err)
-			// Ecotone: ParentBeaconBlockRoot must be present and equal the L1 head's.
-			require.NotNil(t, b.ParentBeaconBlockRoot)
-			assert.Equal(t, b.ParentBeaconBlockRoot, opReth.L1Head.ParentBeaconRoot())
-
-			l2Block, err := opReth.L2Client.BlockByNumber(ctx, nil)
-			require.NoError(t, err)
-			assert.NotNil(t, l2Block.Header().ParentBeaconRoot)
-			assert.Equal(t, l2Block.Header().ParentBeaconRoot, opReth.L1Head.ParentBeaconRoot())
-		})
-
-		t.Run(fmt.Sprintf("TstoreTxn_%s", test.name), func(t *testing.T) {
-			op_e2e.InitParallel(t)
-			cfg := e2esys.EcotoneSystemConfig(t, &test.ecotoneTime)
-			cfg.DeployConfig.L2GenesisMantleSkadiTimeOffset = &test.ecotoneTime
-			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &test.ecotoneTime
-			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &test.ecotoneTime
-
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			defer cancel()
-
-			opReth, err := NewRethEngine(t, ctx, &cfg)
-			require.NoError(t, err)
-			defer opReth.Close()
-
-			test.activateEcotone(ctx, t)
-
-			tstoreTxn := types.NewTx(&types.DepositTx{
-				From:  cfg.Secrets.Addresses().Alice,
-				Value: big.NewInt(params.Ether),
-				Gas:   1000001,
-				Data: []byte{
-					byte(vm.PUSH1), 0x01,
-					byte(vm.PUSH1), 0x01,
-					byte(vm.TSTORE),
-					byte(vm.PUSH0),
-				},
-				IsSystemTransaction: false,
-			})
-
-			_, err = opReth.AddL2Block(ctx, tstoreTxn)
-			require.NoError(t, err)
-
-			_, err = opReth.AddL2Block(ctx, tstoreTxn)
-			require.NoError(t, err)
-
-			receipt, err := opReth.L2Client.TransactionReceipt(ctx, tstoreTxn.Hash())
-			require.NoError(t, err)
-			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+			body(t, opReth, cfg)
 		})
 	}
+
+	run("HashParentBeaconBlockRoot", func(t *testing.T, opReth *enginetest.OpEngine, _ e2esys.SystemConfig) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		b, err := opReth.AddL2Block(ctx)
+		require.NoError(t, err)
+		// Ecotone: ParentBeaconBlockRoot must be present and equal the L1 head's.
+		require.NotNil(t, b.ParentBeaconBlockRoot)
+		assert.Equal(t, b.ParentBeaconBlockRoot, opReth.L1Head.ParentBeaconRoot())
+
+		l2Block, err := opReth.L2Client.BlockByNumber(ctx, nil)
+		require.NoError(t, err)
+		assert.NotNil(t, l2Block.Header().ParentBeaconRoot)
+		assert.Equal(t, l2Block.Header().ParentBeaconRoot, opReth.L1Head.ParentBeaconRoot())
+	})
+
+	run("TstoreTxn", func(t *testing.T, opReth *enginetest.OpEngine, cfg e2esys.SystemConfig) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		tstoreTxn := types.NewTx(&types.DepositTx{
+			From:  cfg.Secrets.Addresses().Alice,
+			Value: big.NewInt(params.Ether),
+			Gas:   1000001,
+			Data: []byte{
+				byte(vm.PUSH1), 0x01,
+				byte(vm.PUSH1), 0x01,
+				byte(vm.TSTORE),
+				byte(vm.PUSH0),
+			},
+			IsSystemTransaction: false,
+		})
+
+		_, err := opReth.AddL2Block(ctx, tstoreTxn)
+		require.NoError(t, err)
+
+		_, err = opReth.AddL2Block(ctx, tstoreTxn)
+		require.NoError(t, err)
+
+		receipt, err := opReth.L2Client.TransactionReceipt(ctx, tstoreTxn.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	})
 }
 
 // TestPreFjord is skipped for op-reth.
