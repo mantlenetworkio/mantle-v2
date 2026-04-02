@@ -79,7 +79,11 @@ func (ei *ExternalInstance) Start() error {
 		ctx, cancel := context.WithCancel(context.Background())
 		logger := testlog.Logger(ei.tb, log.LevelInfo)
 		prefix := fmt.Sprintf("[reth-%s] ", ei.name)
-		go streamToLog(ctx, logger, prefix, stdout)
+		stdoutDone := make(chan struct{})
+		go func() {
+			defer close(stdoutDone)
+			streamToLog(ctx, logger, prefix, stdout)
+		}()
 		stderrDone := make(chan struct{})
 		go func() {
 			defer close(stderrDone)
@@ -94,8 +98,12 @@ func (ei *ExternalInstance) Start() error {
 		case exitErr := <-exitCh:
 			// Process exited quickly — check stderr for a port-conflict.
 			cancel()
-			// Wait for the stderr goroutine to finish draining before inspecting the
+			// Wait for both goroutines to finish draining before inspecting the
 			// buffer; this avoids the fragile time.Sleep(100ms) approach.
+			// stdout: when the process exits its pipe closes, so scanner.Scan()
+			// returns false and the goroutine exits promptly.
+			// stderr: same, but we also inspect the buffer immediately after.
+			<-stdoutDone
 			<-stderrDone
 			if isPortConflict(stderrBuf.String()) {
 				lastErr = exitErr

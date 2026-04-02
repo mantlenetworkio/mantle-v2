@@ -197,6 +197,9 @@ func TestCanyon(t *testing.T) {
 			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &canyonTime
 			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &canyonTime
 
+			// outer ctx: scopes the reth node lifetime (startup + shutdown).
+			// Each body creates its own ctx for individual RPC calls so that
+			// per-call timeouts are independent of node startup time.
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 
@@ -276,6 +279,9 @@ func TestEcotone(t *testing.T) {
 			cfg.DeployConfig.L2GenesisMantleLimbTimeOffset = &ecotoneTime
 			cfg.DeployConfig.L2GenesisMantleArsiaTimeOffset = &ecotoneTime
 
+			// outer ctx: scopes the reth node lifetime (startup + shutdown).
+			// Each body creates its own ctx for individual RPC calls so that
+			// per-call timeouts are independent of node startup time.
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 
