@@ -46,6 +46,7 @@ serde = ["dep:serde", "revm/serde", "alloy-primitives/serde"]
 portable = ["revm/portable"]
 
 dev = [
+	"revm/dev",
 	"memory_limit",
 	"optional_balance_check",
 	"optional_block_gas_limit",
