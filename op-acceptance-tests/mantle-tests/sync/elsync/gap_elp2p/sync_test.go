@@ -165,23 +165,43 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 		require.Equal(uint64(targetNum), head)
 	}
 
-	// FCU to target block: on geth this cannot be validated yet (triggers EL Sync but ELP2P
-	// not yet available), returning SYNCING. On reth, the block may already be in the engine
-	// tree (queued from earlier SYNCING calls), so it may return VALID immediately.
+	// FCU to target block with a gap (ELP2P not yet connected):
+	// - geth: cannot validate target because parent is missing; returns SYNCING and must NOT
+	//   advance the unsafe head — SYNCING FCUs are a no-op for head advancement on geth.
+	// - reth: may already have startNum+3..+4 in the engine tree (queued during earlier
+	//   SYNCING/VALID NewPayload calls); may return VALID and advance head.
 	// Example logs from L2EL(geth):
 	//  New skeleton head announced
 	//  created initial skeleton subchain
 	//  Starting reverse header sync cycle
 	//  Block synchronisation started
 	//  Backfilling with the network
-	targetNum = startNum + 3
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
 
 	targetNum = startNum + 3
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	if !isReth {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+		// On geth: SYNCING FCU must NOT advance the unsafe head
+		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
+	} else {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	}
+
+	targetNum = startNum + 3
+	if !isReth {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
+	} else {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	}
 
 	targetNum = startNum + 4
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	if !isReth {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
+	} else {
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+	}
 
 	// Finally peer for enabling ELP2P
 	sys.L2ELB.PeerWith(sys.L2EL)

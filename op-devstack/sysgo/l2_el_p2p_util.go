@@ -2,6 +2,7 @@ package sysgo
 
 import (
 	"context"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -93,13 +94,17 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	require.NoError(acceptor.CallContext(ctx, &peerAdded, "admin_addPeer", initiatorInfo.Enode), "acceptor add peer")
 	require.True(peerAdded, "acceptor should have added peer successfully")
 
-	// Wait up to 90 seconds for the peer to appear on either side.
-	// 30 seconds is sufficient for geth (synchronous P2P). The extended timeout
-	// accommodates reth with --disable-discovery: after both nodes call admin_addPeer
-	// on each other, the actual TCP handshake is initiated by the acceptor side, which
-	// may take additional time before the devp2p listener processes the outbound dial
-	// request. In the worst case (CI under load) this can exceed 30 seconds for reth.
-	connCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	// Wait for the peer connection to appear.
+	// geth processes admin_addPeer synchronously so 30 seconds is sufficient.
+	// reth with --disable-discovery needs more time: after both nodes call admin_addPeer
+	// on each other, the TCP handshake is initiated by the acceptor side and may be delayed
+	// while the devp2p listener processes the outbound dial request. In CI under load this
+	// can exceed 30 seconds for reth.
+	connTimeout := 30 * time.Second
+	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+		connTimeout = 90 * time.Second
+	}
+	connCtx, cancel := context.WithTimeout(context.Background(), connTimeout)
 	defer cancel()
 	err := wait.For(connCtx, time.Second, func() (bool, error) {
 		var peers []peer
