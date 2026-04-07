@@ -134,14 +134,20 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// No FCU yet so head not advanced yet (reth: blocks not committed to DB until FCU)
 	require.Equal(startNum, sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
 
+	// isReth is used for client-conditional assertions throughout the rest of this test.
+	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
+
 	// NewPayload for startNum+6:
-	// - geth: returns SYNCING (parent startNum+5 is unknown; out-of-order SYNCING payloads
-	//   are not retained, so there is still a gap at startNum+3)
+	// - geth: parent startNum+5 is unknown (SYNCING payloads not retained); returns SYNCING.
 	// - reth: may return VALID because reth's engine queues previously-SYNCING payloads
 	//   (startNum+3, +4, +5) and processes them once startNum+1 and startNum+2 are inserted,
 	//   making startNum+5 available as parent.
 	targetNum = startNum + 6
-	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
+	if isReth {
+		sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
+	} else {
+		sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsSyncing()
+	}
 
 	// FCU marks startNum + 2 as valid, promoting non canonical blocks to canonical blocks
 	// Example logs from L2EL(geth)
@@ -176,7 +182,6 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	//  Starting reverse header sync cycle
 	//  Block synchronisation started
 	//  Backfilling with the network
-	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
 
 	targetNum = startNum + 3
 	if !isReth {
@@ -231,8 +236,7 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  "Restarting sync cycle" reason="chain gapped, head: 4, newHead: 6"
 	targetNum = startNum + 6
-	// Use more attempts here since this triggers a fresh EL sync cycle (needs time to download+validate)
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(10)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
 	// head advanced
@@ -242,8 +246,7 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  "Restarting sync cycle" reason="chain gapped, head: 6, newHead: 8"
 	targetNum = startNum + 8
-	// Use more attempts here since this triggers a fresh EL sync cycle (needs time to download+validate)
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(10)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
 	// head advanced
