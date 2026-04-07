@@ -1,6 +1,7 @@
 package gap_elp2p
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -107,11 +108,19 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValid()
 	logger.Info("Non canonical chain advanced", "number", targetNum)
 
-	// Note: on geth, sequential NewPayload blocks are stored as non-canonical and
-	// immediately accessible by hash via eth_getBlockByHash. On reth, engine_newPayload
-	// returns VALID before the block is committed to the HTTP RPC DB (async pipeline),
-	// so the non-canonical hash accessibility check is skipped here.
-	// Canonicalization is verified after FCU below.
+	// On geth, NewPayload stores the block as non-canonical and it is immediately accessible
+	// by hash via eth_getBlockByHash (but not by number, since it is not yet canonical).
+	// On reth, engine_newPayload returns VALID before the block is committed to the HTTP RPC
+	// DB (async pipeline), so the hash is not yet resolvable. Skip on reth.
+	if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+		blockRefNonCan := sys.L2EL.BlockRefByNumber(targetNum) // targetNum = startNum+2
+		nonCan := sys.L2ELB.BlockRefByHash(blockRefNonCan.Hash)
+		require.Equal(uint64(targetNum), nonCan.Number)
+		require.Equal(blockRefNonCan.Hash, nonCan.Hash)
+		// Non-canonical: not yet accessible by number
+		_, errNonCan := sys.L2ELB.Escape().L2EthClient().BlockRefByNumber(t.Ctx(), targetNum)
+		require.ErrorIs(errNonCan, ethereum.NotFound)
+	}
 
 	// Previously inserted payloads (returned SYNCING, startNum+3 and startNum+5) are not
 	// retained to make a non-canonical chain automatically
@@ -145,8 +154,16 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
-	// Head advanced, canonical head bumped (at least to startNum+2)
-	require.GreaterOrEqual(sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number, uint64(targetNum))
+	// Head advanced, canonical head bumped.
+	// On geth: FCU is synchronous; after FCU(startNum+2) returns VALID, head is exactly startNum+2.
+	// On reth: the async pipeline may extend the canonical chain using already-queued payloads
+	// (startNum+3..+6) immediately after FCU completes, so head may exceed targetNum.
+	head := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
+	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+		require.GreaterOrEqual(head, uint64(targetNum))
+	} else {
+		require.Equal(uint64(targetNum), head)
+	}
 
 	// FCU to target block: on geth this cannot be validated yet (triggers EL Sync but ELP2P
 	// not yet available), returning SYNCING. On reth, the block may already be in the engine
