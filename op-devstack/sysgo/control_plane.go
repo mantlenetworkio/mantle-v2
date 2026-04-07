@@ -36,12 +36,16 @@ func (c *ControlPlane) L2ELNodeState(id stack.L2ELNodeID, mode stack.ControlActi
 }
 
 // L2ELNodeWipe wipes the data directory of the given L2 EL node, resetting it to genesis.
-// Only supported for op-reth nodes (which store data on disk); fails the test for other node types.
+// Only op-reth nodes persist chain data to disk and can be wiped; for other node types
+// (e.g. op-geth which uses an in-memory DB) this is a no-op with a warning.
 func (c *ControlPlane) L2ELNodeWipe(id stack.L2ELNodeID) {
 	s, ok := c.o.l2ELs.Get(id)
 	c.o.P().Require().True(ok, "need l2el node to wipe")
 	reth, ok := s.(*OpReth)
-	c.o.P().Require().True(ok, "L2ELNodeWipe only supported for op-reth nodes")
+	if !ok {
+		c.o.P().Logger().Warn("L2ELNodeWipe called on non-reth node; no persistent data to wipe, skipping", "id", id)
+		return
+	}
 	reth.Wipe()
 }
 

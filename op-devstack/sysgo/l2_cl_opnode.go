@@ -59,11 +59,16 @@ type OpNode struct {
 
 var _ L2CLNode = (*OpNode)(nil)
 
+// devstackL2ELKindEnv is the environment variable that selects the L2 EL client kind
+// (e.g. "op-reth"). This constant is used by devstackL2ELKind() and must match the
+// variable consumed by WithL2ELNode when selecting the EL implementation.
+const devstackL2ELKindEnv = "DEVSTACK_L2EL_KIND"
+
 // devstackL2ELKind maps the DEVSTACK_L2EL_KIND environment variable (same one used by
 // WithL2ELNode) to the engine.Kind type, defaulting to Geth when unset or unrecognized.
 // This keeps the op-node sync config consistent with the actual EL being used.
 func devstackL2ELKind() enginekind.Kind {
-	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
 		return enginekind.Reth
 	}
 	return enginekind.Geth

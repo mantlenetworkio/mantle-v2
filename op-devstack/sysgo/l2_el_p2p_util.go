@@ -94,7 +94,11 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	require.True(peerAdded, "acceptor should have added peer successfully")
 
 	// Wait up to 90 seconds for the peer to appear on either side.
-	// Reth with --disable-discovery may take longer to establish the connection.
+	// 30 seconds is sufficient for geth (synchronous P2P). The extended timeout
+	// accommodates reth with --disable-discovery: after both nodes call admin_addPeer
+	// on each other, the actual TCP handshake is initiated by the acceptor side, which
+	// may take additional time before the devp2p listener processes the outbound dial
+	// request. In the worst case (CI under load) this can exceed 30 seconds for reth.
 	connCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	err := wait.For(connCtx, time.Second, func() (bool, error) {

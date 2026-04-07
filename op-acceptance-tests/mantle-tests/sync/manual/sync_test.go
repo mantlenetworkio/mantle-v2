@@ -1,6 +1,7 @@
 package manual
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -40,6 +41,16 @@ func TestVerifierManualSync(gt *testing.T) {
 		// Insert payload
 		logger.Info("NewPayload", "target", blockNum)
 		sys.L2ELB.NewPayload(sys.L2EL, blockNum).IsValid()
+
+		// On geth: after NewPayload returns VALID, the block is stored as non-canonical and
+		// immediately accessible by hash (but not yet by number). On reth, engine_newPayload
+		// returns VALID before the block is committed to the HTTP RPC DB (async pipeline), so
+		// neither hash nor number lookup is guaranteed to succeed yet. Skip on reth.
+		if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+			require.Equal(blockNum, sys.L2ELB.BlockRefByHash(block.Hash).Number)
+			_, errNC := sys.L2ELB.Escape().EthClient().BlockRefByNumber(t.Ctx(), blockNum)
+			require.Error(errNC, ethereum.NotFound)
+		}
 
 		// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
 		// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up).
