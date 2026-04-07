@@ -1,19 +1,19 @@
 //! Optimism builder trait [`OpBuilder`] used to build [`OpEvm`].
-use crate::{evm::OpEvm, precompiles::OpPrecompiles, transaction::OpTxTr, L1BlockInfo, OpSpecId};
+use crate::{L1BlockInfo, OpSpecId, evm::OpEvm, precompiles::OpPrecompiles, transaction::OpTxTr};
 use revm::{
+    Context, Database,
     context::Cfg,
     context_interface::{Block, JournalTr},
     handler::instructions::EthInstructions,
     interpreter::interpreter::EthInterpreter,
     state::EvmState,
-    Context, Database,
 };
 
-/// Type alias for default OpEvm
+/// Type alias for default `OpEvm`
 pub type DefaultOpEvm<CTX, INSP = ()> =
     OpEvm<CTX, INSP, EthInstructions<EthInterpreter, CTX>, OpPrecompiles>;
 
-/// Trait that allows for optimism OpEvm to be built.
+/// Trait that allows for optimism `OpEvm` to be built.
 pub trait OpBuilder: Sized {
     /// Type of the context.
     type Context;

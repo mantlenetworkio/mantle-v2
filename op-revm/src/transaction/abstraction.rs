@@ -1,14 +1,15 @@
-//! Optimism transaction abstraction containing the `[OpTxTr]` trait and corresponding `[OpTransaction]` type.
-use super::deposit::{DepositTransactionParts, DEPOSIT_TRANSACTION_TYPE};
+//! Optimism transaction abstraction containing the `[OpTxTr]` trait and corresponding
+//! `[OpTransaction]` type.
+use super::deposit::{DEPOSIT_TRANSACTION_TYPE, DepositTransactionParts};
 use auto_impl::auto_impl;
 use revm::{
     context::{
-        tx::{TxEnvBuildError, TxEnvBuilder},
         TxEnv,
+        tx::{TxEnvBuildError, TxEnvBuilder},
     },
     context_interface::transaction::Transaction,
     handler::SystemCallTx,
-    primitives::{Address, Bytes, TxKind, B256, U256},
+    primitives::{Address, B256, Bytes, TxKind, U256},
 };
 use std::vec;
 
@@ -58,11 +59,7 @@ impl<T: Transaction> AsRef<T> for OpTransaction<T> {
 impl<T: Transaction> OpTransaction<T> {
     /// Create a new Optimism transaction.
     pub fn new(base: T) -> Self {
-        Self {
-            base,
-            enveloped_tx: None,
-            deposit: DepositTransactionParts::default(),
-        }
+        Self { base, enveloped_tx: None, deposit: DepositTransactionParts::default() }
     }
 }
 
@@ -89,11 +86,8 @@ impl<TX: Transaction + SystemCallTx> SystemCallTx for OpTransaction<TX> {
         system_contract_address: Address,
         data: Bytes,
     ) -> Self {
-        let mut tx = OpTransaction::new(TX::new_system_tx_with_caller(
-            caller,
-            system_contract_address,
-            data,
-        ));
+        let mut tx =
+            Self::new(TX::new_system_tx_with_caller(caller, system_contract_address, data));
 
         tx.enveloped_tx = Some(Bytes::default());
 
@@ -113,10 +107,10 @@ impl<T: Transaction> Transaction for OpTransaction<T> {
 
     fn tx_type(&self) -> u8 {
         // If this is a deposit transaction (has source_hash set), return deposit type
-        if self.deposit.source_hash != B256::ZERO {
-            DEPOSIT_TRANSACTION_TYPE
-        } else {
+        if self.deposit.source_hash == B256::ZERO {
             self.base.tx_type()
+        } else {
+            DEPOSIT_TRANSACTION_TYPE
         }
     }
 
@@ -228,7 +222,7 @@ impl OpTransactionBuilder {
         }
     }
 
-    /// Set the base transaction builder based for TxEnvBuilder.
+    /// Set the base transaction builder based for `TxEnvBuilder`.
     pub fn base(mut self, base: TxEnvBuilder) -> Self {
         self.base = base;
         self
@@ -241,25 +235,25 @@ impl OpTransactionBuilder {
     }
 
     /// Set the source hash of the deposit transaction.
-    pub fn source_hash(mut self, source_hash: B256) -> Self {
+    pub const fn source_hash(mut self, source_hash: B256) -> Self {
         self.deposit.source_hash = source_hash;
         self
     }
 
     /// Set the mint of the deposit transaction.
-    pub fn mint(mut self, mint: u128) -> Self {
+    pub const fn mint(mut self, mint: u128) -> Self {
         self.deposit.mint = Some(mint);
         self
     }
 
     /// Set the deposit transaction to be a system transaction.
-    pub fn is_system_transaction(mut self) -> Self {
+    pub const fn is_system_transaction(mut self) -> Self {
         self.deposit.is_system_transaction = true;
         self
     }
 
     /// Set the deposit transaction to not be a system transaction.
-    pub fn not_system_transaction(mut self) -> Self {
+    pub const fn not_system_transaction(mut self) -> Self {
         self.deposit.is_system_transaction = false;
         self
     }
@@ -299,21 +293,17 @@ impl OpTransactionBuilder {
             // deposit transactions should not carry enveloped bytes
             self.enveloped_tx = None;
         } else if self.enveloped_tx.is_none() {
-            // if type is not set and source hash is not set, set the enveloped transaction to something.
+            // if type is not set and source hash is not set, set the enveloped transaction to
+            // something.
             self.enveloped_tx = Some(vec![0x00].into());
         }
 
         let base = self.base.build_fill();
 
-        OpTransaction {
-            base,
-            enveloped_tx: self.enveloped_tx,
-            deposit: self.deposit,
-        }
+        OpTransaction { base, enveloped_tx: self.enveloped_tx, deposit: self.deposit }
     }
 
     /// Build the [`OpTransaction`] instance, return error if the transaction is not valid.
-    ///
     pub fn build(mut self) -> Result<OpTransaction<TxEnv>, OpBuildError> {
         let tx_type = self.base.get_tx_type();
         if tx_type.is_some() {
@@ -336,11 +326,7 @@ impl OpTransactionBuilder {
 
         let base = self.base.build()?;
 
-        Ok(OpTransaction {
-            base,
-            enveloped_tx: self.enveloped_tx,
-            deposit: self.deposit,
-        })
+        Ok(OpTransaction { base, enveloped_tx: self.enveloped_tx, deposit: self.deposit })
     }
 }
 
@@ -358,7 +344,7 @@ pub enum OpBuildError {
 
 impl From<TxEnvBuildError> for OpBuildError {
     fn from(error: TxEnvBuildError) -> Self {
-        OpBuildError::Base(error)
+        Self::Base(error)
     }
 }
 
@@ -372,10 +358,7 @@ mod tests {
 
     #[test]
     fn test_deposit_transaction_fields() {
-        let base_tx = TxEnv::builder()
-            .gas_limit(10)
-            .gas_price(100)
-            .gas_priority_fee(Some(5));
+        let base_tx = TxEnv::builder().gas_limit(10).gas_price(100).gas_priority_fee(Some(5));
 
         let op_tx = OpTransaction::builder()
             .base(base_tx)
@@ -390,7 +373,8 @@ mod tests {
         // Verify common fields access
         assert_eq!(op_tx.gas_limit(), 10);
         assert_eq!(op_tx.kind(), revm::primitives::TxKind::Call(Address::ZERO));
-        // Verify gas related calculations - deposit transactions use gas_price for effective gas price
+        // Verify gas related calculations - deposit transactions use gas_price for effective gas
+        // price
         assert_eq!(op_tx.effective_gas_price(90), 100);
         assert_eq!(op_tx.max_fee_per_gas(), 100);
     }

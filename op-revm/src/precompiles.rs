@@ -6,10 +6,10 @@ use revm::{
     handler::{EthPrecompiles, PrecompileProvider},
     interpreter::{CallInputs, InterpreterResult},
     precompile::{
-        self, bn254, secp256r1, Precompile, PrecompileError, PrecompileId, PrecompileResult,
-        Precompiles,
+        self, Precompile, PrecompileError, PrecompileId, PrecompileResult, Precompiles, bn254,
+        secp256r1,
     },
-    primitives::{hardfork::SpecId, Address, OnceLock},
+    primitives::{Address, OnceLock, hardfork::SpecId},
 };
 use std::{boxed::Box, string::String};
 
@@ -23,32 +23,26 @@ pub struct OpPrecompiles {
 }
 
 impl OpPrecompiles {
-    /// Create a new precompile provider with the given OpSpec.
+    /// Create a new precompile provider with the given `OpSpec`.
     #[inline]
     pub fn new_with_spec(spec: OpSpecId) -> Self {
         let precompiles = match spec {
-            spec @ (OpSpecId::BEDROCK
-            | OpSpecId::REGOLITH
-            | OpSpecId::CANYON
-            | OpSpecId::ECOTONE) => Precompiles::new(spec.into_eth_spec().into()),
+            spec @ (OpSpecId::BEDROCK |
+            OpSpecId::REGOLITH |
+            OpSpecId::CANYON |
+            OpSpecId::ECOTONE) => Precompiles::new(spec.into_eth_spec().into()),
             OpSpecId::FJORD => fjord(),
             OpSpecId::GRANITE | OpSpecId::HOLOCENE => granite(),
             OpSpecId::ISTHMUS => isthmus(),
             OpSpecId::INTEROP | OpSpecId::OSAKA | OpSpecId::JOVIAN => jovian(),
         };
 
-        Self {
-            inner: EthPrecompiles {
-                precompiles,
-                spec: SpecId::default(),
-            },
-            spec,
-        }
+        Self { inner: EthPrecompiles { precompiles, spec: SpecId::default() }, spec }
     }
 
     /// Precompiles getter.
     #[inline]
-    pub fn precompiles(&self) -> &'static Precompiles {
+    pub const fn precompiles(&self) -> &'static Precompiles {
         self.inner.precompiles
     }
 }
@@ -168,11 +162,8 @@ pub mod bn254_pair {
     /// Max input size for the bn254 pair precompile.
     pub const GRANITE_MAX_INPUT_SIZE: usize = 112687;
     /// Bn254 pair precompile.
-    pub const GRANITE: Precompile = Precompile::new(
-        PrecompileId::Bn254Pairing,
-        bn254::pair::ADDRESS,
-        run_pair_granite,
-    );
+    pub const GRANITE: Precompile =
+        Precompile::new(PrecompileId::Bn254Pairing, bn254::pair::ADDRESS, run_pair_granite);
 
     /// Run the bn254 pair precompile with Optimism input limit.
     pub fn run_pair_granite(input: &[u8], gas_limit: u64) -> PrecompileResult {
@@ -190,11 +181,8 @@ pub mod bn254_pair {
     /// Max input size for the bn254 pair precompile.
     pub const JOVIAN_MAX_INPUT_SIZE: usize = 81_984;
     /// Bn254 pair precompile.
-    pub const JOVIAN: Precompile = Precompile::new(
-        PrecompileId::Bn254Pairing,
-        bn254::pair::ADDRESS,
-        run_pair_jovian,
-    );
+    pub const JOVIAN: Precompile =
+        Precompile::new(PrecompileId::Bn254Pairing, bn254::pair::ADDRESS, run_pair_jovian);
 
     /// Run the bn254 pair precompile with Optimism input limit.
     pub fn run_pair_jovian(input: &[u8], gas_limit: u64) -> PrecompileResult {
@@ -210,7 +198,7 @@ pub mod bn254_pair {
     }
 }
 
-/// Bls12_381 precompile.
+/// `Bls12_381` precompile.
 pub mod bls12_381 {
     use super::*;
     use revm::precompile::bls12_381_const::{G1_MSM_ADDRESS, G2_MSM_ADDRESS, PAIRING_ADDRESS};
@@ -240,11 +228,8 @@ pub mod bls12_381 {
     pub const ISTHMUS_G2_MSM: Precompile =
         Precompile::new(PrecompileId::Bls12G2Msm, G2_MSM_ADDRESS, run_g2_msm_isthmus);
     /// Pairing precompile.
-    pub const ISTHMUS_PAIRING: Precompile = Precompile::new(
-        PrecompileId::Bls12Pairing,
-        PAIRING_ADDRESS,
-        run_pair_isthmus,
-    );
+    pub const ISTHMUS_PAIRING: Precompile =
+        Precompile::new(PrecompileId::Bls12Pairing, PAIRING_ADDRESS, run_pair_isthmus);
 
     /// G1 msm precompile after the Jovian Hardfork.
     pub const JOVIAN_G1_MSM: Precompile =
@@ -320,16 +305,16 @@ pub mod bls12_381 {
 #[cfg(test)]
 mod tests {
     use crate::precompiles::bls12_381::{
-        run_g1_msm_isthmus, run_g1_msm_jovian, run_g2_msm_isthmus, run_g2_msm_jovian,
         ISTHMUS_G1_MSM_MAX_INPUT_SIZE, ISTHMUS_G2_MSM_MAX_INPUT_SIZE,
         ISTHMUS_PAIRING_MAX_INPUT_SIZE, JOVIAN_G1_MSM_MAX_INPUT_SIZE, JOVIAN_G2_MSM_MAX_INPUT_SIZE,
-        JOVIAN_PAIRING_MAX_INPUT_SIZE,
+        JOVIAN_PAIRING_MAX_INPUT_SIZE, run_g1_msm_isthmus, run_g1_msm_jovian, run_g2_msm_isthmus,
+        run_g2_msm_jovian,
     };
 
     use super::*;
     use revm::{
-        precompile::{bls12_381_const, PrecompileError},
-        primitives::{hex, Bytes},
+        precompile::{PrecompileError, bls12_381_const},
+        primitives::{Bytes, hex},
     };
     use std::vec;
 
@@ -403,10 +388,7 @@ mod tests {
     #[test]
     fn test_get_jovian_precompile_with_bad_input_len() {
         let precompiles = OpPrecompiles::new_with_spec(OpSpecId::JOVIAN);
-        let bn254_pair_precompile = precompiles
-            .precompiles()
-            .get(&bn254::pair::ADDRESS)
-            .unwrap();
+        let bn254_pair_precompile = precompiles.precompiles().get(&bn254::pair::ADDRESS).unwrap();
 
         let mut bad_input_len = bn254_pair::JOVIAN_MAX_INPUT_SIZE + 1;
         assert!(bad_input_len < bn254_pair::GRANITE_MAX_INPUT_SIZE);
@@ -415,10 +397,8 @@ mod tests {
         let res = bn254_pair_precompile.execute(&input, u64::MAX);
         assert!(matches!(res, Err(PrecompileError::Bn254PairLength)));
 
-        let bls12_381_g1_msm_precompile = precompiles
-            .precompiles()
-            .get(&bls12_381_const::G1_MSM_ADDRESS)
-            .unwrap();
+        let bls12_381_g1_msm_precompile =
+            precompiles.precompiles().get(&bls12_381_const::G1_MSM_ADDRESS).unwrap();
         bad_input_len = bls12_381::JOVIAN_G1_MSM_MAX_INPUT_SIZE + 1;
         assert!(bad_input_len < bls12_381::ISTHMUS_G1_MSM_MAX_INPUT_SIZE);
         let input = vec![0u8; bad_input_len];
@@ -427,10 +407,8 @@ mod tests {
             matches!(res, Err(PrecompileError::Other(msg)) if msg.contains("input length too long"))
         );
 
-        let bls12_381_g2_msm_precompile = precompiles
-            .precompiles()
-            .get(&bls12_381_const::G2_MSM_ADDRESS)
-            .unwrap();
+        let bls12_381_g2_msm_precompile =
+            precompiles.precompiles().get(&bls12_381_const::G2_MSM_ADDRESS).unwrap();
         bad_input_len = bls12_381::JOVIAN_G2_MSM_MAX_INPUT_SIZE + 1;
         assert!(bad_input_len < bls12_381::ISTHMUS_G2_MSM_MAX_INPUT_SIZE);
         let input = vec![0u8; bad_input_len];
@@ -439,10 +417,8 @@ mod tests {
             matches!(res, Err(PrecompileError::Other(msg)) if msg.contains("input length too long"))
         );
 
-        let bls12_381_pairing_precompile = precompiles
-            .precompiles()
-            .get(&bls12_381_const::PAIRING_ADDRESS)
-            .unwrap();
+        let bls12_381_pairing_precompile =
+            precompiles.precompiles().get(&bls12_381_const::PAIRING_ADDRESS).unwrap();
         bad_input_len = bls12_381::JOVIAN_PAIRING_MAX_INPUT_SIZE + 1;
         assert!(bad_input_len < bls12_381::ISTHMUS_PAIRING_MAX_INPUT_SIZE);
         let input = vec![0u8; bad_input_len];
@@ -492,9 +468,7 @@ mod tests {
 
     #[test]
     fn test_default_precompiles_is_latest() {
-        let latest = OpPrecompiles::new_with_spec(OpSpecId::default())
-            .inner
-            .precompiles;
+        let latest = OpPrecompiles::new_with_spec(OpSpecId::default()).inner.precompiles;
         let default = OpPrecompiles::default().inner.precompiles;
         assert_eq!(latest.len(), default.len());
 

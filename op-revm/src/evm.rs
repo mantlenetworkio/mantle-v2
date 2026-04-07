@@ -1,16 +1,16 @@
 //! Contains the `[OpEvm]` type and its implementation of the execution EVM traits.
-use crate::{precompiles::OpPrecompiles, OpSpecId};
+use crate::{OpSpecId, precompiles::OpPrecompiles};
 use revm::{
+    Database, Inspector,
     context::{Cfg, ContextError, ContextSetters, Evm, FrameStack},
     context_interface::ContextTr,
     handler::{
+        EthFrame, EvmTr, FrameInitOrResult, ItemOrResult, PrecompileProvider,
         evm::FrameTr,
         instructions::{EthInstructions, InstructionProvider},
-        EthFrame, EvmTr, FrameInitOrResult, ItemOrResult, PrecompileProvider,
     },
     inspector::{InspectorEvmTr, JournalExt},
-    interpreter::{interpreter::EthInterpreter, InterpreterResult},
-    Database, Inspector,
+    interpreter::{InterpreterResult, interpreter::EthInterpreter},
 };
 
 /// Optimism EVM extends the [`Evm`] type with Optimism specific types and logic.
@@ -114,12 +114,7 @@ where
     #[inline]
     fn all(
         &self,
-    ) -> (
-        &Self::Context,
-        &Self::Instructions,
-        &Self::Precompiles,
-        &FrameStack<Self::Frame>,
-    ) {
+    ) -> (&Self::Context, &Self::Instructions, &Self::Precompiles, &FrameStack<Self::Frame>) {
         self.0.all()
     }
 

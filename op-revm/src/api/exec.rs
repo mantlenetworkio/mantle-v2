@@ -1,40 +1,30 @@
 //! Implementation of the [`ExecuteEvm`] trait for the [`OpEvm`].
 use crate::{
-    evm::OpEvm, handler::OpHandler, transaction::OpTxTr, L1BlockInfo, OpHaltReason, OpSpecId,
-    OpTransactionError,
+    L1BlockInfo, OpHaltReason, OpSpecId, OpTransactionError, evm::OpEvm, handler::OpHandler,
+    transaction::OpTxTr,
 };
 use revm::{
-    context::{result::ExecResultAndState, ContextSetters},
+    DatabaseCommit, ExecuteCommitEvm, ExecuteEvm,
+    context::{ContextSetters, result::ExecResultAndState},
     context_interface::{
-        result::{EVMError, ExecutionResult},
         Cfg, ContextTr, Database, JournalTr,
+        result::{EVMError, ExecutionResult},
     },
     handler::{
-        instructions::EthInstructions, system_call::SystemCallEvm, EthFrame, Handler,
-        PrecompileProvider, SystemCallTx,
+        EthFrame, Handler, PrecompileProvider, SystemCallTx, instructions::EthInstructions,
+        system_call::SystemCallEvm,
     },
     inspector::{
         InspectCommitEvm, InspectEvm, InspectSystemCallEvm, Inspector, InspectorHandler, JournalExt,
     },
-    interpreter::{interpreter::EthInterpreter, InterpreterResult},
+    interpreter::{InterpreterResult, interpreter::EthInterpreter},
     primitives::{Address, Bytes},
     state::EvmState,
-    DatabaseCommit, ExecuteCommitEvm, ExecuteEvm,
 };
 
 /// Type alias for Optimism context
 pub trait OpContextTr:
     ContextTr<
-    Journal: JournalTr<State = EvmState>,
-    Tx: OpTxTr,
-    Cfg: Cfg<Spec = OpSpecId>,
-    Chain = L1BlockInfo,
->
-{
-}
-
-impl<T> OpContextTr for T where
-    T: ContextTr<
         Journal: JournalTr<State = EvmState>,
         Tx: OpTxTr,
         Cfg: Cfg<Spec = OpSpecId>,
@@ -43,7 +33,17 @@ impl<T> OpContextTr for T where
 {
 }
 
-/// Type alias for the error type of the OpEvm.
+impl<T> OpContextTr for T where
+    T: ContextTr<
+            Journal: JournalTr<State = EvmState>,
+            Tx: OpTxTr,
+            Cfg: Cfg<Spec = OpSpecId>,
+            Chain = L1BlockInfo,
+        >
+{
+}
+
+/// Type alias for the error type of the `OpEvm`.
 pub type OpError<CTX> = EVMError<<<CTX as ContextTr>::Db as Database>::Error, OpTransactionError>;
 
 impl<CTX, INSP, PRECOMPILE> ExecuteEvm

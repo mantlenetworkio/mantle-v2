@@ -7,7 +7,6 @@ edition.workspace = true
 keywords.workspace = true
 license.workspace = true
 repository.workspace = true
-readme.workspace = true
 rust-version.workspace = true
 
 [package.metadata.docs.rs]
@@ -43,7 +42,6 @@ std = [
 	"serde_json/std",
 	"alloy-primitives/std",
 ]
-hashbrown = ["revm/hashbrown"]
 serde = ["dep:serde", "revm/serde", "alloy-primitives/serde"]
 portable = ["revm/portable"]
 

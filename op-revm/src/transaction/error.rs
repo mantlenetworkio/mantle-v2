@@ -18,28 +18,31 @@ pub enum OpTransactionError {
     /// was deprecated in the Regolith hardfork, and this error is thrown if a `Deposit` transaction
     /// is found with this field set to `true` after the hardfork activation.
     ///
-    /// In addition, this error is internal, and bubbles up into an [OpHaltReason::FailedDeposit][crate::OpHaltReason::FailedDeposit] error
-    /// in the `revm` handler for the consumer to easily handle. This is due to a state transition
-    /// rule on OP Stack chains where, if for any reason a deposit transaction fails, the transaction
-    /// must still be included in the block, the sender nonce is bumped, the `mint` value persists, and
-    /// special gas accounting rules are applied. Normally on L1, [EVMError::Transaction] errors
-    /// are cause for non-inclusion, so a special [OpHaltReason][crate::OpHaltReason] variant was introduced to handle this
-    /// case for failed deposit transactions.
+    /// In addition, this error is internal, and bubbles up into an
+    /// [`OpHaltReason::FailedDeposit`][crate::OpHaltReason::FailedDeposit] error in the `revm`
+    /// handler for the consumer to easily handle. This is due to a state transition rule on OP
+    /// Stack chains where, if for any reason a deposit transaction fails, the transaction
+    /// must still be included in the block, the sender nonce is bumped, the `mint` value persists,
+    /// and special gas accounting rules are applied. Normally on L1, [`EVMError::Transaction`]
+    /// errors are cause for non-inclusion, so a special [`OpHaltReason`][crate::OpHaltReason]
+    /// variant was introduced to handle this case for failed deposit transactions.
     DepositSystemTxPostRegolith,
     /// Deposit transaction halts bubble up to the global main return handler, wiping state and
     /// only increasing the nonce + persisting the mint value.
     ///
-    /// This is a catch-all error for any deposit transaction that results in an [OpHaltReason][crate::OpHaltReason] error
-    /// post-regolith hardfork. This allows for a consumer to easily handle special cases where
-    /// a deposit transaction fails during validation, but must still be included in the block.
+    /// This is a catch-all error for any deposit transaction that results in an
+    /// [`OpHaltReason`][crate::OpHaltReason] error post-regolith hardfork. This allows for a
+    /// consumer to easily handle special cases where a deposit transaction fails during
+    /// validation, but must still be included in the block.
     ///
-    /// In addition, this error is internal, and bubbles up into an [OpHaltReason::FailedDeposit][crate::OpHaltReason::FailedDeposit] error
-    /// in the `revm` handler for the consumer to easily handle. This is due to a state transition
-    /// rule on OP Stack chains where, if for any reason a deposit transaction fails, the transaction
-    /// must still be included in the block, the sender nonce is bumped, the `mint` value persists, and
-    /// special gas accounting rules are applied. Normally on L1, [EVMError::Transaction] errors
-    /// are cause for non-inclusion, so a special [OpHaltReason][crate::OpHaltReason] variant was introduced to handle this
-    /// case for failed deposit transactions.
+    /// In addition, this error is internal, and bubbles up into an
+    /// [`OpHaltReason::FailedDeposit`][crate::OpHaltReason::FailedDeposit] error in the `revm`
+    /// handler for the consumer to easily handle. This is due to a state transition rule on OP
+    /// Stack chains where, if for any reason a deposit transaction fails, the transaction
+    /// must still be included in the block, the sender nonce is bumped, the `mint` value persists,
+    /// and special gas accounting rules are applied. Normally on L1, [`EVMError::Transaction`]
+    /// errors are cause for non-inclusion, so a special [`OpHaltReason`][crate::OpHaltReason]
+    /// variant was introduced to handle this case for failed deposit transactions.
     HaltedDepositPostRegolith,
     /// Missing enveloped transaction bytes for non-deposit transaction.
     ///
@@ -55,10 +58,7 @@ impl Display for OpTransactionError {
         match self {
             Self::Base(error) => error.fmt(f),
             Self::DepositSystemTxPostRegolith => {
-                write!(
-                    f,
-                    "deposit system transactions post regolith hardfork are not supported"
-                )
+                write!(f, "deposit system transactions post regolith hardfork are not supported")
             }
             Self::HaltedDepositPostRegolith => {
                 write!(
@@ -67,10 +67,7 @@ impl Display for OpTransactionError {
                 )
             }
             Self::MissingEnvelopedTx => {
-                write!(
-                    f,
-                    "missing enveloped transaction bytes for non-deposit transaction"
-                )
+                write!(f, "missing enveloped transaction bytes for non-deposit transaction")
             }
         }
     }
@@ -122,9 +119,6 @@ mod test {
         let response = r#""DepositSystemTxPostRegolith""#;
 
         let op_transaction_error: OpTransactionError = serde_json::from_str(response).unwrap();
-        assert_eq!(
-            op_transaction_error,
-            OpTransactionError::DepositSystemTxPostRegolith
-        );
+        assert_eq!(op_transaction_error, OpTransactionError::DepositSystemTxPostRegolith);
     }
 }
