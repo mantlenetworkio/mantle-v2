@@ -69,9 +69,13 @@ func matchesPeerID(peerID, targetNodeID string) bool {
 
 // ConnectP2P creates a p2p peer connection between node1 and node2.
 //
-// Both nodes call admin_addPeer on each other (bidirectional) so that either
-// side can initiate the TCP dial. This is required for op-reth with
-// --disable-discovery, which does not actively dial admin_addPeer targets.
+// The initiator always calls admin_addPeer on the acceptor to trigger the outbound
+// dial. For op-reth with --disable-discovery, the acceptor must also call
+// admin_addPeer on the initiator because reth does not actively dial admin_addPeer
+// targets; the acceptor must initiate the TCP handshake. For op-geth, the
+// initiator's addPeer is sufficient and bidirectional addPeer is intentionally
+// avoided: simultaneous dials cause geth's devp2p scheduler to add repeated
+// dial-history entries on the "loser" side, making subsequent reconnects unreliable.
 //
 // Peer verification uses the canonical 64-hex keccak256 node ID derived from
 // the enode URL. This avoids a cross-client ID encoding mismatch where
@@ -86,20 +90,25 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	initiatorNodeID := enodeNodeID(require, initiatorInfo.Enode)
 	acceptorNodeID := enodeNodeID(require, acceptorInfo.Enode)
 
-	// Both nodes add each other as peers so that either side can initiate the
-	// connection. Required for reth with --disable-discovery.
+	// Initiator always dials the acceptor.
 	var peerAdded bool
 	require.NoError(initiator.CallContext(ctx, &peerAdded, "admin_addPeer", acceptorInfo.Enode), "initiator add peer")
 	require.True(peerAdded, "initiator should have added peer successfully")
-	require.NoError(acceptor.CallContext(ctx, &peerAdded, "admin_addPeer", initiatorInfo.Enode), "acceptor add peer")
-	require.True(peerAdded, "acceptor should have added peer successfully")
+
+	// reth with --disable-discovery does not actively dial admin_addPeer targets.
+	// Have the acceptor also call addPeer so it can initiate the TCP handshake.
+	// op-geth dials synchronously from the initiator side, so bidirectional addPeer
+	// is not needed and intentionally skipped to avoid dial-history re-dial issues.
+	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+		require.NoError(acceptor.CallContext(ctx, &peerAdded, "admin_addPeer", initiatorInfo.Enode), "acceptor add peer")
+		require.True(peerAdded, "acceptor should have added peer successfully")
+	}
 
 	// Wait for the peer connection to appear.
-	// geth processes admin_addPeer synchronously so 30 seconds is sufficient.
-	// reth with --disable-discovery needs more time: after both nodes call admin_addPeer
-	// on each other, the TCP handshake is initiated by the acceptor side and may be delayed
-	// while the devp2p listener processes the outbound dial request. In CI under load this
-	// can exceed 30 seconds for reth.
+	// geth: 30 s is sufficient for the initiator-side synchronous dial.
+	// reth with --disable-discovery needs more time: the TCP handshake is
+	// initiated by the acceptor side and may be delayed while the devp2p listener
+	// processes the outbound dial request. In CI under load this can exceed 30 s.
 	connTimeout := 30 * time.Second
 	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
 		connTimeout = 90 * time.Second
@@ -129,17 +138,33 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 }
 
 // DisconnectP2P disconnects a p2p peer connection between node1 and node2.
+//
+// For op-reth, both nodes call admin_removePeer on each other (bidirectional)
+// to mirror the bidirectional admin_addPeer done by ConnectP2P. For op-geth,
+// only the initiator calls removePeer; the acceptor never had the initiator as a
+// static peer (unidirectional addPeer), so there is nothing to clean up on the
+// acceptor side.
 func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcCaller, acceptor RpcCaller) {
-	var targetInfo p2p.NodeInfo
-	require.NoError(acceptor.CallContext(ctx, &targetInfo, "admin_nodeInfo"), "get node info")
+	var initiatorInfo, acceptorInfo p2p.NodeInfo
+	require.NoError(acceptor.CallContext(ctx, &acceptorInfo, "admin_nodeInfo"), "get acceptor node info")
 
-	// Derive canonical node ID from the enode URL (consistent across EL clients).
-	targetNodeID := enodeNodeID(require, targetInfo.Enode)
+	// Derive canonical node IDs from the enode URLs (consistent across EL clients).
+	acceptorNodeID := enodeNodeID(require, acceptorInfo.Enode)
 
 	var peerRemoved bool
-	require.NoError(initiator.CallContext(ctx, &peerRemoved, "admin_removePeer", targetInfo.ENR), "remove peer")
-	require.True(peerRemoved, "should have removed peer successfully")
+	require.NoError(initiator.CallContext(ctx, &peerRemoved, "admin_removePeer", acceptorInfo.ENR), "initiator remove peer")
+	require.True(peerRemoved, "initiator should have removed peer successfully")
 
+	// For reth: also remove acceptor-side static peer to mirror bidirectional ConnectP2P.
+	var initiatorNodeID string
+	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+		require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
+		initiatorNodeID = enodeNodeID(require, initiatorInfo.Enode)
+		require.NoError(acceptor.CallContext(ctx, &peerRemoved, "admin_removePeer", initiatorInfo.ENR), "acceptor remove peer")
+		require.True(peerRemoved, "acceptor should have removed peer successfully")
+	}
+
+	// Wait for both sides (or just the initiator side for geth) to no longer see each other.
 	waitCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	err := wait.For(waitCtx, time.Second, func() (bool, error) {
@@ -147,11 +172,22 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 		if err := initiator.CallContext(waitCtx, &peers, "admin_peers"); err != nil {
 			return false, err
 		}
+		if slices.ContainsFunc(peers, func(p peer) bool {
+			return matchesPeerID(p.ID, acceptorNodeID)
+		}) {
+			return false, nil
+		}
+		if os.Getenv(devstackL2ELKindEnv) != "op-reth" {
+			return true, nil
+		}
+		if err := acceptor.CallContext(waitCtx, &peers, "admin_peers"); err != nil {
+			return false, err
+		}
 		return !slices.ContainsFunc(peers, func(p peer) bool {
-			return matchesPeerID(p.ID, targetNodeID)
+			return matchesPeerID(p.ID, initiatorNodeID)
 		}), nil
 	})
-	require.NoError(err, "The peer was not removed")
+	require.NoError(err, "The peer was not disconnected")
 }
 
 type peer struct {
