@@ -40,6 +40,7 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 	// For reth: wait for the async pipeline to commit the sequencer's last unsafe block
 	// to the EL DB before using it as the parent for the first manual-sequenced block.
 	// On geth (synchronous pipeline) Reached() is an instant no-op.
+	// Reached uses a 2s fixed retry interval; 10 attempts = up to 20s.
 	sys.L2EL.Reached(eth.Unsafe, sys.L2CL.HeadBlockRef(types.LocalUnsafe).Number, 10)
 
 	// Use the EL's committed unsafe head hash as parent instead of latestUnsafe_A
@@ -64,6 +65,7 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 			// read a stale EL head (L1 origin 0) from reth's DB during a reset and
 			// reject the next build with "L1 origin break" error.
 			// On geth (synchronous pipeline) Reached() is an instant no-op.
+			// Reached uses a 2s fixed retry interval; 10 attempts = up to 20s.
 			sys.L2EL.Reached(eth.Unsafe, clHead.Number, 10)
 			parent = clHead.Hash
 
@@ -79,6 +81,7 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 	// before calling StartSequencer, so op-node picks up the correct EL head.
 	// On geth (synchronous pipeline) this is an instant no-op; on reth it prevents
 	// a "L1 origin break" where op-node reads a stale EL head and builds on the wrong parent.
+	// Reached uses a 2s fixed retry interval; 60 attempts = up to 2 minutes.
 	lastBlockNum := sys.L2EL.BlockRefByHash(parent).Number
 	sys.L2EL.Reached(eth.Unsafe, lastBlockNum, 60)
 	sys.L2CL.StartSequencer()

@@ -20,6 +20,7 @@ func TestVerifierManualSync(gt *testing.T) {
 	logger := t.Logger()
 
 	delta := uint64(7)
+	// WaitUntilValid uses a 1s fixed retry interval; 10 attempts = up to 10s.
 	attempts := 10
 	sys.L2CL.Advanced(types.LocalUnsafe, delta, 30)
 

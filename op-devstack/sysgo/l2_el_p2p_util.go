@@ -2,7 +2,6 @@ package sysgo
 
 import (
 	"context"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 
+	enginekind "github.com/ethereum-optimism/optimism/op-node/rollup/engine"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/wait"
 	"github.com/ethereum-optimism/optimism/op-service/dial"
@@ -99,7 +99,7 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	// Have the acceptor also call addPeer so it can initiate the TCP handshake.
 	// op-geth dials synchronously from the initiator side, so bidirectional addPeer
 	// is not needed and intentionally skipped to avoid dial-history re-dial issues.
-	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+	if devstackL2ELKind() == enginekind.Reth {
 		require.NoError(acceptor.CallContext(ctx, &peerAdded, "admin_addPeer", initiatorInfo.Enode), "acceptor add peer")
 		require.True(peerAdded, "acceptor should have added peer successfully")
 	}
@@ -110,29 +110,29 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	// initiated by the acceptor side and may be delayed while the devp2p listener
 	// processes the outbound dial request. In CI under load this can exceed 30 s.
 	connTimeout := 30 * time.Second
-	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+	if devstackL2ELKind() == enginekind.Reth {
 		connTimeout = 90 * time.Second
 	}
 	connCtx, cancel := context.WithTimeout(context.Background(), connTimeout)
 	defer cancel()
+	// Require both sides to see each other: an AND condition prevents a half-open
+	// devp2p connection (only one peer list updated) from being accepted as success,
+	// which would cause subsequent sync steps to flake.
 	err := wait.For(connCtx, time.Second, func() (bool, error) {
-		var peers []peer
-		// Check initiator's peer list for acceptor
-		if err := initiator.CallContext(connCtx, &peers, "admin_peers"); err != nil {
+		var initiatorPeers, acceptorPeers []peer
+		if err := initiator.CallContext(connCtx, &initiatorPeers, "admin_peers"); err != nil {
 			return false, err
 		}
-		if slices.ContainsFunc(peers, func(p peer) bool {
+		if err := acceptor.CallContext(connCtx, &acceptorPeers, "admin_peers"); err != nil {
+			return false, err
+		}
+		initiatorSeesAcceptor := slices.ContainsFunc(initiatorPeers, func(p peer) bool {
 			return matchesPeerID(p.ID, acceptorNodeID)
-		}) {
-			return true, nil
-		}
-		// Check acceptor's peer list for initiator
-		if err := acceptor.CallContext(connCtx, &peers, "admin_peers"); err != nil {
-			return false, err
-		}
-		return slices.ContainsFunc(peers, func(p peer) bool {
+		})
+		acceptorSeesInitiator := slices.ContainsFunc(acceptorPeers, func(p peer) bool {
 			return matchesPeerID(p.ID, initiatorNodeID)
-		}), nil
+		})
+		return initiatorSeesAcceptor && acceptorSeesInitiator, nil
 	})
 	require.NoError(err, "The peer was not connected")
 }
@@ -157,7 +157,7 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 
 	// For reth: also remove acceptor-side static peer to mirror bidirectional ConnectP2P.
 	var initiatorNodeID string
-	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+	if devstackL2ELKind() == enginekind.Reth {
 		require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
 		initiatorNodeID = enodeNodeID(require, initiatorInfo.Enode)
 		require.NoError(acceptor.CallContext(ctx, &peerRemoved, "admin_removePeer", initiatorInfo.ENR), "acceptor remove peer")
@@ -177,7 +177,7 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 		}) {
 			return false, nil
 		}
-		if os.Getenv(devstackL2ELKindEnv) != "op-reth" {
+		if devstackL2ELKind() != enginekind.Reth {
 			return true, nil
 		}
 		if err := acceptor.CallContext(waitCtx, &peers, "admin_peers"); err != nil {

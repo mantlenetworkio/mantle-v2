@@ -153,6 +153,7 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Example logs from L2EL(geth)
 	//  Extend chain
 	//  Chain head was updated
+	// WaitUntilValid uses a 1s fixed retry interval; 3 attempts = up to 3s.
 	attempts := 3
 	targetNum = startNum + 2
 	// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
@@ -299,6 +300,7 @@ func TestELP2PFCUUnavailableHash(gt *testing.T) {
 
 	// Trigger EL Sync to valid hash
 	targetNum := startNum + 3
+	// WaitUntilValid uses a 1s fixed retry interval; 5 attempts = up to 5s.
 	attempts := 5
 	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
 	// head advanced
@@ -356,6 +358,7 @@ func TestSafeDoesNotAdvanceWhenUnsafeIsSyncing_NoELP2P(gt *testing.T) {
 
 	// FCU to advance unsafe and safe normally, promoting non canonical chain to canonical
 	logger.Info("ForkchoiceUpdate", "target", targetNum)
+	// WaitUntilValid uses a 1s fixed retry interval; 5 attempts = up to 5s.
 	attempts := 5
 	// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
 	// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up)
@@ -439,6 +442,7 @@ func TestInvalidPayloadThroughCLP2P(gt *testing.T) {
 	startNum := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
 
 	// We check L2ELB can be advanced using the valid payload first
+	// WaitUntilValid uses a 1s fixed retry interval; 3 attempts = up to 3s.
 	attempts := 3
 	targetNum := startNum + 1
 	sys.L2CLB.SignalTarget(sys.L2EL, targetNum)
