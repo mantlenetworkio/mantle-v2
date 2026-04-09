@@ -93,6 +93,7 @@ func (af *ArsiaFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) Ar
 			"(OperatorFeeVaultAddr received 0; op-geth routed to coinbase)",
 			coinbaseDiff, l2Fee, inferredOpFee)
 		operatorFee = inferredOpFee
+		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee) // patch: fee went to coinbase not vault
 		coinbaseDiffForAssert = new(big.Int).Set(l2Fee) // normalize for assertion
 	}
 
@@ -171,6 +172,7 @@ func (af *ArsiaFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) Ar
 			"coinbaseDiff=%s l2Fee=%s inferredOperatorFee=%s",
 			coinbaseDiff, l2Fee, inferredOpFee)
 		operatorFee = inferredOpFee
+		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee) // patch: fee went to coinbase not vault
 		coinbaseDiffForAssert = new(big.Int).Set(l2Fee)
 	}
 
