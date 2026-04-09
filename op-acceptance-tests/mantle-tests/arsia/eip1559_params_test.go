@@ -167,12 +167,14 @@ func TestEIP1559Params(gt *testing.T) {
 	t.Logf("Expected default EIP-1559 params from rollup config: denominator=%d, elasticity=%d",
 		expectedDefaultDenom, expectedDefaultElasticity)
 
-	// Before any changes: L1 SystemConfig should have both values at zero (initial state),
-	// while L2 block headers should carry the defaults from the rollup config.
+	// Read current L1 SystemConfig EIP-1559 params as baseline (log-only, no assertion).
+	// NOTE: In sysext mode the devnet may have non-zero initial values (e.g. denominator=50
+	// from devnet-environment.json rollup_config). We do NOT assert the initial state is zero;
+	// the test validates only that new values written via SetEIP1559Params propagate to L2.
+	// 依据：sysgo 模式下测试自行初始化链，初始值由测试控制（为 0）；
+	// sysext 模式下连接已运行的 devnet，初始值由 devnet 配置决定，两者不同。
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
-	require.Equal(uint32(0), origDenom, "initial L1 denominator should be zero")
-	require.Equal(uint32(0), origElasticity, "initial L1 elasticity should be zero")
 
 	l2Denom, l2Elast := ep.readL2EIP1559Params(t)
 	t.Logf("Initial L2 block header EIP-1559 params: denominator=%d, elasticity=%d", l2Denom, l2Elast)
