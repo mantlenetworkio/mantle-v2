@@ -1,6 +1,9 @@
 package dsl
 
 import (
+	"context"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
@@ -40,7 +43,21 @@ func (f *Faucet) Fund(addr common.Address, amount eth.ETH) {
 		return
 	}
 	err := retry.Do0(f.ctx, 3, retry.Exponential(), func() error {
-		err := f.inner.API().RequestETH(f.ctx, addr, amount)
+		// Use a per-attempt context with a fixed 30s timeout instead of f.ctx.
+		//
+		// retry.Do0 treats context.DeadlineExceeded originating from f.ctx as a
+		// non-retryable signal and stops immediately. By isolating the HTTP call
+		// into a child context, a slow or rate-limited faucet response times out
+		// within the child context while f.ctx remains alive, allowing retry.Do0
+		// to continue its retry loop.
+		//
+		// 依据：sysext faucet (:39001) 在连续测试间可能处于 rate-limit 或 busy 状态
+		// （实测 TestDepositMNTByBridge_ZeroValue 96s 后立即发起请求会在 12s 超时），
+		// HTTP 超时错误来自 child context，f.ctx 仍有效，retry.Do0 继续重试。
+		// WARN 日志只出现一次证明旧代码中重试被提前终止。
+		reqCtx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
+		defer cancel()
+		err := f.inner.API().RequestETH(reqCtx, addr, amount)
 		if err != nil {
 			f.log.Warn("Failed to fund address", "addr", addr, "amount", amount, "err", err)
 		}
