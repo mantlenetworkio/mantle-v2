@@ -1,6 +1,8 @@
 package dsl
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -216,6 +218,73 @@ func (of *OperatorFee) ValidateTransactionFees(from *EOA, to *EOA, amount *big.I
 
 func (of *OperatorFee) RestoreOriginalConfig() {
 	of.SetOperatorFee(of.originalScalar, of.originalConstant)
+}
+
+// RestoreOriginalConfigWithCtx restores operator fee to the values captured at construction,
+// using the caller-provided ctx instead of of.ctx.
+//
+// This avoids depending on the parent test context, which may be nearly exhausted after
+// running sub-tests (ZeroFees ~60s + NonZeroFees ~60s ≈ 120s consumed).
+//
+// Implementation: ctx is passed directly into contractio.Write and the polling select;
+// of.ctx is NOT modified, so there is no concurrent-write risk.
+//
+// 依据：父 context 在两个子测试后剩余时间不足以完成 L1 写入（12 次重试指数退避）
+// 和 L2 同步等待（最长 2min）；独立 context 确保清理步骤不受子测试耗时影响。
+//
+// Returns an error instead of calling require.NoError so t.Cleanup can report via
+// t.Errorf without panicking outside a test goroutine.
+func (of *OperatorFee) RestoreOriginalConfigWithCtx(ctx context.Context) error {
+	systemOwner := of.GetSystemOwner()
+
+	_, err := contractio.Write(
+		of.systemConfig.SetOperatorFeeScalars(of.originalScalar, of.originalConstant),
+		ctx,
+		systemOwner.Plan(),
+		txplan.WithRetryInclusion(of.l1Client.Escape().EthClient(), 12, retry.Exponential()),
+	)
+	if err != nil {
+		return fmt.Errorf("RestoreOriginalConfig: set scalars on L1: %w", err)
+	}
+	of.t.Logf("Restored operator fee to original: scalar=%d, constant=%d",
+		of.originalScalar, of.originalConstant)
+
+	// Poll until L2 reflects the restored values.
+	// Only ctx controls the timeout; no internal deadline variable (avoids dual-timeout confusion).
+	// time.After inside select makes the sleep ctx-cancellable, avoiding a 5s stall on cancel.
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("RestoreOriginalConfig: context expired waiting for L2 sync: %w", ctx.Err())
+		default:
+		}
+		scalar, err := contractio.Read(of.l1Block.OperatorFeeScalar(), ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("RestoreOriginalConfig: context expired during poll: %w", ctx.Err())
+			case <-time.After(5 * time.Second):
+			}
+			continue
+		}
+		constant, err := contractio.Read(of.l1Block.OperatorFeeConstant(), ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("RestoreOriginalConfig: context expired during poll: %w", ctx.Err())
+			case <-time.After(5 * time.Second):
+			}
+			continue
+		}
+		if scalar == of.originalScalar && constant == of.originalConstant {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("RestoreOriginalConfig: context expired waiting for sync: %w", ctx.Err())
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
 
 func RunOperatorFeeTest(t devtest.T, l2Chain *L2Network, l1EL *L1ELNode, funderL1, funderL2 *Funder) {
