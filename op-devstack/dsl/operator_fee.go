@@ -229,8 +229,9 @@ func (of *OperatorFee) RestoreOriginalConfig() {
 // Implementation: ctx is passed directly into contractio.Write and the polling select;
 // of.ctx is NOT modified, so there is no concurrent-write risk.
 //
-// 依据：父 context 在两个子测试后剩余时间不足以完成 L1 写入（12 次重试指数退避）
-// 和 L2 同步等待（最长 2min）；独立 context 确保清理步骤不受子测试耗时影响。
+// Rationale: the parent context has insufficient remaining time after two sub-tests to
+// complete the L1 write (12-retry exponential back-off) and L2 sync wait (up to 2min);
+// an independent context ensures cleanup is not affected by sub-test duration.
 //
 // Returns an error instead of calling require.NoError so t.Cleanup can report via
 // t.Errorf without panicking outside a test goroutine.

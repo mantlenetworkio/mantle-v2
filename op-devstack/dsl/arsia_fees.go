@@ -79,12 +79,13 @@ func (af *ArsiaFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) Ar
 	// Standard (sysgo): coinbaseDiff = l2Fee (priorityFee only), OperatorVault = operatorFee.
 	// Sysext devnet:    coinbaseDiff = l2Fee + operatorFee,       OperatorVault = 0.
 	//
-	// 依据：sysext devnet 版本 op-geth 将 operator fee 路由至 block coinbase 而非
-	// predeploys.OperatorFeeVaultAddr，导致 coinbaseDiff = priorityFee + operatorFee。
-	// 通过 OperatorVault=0 且 coinbaseDiff>l2Fee 启发式检测，两条件同时满足才触发。
-	// 归一化后 validateVaultIncreaseFees 可使用统一断言路径。
+	// Rationale: in sysext devnet, op-geth routes the operator fee to the block coinbase
+	// instead of predeploys.OperatorFeeVaultAddr, so coinbaseDiff = priorityFee + operatorFee.
+	// We detect this heuristically when OperatorVault=0 AND coinbaseDiff > l2Fee (both
+	// conditions must hold). After normalization, validateVaultIncreaseFees uses a unified
+	// assertion path.
 	//
-	// N4: 触发时记录日志，方便调试路由路径和未来 op-geth 版本行为变化。
+	// N4: log when triggered to aid debugging fee routing and future op-geth behavior changes.
 	coinbaseDiffForAssert := new(big.Int).Set(coinbaseDiff)
 	if operatorFee.Sign() == 0 && coinbaseDiff.Cmp(l2Fee) > 0 {
 		inferredOpFee := new(big.Int).Sub(coinbaseDiff, l2Fee)
@@ -334,8 +335,8 @@ func (af *ArsiaFees) validateFeatures(receipt *types.Receipt, l1Fee *big.Int) (u
 //
 // OperatorVault assertion is skipped when operatorFee > 0 but OperatorVault = 0,
 // which indicates operator fee was routed to coinbase (sysext devnet behavior).
-// 依据：OperatorFeeVault 增量为 0 属预期行为，不应报错；
-// sysgo 路径下 OperatorVault > 0 或 operatorFee = 0，走标准断言。
+// Rationale: a zero OperatorFeeVault increase is expected behavior and should not fail;
+// in the sysgo path OperatorVault > 0 or operatorFee = 0, so the standard assertion applies.
 func (af *ArsiaFees) validateVaultIncreaseFees(
 	l2Fee, baseFee, priorityFee, l1Fee, operatorFee, coinbaseDiff *big.Int,
 	vaultsAfter, vaultsBefore VaultBalances) {

@@ -51,10 +51,11 @@ func (f *Faucet) Fund(addr common.Address, amount eth.ETH) {
 		// within the child context while f.ctx remains alive, allowing retry.Do0
 		// to continue its retry loop.
 		//
-		// 依据：sysext faucet (:39001) 在连续测试间可能处于 rate-limit 或 busy 状态
-		// （实测 TestDepositMNTByBridge_ZeroValue 96s 后立即发起请求会在 12s 超时），
-		// HTTP 超时错误来自 child context，f.ctx 仍有效，retry.Do0 继续重试。
-		// WARN 日志只出现一次证明旧代码中重试被提前终止。
+		// Rationale: the sysext faucet (:39001) may be rate-limited or busy between
+		// consecutive tests (observed: a request right after TestDepositMNTByBridge_ZeroValue
+		// 96s run hits a 12s timeout). The HTTP timeout error originates from the child
+		// context, so f.ctx stays alive and retry.Do0 continues retrying.
+		// A single WARN log in the old code proved that retries were being terminated early.
 		reqCtx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
 		defer cancel()
 		err := f.inner.API().RequestETH(reqCtx, addr, amount)
