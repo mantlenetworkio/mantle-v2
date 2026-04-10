@@ -171,8 +171,9 @@ func TestEIP1559Params(gt *testing.T) {
 	// NOTE: In sysext mode the devnet may have non-zero initial values (e.g. denominator=50
 	// from devnet-environment.json rollup_config). We do NOT assert the initial state is zero;
 	// the test validates only that new values written via SetEIP1559Params propagate to L2.
-	// 依据：sysgo 模式下测试自行初始化链，初始值由测试控制（为 0）；
-	// sysext 模式下连接已运行的 devnet，初始值由 devnet 配置决定，两者不同。
+	// Rationale: in sysgo mode the test initialises the chain itself so initial values
+	// are test-controlled (zero); in sysext mode we connect to a running devnet whose
+	// initial values come from the devnet configuration — the two may differ.
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
 
@@ -182,8 +183,9 @@ func TestEIP1559Params(gt *testing.T) {
 	// (e.g. denominator=8 from genesis or a previous test run), which may differ from
 	// the rollup config default (denominator=50). We do NOT assert the initial L2 state;
 	// the test only validates that new values written via SetEIP1559Params propagate to L2.
-	// 依据：sysext devnet 的 L2 当前状态由 L1 SystemConfig 历史写入决定，
-	// 可能与 rollup config 默认值不同，断言初始状态不是本测试的目的。
+	// Rationale: in sysext mode the L2 state reflects historical L1 SystemConfig writes,
+	// which may differ from the rollup config defaults; asserting initial state is not
+	// the purpose of this test.
 
 	testCases := []struct {
 		name        string
