@@ -3,11 +3,9 @@ package sysgo
 import (
 	"context"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
 
 	enginekind "github.com/ethereum-optimism/optimism/op-node/rollup/engine"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
@@ -44,29 +42,6 @@ type RpcCaller interface {
 	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
-// enodeNodeID derives the canonical 64-hex keccak256 devp2p node ID from an
-// enode URL. This is the authoritative identifier that admin_peers consistently
-// returns (modulo an optional "0x" prefix in op-reth).
-//
-// Using the enode URL rather than admin_nodeInfo.id avoids a cross-client format
-// mismatch:
-//   - op-geth admin_nodeInfo.id  → 64-hex keccak256 hash, no prefix
-//   - op-reth admin_nodeInfo.id  → 66-hex compressed public key, no prefix
-//   - op-geth admin_peers[].id   → 64-hex keccak256 hash, no prefix
-//   - op-reth admin_peers[].id   → 64-hex keccak256 hash, "0x" prefix
-func enodeNodeID(require *testreq.Assertions, enodeURL string) string {
-	node, err := enode.ParseV4(enodeURL)
-	require.NoError(err, "failed to parse enode URL")
-	return node.ID().String() // 64 lowercase hex chars, no "0x"
-}
-
-// matchesPeerID reports whether the peer ID returned by admin_peers matches the
-// given canonical node ID. It strips an optional "0x" prefix to handle the
-// format difference between op-geth (no prefix) and op-reth (with "0x" prefix).
-func matchesPeerID(peerID, targetNodeID string) bool {
-	return strings.EqualFold(strings.TrimPrefix(peerID, "0x"), targetNodeID)
-}
-
 // ConnectP2P creates a p2p peer connection between node1 and node2.
 //
 // The initiator always calls admin_addPeer on the acceptor to trigger the outbound
@@ -76,19 +51,10 @@ func matchesPeerID(peerID, targetNodeID string) bool {
 // initiator's addPeer is sufficient and bidirectional addPeer is intentionally
 // avoided: simultaneous dials cause geth's devp2p scheduler to add repeated
 // dial-history entries on the "loser" side, making subsequent reconnects unreliable.
-//
-// Peer verification uses the canonical 64-hex keccak256 node ID derived from
-// the enode URL. This avoids a cross-client ID encoding mismatch where
-// op-reth's admin_nodeInfo.id is a compressed public key (different format)
-// while op-reth's admin_peers[].id is a keccak256 hash with a "0x" prefix.
 func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcCaller, acceptor RpcCaller) {
 	var initiatorInfo, acceptorInfo p2p.NodeInfo
 	require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
 	require.NoError(acceptor.CallContext(ctx, &acceptorInfo, "admin_nodeInfo"), "get acceptor node info")
-
-	// Derive canonical node IDs from the enode URLs (consistent across EL clients).
-	initiatorNodeID := enodeNodeID(require, initiatorInfo.Enode)
-	acceptorNodeID := enodeNodeID(require, acceptorInfo.Enode)
 
 	// Initiator always dials the acceptor.
 	var peerAdded bool
@@ -127,10 +93,10 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 			return false, err
 		}
 		initiatorSeesAcceptor := slices.ContainsFunc(initiatorPeers, func(p peer) bool {
-			return matchesPeerID(p.ID, acceptorNodeID)
+			return p.ID == acceptorInfo.ID
 		})
 		acceptorSeesInitiator := slices.ContainsFunc(acceptorPeers, func(p peer) bool {
-			return matchesPeerID(p.ID, initiatorNodeID)
+			return p.ID == initiatorInfo.ID
 		})
 		return initiatorSeesAcceptor && acceptorSeesInitiator, nil
 	})
@@ -148,18 +114,13 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 	var initiatorInfo, acceptorInfo p2p.NodeInfo
 	require.NoError(acceptor.CallContext(ctx, &acceptorInfo, "admin_nodeInfo"), "get acceptor node info")
 
-	// Derive canonical node IDs from the enode URLs (consistent across EL clients).
-	acceptorNodeID := enodeNodeID(require, acceptorInfo.Enode)
-
 	var peerRemoved bool
 	require.NoError(initiator.CallContext(ctx, &peerRemoved, "admin_removePeer", acceptorInfo.ENR), "initiator remove peer")
 	require.True(peerRemoved, "initiator should have removed peer successfully")
 
 	// For reth: also remove acceptor-side static peer to mirror bidirectional ConnectP2P.
-	var initiatorNodeID string
 	if devstackL2ELKind() == enginekind.Reth {
 		require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
-		initiatorNodeID = enodeNodeID(require, initiatorInfo.Enode)
 		require.NoError(acceptor.CallContext(ctx, &peerRemoved, "admin_removePeer", initiatorInfo.ENR), "acceptor remove peer")
 		require.True(peerRemoved, "acceptor should have removed peer successfully")
 	}
@@ -173,7 +134,7 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 			return false, err
 		}
 		if slices.ContainsFunc(peers, func(p peer) bool {
-			return matchesPeerID(p.ID, acceptorNodeID)
+			return p.ID == acceptorInfo.ID
 		}) {
 			return false, nil
 		}
@@ -184,7 +145,7 @@ func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator R
 			return false, err
 		}
 		return !slices.ContainsFunc(peers, func(p peer) bool {
-			return matchesPeerID(p.ID, initiatorNodeID)
+			return p.ID == initiatorInfo.ID
 		}), nil
 	})
 	require.NoError(err, "The peer was not disconnected")
