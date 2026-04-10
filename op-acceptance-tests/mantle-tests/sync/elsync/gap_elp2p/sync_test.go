@@ -108,11 +108,14 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValid()
 	logger.Info("Non canonical chain advanced", "number", targetNum)
 
+	// isReth is used for client-conditional assertions throughout the rest of this test.
+	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
+
 	// On geth, NewPayload stores the block as non-canonical and it is immediately accessible
 	// by hash via eth_getBlockByHash (but not by number, since it is not yet canonical).
 	// On reth, engine_newPayload returns VALID before the block is committed to the HTTP RPC
 	// DB (async pipeline), so the hash is not yet resolvable. Skip on reth.
-	if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+	if !isReth {
 		blockRefNonCan := sys.L2EL.BlockRefByNumber(targetNum) // targetNum = startNum+2
 		nonCan := sys.L2ELB.BlockRefByHash(blockRefNonCan.Hash)
 		require.Equal(uint64(targetNum), nonCan.Number)
@@ -133,9 +136,6 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 
 	// No FCU yet so head not advanced yet (reth: blocks not committed to DB until FCU)
 	require.Equal(startNum, sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
-
-	// isReth is used for client-conditional assertions throughout the rest of this test.
-	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
 
 	// NewPayload for startNum+6:
 	// - geth: parent startNum+5 is unknown (SYNCING payloads not retained); returns SYNCING.
@@ -166,7 +166,7 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// On reth: the async pipeline may extend the canonical chain using already-queued payloads
 	// (startNum+3..+6) immediately after FCU completes, so head may exceed targetNum.
 	head := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
-	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+	if isReth {
 		require.GreaterOrEqual(head, uint64(targetNum))
 	} else {
 		require.Equal(uint64(targetNum), head)
