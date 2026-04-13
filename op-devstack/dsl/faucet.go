@@ -43,19 +43,9 @@ func (f *Faucet) Fund(addr common.Address, amount eth.ETH) {
 		return
 	}
 	err := retry.Do0(f.ctx, 3, retry.Exponential(), func() error {
-		// Use a per-attempt context with a fixed 30s timeout instead of f.ctx.
-		//
-		// retry.Do0 treats context.DeadlineExceeded originating from f.ctx as a
-		// non-retryable signal and stops immediately. By isolating the HTTP call
-		// into a child context, a slow or rate-limited faucet response times out
-		// within the child context while f.ctx remains alive, allowing retry.Do0
-		// to continue its retry loop.
-		//
-		// Rationale: the sysext faucet (:39001) may be rate-limited or busy between
-		// consecutive tests (observed: a request right after TestDepositMNTByBridge_ZeroValue
-		// 96s run hits a 12s timeout). The HTTP timeout error originates from the child
-		// context, so f.ctx stays alive and retry.Do0 continues retrying.
-		// A single WARN log in the old code proved that retries were being terminated early.
+		// Use a per-attempt context so HTTP timeouts don't propagate to f.ctx and
+		// abort the retry loop. retry.Do0 treats f.ctx.DeadlineExceeded as
+		// non-retryable and stops immediately.
 		reqCtx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
 		defer cancel()
 		err := f.inner.API().RequestETH(reqCtx, addr, amount)

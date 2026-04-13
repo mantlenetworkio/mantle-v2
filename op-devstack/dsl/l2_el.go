@@ -100,6 +100,9 @@ func (el *L2ELNode) NotAdvancedFn(label eth.BlockLabel, attempts int) CheckFunc 
 	}
 }
 
+// ReachedFn polls until the EL's head for `label` reaches `target`, with a 2s
+// fixed interval between attempts (total wall-clock budget = attempts × 2s).
+// Needed on reth (async commit) and a no-op on geth (synchronous pipeline).
 func (el *L2ELNode) ReachedFn(label eth.BlockLabel, target uint64, attempts int) CheckFunc {
 	return func() error {
 		logger := el.log.With("id", el.inner.ID(), "chain", el.ChainID(), "label", label, "target", target)

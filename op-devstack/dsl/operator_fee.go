@@ -220,21 +220,14 @@ func (of *OperatorFee) RestoreOriginalConfig() {
 	of.SetOperatorFee(of.originalScalar, of.originalConstant)
 }
 
-// RestoreOriginalConfigWithCtx restores operator fee to the values captured at construction,
-// using the caller-provided ctx instead of of.ctx.
+// RestoreOriginalConfigWithCtx restores operator fee to the values captured at
+// construction, using the caller-provided ctx instead of of.ctx. Use this from
+// t.Cleanup with an independent context: of.ctx is the parent test context and
+// may be near-exhausted after long-running sub-tests, leaving insufficient time
+// for the L1 write + L2 sync poll.
 //
-// This avoids depending on the parent test context, which may be nearly exhausted after
-// running sub-tests (ZeroFees ~60s + NonZeroFees ~60s ≈ 120s consumed).
-//
-// Implementation: ctx is passed directly into contractio.Write and the polling select;
-// of.ctx is NOT modified, so there is no concurrent-write risk.
-//
-// Rationale: the parent context has insufficient remaining time after two sub-tests to
-// complete the L1 write (12-retry exponential back-off) and L2 sync wait (up to 2min);
-// an independent context ensures cleanup is not affected by sub-test duration.
-//
-// Returns an error instead of calling require.NoError so t.Cleanup can report via
-// t.Errorf without panicking outside a test goroutine.
+// Returns an error (instead of require.NoError) so t.Cleanup can report via
+// t.Errorf without panicking outside the test goroutine.
 func (of *OperatorFee) RestoreOriginalConfigWithCtx(ctx context.Context) error {
 	systemOwner := of.GetSystemOwner()
 
@@ -250,9 +243,8 @@ func (of *OperatorFee) RestoreOriginalConfigWithCtx(ctx context.Context) error {
 	of.t.Logf("Restored operator fee to original: scalar=%d, constant=%d",
 		of.originalScalar, of.originalConstant)
 
-	// Poll until L2 reflects the restored values.
-	// Only ctx controls the timeout; no internal deadline variable (avoids dual-timeout confusion).
-	// time.After inside select makes the sleep ctx-cancellable, avoiding a 5s stall on cancel.
+	// Poll until L2 reflects the restored values, using ctx as the sole deadline.
+	// time.After sits inside select{} so cancel doesn't stall for 5s.
 	for {
 		select {
 		case <-ctx.Done():

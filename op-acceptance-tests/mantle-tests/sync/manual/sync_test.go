@@ -20,7 +20,6 @@ func TestVerifierManualSync(gt *testing.T) {
 	logger := t.Logger()
 
 	delta := uint64(7)
-	// WaitUntilValid uses a 1s fixed retry interval; 10 attempts = up to 10s.
 	attempts := 10
 	sys.L2CL.Advanced(types.LocalUnsafe, delta, 30)
 
@@ -53,10 +52,9 @@ func TestVerifierManualSync(gt *testing.T) {
 			require.Error(errNC, ethereum.NotFound)
 		}
 
-		// FCU: wait until VALID to handle reth's async pipeline (geth is synchronous so this
-		// is a no-op for geth, but reth may initially return SYNCING while the pipeline catches up).
-		// Note: on reth, engine_newPayload returns VALID before the block is committed to the DB,
-		// so any checks between NewPayload and ForkchoiceUpdate may race. We go straight to FCU.
+		// On reth, engine_newPayload returns VALID before the block is committed
+		// to the DB, so checks between NewPayload and ForkchoiceUpdate may race.
+		// Go straight to FCU.
 		logger.Info("ForkchoiceUpdate", "target", blockNum)
 		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, blockNum, 0, 0, nil).WaitUntilValid(attempts)
 		// Payload valid and canonicalized

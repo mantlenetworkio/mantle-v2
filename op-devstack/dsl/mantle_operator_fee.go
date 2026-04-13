@@ -123,13 +123,9 @@ func RunMantleOperatorFeeTest(t devtest.T, l2Chain *L2Network, l1EL *L1ELNode, f
 		})
 	}
 
-	// Register cleanup with an independent context instead of calling RestoreOriginalConfig()
-	// directly. The parent test context is nearly exhausted after ZeroFees + NonZeroFees (~120s);
-	// a 3-minute independent context covers L1 write (12-retry exponential ≈ 0.5min max) +
-	// L2 sync (≤2min) = ≤2.5min total, with 0.5min margin.
-	// Rationale: calling directly would use the parent context, which has insufficient time
-	// remaining after ZeroFees + NonZeroFees consume ~120s. t.Cleanup runs after the test
-	// ends, and an independent context ensures the cleanup steps complete fully.
+	// Register cleanup with an independent context: the parent test context is
+	// near-exhausted after ZeroFees + NonZeroFees, leaving insufficient time for
+	// the L1 write + L2 sync the restore performs. See RestoreOriginalConfigWithCtx.
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 		defer cancel()

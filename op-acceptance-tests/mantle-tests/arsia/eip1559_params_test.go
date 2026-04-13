@@ -167,25 +167,15 @@ func TestEIP1559Params(gt *testing.T) {
 	t.Logf("Expected default EIP-1559 params from rollup config: denominator=%d, elasticity=%d",
 		expectedDefaultDenom, expectedDefaultElasticity)
 
-	// Read current L1 SystemConfig EIP-1559 params as baseline (log-only, no assertion).
-	// NOTE: In sysext mode the devnet may have non-zero initial values (e.g. denominator=50
-	// from devnet-environment.json rollup_config). We do NOT assert the initial state is zero;
-	// the test validates only that new values written via SetEIP1559Params propagate to L2.
-	// Rationale: in sysgo mode the test initialises the chain itself so initial values
-	// are test-controlled (zero); in sysext mode we connect to a running devnet whose
-	// initial values come from the devnet configuration — the two may differ.
+	// Initial L1/L2 EIP-1559 params are logged only, not asserted: in sysext
+	// mode the devnet may carry prior SystemConfig writes that differ from rollup
+	// config defaults. The test validates that values written via SetEIP1559Params
+	// propagate to L2 — the initial state is out of scope.
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
 
 	l2Denom, l2Elast := ep.readL2EIP1559Params(t)
 	t.Logf("Initial L2 block header EIP-1559 params: denominator=%d, elasticity=%d", l2Denom, l2Elast)
-	// NOTE: In sysext mode the devnet L2 may already reflect a prior SystemConfig write
-	// (e.g. denominator=8 from genesis or a previous test run), which may differ from
-	// the rollup config default (denominator=50). We do NOT assert the initial L2 state;
-	// the test only validates that new values written via SetEIP1559Params propagate to L2.
-	// Rationale: in sysext mode the L2 state reflects historical L1 SystemConfig writes,
-	// which may differ from the rollup config defaults; asserting initial state is not
-	// the purpose of this test.
 
 	testCases := []struct {
 		name        string

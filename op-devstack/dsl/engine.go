@@ -96,6 +96,10 @@ func (r *ForkchoiceUpdateResult) IsValid() *ForkchoiceUpdateResult {
 	return r
 }
 
+// WaitUntilValid polls the FCU result up to `attempts` times with a 1s fixed
+// interval (total wall-clock budget = attempts × 1s). Bridges reth's async
+// pipeline, where FCU may transiently return SYNCING before transitioning to
+// VALID; on geth (synchronous pipeline) the first attempt always succeeds.
 func (r *ForkchoiceUpdateResult) WaitUntilValid(attempts int) *ForkchoiceUpdateResult {
 	tryCnt := 0
 	err := retry.Do0(r.T.Ctx(), attempts, &retry.FixedStrategy{Dur: 1 * time.Second},
