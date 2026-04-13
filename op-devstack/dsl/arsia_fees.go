@@ -88,6 +88,11 @@ func (af *ArsiaFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) Ar
 	walletBalanceDiff.Sub(walletBalanceDiff, amount)
 
 	fastLzSize, estimatedBrotliSize := af.validateFeatures(receipt, l1Fee)
+	// NOTE: In sysext mode, vaultIncreases.BaseFeeVault and .OperatorVault may have been
+	// patched by normalizeSysextCoinbase to match the expected fee values. This makes the
+	// validateFeeDistribution assertions self-consistent but not a true vault audit.
+	// The real on-chain validation happens in validateVaultIncreaseFees (which re-derives
+	// from raw before/after balances and conditionally skips inapplicable assertions).
 	af.validateFeeDistribution(l1Fee, baseFee, priorityFee, operatorFee, vaultIncreases)
 	af.validateTotalBalance(walletBalanceDiff, totalFee, vaultIncreases)
 
@@ -158,6 +163,7 @@ func (af *ArsiaFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) Ar
 	walletBalanceDiff.Sub(walletBalanceDiff, amount)
 
 	fastLzSize, estimatedBrotliSize := af.validateFeatures(receipt, l1Fee)
+	// NOTE: See ValidateReceipt for explanation of patched vaultIncreases in sysext mode.
 	af.validateFeeDistribution(l1Fee, baseFee, priorityFee, operatorFee, vaultIncreases)
 	af.validateTotalBalance(walletBalanceDiff, totalFee, vaultIncreases)
 
@@ -240,7 +246,7 @@ type sysextNormResult struct {
 //  1. coinbaseDiff == l2Fee                              → sysgo standard, no normalization
 //  2. coinbaseDiff == baseFee + l2Fee                    → sysext: baseFee routed to coinbase
 //  3. coinbaseDiff == baseFee + l2Fee + X (OperatorVault=0) → sysext: baseFee + opFee to coinbase
-//  4. coinbaseDiff == l2Fee + X (OperatorVault=0)        → sysext legacy: opFee only to coinbase
+//  4. coinbaseDiff > l2Fee (OperatorVault=0)              → sysext legacy: opFee only to coinbase
 //
 // All sysext paths normalize coinbaseDiffForAssert to l2Fee and patch vaultIncreases as needed.
 func (af *ArsiaFees) normalizeSysextCoinbase(
@@ -250,7 +256,7 @@ func (af *ArsiaFees) normalizeSysextCoinbase(
 ) sysextNormResult {
 	result := sysextNormResult{
 		coinbaseDiffForAssert: new(big.Int).Set(coinbaseDiff),
-		operatorFee:           operatorFee,
+		operatorFee:           new(big.Int).Set(operatorFee),
 		baseFeeInCoinbase:     false,
 	}
 
@@ -309,7 +315,14 @@ func (af *ArsiaFees) normalizeSysextCoinbase(
 		return result
 	}
 
-	// No normalization needed or unknown pattern — let assertions catch it.
+	// No recognized normalization pattern — let assertions catch unexpected routing.
+	// This can happen if coinbaseDiff > basePlusPriority with OperatorVault > 0,
+	// or other unanticipated sysext routing configurations.
+	if coinbaseDiff.Cmp(l2Fee) != 0 {
+		af.t.Logf("Unrecognized sysext routing pattern (no normalization applied): "+
+			"coinbaseDiff=%s l2Fee=%s baseFee=%s operatorFee(vault)=%s",
+			coinbaseDiff, l2Fee, baseFee, operatorFee)
+	}
 	return result
 }
 
@@ -380,7 +393,7 @@ func (af *ArsiaFees) validateFeatures(receipt *types.Receipt, l1Fee *big.Int) (u
 	return fastLzSizeSigned, expectedFee
 }
 
-// validateVaultIncreaseFees overrides FjordFees for Arsia-specific fee routing.
+// validateVaultIncreaseFees replaces FjordFees for Arsia-specific fee routing.
 //
 // Caller normalizes coinbaseDiff before passing:
 //
