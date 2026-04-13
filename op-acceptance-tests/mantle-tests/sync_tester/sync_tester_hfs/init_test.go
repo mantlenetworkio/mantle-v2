@@ -12,7 +12,8 @@ import (
 
 func TestMain(m *testing.M) {
 	presets.DoMain(m, presets.WithMantleSimpleWithSyncTester(),
-		presets.WithCompatibleTypes(compat.SysGo),
+		// The Arsia version of the SystemConfig contract does not support high gas limit parameters in pre-Arsia.
+		presets.WithCompatibleTypes(compat.Persistent),
 		presets.WithMantleHardforkSequentialActivation(forks.MantleSkadi, forks.MantleArsia, 6),
 		presets.WithNoDiscovery(),
 		stack.Combine(

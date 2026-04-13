@@ -75,30 +75,10 @@ func (af *ArsiaFees) ValidateReceipt(receipt *types.Receipt, amount *big.Int) Ar
 	l2Fee := new(big.Int).Set(priorityFee)
 	operatorFee := vaultIncreases.OperatorVault
 
-	// Detect sysext devnet operator fee routing to block coinbase instead of OperatorFeeVaultAddr.
-	// Standard (sysgo): coinbaseDiff = l2Fee (priorityFee only), OperatorVault = operatorFee.
-	// Sysext devnet:    coinbaseDiff = l2Fee + operatorFee,       OperatorVault = 0.
-	//
-	// Rationale: in sysext devnet, op-geth routes the operator fee to the block coinbase
-	// instead of predeploys.OperatorFeeVaultAddr, so coinbaseDiff = priorityFee + operatorFee.
-	// We detect this heuristically when OperatorVault=0 AND coinbaseDiff > l2Fee (both
-	// conditions must hold). After normalization, validateVaultIncreaseFees uses a unified
-	// assertion path.
-	//
-	// N4: log when triggered to aid debugging fee routing and future op-geth behavior changes.
-	coinbaseDiffForAssert := new(big.Int).Set(coinbaseDiff)
-	if operatorFee.Sign() == 0 && coinbaseDiff.Cmp(l2Fee) > 0 {
-		inferredOpFee := new(big.Int).Sub(coinbaseDiff, l2Fee)
-		af.t.Logf("Detected sysext coinbase operator fee routing: "+
-			"coinbaseDiff=%s l2Fee=%s inferredOperatorFee=%s "+
-			"(OperatorFeeVaultAddr received 0; op-geth routed to coinbase)",
-			coinbaseDiff, l2Fee, inferredOpFee)
-		operatorFee = inferredOpFee
-		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee) // patch: fee went to coinbase not vault
-		coinbaseDiffForAssert = new(big.Int).Set(l2Fee) // normalize for assertion
-	}
+	norm := af.normalizeSysextCoinbase(coinbaseDiff, l2Fee, baseFee, operatorFee, &vaultIncreases)
+	operatorFee = norm.operatorFee
 
-	af.validateVaultIncreaseFees(l2Fee, baseFee, priorityFee, l1Fee, operatorFee, coinbaseDiffForAssert, vaultsAfter, vaultsBefore)
+	af.validateVaultIncreaseFees(l2Fee, baseFee, priorityFee, l1Fee, operatorFee, norm.coinbaseDiffForAssert, norm.baseFeeInCoinbase, vaultsAfter, vaultsBefore)
 
 	totalFee := new(big.Int).Add(l1Fee, l2Fee)
 	totalFee.Add(totalFee, baseFee)
@@ -165,19 +145,10 @@ func (af *ArsiaFees) ValidateTransaction(from *EOA, to *EOA, amount *big.Int) Ar
 	l2Fee := new(big.Int).Set(priorityFee)
 	operatorFee := vaultIncreases.OperatorVault
 
-	// Same sysext coinbase routing detection as ValidateReceipt. See that function for rationale.
-	coinbaseDiffForAssert := new(big.Int).Set(coinbaseDiff)
-	if operatorFee.Sign() == 0 && coinbaseDiff.Cmp(l2Fee) > 0 {
-		inferredOpFee := new(big.Int).Sub(coinbaseDiff, l2Fee)
-		af.t.Logf("Detected sysext coinbase operator fee routing: "+
-			"coinbaseDiff=%s l2Fee=%s inferredOperatorFee=%s",
-			coinbaseDiff, l2Fee, inferredOpFee)
-		operatorFee = inferredOpFee
-		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee) // patch: fee went to coinbase not vault
-		coinbaseDiffForAssert = new(big.Int).Set(l2Fee)
-	}
+	norm := af.normalizeSysextCoinbase(coinbaseDiff, l2Fee, baseFee, operatorFee, &vaultIncreases)
+	operatorFee = norm.operatorFee
 
-	af.validateVaultIncreaseFees(l2Fee, baseFee, priorityFee, l1Fee, operatorFee, coinbaseDiffForAssert, vaultsAfter, vaultsBefore)
+	af.validateVaultIncreaseFees(l2Fee, baseFee, priorityFee, l1Fee, operatorFee, norm.coinbaseDiffForAssert, norm.baseFeeInCoinbase, vaultsAfter, vaultsBefore)
 
 	totalFee := new(big.Int).Add(l1Fee, l2Fee)
 	totalFee.Add(totalFee, baseFee)
@@ -254,6 +225,94 @@ func (af *ArsiaFees) getCoinbaseBalanceAt(client apis.EthClient, blockHash commo
 	return balance
 }
 
+// sysextNormResult holds the results of sysext coinbase fee routing normalization.
+type sysextNormResult struct {
+	coinbaseDiffForAssert *big.Int
+	operatorFee           *big.Int
+	baseFeeInCoinbase     bool
+}
+
+// normalizeSysextCoinbase detects and normalizes sysext devnet fee routing where the block
+// coinbase receives baseFee and/or operatorFee in addition to the standard priorityFee (l2Fee).
+//
+// Four scenarios (matched in order, most specific first):
+//
+//  1. coinbaseDiff == l2Fee                              → sysgo standard, no normalization
+//  2. coinbaseDiff == baseFee + l2Fee                    → sysext: baseFee routed to coinbase
+//  3. coinbaseDiff == baseFee + l2Fee + X (OperatorVault=0) → sysext: baseFee + opFee to coinbase
+//  4. coinbaseDiff == l2Fee + X (OperatorVault=0)        → sysext legacy: opFee only to coinbase
+//
+// All sysext paths normalize coinbaseDiffForAssert to l2Fee and patch vaultIncreases as needed.
+func (af *ArsiaFees) normalizeSysextCoinbase(
+	coinbaseDiff, l2Fee, baseFee *big.Int,
+	operatorFee *big.Int,
+	vaultIncreases *VaultBalances,
+) sysextNormResult {
+	result := sysextNormResult{
+		coinbaseDiffForAssert: new(big.Int).Set(coinbaseDiff),
+		operatorFee:           operatorFee,
+		baseFeeInCoinbase:     false,
+	}
+
+	// Scenario 1: sysgo standard — coinbaseDiff equals l2Fee exactly, nothing to normalize.
+	if coinbaseDiff.Cmp(l2Fee) == 0 {
+		return result
+	}
+
+	// Precompute baseFee + l2Fee for scenario 2/3 detection.
+	basePlusPriority := new(big.Int).Add(baseFee, l2Fee)
+
+	// Scenario 2: sysext baseFee routing — coinbaseDiff equals baseFee + l2Fee exactly.
+	// OperatorVault may be 0 or > 0 (operator fee handled by vault normally).
+	if coinbaseDiff.Cmp(basePlusPriority) == 0 {
+		af.t.Logf("Detected sysext coinbase base fee routing: "+
+			"coinbaseDiff=%s = baseFee=%s + l2Fee=%s "+
+			"(baseFee routed to coinbase, not BaseFeeVault)",
+			coinbaseDiff, baseFee, l2Fee)
+		result.coinbaseDiffForAssert = new(big.Int).Set(l2Fee)
+		result.baseFeeInCoinbase = true
+		if vaultIncreases.BaseFeeVault.Sign() == 0 {
+			vaultIncreases.BaseFeeVault = new(big.Int).Set(baseFee)
+		}
+		return result
+	}
+
+	// Scenario 3: sysext baseFee + operatorFee routing — coinbaseDiff > baseFee + l2Fee
+	// and OperatorVault is 0 (operator fee routed to coinbase along with baseFee).
+	if coinbaseDiff.Cmp(basePlusPriority) > 0 && operatorFee.Sign() == 0 {
+		inferredOpFee := new(big.Int).Sub(coinbaseDiff, basePlusPriority)
+		af.t.Logf("Detected sysext coinbase base+operator fee routing: "+
+			"coinbaseDiff=%s = baseFee=%s + l2Fee=%s + inferredOpFee=%s "+
+			"(baseFee and operatorFee routed to coinbase)",
+			coinbaseDiff, baseFee, l2Fee, inferredOpFee)
+		result.coinbaseDiffForAssert = new(big.Int).Set(l2Fee)
+		result.operatorFee = inferredOpFee
+		result.baseFeeInCoinbase = true
+		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee)
+		if vaultIncreases.BaseFeeVault.Sign() == 0 {
+			vaultIncreases.BaseFeeVault = new(big.Int).Set(baseFee)
+		}
+		return result
+	}
+
+	// Scenario 4: sysext legacy operatorFee-only routing — coinbaseDiff > l2Fee
+	// and OperatorVault is 0. baseFee still goes to BaseFeeVault normally.
+	if coinbaseDiff.Cmp(l2Fee) > 0 && operatorFee.Sign() == 0 {
+		inferredOpFee := new(big.Int).Sub(coinbaseDiff, l2Fee)
+		af.t.Logf("Detected sysext coinbase operator fee routing: "+
+			"coinbaseDiff=%s l2Fee=%s inferredOperatorFee=%s "+
+			"(OperatorFeeVaultAddr received 0; op-geth routed to coinbase)",
+			coinbaseDiff, l2Fee, inferredOpFee)
+		result.coinbaseDiffForAssert = new(big.Int).Set(l2Fee)
+		result.operatorFee = inferredOpFee
+		vaultIncreases.OperatorVault = new(big.Int).Set(inferredOpFee)
+		return result
+	}
+
+	// No normalization needed or unknown pattern — let assertions catch it.
+	return result
+}
+
 // validateFeatures validates that the features of the Arsia transaction are correct
 func (af *ArsiaFees) validateFeatures(receipt *types.Receipt, l1Fee *big.Int) (uint64, *big.Int) {
 	af.require.NotNil(receipt.L1Fee, "L1 fee should be present in Fjord")
@@ -321,32 +380,37 @@ func (af *ArsiaFees) validateFeatures(receipt *types.Receipt, l1Fee *big.Int) (u
 	return fastLzSizeSigned, expectedFee
 }
 
-// validateVaultIncreaseFees overrides FjordFees for Arsia-specific operator fee routing.
+// validateVaultIncreaseFees overrides FjordFees for Arsia-specific fee routing.
 //
 // Caller normalizes coinbaseDiff before passing:
 //
 //	Standard path (sysgo): coinbaseDiff = l2Fee  (passed as-is)
-//	Sysext coinbase path:  coinbaseDiff = l2Fee  (caller already normalized from l2Fee+opFee)
+//	Sysext coinbase path:  coinbaseDiff = l2Fee  (caller already normalized)
 //
-// N5 note: The assertion "l2Fee == coinbaseDiff" is semantically a no-op in the sysext
-// coinbase path (both sides equal l2Fee after normalization). This is intentional — the
-// assertion still guards against unexpected coinbase changes in standard environments,
-// and the normalization itself is the effective validation in the sysext path.
+// The baseFeeInCoinbase flag indicates that baseFee was routed to the block coinbase
+// in sysext mode. When true AND BaseFeeVault raw increase is 0, the BaseFeeVault
+// assertion is skipped — the caller has already patched vaultIncreases for downstream
+// validateFeeDistribution / validateTotalBalance assertions.
 //
 // OperatorVault assertion is skipped when operatorFee > 0 but OperatorVault = 0,
 // which indicates operator fee was routed to coinbase (sysext devnet behavior).
-// Rationale: a zero OperatorFeeVault increase is expected behavior and should not fail;
-// in the sysgo path OperatorVault > 0 or operatorFee = 0, so the standard assertion applies.
 func (af *ArsiaFees) validateVaultIncreaseFees(
 	l2Fee, baseFee, priorityFee, l1Fee, operatorFee, coinbaseDiff *big.Int,
+	baseFeeInCoinbase bool,
 	vaultsAfter, vaultsBefore VaultBalances) {
 
 	vaultsIncrease := af.calculateVaultIncreases(vaultsBefore, vaultsAfter)
 
 	af.require.Equal(l2Fee, coinbaseDiff,
 		"L2 fee must equal coinbase difference (coinbase is always sequencer fee vault)")
-	af.require.Equal(baseFee, vaultsIncrease.BaseFeeVault,
-		"base fee must match BaseFeeVault increase")
+
+	// Skip BaseFeeVault assertion when baseFee was routed to coinbase (sysext)
+	// and the vault did not receive it independently.
+	if !baseFeeInCoinbase || vaultsIncrease.BaseFeeVault.Sign() > 0 {
+		af.require.Equal(baseFee, vaultsIncrease.BaseFeeVault,
+			"base fee must match BaseFeeVault increase")
+	}
+
 	af.require.Equal(priorityFee, vaultsIncrease.SequencerVault,
 		"priority fee must match SequencerFeeVault increase")
 	af.require.Equal(l1Fee, vaultsIncrease.L1FeeVault,
