@@ -15,6 +15,11 @@ import (
 )
 
 // Transfer: simple L2 native transfer smoke test with balance delta assertions.
+// Uses ValidateTransaction (not ValidateReceipt) to isolate fee measurement to
+// a single transaction, reducing interference from other transactions that may
+// share the same block — especially when reth is the sequencer, which batches
+// more aggressively than geth. Note: vault snapshots still use "latest" block,
+// so complete isolation is only guaranteed when the test is the sole tx source.
 func TestTransfer(gt *testing.T) {
 	// Create a test environment using op-devstack
 	t := devtest.SerialT(gt)
@@ -22,15 +27,10 @@ func TestTransfer(gt *testing.T) {
 
 	// Create two L2 wallets
 	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
-	aliceBalance := alice.GetBalance()
 	bob := sys.Wallet.NewEOA(sys.L2EL)
-	bobBalance := bob.GetBalance()
-	t.Logger().Info("L2 balances before transfer", "alice", alice.Address(), "aliceBalance", aliceBalance, "bob", bob.Address(), "bobBalance", bobBalance)
+	t.Logger().Info("L2 balances before transfer", "alice", alice.Address(), "aliceBalance", alice.GetBalance(), "bob", bob.Address(), "bobBalance", bob.GetBalance())
 
 	depositAmount := eth.OneHundredthEther
-	bobAddr := bob.Address()
-	receipt := alice.Transfer(bobAddr, depositAmount).Included.Value()
-	bob.WaitForBalance(bobBalance.Add(depositAmount))
 
 	if sys.L2Chain.IsMantleForkActive(forks.MantleArsia) {
 		l2Client := sys.L2EL.Escape().EthClient()
@@ -43,9 +43,13 @@ func TestTransfer(gt *testing.T) {
 		t.Require().NoError(err)
 
 		fees := dsl.NewArsiaFees(t, sys.L2Chain, tokenRatio)
-		fees.ValidateReceipt(receipt, depositAmount.ToBig())
+		fees.ValidateTransaction(alice, bob, depositAmount.ToBig())
 	} else {
 		fees := dsl.NewLimbFees(t, sys.L2Chain)
-		fees.ValidateReceipt(receipt, depositAmount.ToBig())
+		fees.ValidateTransaction(alice, bob, depositAmount.ToBig())
 	}
+
+	// Verify recipient received the transfer amount (ValidateTransaction only
+	// asserts the sender side; this closes the recipient-side coverage gap).
+	bob.VerifyBalanceExact(depositAmount)
 }

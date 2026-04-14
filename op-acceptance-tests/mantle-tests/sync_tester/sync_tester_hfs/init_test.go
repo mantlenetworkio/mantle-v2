@@ -30,12 +30,11 @@ func TestMain(m *testing.M) {
 		//            presets.NewSimpleWithSyncTester → shim/network.go:74
 		//            fails with "must find sync tester ByIndex(0)".
 		//
-		// To re-enable:
-		//   - For sysgo: lower GasLimit below SystemConfig.MAX_GAS_LIMIT,
-		//     then switch back to compat.SysGo.
-		//   - For sysext: provision a sync_tester service in the rde-v3
-		//     devnet and regenerate devnet-environment.json, then switch
-		//     to compat.Persistent.
+		// TODO: re-enable under sysgo once GasLimit is lowered below
+		// SystemConfig.MAX_GAS_LIMIT, then switch back to compat.SysGo.
+		// TODO: re-enable under sysext once a sync_tester service is
+		// provisioned in rde-v3 devnet-environment.json, then switch
+		// to compat.Persistent.
 		presets.WithCompatibleTypes(compat.Kurtosis),
 		presets.WithMantleHardforkSequentialActivation(forks.MantleSkadi, forks.MantleArsia, 6),
 		presets.WithNoDiscovery(),

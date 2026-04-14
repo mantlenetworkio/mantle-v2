@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -167,15 +168,20 @@ func TestEIP1559Params(gt *testing.T) {
 	t.Logf("Expected default EIP-1559 params from rollup config: denominator=%d, elasticity=%d",
 		expectedDefaultDenom, expectedDefaultElasticity)
 
-	// Initial L1/L2 EIP-1559 params are logged only, not asserted: in sysext
-	// mode the devnet may carry prior SystemConfig writes that differ from rollup
-	// config defaults. The test validates that values written via SetEIP1559Params
-	// propagate to L2 — the initial state is out of scope.
+	// Initial L1/L2 EIP-1559 params: in sysgo mode the chain is freshly initialized,
+	// so the initial values must match the rollup config defaults. In sysext mode
+	// the devnet may carry prior SystemConfig writes that differ from defaults,
+	// so we only log the initial state without asserting.
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
 
 	l2Denom, l2Elast := ep.readL2EIP1559Params(t)
 	t.Logf("Initial L2 block header EIP-1559 params: denominator=%d, elasticity=%d", l2Denom, l2Elast)
+
+	if presets.Orchestrator().Type() == compat.SysGo {
+		require.Equal(expectedDefaultDenom, l2Denom, "L2 denominator should match rollup config default (sysgo fresh chain)")
+		require.Equal(expectedDefaultElasticity, l2Elast, "L2 elasticity should match rollup config default (sysgo fresh chain)")
+	}
 
 	testCases := []struct {
 		name        string

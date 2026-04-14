@@ -44,6 +44,13 @@ type RpcCaller interface {
 
 // ConnectP2P creates a p2p peer connection between node1 and node2.
 //
+// Peer IDs from admin_peers[].id are compared directly against admin_nodeInfo.id.
+// Since mantle-xyz/reth v2.2.1 (commit e166f3a9, porting paradigmxyz/reth#23318
+// and #23319), both fields return the same 64-hex keccak256 node ID without a
+// "0x" prefix, matching go-ethereum's format. Prior to that fix,
+// admin_nodeInfo.id returned a 66-hex compressed public key and
+// admin_peers[].id included a "0x" prefix, requiring client-side normalization.
+//
 // The initiator always calls admin_addPeer on the acceptor to trigger the outbound
 // dial. For op-reth with --disable-discovery, the acceptor must also call
 // admin_addPeer on the initiator because reth does not actively dial admin_addPeer

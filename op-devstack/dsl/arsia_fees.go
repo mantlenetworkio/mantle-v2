@@ -318,11 +318,9 @@ func (af *ArsiaFees) normalizeSysextCoinbase(
 	// No recognized normalization pattern — let assertions catch unexpected routing.
 	// This can happen if coinbaseDiff > basePlusPriority with OperatorVault > 0,
 	// or other unanticipated sysext routing configurations.
-	if coinbaseDiff.Cmp(l2Fee) != 0 {
-		af.t.Logf("Unrecognized sysext routing pattern (no normalization applied): "+
-			"coinbaseDiff=%s l2Fee=%s baseFee=%s operatorFee(vault)=%s",
-			coinbaseDiff, l2Fee, baseFee, operatorFee)
-	}
+	af.t.Logf("Unrecognized sysext routing pattern (no normalization applied): "+
+		"coinbaseDiff=%s l2Fee=%s baseFee=%s operatorFee(vault)=%s",
+		coinbaseDiff, l2Fee, baseFee, operatorFee)
 	return result
 }
 
