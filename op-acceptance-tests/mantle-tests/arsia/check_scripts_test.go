@@ -170,7 +170,11 @@ func checkFastLZTransactions(t devtest.T, ctx context.Context, sys *presets.Mini
 		require.NoError(err)
 		require.NotNil(receipt.L1Fee)
 		// Mantle L1 fee is multiplied by token ratio
-		tokenRatio, err := contractio.Read(gasPriceOracle.TokenRatio(), ctx)
+		tokenRatio, err := contractio.Read(gasPriceOracle.TokenRatio(), ctx, func(ptx *txplan.PlannedTx) {
+			ptx.AgainstBlock.Fn(func(ctx context.Context) (eth.BlockInfo, error) {
+				return l2Client.InfoByHash(ctx, receipt.BlockHash)
+			})
+		})
 		require.NoError(err)
 		expectedFee = expectedFee.Mul(expectedFee, tokenRatio)
 		dsl.ValidateL1FeeMatches(t, expectedFee, receipt.L1Fee)
