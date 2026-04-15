@@ -74,9 +74,7 @@ func (u *EOA) Plan() txplan.Option {
 		txplan.WithAgainstLatestBlock(elClient),
 		txplan.WithEstimator(elClient, true),
 		txplan.WithRetrySubmission(elClient, 5, retry.Exponential()),
-		// 30 attempts × 2s = 60s window. The original 5 × exponential (~25s) is
-		// too tight for sysext with real L1 (12s block time, mainnet preset).
-		txplan.WithRetryInclusion(elClient, 30, retry.Fixed(2*time.Second)),
+		txplan.WithRetryInclusion(elClient, 8, retry.Exponential()), // 15s -> 45s
 		txplan.WithBlockInclusionInfo(elClient),
 	)
 }

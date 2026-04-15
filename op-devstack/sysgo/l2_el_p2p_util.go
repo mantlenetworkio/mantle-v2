@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p"
 
-	enginekind "github.com/ethereum-optimism/optimism/op-node/rollup/engine"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/wait"
 	"github.com/ethereum-optimism/optimism/op-service/dial"
@@ -51,42 +50,23 @@ type RpcCaller interface {
 // admin_nodeInfo.id returned a 66-hex compressed public key and
 // admin_peers[].id included a "0x" prefix, requiring client-side normalization.
 //
-// The initiator always calls admin_addPeer on the acceptor to trigger the outbound
-// dial. For op-reth with --disable-discovery, the acceptor must also call
-// admin_addPeer on the initiator because reth does not actively dial admin_addPeer
-// targets; the acceptor must initiate the TCP handshake. For op-geth, the
-// initiator's addPeer is sufficient and bidirectional addPeer is intentionally
-// avoided: simultaneous dials cause geth's devp2p scheduler to add repeated
-// dial-history entries on the "loser" side, making subsequent reconnects unreliable.
+// Only the initiator calls admin_addPeer. Both op-geth and op-reth dial static
+// peers added via admin_addPeer, so a single unidirectional call is sufficient.
+// The difference is timing: op-geth's dialsched.addStatic triggers an immediate
+// synchronous dial, while op-reth's PeersManager schedules the dial asynchronously
+// via fill_outbound_slots, which polls every 5 s (refill_slots_interval). The 45 s
+// timeout accommodates this delay with margin for CI load.
 func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcCaller, acceptor RpcCaller) {
 	var initiatorInfo, acceptorInfo p2p.NodeInfo
 	require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
 	require.NoError(acceptor.CallContext(ctx, &acceptorInfo, "admin_nodeInfo"), "get acceptor node info")
 
-	// Initiator always dials the acceptor.
 	var peerAdded bool
 	require.NoError(initiator.CallContext(ctx, &peerAdded, "admin_addPeer", acceptorInfo.Enode), "initiator add peer")
 	require.True(peerAdded, "initiator should have added peer successfully")
 
-	// reth with --disable-discovery does not actively dial admin_addPeer targets.
-	// Have the acceptor also call addPeer so it can initiate the TCP handshake.
-	// op-geth dials synchronously from the initiator side, so bidirectional addPeer
-	// is not needed and intentionally skipped to avoid dial-history re-dial issues.
-	if devstackL2ELKind() == enginekind.Reth {
-		require.NoError(acceptor.CallContext(ctx, &peerAdded, "admin_addPeer", initiatorInfo.Enode), "acceptor add peer")
-		require.True(peerAdded, "acceptor should have added peer successfully")
-	}
-
-	// Wait for the peer connection to appear.
-	// geth: 30 s is sufficient for the initiator-side synchronous dial.
-	// reth with --disable-discovery needs more time: the TCP handshake is
-	// initiated by the acceptor side and may be delayed while the devp2p listener
-	// processes the outbound dial request. In CI under load this can exceed 30 s.
-	connTimeout := 30 * time.Second
-	if devstackL2ELKind() == enginekind.Reth {
-		connTimeout = 90 * time.Second
-	}
-	connCtx, cancel := context.WithTimeout(context.Background(), connTimeout)
+	// 45 s timeout: 30 s base + 5 s for reth's async dial scheduler + 10 s CI margin.
+	connCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	// Require both sides to see each other: an AND condition prevents a half-open
 	// devp2p connection (only one peer list updated) from being accepted as success,
@@ -112,46 +92,34 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 
 // DisconnectP2P disconnects a p2p peer connection between node1 and node2.
 //
-// For op-reth, both nodes call admin_removePeer on each other (bidirectional)
-// to mirror the bidirectional admin_addPeer done by ConnectP2P. For op-geth,
-// only the initiator calls removePeer; the acceptor never had the initiator as a
-// static peer (unidirectional addPeer), so there is nothing to clean up on the
-// acceptor side.
+// Only the initiator calls admin_removePeer, matching the unidirectional
+// admin_addPeer in ConnectP2P. Both sides are polled to confirm full teardown.
 func DisconnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcCaller, acceptor RpcCaller) {
 	var initiatorInfo, acceptorInfo p2p.NodeInfo
+	require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
 	require.NoError(acceptor.CallContext(ctx, &acceptorInfo, "admin_nodeInfo"), "get acceptor node info")
 
 	var peerRemoved bool
 	require.NoError(initiator.CallContext(ctx, &peerRemoved, "admin_removePeer", acceptorInfo.ENR), "initiator remove peer")
 	require.True(peerRemoved, "initiator should have removed peer successfully")
 
-	// For reth: also remove acceptor-side static peer to mirror bidirectional ConnectP2P.
-	if devstackL2ELKind() == enginekind.Reth {
-		require.NoError(initiator.CallContext(ctx, &initiatorInfo, "admin_nodeInfo"), "get initiator node info")
-		require.NoError(acceptor.CallContext(ctx, &peerRemoved, "admin_removePeer", initiatorInfo.ENR), "acceptor remove peer")
-		require.True(peerRemoved, "acceptor should have removed peer successfully")
-	}
-
-	// Wait for both sides (or just the initiator side for geth) to no longer see each other.
+	// Wait for both sides to no longer see each other.
 	waitCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	err := wait.For(waitCtx, time.Second, func() (bool, error) {
-		var peers []peer
-		if err := initiator.CallContext(waitCtx, &peers, "admin_peers"); err != nil {
+		var initiatorPeers, acceptorPeers []peer
+		if err := initiator.CallContext(waitCtx, &initiatorPeers, "admin_peers"); err != nil {
 			return false, err
 		}
-		if slices.ContainsFunc(peers, func(p peer) bool {
+		if slices.ContainsFunc(initiatorPeers, func(p peer) bool {
 			return p.ID == acceptorInfo.ID
 		}) {
 			return false, nil
 		}
-		if devstackL2ELKind() != enginekind.Reth {
-			return true, nil
-		}
-		if err := acceptor.CallContext(waitCtx, &peers, "admin_peers"); err != nil {
+		if err := acceptor.CallContext(waitCtx, &acceptorPeers, "admin_peers"); err != nil {
 			return false, err
 		}
-		return !slices.ContainsFunc(peers, func(p peer) bool {
+		return !slices.ContainsFunc(acceptorPeers, func(p peer) bool {
 			return p.ID == initiatorInfo.ID
 		}), nil
 	})

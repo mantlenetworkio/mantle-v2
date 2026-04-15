@@ -174,6 +174,10 @@ func TestEIP1559Params(gt *testing.T) {
 	// so we only log the initial state without asserting.
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
+	if presets.Orchestrator().Type() == compat.SysGo {
+		require.Equal(uint32(0), origDenom, "initial L1 denominator should be zero")
+		require.Equal(uint32(0), origElasticity, "initial L1 elasticity should be zero")
+	}
 
 	l2Denom, l2Elast := ep.readL2EIP1559Params(t)
 	t.Logf("Initial L2 block header EIP-1559 params: denominator=%d, elasticity=%d", l2Denom, l2Elast)

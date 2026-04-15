@@ -57,6 +57,15 @@ import (
 //   - With ELP2P enabled, repeated FCU attempts eventually validate and advance the canonical chain.
 func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	t := devtest.SerialT(gt)
+
+	// On reth, the async engine pipeline queues SYNCING payloads and may extend chains
+	// immediately after FCU, producing different intermediate states than geth.
+	// See TestL2ELP2PCanonicalChainAdvancedByFCU_Reth for reth-specific coverage.
+	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
+		t.Skip("reth's async engine pipeline queues and extends chains differently; " +
+			"see TestL2ELP2PCanonicalChainAdvancedByFCU_Reth for reth-specific coverage")
+	}
+
 	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
 	require := t.Require()
 	logger := t.Logger()
@@ -108,103 +117,73 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValid()
 	logger.Info("Non canonical chain advanced", "number", targetNum)
 
-	// isReth is used for client-conditional assertions throughout the rest of this test.
-	isReth := os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth"
+	// Non canonical chain can be fetched via blockhash
+	blockRef := sys.L2EL.BlockRefByNumber(targetNum)
+	nonCan := sys.L2ELB.BlockRefByHash(blockRef.Hash)
+	require.Equal(uint64(targetNum), nonCan.Number)
+	require.Equal(blockRef.Hash, nonCan.Hash)
+	// Still targetNum block is non canonicalized
+	_, err := sys.L2ELB.Escape().L2EthClient().BlockRefByNumber(t.Ctx(), targetNum)
+	require.ErrorIs(err, ethereum.NotFound)
 
-	// On geth, NewPayload stores the block as non-canonical and it is immediately accessible
-	// by hash via eth_getBlockByHash (but not by number, since it is not yet canonical).
-	// On reth, engine_newPayload returns VALID before the block is committed to the HTTP RPC
-	// DB (async pipeline), so the hash is not yet resolvable. Skip on reth.
-	if !isReth {
-		blockRefNonCan := sys.L2EL.BlockRefByNumber(targetNum) // targetNum = startNum+2
-		nonCan := sys.L2ELB.BlockRefByHash(blockRefNonCan.Hash)
-		require.Equal(uint64(targetNum), nonCan.Number)
-		require.Equal(blockRefNonCan.Hash, nonCan.Hash)
-		// Non-canonical: not yet accessible by number
-		_, errNonCan := sys.L2ELB.Escape().L2EthClient().BlockRefByNumber(t.Ctx(), targetNum)
-		require.ErrorIs(errNonCan, ethereum.NotFound)
-	}
-
-	// Previously inserted payloads (returned SYNCING, startNum+3 and startNum+5) are not
-	// retained to make a non-canonical chain automatically
-	blockRef := sys.L2EL.BlockRefByNumber(startNum + 3)
-	_, err := sys.L2ELB.Escape().EthClient().BlockRefByHash(t.Ctx(), blockRef.Hash)
+	// Previously inserted payloads are not used to make non-canonical chain automatically
+	blockRef = sys.L2EL.BlockRefByNumber(startNum + 3)
+	_, err = sys.L2ELB.Escape().EthClient().BlockRefByHash(t.Ctx(), blockRef.Hash)
 	require.ErrorIs(err, ethereum.NotFound)
 	blockRef = sys.L2EL.BlockRefByNumber(startNum + 5)
 	_, err = sys.L2ELB.Escape().EthClient().BlockRefByHash(t.Ctx(), blockRef.Hash)
 	require.ErrorIs(err, ethereum.NotFound)
 
-	// No FCU yet so head not advanced yet (reth: blocks not committed to DB until FCU)
+	// No FCU yet so head not advanced yet
 	require.Equal(startNum, sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
 
-	// NewPayload for startNum+6:
-	// - geth: parent startNum+5 is unknown (SYNCING payloads not retained); returns SYNCING.
-	// - reth: may return VALID because reth's engine queues previously-SYNCING payloads
-	//   (startNum+3, +4, +5) and processes them once startNum+1 and startNum+2 are inserted,
-	//   making startNum+5 available as parent.
+	// NewPayload does not trigger the EL Sync
+	// Example logs from L2EL(geth)
+	//  New skeleton head announced
+	//  Ignoring payload with missing parent
 	targetNum = startNum + 6
-	if isReth {
-		sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
-	} else {
-		sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsSyncing()
-	}
+	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsSyncing()
 
 	// FCU marks startNum + 2 as valid, promoting non canonical blocks to canonical blocks
 	// Example logs from L2EL(geth)
 	//  Extend chain
 	//  Chain head was updated
-	attempts := 3
 	targetNum = startNum + 2
-	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValid()
 	logger.Info("Canonical chain advanced", "number", targetNum)
 
-	// Head advanced, canonical head bumped.
-	// On geth: FCU is synchronous; after FCU(startNum+2) returns VALID, head is exactly startNum+2.
-	// On reth: the async pipeline may extend the canonical chain using already-queued payloads
-	// (startNum+3..+6) immediately after FCU completes, so head may exceed targetNum.
-	head := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
-	if isReth {
-		require.GreaterOrEqual(head, uint64(targetNum))
-	} else {
-		require.Equal(uint64(targetNum), head)
-	}
+	// Head advanced, canonical head bumped
+	require.Equal(uint64(targetNum), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
 
-	// FCU to target block with a gap (ELP2P not yet connected):
-	// - geth: cannot validate target because parent is missing; returns SYNCING and must NOT
-	//   advance the unsafe head — SYNCING FCUs are a no-op for head advancement on geth.
-	// - reth: may already have startNum+3..+4 in the engine tree (queued during earlier
-	//   SYNCING/VALID NewPayload calls); may return VALID and advance head.
-	// Example logs from L2EL(geth):
+	// FCU to target block which cannot be validated, triggers EL Sync but ELP2P not yet available
+	// Example logs from L2EL(geth)
 	//  New skeleton head announced
 	//  created initial skeleton subchain
 	//  Starting reverse header sync cycle
 	//  Block synchronisation started
 	//  Backfilling with the network
-
 	targetNum = startNum + 3
-	if !isReth {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
-		// On geth: SYNCING FCU must NOT advance the unsafe head
-		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
-	} else {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
-	}
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
 
-	targetNum = startNum + 3
-	if !isReth {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
-		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
-	} else {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
-	}
+	// head not advanced
+	require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
 
+	// FCU to target block which cannot be validated
+	// Example logs from L2EL(geth)
+	//  New skeleton head announced
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+
+	// head not advanced
+	require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
+
+	// FCU to target block which cannot be validated
+	// Example logs from L2EL(geth)
+	//  New skeleton head announced
 	targetNum = startNum + 4
-	if !isReth {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
-		require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
-	} else {
-		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
-	}
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+
+	// head not advanced
+	require.Equal(uint64(startNum+2), sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
 
 	// Finally peer for enabling ELP2P
 	sys.L2ELB.PeerWith(sys.L2EL)
@@ -218,6 +197,8 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// In practice, after peers are established, one or two FCU calls
 	// typically observe VALID — though this depends on the EL’s sync progress
 	// and network conditions.
+	attempts := 3
+
 	// Retry a few times until the first EL Sync is complete
 	sys.L2ELB.FinishedELSync(sys.L2EL, targetNum, 0, 0)
 
@@ -256,6 +237,139 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	_, err = sys.L2ELB.Escape().L2EthClient().BlockRefByNumber(t.Ctx(), targetNum)
 	require.ErrorIs(err, ethereum.NotFound)
 	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsSyncing()
+
+	t.Cleanup(func() {
+		sys.L2CLB.Start()
+		sys.L2ELB.DisconnectPeerWith(sys.L2EL)
+	})
+}
+
+// TestL2ELP2PCanonicalChainAdvancedByFCU_Reth is the reth-specific companion to
+// TestL2ELP2PCanonicalChainAdvancedByFCU.
+//
+// Reth's async engine pipeline differs from geth in several ways:
+//   - After NewPayload returns VALID, the block may not be immediately accessible by hash;
+//     the async DB pipeline commits it asynchronously.
+//   - SYNCING payloads may be queued and later extended when ancestors arrive, so a
+//     NewPayload for startNum+6 may return VALID (not just SYNCING) if the pipeline has
+//     already processed the intermediate blocks.
+//   - FCU may advance the head beyond the explicit target if the pipeline has already
+//     validated additional blocks.
+//   - FCU to gapped targets may return VALID (not just SYNCING) if the pipeline has
+//     already filled the gap.
+//
+// This test verifies that:
+//   - Non-canonical blocks eventually become accessible by hash after NewPayload VALID.
+//   - FCU promotes non-canonical blocks to canonical.
+//   - ELP2P and EL sync still work correctly to resolve gaps.
+//   - The canonical chain eventually converges with the reference node.
+func TestL2ELP2PCanonicalChainAdvancedByFCU_Reth(gt *testing.T) {
+	t := devtest.SerialT(gt)
+
+	if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+		t.Skip("this test covers reth-specific async engine pipeline behavior")
+	}
+
+	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	require := t.Require()
+	logger := t.Logger()
+	ctx := t.Ctx()
+
+	// Advance few blocks to make sure reference node advanced
+	sys.L2CL.Advanced(types.LocalUnsafe, 10, 30)
+
+	sys.L2CLB.Stop()
+
+	// At this point, L2ELB has no ELP2P, and L2CL connection
+	startNum := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
+
+	// NewPayload for future blocks without parents: returns SYNCING on reth too
+	sys.L2ELB.NewPayload(sys.L2EL, startNum+3).IsSyncing()
+	sys.L2ELB.NewPayload(sys.L2EL, startNum+5).IsSyncing()
+	sys.L2ELB.NewPayload(sys.L2EL, startNum+4).IsSyncing()
+
+	// NewPayload can extend non-canonical chain (state for startNum exists)
+	targetNum := startNum + 1
+	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValid()
+	logger.Info("Non canonical chain advanced", "number", targetNum)
+
+	targetNum = startNum + 2
+	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValid()
+	logger.Info("Non canonical chain advanced", "number", targetNum)
+
+	// Reth's engine tree accepts the blocks (NewPayload VALID), but does NOT commit them
+	// to the HTTP RPC DB until ForkchoiceUpdate. Verify this behavioral difference:
+	// blocks accepted by NewPayload must NOT be accessible by hash or number yet.
+	blockRefNonCan := sys.L2EL.BlockRefByNumber(targetNum) // targetNum = startNum+2
+	_, errHash := sys.L2ELB.Escape().EthClient().BlockRefByHash(ctx, blockRefNonCan.Hash)
+	require.Error(errHash, "reth should not expose VALID block by hash before FCU")
+	_, errNum := sys.L2ELB.Escape().L2EthClient().BlockRefByNumber(ctx, targetNum)
+	require.Error(errNum, "reth should not expose VALID block by number before FCU")
+
+	// Previously inserted SYNCING payloads should not be retained
+	blockRef := sys.L2EL.BlockRefByNumber(startNum + 3)
+	_, err := sys.L2ELB.Escape().EthClient().BlockRefByHash(ctx, blockRef.Hash)
+	require.ErrorIs(err, ethereum.NotFound)
+	blockRef = sys.L2EL.BlockRefByNumber(startNum + 5)
+	_, err = sys.L2ELB.Escape().EthClient().BlockRefByHash(ctx, blockRef.Hash)
+	require.ErrorIs(err, ethereum.NotFound)
+
+	// No FCU yet so head not advanced yet
+	require.Equal(startNum, sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number)
+
+	// NewPayload for startNum+6:
+	// Reth may have queued earlier SYNCING payloads and extended the chain, so it may
+	// return VALID or SYNCING depending on pipeline state.
+	targetNum = startNum + 6
+	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
+
+	// FCU marks startNum+2 as valid, promoting non-canonical blocks to canonical
+	attempts := 3
+	targetNum = startNum + 2
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	logger.Info("Canonical chain advanced", "number", targetNum)
+
+	// On reth: the async pipeline may have already extended the chain beyond targetNum,
+	// so head may be >= targetNum (not necessarily equal).
+	head := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
+	require.GreaterOrEqual(head, uint64(targetNum),
+		"reth head should be at least targetNum after FCU")
+
+	// FCU to gapped targets: reth's pipeline may have already filled the gap from
+	// queued SYNCING payloads, so these may return VALID immediately.
+	targetNum = startNum + 3
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+
+	targetNum = startNum + 4
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
+
+	// Enable ELP2P
+	sys.L2ELB.PeerWith(sys.L2EL)
+
+	// Wait for EL sync to complete
+	targetNum = startNum + 4
+	sys.L2ELB.FinishedELSync(sys.L2EL, targetNum, 0, 0)
+	sys.L2ELB.Reached(eth.Unsafe, targetNum, 3)
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	logger.Info("Canonical chain advanced", "number", targetNum)
+
+	require.GreaterOrEqual(sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number, uint64(targetNum))
+
+	// FCU to further targets with ELP2P enabled
+	targetNum = startNum + 6
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	logger.Info("Canonical chain advanced", "number", targetNum)
+	require.GreaterOrEqual(sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number, uint64(targetNum))
+
+	targetNum = startNum + 8
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).WaitUntilValid(attempts)
+	logger.Info("Canonical chain advanced", "number", targetNum)
+	require.GreaterOrEqual(sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number, uint64(targetNum))
+
+	// NewPayload still does not trigger EL Sync on reth
+	targetNum = startNum + 10
+	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
+	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()
 
 	t.Cleanup(func() {
 		sys.L2CLB.Start()

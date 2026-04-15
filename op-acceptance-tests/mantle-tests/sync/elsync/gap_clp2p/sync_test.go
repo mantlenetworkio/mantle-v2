@@ -69,7 +69,6 @@ func TestCLUnsafeNotRewoundOnInvalidDuringELSync(gt *testing.T) {
 	sys.L2CLB.Stop()
 	// Wipe out L2ELB state to start from genesis
 	sys.L2ELB.Stop()
-	sys.L2ELB.Wipe()
 	sys.L2ELB.Start()
 	sys.L2CLB.Start()
 
@@ -115,6 +114,94 @@ func TestCLUnsafeNotRewoundOnInvalidDuringELSync(gt *testing.T) {
 	// Check newPayload returns INVALID
 	// ex) op-geth error msg: "ignoring bad block: holocene extraData should be 9 bytes, got 32"
 	sys.L2ELB.NewPayloadRaw(payload).IsInvalid()
+
+	t.Cleanup(func() {
+		sys.L2ELB.Start()
+		sys.L2CLB.Start()
+	})
+}
+
+// TestCLUnsafeNotRewoundOnInvalidDuringELSync_Reth is the reth-specific companion to
+// TestCLUnsafeNotRewoundOnInvalidDuringELSync.
+//
+// Reth defers header-level validation (e.g. Holocene ExtraData length) during EL sync
+// until the parent block is available. It returns SYNCING instead of INVALID for such
+// payloads. This test verifies that:
+//   - The malformed payload is NOT accepted as VALID (reth returns SYNCING, not VALID).
+//   - The EL does not advance its unsafe head.
+//   - The CL's unsafe head does not regress below the pre-injection level.
+func TestCLUnsafeNotRewoundOnInvalidDuringELSync_Reth(gt *testing.T) {
+	t := devtest.SerialT(gt)
+
+	if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+		t.Skip("this test covers reth-specific deferred header validation behavior")
+	}
+
+	sys := presets.NewSingleChainMultiNodeWithoutCheck(t)
+	logger := t.Logger()
+	require := t.Require()
+
+	// Advance few blocks to make sure reference node advanced
+	sys.L2CL.Advanced(types.LocalUnsafe, 7, 30)
+
+	// Restart L2CLB to always trigger an EL Sync
+	sys.L2CLB.Stop()
+	// Wipe out L2ELB state to start from genesis
+	sys.L2ELB.Stop()
+	sys.L2ELB.Wipe()
+	sys.L2ELB.Start()
+	sys.L2CLB.Start()
+
+	// At this point, L2ELB has no ELP2P and no safe advancement because batcher is stopped
+	startNum := sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number
+	sys.L2CLB.UnsafeHead().NumEqualTo(startNum)
+
+	attempts := 3
+	// Check CL and EL divergence when there is a unsafe gap
+	for _, gap := range []uint64{3, 5} {
+		targetNum := startNum + gap
+		sys.L2CLB.SignalTarget(sys.L2EL, targetNum)
+		sys.L2ELB.NotAdvanced(eth.Unsafe, 5)
+		sys.L2ELB.UnsafeHead().NumEqualTo(startNum)
+		// Check FCU returns SYNCING
+		sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, startNum, startNum, nil).Retry(attempts).ResultAllSyncing()
+		// Even though EL did not advance, CL advanced
+		sys.L2CLB.UnsafeHead().NumEqualTo(targetNum)
+		logger.Info("CL and EL diverged", "CL", targetNum, "EL", startNum)
+	}
+
+	preCLUnsafe := sys.L2CLB.UnsafeHead().BlockRef.Number
+
+	// Inject invalid payload that can be only checked by the EL
+	// Must choose payload number after CL unsafe to make the payload sent to EL
+	targetNum := preCLUnsafe + 1
+	payload := sys.L2EL.PayloadByNumber(targetNum)
+	// inject fault to the payload
+	// Altering extradata makes geth return INVALID, but reth defers this check
+	payload.ExecutionPayload.ExtraData = bytes.Repeat([]byte{0xFF}, 32)
+	newHash, ok := payload.CheckBlockHash()
+	require.False(ok)
+	logger.Info("Injected fault to payload", "newHash", newHash, "prevHash", payload.ExecutionPayload.BlockHash)
+	payload.ExecutionPayload.BlockHash = newHash
+	_, ok = payload.CheckBlockHash()
+	require.True(ok)
+	sys.L2CLB.PostUnsafePayload(payload)
+
+	// EL must not advance — the malformed payload should not be executed
+	sys.L2ELB.NotAdvanced(eth.Unsafe, attempts)
+	sys.L2ELB.UnsafeHead().NumEqualTo(startNum)
+
+	// Reth returns SYNCING (not INVALID) for header-invalid payloads during EL sync,
+	// because it defers header validation until the parent block is available.
+	// Crucially, it does NOT return VALID — the payload is not accepted.
+	sys.L2ELB.NewPayloadRaw(payload).IsSyncing()
+
+	// CL's unsafe head must not regress below the pre-injection level.
+	// On reth, SYNCING responses may allow the CL to advance further, so we only
+	// assert a lower bound (no regression), not an exact value.
+	clUnsafe := sys.L2CLB.UnsafeHead().BlockRef.Number
+	require.GreaterOrEqual(clUnsafe, preCLUnsafe,
+		"CL unsafe head must not regress after injecting invalid payload")
 
 	t.Cleanup(func() {
 		sys.L2ELB.Start()

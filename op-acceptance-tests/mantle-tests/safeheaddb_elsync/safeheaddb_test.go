@@ -39,16 +39,18 @@ func TestTruncateDatabaseOnELResync(gt *testing.T) {
 	sys.L2CLB.VerifySafeHeadDatabaseMatches(sys.L2CL)
 }
 
+// TestNotTruncateDatabaseOnRestartWithExistingDatabase verifies that restarting the CL (op-node)
+// while the EL retains its chain data does NOT truncate the safe head DB on geth.
+//
+// On reth (SupportsPostFinalizationELSync=true), the CL always triggers EL sync even when the EL
+// has existing data, so safe head DB truncation is expected. That scenario is covered by
+// TestTruncateDatabaseOnCLRestartWithReth below.
 func TestNotTruncateDatabaseOnRestartWithExistingDatabase(gt *testing.T) {
 	t := devtest.SerialT(gt)
 
-	// With reth, SupportsPostFinalizationELSync=true causes op-node to trigger EL sync on CL restart
-	// even when the EL already has chain data. This leads to safe head DB truncation, which violates
-	// the invariant this test checks (that the safe head DB is not truncated on normal restart).
-	// This is expected reth behavior: EL sync can be triggered post-finalization on reth.
 	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
-		t.Skip("reth SupportsPostFinalizationELSync=true triggers EL sync on CL restart even with " +
-			"existing EL data, causing safe head DB truncation that this test asserts does not happen")
+		t.Skip("reth always triggers EL sync on CL restart (SupportsPostFinalizationELSync=true); " +
+			"see TestTruncateDatabaseOnCLRestartWithReth for reth-specific coverage")
 	}
 
 	sys := presets.NewSingleChainMultiNode(t)
@@ -72,4 +74,37 @@ func TestNotTruncateDatabaseOnRestartWithExistingDatabase(gt *testing.T) {
 	sys.L2CLB.Advanced(types.LocalSafe, 1, 30) // At least one safe head db update after resync
 
 	sys.L2CLB.VerifySafeHeadDatabaseMatches(sys.L2CL, dsl.WithMinRequiredL2Block(preRestartSafeBlock))
+}
+
+// TestTruncateDatabaseOnCLRestartWithReth verifies that on reth, restarting only the CL while
+// the EL retains chain data still triggers EL sync (because SupportsPostFinalizationELSync=true),
+// truncates the safe head DB, and then correctly rebuilds it to match the sequencer.
+func TestTruncateDatabaseOnCLRestartWithReth(gt *testing.T) {
+	t := devtest.SerialT(gt)
+
+	if os.Getenv("DEVSTACK_L2EL_KIND") != "op-reth" {
+		t.Skip("this test covers reth-specific EL sync behavior (SupportsPostFinalizationELSync=true)")
+	}
+
+	sys := presets.NewSingleChainMultiNode(t)
+
+	dsl.CheckAll(t,
+		sys.L2CL.AdvancedFn(types.LocalSafe, 1, 30),
+		sys.L2CLB.AdvancedFn(types.LocalSafe, 1, 30))
+	sys.L2CLB.Matched(sys.L2CL, types.LocalSafe, 30)
+	sys.L2CLB.VerifySafeHeadDatabaseMatches(sys.L2CL)
+
+	// Restart only the CL. The EL keeps its data, but reth's SupportsPostFinalizationELSync=true
+	// causes op-node to enter EL sync anyway, truncating the safe head DB.
+	sys.L2CLB.Stop()
+
+	sys.L2CL.Advanced(types.LocalSafe, 3, 30)
+
+	sys.L2CLB.Start()
+
+	// Verify the system recovers: verifier catches up and safe head DB is rebuilt correctly.
+	sys.L2CLB.Matched(sys.L2CL, types.LocalSafe, 30)
+	sys.L2CLB.Advanced(types.LocalSafe, 1, 30)
+
+	sys.L2CLB.VerifySafeHeadDatabaseMatches(sys.L2CL)
 }
