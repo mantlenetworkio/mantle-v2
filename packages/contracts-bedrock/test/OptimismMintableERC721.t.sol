@@ -42,9 +42,7 @@ contract OptimismMintableERC721_Test is ERC721Bridge_Initializer {
         assertEq(L2Token.version(), "1.1.0");
     }
 
-    /**
-     * @notice Ensure that the contract supports the expected interfaces.
-     */
+    /// @notice Ensure that the contract supports the expected interfaces.
     function test_supportsInterfaces_succeeds() external view {
         // Checks if the contract supports the IOptimismMintableERC721 interface.
         assertTrue(L2Token.supportsInterface(type(IOptimismMintableERC721).interfaceId));

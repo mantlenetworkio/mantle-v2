@@ -64,13 +64,13 @@ contract L1MantleToken is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-        _mint(msg.sender, 10000 * 10 ** uint(decimals()));
-
+        _mint(msg.sender, 10000 * 10 ** uint256(decimals()));
     }
 
     /* ========== INITIALIZER ========== */
 
-    /// @notice Initializes the L1MantleToken contract, setting the inital total supply as {initialSupply} and the owner as {_owner}
+    /// @notice Initializes the L1MantleToken contract, setting the inital total supply as {initialSupply} and the owner
+    /// as {_owner}
     /// @dev the mintCapNumerator should not be set as it is initialized as 0
     /// @dev Requirements:
     ///     - all parameters must be non-zero
@@ -99,7 +99,8 @@ contract L1MantleToken is
     ///             - maxMintAmount = (mintCapNumerator * totalSupply()) / MINT_CAP_DENOMINATOR
     ///              - The specified time interval at which mints can occur is initially set to 1 year
     ///     - the parameter {amount} must be less than or equal to {maxMintAmount} as computed above
-    ///     - the {blockTimestamp} of the block in which this function is called must be greater than or equal to {nextMint}
+    ///     - the {blockTimestamp} of the block in which this function is called must be greater than or equal to
+    /// {nextMint}
     /// @param _recipient The address to mint tokens to
     /// @param _amount The amount of tokens to mint
     function mint(address _recipient, uint256 _amount) public onlyOwner {
@@ -136,7 +137,10 @@ contract L1MantleToken is
         address from,
         address to,
         uint256 amount
-    ) internal override(ERC20Upgradeable, ERC20VotesUpgradeable) {
+    )
+        internal
+        override(ERC20Upgradeable, ERC20VotesUpgradeable)
+    {
         super._afterTokenTransfer(from, to, amount);
     }
 

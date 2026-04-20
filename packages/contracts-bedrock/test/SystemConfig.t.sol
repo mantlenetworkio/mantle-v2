@@ -196,7 +196,8 @@ contract SystemConfig_Setters_Test is SystemConfig_Init {
 
     function testFuzz_setGasLimit_succeeds(uint64 newGasLimit) external {
         uint64 minimumGasLimit = sysConf.minimumGasLimit();
-        newGasLimit = uint64(bound(uint256(newGasLimit), uint256(minimumGasLimit), uint256(type(uint64).max)));
+        uint64 maximumGasLimit = sysConf.maximumGasLimit();
+        newGasLimit = uint64(bound(uint256(newGasLimit), uint256(minimumGasLimit), uint256(maximumGasLimit)));
 
         vm.expectEmit(true, true, true, true);
         emit ConfigUpdate(0, SystemConfig.UpdateType.GAS_LIMIT, abi.encode(newGasLimit));

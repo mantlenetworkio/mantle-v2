@@ -160,7 +160,7 @@ func mainAction(c *cli.Context) error {
 	}
 	state.StartPrefetcher("debug", witness, nil)
 	defer func() { // Even if the EVM fails, try to export witness data for the state-transition up to the error.
-		witnessDump := witness.ToExecutionWitness()
+		witnessDump := witness.ToExtWitness()
 		out, err := json.MarshalIndent(witnessDump, "", "  ")
 		if err != nil {
 			logger.Error("failed to encode witness", "err", err)
@@ -317,7 +317,8 @@ func Process(logger log.Logger, config *params.ChainConfig,
 	if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(blockNumber) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
-	misc.EnsureCreate2Deployer(config, uint64(block.Time), statedb)
+	// Mantle geth not supporting this yet
+	// misc.EnsureCreate2Deployer(config, uint64(block.Time), statedb)
 	var (
 		blockContext vm.BlockContext
 		signer       = types.MakeSigner(config, header.Number, header.Time)
@@ -337,7 +338,8 @@ func Process(logger log.Logger, config *params.ChainConfig,
 	for i, tx := range block.Transactions {
 		logger.Info("Processing tx", "i", i, "hash", tx.Hash())
 		_, _ = fmt.Fprintf(outW, "# Processing tx %d\n", i)
-		msg, err := core.TransactionToMessage(tx, signer, header.BaseFee)
+		rules := config.Rules(blockNumber, false, uint64(block.Time))
+		msg, err := core.TransactionToMessage(tx, signer, header.BaseFee, &rules)
 		if err != nil {
 			return nil, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}

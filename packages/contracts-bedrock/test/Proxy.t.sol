@@ -19,7 +19,7 @@ contract SimpleStorage {
 
 contract Clasher {
     function upgradeTo(address) external pure {
-        revert("upgradeTo");
+        revert("Clasher: upgradeTo");
     }
 }
 
@@ -76,7 +76,7 @@ contract Proxy_Test is Test {
         // The implementation does not have a `upgradeTo`
         // method, calling `upgradeTo` not as the owner
         // should revert.
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         proxy.upgradeTo(address(64));
 
         // Call `upgradeTo` as the owner, it should succeed
@@ -95,7 +95,7 @@ contract Proxy_Test is Test {
     function test_ownerProxyCall_notAdmin_succeeds() external {
         // Calling `changeAdmin` not as the owner should revert
         // as the implementation does not have a `changeAdmin` method.
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         proxy.changeAdmin(address(1));
 
         // Call `changeAdmin` as the owner, it should succeed
@@ -108,7 +108,7 @@ contract Proxy_Test is Test {
         // Calling `admin` not as the owner should
         // revert as the implementation does not have
         // a `admin` method.
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         proxy.admin();
 
         // Calling `admin` as the owner should work.
@@ -154,7 +154,7 @@ contract Proxy_Test is Test {
         vm.expectEmit(true, true, true, true);
         emit Upgraded(address(simpleStorage));
         vm.prank(alice);
-        proxy.upgradeToAndCall(address(simpleStorage), abi.encodeWithSelector(simpleStorage.set.selector, 1, 1));
+        proxy.upgradeToAndCall(address(simpleStorage), abi.encodeCall(SimpleStorage.set, (1, 1)));
 
         // The call should have impacted the state
         uint256 result = SimpleStorage(address(proxy)).get(1);
@@ -186,8 +186,8 @@ contract Proxy_Test is Test {
 
         // The attempt to `upgradeToAndCall`
         // should revert when it is not called by the owner.
-        vm.expectRevert();
-        proxy.upgradeToAndCall(address(simpleStorage), abi.encodeWithSelector(simpleStorage.set.selector, 1, 1));
+        vm.expectRevert(bytes(""));
+        proxy.upgradeToAndCall(address(simpleStorage), abi.encodeCall(SimpleStorage.set, (1, 1)));
     }
 
     function test_upgradeToAndCall_isPayable_succeeds() external {
@@ -196,9 +196,7 @@ contract Proxy_Test is Test {
         // Set the implementation and call and send
         // value.
         vm.prank(alice);
-        proxy.upgradeToAndCall{ value: 1 ether }(
-            address(simpleStorage), abi.encodeWithSelector(simpleStorage.set.selector, 1, 1)
-        );
+        proxy.upgradeToAndCall{ value: 1 ether }(address(simpleStorage), abi.encodeCall(SimpleStorage.set, (1, 1)));
 
         // The implementation address should be correct
         vm.prank(alice);
@@ -228,7 +226,7 @@ contract Proxy_Test is Test {
         // not as the owner so that the call passes through.
         // The implementation will revert so we can be
         // sure that the call passed through.
-        vm.expectRevert(bytes("upgradeTo"));
+        vm.expectRevert(bytes("Clasher: upgradeTo"));
         proxy.upgradeTo(address(0));
 
         {
@@ -259,7 +257,8 @@ contract Proxy_Test is Test {
         (bool success, bytes memory returndata) = address(proxy).call(hex"");
         assertEq(success, false);
 
-        bytes memory err = abi.encodeWithSignature("Error(string)", "Proxy: implementation not initialized");
+        bytes memory err =
+            bytes.concat(bytes4(keccak256("Error(string)")), abi.encode("Proxy: implementation not initialized"));
 
         assertEq(returndata, err);
     }

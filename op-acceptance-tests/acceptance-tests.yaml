@@ -116,12 +116,26 @@ gates:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/tests/custom_gas_token
         timeout: 10m
 
-  - id: mantle
-    description: "Mantle network tests."
+  - id: mantle-arsia
+    description: "Mantle Arsia network tests."
     tests:
-      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
-        name: TestMinBaseFee
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia/...
+        timeout: 20m
+
+  - id: mantle-base
+    inherits:
+      - mantle-arsia
+    description: "Sanity/smoke acceptance tests for Mantle network."
+    tests:
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
         timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal
+        timeout: 20m
+
   - id: mantle-temp
     description: "Mantle network tests."
     tests:

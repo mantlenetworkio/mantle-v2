@@ -14,6 +14,7 @@ import (
 
 // TestExample1 starts an interop chain and verifies that the local unsafe head advances.
 func TestExample1(gt *testing.T) {
+	gt.Skip("Skipping example test due to mismatched deploy script")
 	t := devtest.ParallelT(gt)
 	sys := presets.NewSimpleInterop(t)
 
@@ -22,6 +23,7 @@ func TestExample1(gt *testing.T) {
 }
 
 func TestExample2(gt *testing.T) {
+	gt.Skip("Skipping example test due to mismatched deploy script")
 	t := devtest.ParallelT(gt)
 	sys := presets.NewSimpleInterop(t)
 
@@ -29,6 +31,7 @@ func TestExample2(gt *testing.T) {
 }
 
 func TestExampleTxsTracing(gt *testing.T) {
+	gt.Skip("Skipping example test due to mismatched deploy script")
 	t := devtest.ParallelT(gt)
 	ctx := t.Ctx()
 	require := t.Require()

@@ -29,9 +29,6 @@ var (
 	// errWrongChainID represents the error when the configured chain id is not
 	// correct
 	errWrongChainID = errors.New("wrong chain id provided")
-	// errNoBaseFee represents the error when the base fee is not found on the
-	// block. This means that the block being queried is pre eip1559
-	errNoBaseFee = errors.New("base fee not found on block")
 )
 
 // GasPriceOracle manages a hot key that can update the L2 Gas Price

@@ -29,7 +29,7 @@ import (
 
 const (
 	mantleDepositGasLimit    uint32 = 300_000
-	mantleWithdrawalGasLimit        = 100_000
+	mantleWithdrawalGasLimit uint32 = 100_000
 
 	mantleMessagePasserABIJSON = `[
 		{"anonymous":false,"inputs":[
@@ -316,7 +316,7 @@ func (b *MantleBridge) InitiateWithdrawalETH(amount eth.ETH, target common.Addre
 		bindings.WithTo(predeploys.L2ToL1MessagePasserAddr),
 	)
 	withdrawReceipt, err := contractio.Write(
-		messagePasser.InitiateWithdrawal(amount.ToBig(), target, big.NewInt(mantleWithdrawalGasLimit), []byte{}),
+		messagePasser.InitiateWithdrawal(amount.ToBig(), target, big.NewInt(int64(mantleWithdrawalGasLimit)), []byte{}),
 		b.ctx,
 		from.Plan(),
 	)

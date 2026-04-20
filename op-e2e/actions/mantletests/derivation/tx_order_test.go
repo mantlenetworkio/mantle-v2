@@ -287,7 +287,6 @@ func TestHighTpsDerivationStability(gt *testing.T) {
 
 	t.Log("PHASE 1: High-load transaction generation")
 
-	l2BlocksGenerated := make([]uint64, 0, numRounds)
 	totalTxsSent := 0
 
 	// Generate high load: multiple rounds of rapid transaction sending
@@ -317,8 +316,6 @@ func TestHighTpsDerivationStability(gt *testing.T) {
 		sequencer.ActL2EndBlock(t)
 
 		l2BlockNum := seqEngine.L2Chain().CurrentBlock().Number.Uint64()
-		l2BlocksGenerated = append(l2BlocksGenerated, l2BlockNum)
-
 		if (round+1)%10 == 0 {
 			t.Logf("Progress: %d/%d rounds completed, %d txs sent, current L2 block: %d (avg %d tx/block)",
 				round+1, numRounds, totalTxsSent, l2BlockNum, txsPerRound)

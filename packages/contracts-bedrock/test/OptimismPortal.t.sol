@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { console } from "forge-std/console.sol";
 import { stdError } from "forge-std/Test.sol";
 import { Portal_Initializer, CommonTest, NextImpl } from "./CommonTest.t.sol";
+import { SystemConfig } from "src/L1/SystemConfig.sol";
 import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
 import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
 import { OptimismPortal } from "src/L1/OptimismPortal.sol";
@@ -13,8 +14,8 @@ import { Proxy } from "src/universal/Proxy.sol";
 import { ResourceMetering } from "src/L1/ResourceMetering.sol";
 
 contract OptimismPortal_Test is Portal_Initializer {
-    event Paused(address);
-    event Unpaused(address);
+    event Paused(address account);
+    event Unpaused(address account);
 
     function test_constructor_succeeds() external view {
         assertEq(address(op.L2_ORACLE()), address(oracle));
@@ -22,9 +23,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         assertEq(op.paused(), false);
     }
 
-    /**
-     * @notice The OptimismPortal can be paused by the GUARDIAN
-     */
+    /// @notice The OptimismPortal can be paused by the GUARDIAN
     function test_pause_succeeds() external {
         address guardian = op.GUARDIAN();
 
@@ -39,10 +38,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         assertEq(op.paused(), true);
     }
 
-    /**
-     * @notice The OptimismPortal reverts when an account that is not the
-     *         GUARDIAN calls `pause()`
-     */
+    /// @notice The OptimismPortal reverts when an account that is not the
+    ///         GUARDIAN calls `pause()`
     function test_pause_onlyGuardian_reverts() external {
         assertEq(op.paused(), false);
 
@@ -54,9 +51,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         assertEq(op.paused(), false);
     }
 
-    /**
-     * @notice The OptimismPortal can be unpaused by the GUARDIAN
-     */
+    /// @notice The OptimismPortal can be unpaused by the GUARDIAN
     function test_unpause_succeeds() external {
         address guardian = op.GUARDIAN();
 
@@ -72,10 +67,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         assertEq(op.paused(), false);
     }
 
-    /**
-     * @notice The OptimismPortal reverts when an account that is not
-     *         the GUARDIAN calls `unpause()`
-     */
+    /// @notice The OptimismPortal reverts when an account that is not
+    ///         the GUARDIAN calls `unpause()`
     function test_unpause_onlyGuardian_reverts() external {
         address guardian = op.GUARDIAN();
 
@@ -111,10 +104,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         op.depositTransaction(0, 0, address(1), 1, 0, true, hex"");
     }
 
-    /**
-     * @notice Prevent deposits from being too large to have a sane upper bound
-     *         on unsafe blocks sent over the p2p network.
-     */
+    /// @notice Prevent deposits from being too large to have a sane upper bound
+    ///         on unsafe blocks sent over the p2p network.
     function test_depositTransaction_largeData_reverts() external {
         uint256 size = 120_001;
         uint64 gasLimit = op.minimumGasLimit(uint64(size));
@@ -130,10 +121,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         });
     }
 
-    /**
-     * @notice Prevent gasless deposits from being force processed in L2 by
-     *         ensuring that they have a large enough gas limit set.
-     */
+    /// @notice Prevent gasless deposits from being force processed in L2 by
+    ///         ensuring that they have a large enough gas limit set.
     function test_depositTransaction_smallGasLimit_reverts() external {
         vm.expectRevert("OptimismPortal: gas limit too small");
         op.depositTransaction({
@@ -147,9 +136,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         });
     }
 
-    /**
-     * @notice Fuzz for too small of gas limits
-     */
+    /// @notice Fuzz for too small of gas limits
     function testFuzz_depositTransaction_smallGasLimit_succeeds(bytes memory _data, bool _shouldFail) external {
         vm.assume(_data.length <= type(uint64).max);
 
@@ -170,10 +157,8 @@ contract OptimismPortal_Test is Portal_Initializer {
         });
     }
 
-    /**
-     * @notice Ensure that the 0 calldata case is covered and there is a linearly
-     *         increasing gas limit for larger calldata sizes.
-     */
+    /// @notice Ensure that the 0 calldata case is covered and there is a linearly
+    ///         increasing gas limit for larger calldata sizes.
     function test_minimumGasLimit_succeeds() external view {
         assertEq(op.minimumGasLimit(0), 21_000);
         assertTrue(op.minimumGasLimit(2) > op.minimumGasLimit(1));
@@ -352,7 +337,7 @@ contract OptimismPortal_Test is Portal_Initializer {
         uint256 ts = block.timestamp;
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(Types.OutputProposal(bytes32(uint256(1)), uint128(ts), uint128(startingBlockNumber)))
         );
 
@@ -409,7 +394,13 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
     constructor() {
         super.setUp();
         _defaultTx = Types.WithdrawalTransaction({
-            nonce: 0, sender: alice, target: bob, mntValue: 0, ethValue: 100, gasLimit: 100_000, data: hex""
+            nonce: 0,
+            sender: alice,
+            target: bob,
+            mntValue: 0,
+            ethValue: 100,
+            gasLimit: 100_000,
+            data: hex""
         });
         // Get withdrawal proof data we can use for testing.
         (_stateRoot, _storageRoot, _outputRoot, _withdrawalHash, _withdrawalProof) =
@@ -450,9 +441,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         assertFalse(op.finalizedWithdrawals(Hashing.hashWithdrawal(_defaultTx)));
     }
 
-    /**
-     * @notice Proving withdrawal transactions should revert when paused
-     */
+    /// @notice Proving withdrawal transactions should revert when paused
     function test_proveWithdrawalTransaction_paused_reverts() external {
         vm.prank(op.GUARDIAN());
         op.pause();
@@ -560,10 +549,9 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         // Propose the same output root again, creating the same output at a different index + l2BlockNumber.
         vm.startPrank(op.L2_ORACLE().PROPOSER());
-        op.L2_ORACLE()
-            .proposeL2Output(
-                proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
-            );
+        op.L2_ORACLE().proposeL2Output(
+            proposal.outputRoot, op.L2_ORACLE().nextBlockNumber(), blockhash(block.number), block.number
+        );
         vm.stopPrank();
 
         // Warp ahead 1 second
@@ -603,9 +591,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         assert(address(bob).balance == bobBalanceBefore + 100);
     }
 
-    /**
-     * @notice Finalizing withdrawal transactions should revert when paused
-     */
+    /// @notice Finalizing withdrawal transactions should revert when paused
     function test_finalizeWithdrawalTransaction_paused_reverts() external {
         vm.prank(op.GUARDIAN());
         op.pause();
@@ -636,7 +622,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // this case we just use bytes32(uint256(1)).
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(bytes32(uint256(1)), _proposedBlockNumber)
         );
 
@@ -661,7 +647,9 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         // Mock a startingTimestamp change on the L2 Oracle
         vm.mockCall(
-            address(op.L2_ORACLE()), abi.encodeWithSignature("startingTimestamp()"), abi.encode(block.timestamp + 1)
+            address(op.L2_ORACLE()),
+            abi.encodePacked(bytes4(keccak256("startingTimestamp()"))),
+            abi.encode(block.timestamp + 1)
         );
 
         // Attempt to finalize the withdrawal
@@ -689,7 +677,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // to finalize the withdrawal.
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(
                 Types.OutputProposal(bytes32(uint256(0)), uint128(block.timestamp), uint128(_proposedBlockNumber))
             )
@@ -720,7 +708,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // finalization period.
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(Types.OutputProposal(_outputRoot, uint128(block.timestamp + 1), uint128(_proposedBlockNumber)))
         );
 
@@ -756,7 +744,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         uint256 recentTimestamp = block.timestamp - 1000;
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(Types.OutputProposal(_outputRoot, uint128(recentTimestamp), uint128(_proposedBlockNumber)))
         );
 
@@ -786,7 +774,13 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // This number was identified through trial and error.
         uint256 gasLimit = 150_000;
         Types.WithdrawalTransaction memory insufficientGasTx = Types.WithdrawalTransaction({
-            nonce: 0, sender: alice, target: bob, mntValue: 100, ethValue: 0, gasLimit: gasLimit, data: hex""
+            nonce: 0,
+            sender: alice,
+            target: bob,
+            mntValue: 100,
+            ethValue: 0,
+            gasLimit: gasLimit,
+            data: hex""
         });
 
         // Get updated proof inputs.
@@ -801,7 +795,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
 
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(
                 Types.OutputProposal(
                     Hashing.hashOutputRootProof(outputRootProof),
@@ -828,7 +822,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // this contract's callPortalAndExpectRevert() function above.
         Types.WithdrawalTransaction memory _testTx = _defaultTx;
         _testTx.target = address(this);
-        _testTx.data = abi.encodeWithSelector(this.callPortalAndExpectRevert.selector);
+        _testTx.data = abi.encodeCall(this.callPortalAndExpectRevert, ());
 
         // Get modified proof inputs.
         (
@@ -849,7 +843,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         uint256 finalizedTimestamp = block.timestamp - oracle.FINALIZATION_PERIOD_SECONDS() - 1;
         vm.mockCall(
             address(op.L2_ORACLE()),
-            abi.encodeWithSelector(L2OutputOracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(Types.OutputProposal(outputRoot, uint128(finalizedTimestamp), uint128(_proposedBlockNumber)))
         );
 
@@ -923,7 +917,7 @@ contract OptimismPortal_FinalizeWithdrawal_Test is Portal_Initializer {
         // Setup the Oracle to return the outputRoot
         vm.mockCall(
             address(oracle),
-            abi.encodeWithSelector(oracle.getL2Output.selector),
+            abi.encodePacked(L2OutputOracle.getL2Output.selector),
             abi.encode(outputRoot, block.timestamp, 100)
         );
 
@@ -985,7 +979,7 @@ contract OptimismPortalUpgradeable_Test is Portal_Initializer {
 
         NextImpl nextImpl = new NextImpl();
         vm.startPrank(multisig);
-        proxy.upgradeToAndCall(address(nextImpl), abi.encodeWithSelector(NextImpl.initialize.selector));
+        proxy.upgradeToAndCall(address(nextImpl), abi.encodeCall(NextImpl.initialize, ()));
         assertEq(proxy.implementation(), address(nextImpl));
 
         // Verify that the NextImpl contract initialized its values according as expected
@@ -995,21 +989,15 @@ contract OptimismPortalUpgradeable_Test is Portal_Initializer {
     }
 }
 
-/**
- * @title OptimismPortalResourceFuzz_Test
- * @dev Test various values of the resource metering config to ensure that deposits cannot be
- *         broken by changing the config.
- */
+/// @title OptimismPortalResourceFuzz_Test
+/// @dev Test various values of the resource metering config to ensure that deposits cannot be
+///         broken by changing the config.
 contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
-    /**
-     * @dev The max gas limit observed throughout this test. Setting this too high can cause
-     *      the test to take too long to run.
-     */
+    /// @dev The max gas limit observed throughout this test. Setting this too high can cause
+    ///      the test to take too long to run.
     uint256 constant MAX_GAS_LIMIT = 30_000_000;
 
-    /**
-     * @dev Test that various values of the resource metering config will not break deposits.
-     */
+    /// @dev Test that various values of the resource metering config will not break deposits.
     function testFuzz_systemConfigDeposit_succeeds(
         uint32 _maxResourceLimit,
         uint8 _elasticityMultiplier,
@@ -1049,9 +1037,7 @@ contract OptimismPortalResourceFuzz_Test is Portal_Initializer {
             systemTxMaxGas: _systemTxMaxGas,
             maximumBaseFee: _maximumBaseFee
         });
-        vm.mockCall(
-            address(systemConfig), abi.encodeWithSelector(systemConfig.resourceConfig.selector), abi.encode(rcfg)
-        );
+        vm.mockCall(address(systemConfig), abi.encodeCall(SystemConfig.resourceConfig, ()), abi.encode(rcfg));
 
         // Set the resource params
         uint256 _prevBlockNum = block.number - _blockDiff;
