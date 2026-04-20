@@ -139,12 +139,14 @@ RUN just copy-contract-artifacts
 
 WORKDIR /app/op-node
 
+ARG TARGETOS TARGETARCH
+
 RUN GITCOMMIT="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || true)}" && \
     GITDATE="${GIT_DATE:-$(git show -s --format='%ct' 2>/dev/null || true)}" && \
     if [ -n "${VERSION:-}" ]; then \
-      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" VERSION="$VERSION" op-node; \
+      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH op-node; \
     else \
-      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" op-node; \
+      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" GOOS=$TARGETOS GOARCH=$TARGETARCH op-node; \
     fi
 
 FROM alpine:3.21
