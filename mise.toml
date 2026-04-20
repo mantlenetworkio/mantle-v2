@@ -72,3 +72,6 @@ binary_signer = "github:ethereum-optimism/fake-binary_signer"
 experimental = true
 pipx.uvx = true
 disable_tools = ["asterisc", "kontrol", "binary_signer"]
+# Python 3.12.0 predates GitHub artifact attestations; disable verification
+# to avoid "No GitHub artifact attestations found" errors in mise ≥2026.4
+python.github_attestations = false
