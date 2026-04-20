@@ -55,7 +55,7 @@ func (n *OpReth) hydrate(system stack.ExtensibleSystem) {
 	system.T().Cleanup(rpcCl.Close)
 
 	// Do not have to check whether client is readOnly because
-	// all external L2 Clients will be wrapped with op-geth sysgo devstack, supporting readOnly
+	// all external L2 Clients will be wrapped with the sysgo devstack shim, supporting readOnly
 	var engineCl client.RPC
 	auth := rpc.WithHTTPAuth(gn.NewJWTAuth(n.jwtSecret))
 	engineCl, err = client.NewRPC(system.T().Ctx(), system.Logger(), n.authRPC, client.WithGethRPCOptions(auth))
@@ -163,7 +163,7 @@ func (n *OpReth) Start() {
 }
 
 // Stop stops the op-reth node.
-// warning: no restarts supported yet, since the RPC port is not remembered.
+// Restarts are supported: TCP proxies retain stable addresses across Stop/Start cycles.
 func (n *OpReth) Stop() {
 	n.mu.Lock()
 	defer n.mu.Unlock()

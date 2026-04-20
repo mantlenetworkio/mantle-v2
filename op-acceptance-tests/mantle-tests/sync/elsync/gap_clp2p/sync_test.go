@@ -54,7 +54,7 @@ func TestCLUnsafeNotRewoundOnInvalidDuringELSync(gt *testing.T) {
 	// payloads, so the CL's unsafe head can advance past the expected point on reth.
 	if os.Getenv("DEVSTACK_L2EL_KIND") == "op-reth" {
 		t.Skip("reth returns SYNCING (not INVALID) for ExtraData-invalid payloads during EL sync: " +
-			"header-level validation is deferred until parent state is available, " +
+			"header-level validation is deferred until the parent block is available, " +
 			"so the CL unsafe head may advance beyond the expected block")
 	}
 

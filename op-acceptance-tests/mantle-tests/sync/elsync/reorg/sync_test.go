@@ -128,7 +128,7 @@ func TestUnsafeGapFillAfterSafeReorg(gt *testing.T) {
 	// Reenable CLP2P
 	// L2CLB will receive unsafe payloads from sequencer
 	// Unsafe gap will be observed by the L2CLB, and it will be smart enough to close the gap,
-	// using RR Sync(soon be deprecated), or rely on EL Sync(desired)
+	// using reverse-chain (RR) Sync or EL Sync to close the gap
 	sys.L2CLB.ConnectPeer(sys.L2CL)
 	sys.L2CL.ConnectPeer(sys.L2CLB)
 
@@ -253,7 +253,7 @@ func TestUnsafeGapFillAfterUnsafeReorg_RestartL2CL(gt *testing.T) {
 
 	// L2CLB will receive unsafe payloads from sequencer
 	// Unsafe gap will be observed by the L2CLB, and it will be smart enough to close the gap,
-	// using RR Sync(soon be deprecated), or rely on EL Sync(desired)
+	// using reverse-chain (RR) Sync or EL Sync to close the gap
 
 	// Unsafe gap is closed
 	sys.L2ELB.Matched(sys.L2EL, types.LocalUnsafe, 50)
@@ -375,7 +375,7 @@ func TestUnsafeGapFillAfterUnsafeReorg_RestartCLP2P(gt *testing.T) {
 
 	// L2CLB will receive unsafe payloads from sequencer
 	// Unsafe gap will be observed by the L2CLB, and it will be smart enough to close the gap,
-	// using RR Sync(soon be deprecated), or rely on EL Sync(desired)
+	// using reverse-chain (RR) Sync or EL Sync to close the gap
 
 	// Unsafe gap is closed
 	sys.L2ELB.Matched(sys.L2EL, types.LocalUnsafe, 50)

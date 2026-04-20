@@ -188,15 +188,10 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU(gt *testing.T) {
 	// Finally peer for enabling ELP2P
 	sys.L2ELB.PeerWith(sys.L2EL)
 
-	// We do NOT need to resend the same FCU just because peers have connected;
-	// the EL continues syncing toward the last forkchoice target asynchronously.
-	//
-	// Once the EL has downloaded and validated the required data,
-	// a subsequent FCU call (even with the same target) may immediately return VALID.
-	//
-	// In practice, after peers are established, one or two FCU calls
-	// typically observe VALID — though this depends on the EL’s sync progress
-	// and network conditions.
+	// Peering alone does not complete EL sync — the EL still needs an FCU call
+	// to trigger or confirm chain advancement. FinishedELSync below retries FCU
+	// (up to 5 times at 2s intervals) until the EL returns VALID, confirming
+	// that it has downloaded and validated the target blocks from its new peer.
 	attempts := 3
 
 	// Retry a few times until the first EL Sync is complete
@@ -366,7 +361,9 @@ func TestL2ELP2PCanonicalChainAdvancedByFCU_Reth(gt *testing.T) {
 	logger.Info("Canonical chain advanced", "number", targetNum)
 	require.GreaterOrEqual(sys.L2ELB.BlockRefByLabel(eth.Unsafe).Number, uint64(targetNum))
 
-	// NewPayload still does not trigger EL Sync on reth
+	// NewPayload alone may not advance the canonical chain; reth can return SYNCING
+	// if the block is not yet connected to its current head. The follow-up FCU
+	// confirms the chain eventually resolves to VALID or SYNCING.
 	targetNum = startNum + 10
 	sys.L2ELB.NewPayload(sys.L2EL, targetNum).IsValidOrSyncing()
 	sys.L2ELB.ForkchoiceUpdate(sys.L2EL, targetNum, 0, 0, nil).IsValidOrSyncing()

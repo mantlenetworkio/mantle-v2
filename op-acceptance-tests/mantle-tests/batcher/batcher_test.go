@@ -41,12 +41,10 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 	// block to the EL DB before using it as the parent for the first manual block.
 	sys.L2EL.Reached(eth.Unsafe, sys.L2CL.HeadBlockRef(types.LocalUnsafe).Number, 10)
 
-	// Use the EL's committed unsafe head hash as parent instead of latestUnsafe_A
-	// (op-node's view). After derivation runs following StopSequencer, reth may have
-	// re-derived the chain and committed a different canonical hash at the same height.
-	// Using BlockRefByLabel ensures we build on the hash reth actually has, preventing
-	// "cannot create new block with L1 origin X on top of L1 origin 0" errors when
-	// latestUnsafe_A is non-canonical in reth's execution DB.
+	// Read the unsafe head hash directly from the EL instead of using the
+	// latestUnsafe_A value returned by StopSequencer. After Reached() confirms
+	// the block is committed, both hashes should be identical, but reading
+	// from the EL is the canonical source of truth for subsequent block builds.
 	parent := sys.L2EL.BlockRefByLabel(eth.Unsafe).Hash
 	nonce := uint64(0)
 	for j := 0; j < 200; j++ {

@@ -41,7 +41,7 @@ type RpcCaller interface {
 	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
-// ConnectP2P creates a p2p peer connection between node1 and node2.
+// ConnectP2P creates a p2p peer connection between the initiator and acceptor.
 //
 // Peer IDs from admin_peers[].id are compared directly against admin_nodeInfo.id.
 // Since mantle-xyz/reth v2.2.1 (commit e166f3a9, porting paradigmxyz/reth#23318
@@ -90,7 +90,7 @@ func ConnectP2P(ctx context.Context, require *testreq.Assertions, initiator RpcC
 	require.NoError(err, "The peer was not connected")
 }
 
-// DisconnectP2P disconnects a p2p peer connection between node1 and node2.
+// DisconnectP2P disconnects a p2p peer connection between the initiator and acceptor.
 //
 // Only the initiator calls admin_removePeer, matching the unidirectional
 // admin_addPeer in ConnectP2P. Both sides are polled to confirm full teardown.
