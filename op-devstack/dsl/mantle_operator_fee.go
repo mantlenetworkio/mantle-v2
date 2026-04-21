@@ -1,7 +1,9 @@
 package dsl
 
 import (
+	"context"
 	"math/big"
+	"time"
 
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -121,5 +123,14 @@ func RunMantleOperatorFeeTest(t devtest.T, l2Chain *L2Network, l1EL *L1ELNode, f
 		})
 	}
 
-	operatorFee.RestoreOriginalConfig()
+	// Register cleanup with an independent context: the parent test context is
+	// near-exhausted after ZeroFees + NonZeroFees, leaving insufficient time for
+	// the L1 write + L2 sync the restore performs. See RestoreOriginalConfigWithCtx.
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer cancel()
+		if err := operatorFee.RestoreOriginalConfigWithCtx(ctx); err != nil {
+			t.Errorf("failed to restore operator fee config: %v", err)
+		}
+	})
 }

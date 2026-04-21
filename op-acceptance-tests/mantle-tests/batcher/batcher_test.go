@@ -37,7 +37,15 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 	latestUnsafe_A := sys.L2CL.StopSequencer()
 	l.Info("Latest unsafe block after stopping the L2 sequencer", "latestUnsafe", latestUnsafe_A)
 
-	parent := latestUnsafe_A
+	// For reth: wait for the async pipeline to commit the sequencer's last unsafe
+	// block to the EL DB before using it as the parent for the first manual block.
+	sys.L2EL.Reached(eth.Unsafe, sys.L2CL.HeadBlockRef(types.LocalUnsafe).Number, 10)
+
+	// Read the unsafe head hash directly from the EL instead of using the
+	// latestUnsafe_A value returned by StopSequencer. After Reached() confirms
+	// the block is committed, both hashes should be identical, but reading
+	// from the EL is the canonical source of truth for subsequent block builds.
+	parent := sys.L2EL.BlockRefByLabel(eth.Unsafe).Hash
 	nonce := uint64(0)
 	for j := 0; j < 200; j++ {
 		l1Origin := sys.L1EL.BlockRefByLabel(eth.Unsafe).Hash
@@ -47,7 +55,13 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 			sequenceBlockWithL1Origin(t, ts_L2, parent, l1Origin, alice, cathrine, nonce)
 			nonce++
 
-			parent = sys.L2CL.HeadBlockRef(types.LocalUnsafe).Hash
+			clHead := sys.L2CL.HeadBlockRef(types.LocalUnsafe)
+			// For reth: wait for the async pipeline to commit the block before using
+			// it as the next parent. Without this, op-node may read a stale EL head
+			// (L1 origin 0) during a reset and reject the next build with
+			// "L1 origin break".
+			sys.L2EL.Reached(eth.Unsafe, clHead.Number, 10)
+			parent = clHead.Hash
 
 			sys.AdvanceTime(time.Second * 2)
 			time.Sleep(20 * time.Millisecond) // failed to force-include tx: type: 2 sender; err: nonce too high
@@ -57,6 +71,11 @@ func TestBatcherFullChannelsAfterDowntime(gt *testing.T) {
 		sys.TestSequencer.SequenceBlock(t, sys.L1Network.ChainID(), common.Hash{})
 	}
 
+	// For reth: wait for the async pipeline to finish processing all
+	// manually-sequenced blocks before calling StartSequencer, so op-node picks
+	// up the correct EL head and does not hit "L1 origin break".
+	lastBlockNum := sys.L2EL.BlockRefByHash(parent).Number
+	sys.L2EL.Reached(eth.Unsafe, lastBlockNum, 60)
 	sys.L2CL.StartSequencer()
 
 	l.Info("Current L1 unsafe block", "currentL1Unsafe", sys.L1EL.BlockRefByLabel(eth.Unsafe))

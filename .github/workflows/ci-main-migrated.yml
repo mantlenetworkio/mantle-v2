@@ -70,7 +70,7 @@ jobs:
           }
 
           contracts_bedrock="$(has_match '^(\.github/workflows/ci-main-migrated\.yml|packages/contracts-bedrock/|op-node/)')"
-          main_go="$(has_match '^(go\.(mod|sum)$|gas-oracle/|op-batcher/|op-chain-ops/|op-node/|op-proposer/|op-service/|op-e2e/mantleopgeth/|op-e2e/actions/mantletests/|op-e2e/actions/mantleupgrades/|op-e2e/system/mantleda/|op-e2e/system/mantlep2p/)')"
+          main_go="$(has_match '^(go\.(mod|sum)$|gas-oracle/|op-batcher/|op-chain-ops/|op-node/|op-proposer/|op-service/|op-e2e/mantleopgeth/|op-e2e/actions/mantletests/|op-e2e/actions/mantleupgrades/|op-e2e/system/mantleda/|op-e2e/system/mantlep2p/|op-acceptance-tests/|op-devstack/|devnet-sdk/)')"
 
           echo "contracts_bedrock=$contracts_bedrock"
           echo "main_go=$main_go"
@@ -559,6 +559,119 @@ jobs:
           name: acceptance-test-logs
           path: op-acceptance-tests/logs
 
+  op-acceptance-tests-reth:
+    name: op-acceptance-tests (reth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    needs:
+      - detect-changes
+      - contracts-bedrock-build
+    if: needs.detect-changes.outputs.main_go == 'true'
+    env:
+      GOFLAGS: "-mod=mod"
+      GO111MODULE: "on"
+      DEVSTACK_L2EL_KIND: "op-reth"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install toolchain via mise
+        uses: jdx/mise-action@v2
+
+      - name: Install op-reth
+        env:
+          OP_RETH_VERSION: "v2.2.1"
+        run: |
+          set -euo pipefail
+          TARBALL="op-reth-${OP_RETH_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          URL="https://github.com/mantle-xyz/reth/releases/download/${OP_RETH_VERSION}/${TARBALL}"
+          echo "Downloading op-reth ${OP_RETH_VERSION} from ${URL}"
+          curl -fsSL "${URL}.sha256" -o "${TARBALL}.sha256"
+          curl -fsSL "$URL" -o "$TARBALL"
+          sha256sum -c "${TARBALL}.sha256"
+          tar xzf "$TARBALL"
+          sudo install -m 755 op-reth /usr/local/bin/op-reth
+          op-reth --version
+
+      - name: Install contracts dependencies
+        run: git submodule update --init --recursive --force -j 8
+      - name: Restore forge artifacts from cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/contracts-bedrock/forge-artifacts
+            packages/contracts-bedrock/cache
+            op-deployer/pkg/deployer/artifacts/forge-artifacts
+          key: forge-artifacts-${{ github.sha }}
+      - name: Build contract artifacts on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: |
+          cd packages/contracts-bedrock && just build-no-tests
+          cd ../../op-deployer && just copy-contract-artifacts
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-v1-${{ hashFiles('go.sum') }}
+          restore-keys: go-mod-v1-
+
+      - name: Download Go dependencies
+        working-directory: op-acceptance-tests
+        run: go mod download
+
+      - name: Run mantle-base acceptance tests (reth)
+        working-directory: op-acceptance-tests
+        timeout-minutes: 60
+        env:
+          OP_RETH_EXEC_PATH: /usr/local/bin/op-reth
+        run: LOG_LEVEL=info just acceptance-test "" "mantle-base"
+
+      - name: Print results (summary)
+        if: always()
+        working-directory: op-acceptance-tests
+        run: |
+          LOG_DIR=$(ls -td -- logs/* | head -1)
+          cat "$LOG_DIR/summary.log" || true
+
+      - name: Print results (failures)
+        if: failure()
+        working-directory: op-acceptance-tests
+        run: |
+          LOG_DIR=$(ls -td -- logs/* | head -1)
+          cat "$LOG_DIR/failed/*.log" || true
+
+      - name: Print results (all)
+        if: always()
+        working-directory: op-acceptance-tests
+        run: |
+          LOG_DIR=$(ls -td -- logs/* | head -1)
+          cat "$LOG_DIR/all.log" || true
+
+      - name: Generate JUnit XML test report
+        if: always()
+        working-directory: op-acceptance-tests
+        run: |
+          LOG_DIR=$(ls -td -- logs/* | head -1)
+          gotestsum --junitfile results/results-reth.xml --raw-command cat $LOG_DIR/raw_go_events.log || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-test-results-reth
+          path: op-acceptance-tests/results
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-test-logs-reth
+          path: op-acceptance-tests/logs
+
   solidity-fmt-check:
     name: solidity-fmt-check
     needs:
@@ -608,6 +721,7 @@ jobs:
       - shell-check
       - docker-build
       - op-acceptance-tests
+      - op-acceptance-tests-reth
     steps:
       - name: Validate job statuses
         env:
