@@ -55,13 +55,13 @@ func TestFaucet(t *testing.T) {
 		}).
 		Return(&types.Receipt{Status: types.ReceiptStatusSuccessful, TxHash: common.Hash{}}, nil)
 
-	require.NoError(t, f.RequestETH(context.Background(), req))
+	require.NoError(t, f.RequestMNT(context.Background(), req))
 
 	req.Amount = intendedFaucetBalance.Add(eth.Ether(1)) // making a transfer beyond the faucet's balance
-	require.ErrorContains(t, f.RequestETH(context.Background(), req), "insufficient balance")
+	require.ErrorContains(t, f.RequestMNT(context.Background(), req), "insufficient balance")
 
 	f.Disable()
-	require.ErrorContains(t, f.RequestETH(context.Background(), req), "disabled")
+	require.ErrorContains(t, f.RequestMNT(context.Background(), req), "disabled")
 	f.Enable()
 
 	txMgr.On("Close").Once()

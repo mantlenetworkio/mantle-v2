@@ -1,0 +1,14 @@
+faucets:
+  mantle-sepolia:
+    el_rpc: "https://rpc-moon.sepolia.mantle.xyz/v1/OTEyYjhkZmJlZGFjOGFkMGUxZDNmMDYz"
+    chain_id: 5003
+    tx_cfg:
+      private_key: "0xa05c937d8c3de8435d94e749d5038033640a59c4e9db7f198bd27773597b63d1"
+    alert_threshold: 30000000000000000000000
+    balance_check_interval: 60
+    lark_webhook_url: "https://open.larksuite.com/open-apis/bot/v2/hook/0c85dfee-3ed2-415d-93b7-93beaeb2a986"
+    chain_name: "Mantle Sepolia"
+    explorer_url: "https://explorer.sepolia.mantle.xyz"
+
+db_path: "faucet.db"
+daily_limit_wei: "1000000000000000000000"

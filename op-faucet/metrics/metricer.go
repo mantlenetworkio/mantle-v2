@@ -11,6 +11,8 @@ type Metricer interface {
 	RecordUp()
 
 	RecordFundAction(faucet ftypes.FaucetID, chainID eth.ChainID, amount eth.ETH) (onDone func(err error))
+	RecordBalance(faucet ftypes.FaucetID, chainID eth.ChainID, balance float64)
+	RecordLowBalance(faucet ftypes.FaucetID, chainID eth.ChainID)
 
 	metrics.TxMetricer
 }

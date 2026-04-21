@@ -40,7 +40,7 @@ func (f *Faucet) Fund(addr common.Address, amount eth.ETH) {
 		return
 	}
 	err := retry.Do0(f.ctx, 3, retry.Exponential(), func() error {
-		err := f.inner.API().RequestETH(f.ctx, addr, amount)
+		err := f.inner.API().RequestMNT(f.ctx, addr, amount)
 		if err != nil {
 			f.log.Warn("Failed to fund address", "addr", addr, "amount", amount, "err", err)
 		}

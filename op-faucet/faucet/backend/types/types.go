@@ -48,3 +48,12 @@ type FaucetRequest struct {
 	Target  common.Address
 	Amount  eth.ETH
 }
+
+// EligibilityResult represents whether a user can claim from the faucet.
+type EligibilityResult struct {
+	Eligible     bool   `json:"eligible"`
+	Registered   bool   `json:"registered"`
+	DailyLimit   string `json:"dailyLimit"`
+	DailyClaimed string `json:"dailyClaimed"`
+	Remaining    string `json:"remaining"`
+}

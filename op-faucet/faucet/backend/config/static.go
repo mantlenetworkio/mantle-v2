@@ -44,6 +44,24 @@ type FaucetEntry struct {
 
 	TxCfg TxManagerConfig `yaml:"tx_cfg"`
 
+	// AlertThreshold is the balance threshold (in wei) below which an alert is triggered.
+	// Default is 0, which disables the alert.
+	AlertThreshold eth.ETH `yaml:"alert_threshold,omitempty"`
+
+	// BalanceCheckInterval is how often (in seconds) to check the faucet balance.
+	// Default is 60 seconds.
+	BalanceCheckInterval uint64 `yaml:"balance_check_interval,omitempty"`
+
+	// LarkWebhookURL is the Lark/Feishu bot webhook URL to send alerts to.
+	// If empty, only log-based alerts are used.
+	LarkWebhookURL string `yaml:"lark_webhook_url,omitempty"`
+
+	// ChainName is the human-readable chain name used in alerts (e.g. "Mantle Sepolia").
+	ChainName string `yaml:"chain_name,omitempty"`
+
+	// ExplorerURL is the block explorer base URL used in alerts (e.g. "https://sepolia.mantlescan.xyz").
+	ExplorerURL string `yaml:"explorer_url,omitempty"`
+
 	// We may add allow-lists, rate-limits, etc. in the future here
 }
 
@@ -70,6 +88,14 @@ type Config struct {
 	// Defaults identifies the faucet to use by chain ID.
 	// If unspecified, the faucet with the lowest faucet-ID for a given chain will be used.
 	Defaults map[eth.ChainID]ftypes.FaucetID `yaml:"defaults,omitempty"`
+
+	// DBPath is the path to the SQLite database for user registration and rate limiting.
+	// Default is "faucet.db".
+	DBPath string `yaml:"db_path,omitempty"`
+
+	// DailyLimitWei is the maximum amount (in wei) a registered user can claim per day.
+	// Default is 0, which means no limit.
+	DailyLimitWei string `yaml:"daily_limit_wei,omitempty"`
 }
 
 var _ Loader = (*Config)(nil)

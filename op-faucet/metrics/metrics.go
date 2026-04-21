@@ -24,6 +24,9 @@ type Metrics struct {
 
 	txDuration *prometheus.HistogramVec
 
+	walletBalance  *prometheus.GaugeVec
+	lowBalanceTotal *prometheus.CounterVec
+
 	info prometheus.GaugeVec
 	up   prometheus.Gauge
 }
@@ -79,6 +82,18 @@ func newMetrics(procName string, registry *prometheus.Registry) *Metrics {
 			Buckets:   []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
 			Help:      "Duration it takes to confirm a tx",
 		}, []string{"faucet", "chain"}),
+
+		walletBalance: factory.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: ns,
+			Name:      "wallet_balance_wei",
+			Help:      "Current faucet wallet balance in wei",
+		}, []string{"faucet", "chain"}),
+
+		lowBalanceTotal: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: ns,
+			Name:      "low_balance_alerts_total",
+			Help:      "Count of low balance alerts triggered",
+		}, []string{"faucet", "chain"}),
 	}
 }
 
@@ -98,6 +113,14 @@ func (m *Metrics) RecordInfo(version string) {
 // RecordUp sets the up metric to 1.
 func (m *Metrics) RecordUp() {
 	m.up.Set(1)
+}
+
+func (m *Metrics) RecordBalance(faucet ftypes.FaucetID, chainID eth.ChainID, balance float64) {
+	m.walletBalance.WithLabelValues(faucet.String(), chainID.String()).Set(balance)
+}
+
+func (m *Metrics) RecordLowBalance(faucet ftypes.FaucetID, chainID eth.ChainID) {
+	m.lowBalanceTotal.WithLabelValues(faucet.String(), chainID.String()).Inc()
 }
 
 func (m *Metrics) RecordFundAction(faucet ftypes.FaucetID, chainID eth.ChainID, amount eth.ETH) (onDone func(err error)) {

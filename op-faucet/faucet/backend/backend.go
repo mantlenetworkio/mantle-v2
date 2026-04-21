@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum-optimism/optimism/op-faucet/faucet/backend/config"
+	"github.com/ethereum-optimism/optimism/op-faucet/faucet/backend/store"
 	ftypes "github.com/ethereum-optimism/optimism/op-faucet/faucet/backend/types"
 	"github.com/ethereum-optimism/optimism/op-faucet/faucet/frontend"
 	"github.com/ethereum-optimism/optimism/op-faucet/metrics"
@@ -23,10 +25,12 @@ type APIRouter interface {
 }
 
 type Backend struct {
-	log      log.Logger
-	m        metrics.Metricer
-	faucets  locks.RWMap[ftypes.FaucetID, *Faucet]
-	defaults locks.RWMap[eth.ChainID, ftypes.FaucetID]
+	log        log.Logger
+	m          metrics.Metricer
+	faucets    locks.RWMap[ftypes.FaucetID, *Faucet]
+	defaults   locks.RWMap[eth.ChainID, ftypes.FaucetID]
+	store      *store.Store
+	dailyLimit *big.Int
 }
 
 func FromConfig(log log.Logger, m metrics.Metricer, cfg *config.Config, router APIRouter) (*Backend, error) {
@@ -35,12 +39,34 @@ func FromConfig(log log.Logger, m metrics.Metricer, cfg *config.Config, router A
 		m:   m,
 	}
 
+	// Initialize store for user registration and rate limiting
+	dbPath := cfg.DBPath
+	if dbPath == "" {
+		dbPath = "faucet.db"
+	}
+	s, err := store.New(dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open store: %w", err)
+	}
+	b.store = s
+
+	if cfg.DailyLimitWei != "" {
+		limit, ok := new(big.Int).SetString(cfg.DailyLimitWei, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid daily_limit_wei: %s", cfg.DailyLimitWei)
+		}
+		b.dailyLimit = limit
+		log.Info("Daily claim limit configured", "limit_wei", cfg.DailyLimitWei)
+	}
+
 	var faucetIDs []ftypes.FaucetID
 	for fID, fCfg := range cfg.Faucets {
 		f, err := FaucetFromConfig(log, m, fID, fCfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to setup faucet %q: %w", fID, err)
 		}
+		f.store = b.store
+		f.dailyLimit = b.dailyLimit
 		b.faucets.Set(fID, f)
 		faucetIDs = append(faucetIDs, fID)
 	}
@@ -139,15 +165,18 @@ func (b *Backend) DisableFaucet(id ftypes.FaucetID) {
 }
 
 func (b *Backend) Stop(ctx context.Context) error {
-	// We have support for ctx/error here,
-	// for future improvements like awaiting txs to complete and/or storing rate-limit data to disk.
-
 	b.faucets.Range(func(key ftypes.FaucetID, value *Faucet) bool {
 		value.Close()
 		return true
 	})
+	if b.store != nil {
+		if err := b.store.Close(); err != nil {
+			return fmt.Errorf("failed to close store: %w", err)
+		}
+	}
 	return nil
 }
+
 
 func (b *Backend) Faucets() (out map[ftypes.FaucetID]eth.ChainID) {
 	out = make(map[ftypes.FaucetID]eth.ChainID)

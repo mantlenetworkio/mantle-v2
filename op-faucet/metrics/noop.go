@@ -14,6 +14,10 @@ func (n NoopMetrics) RecordInfo(version string) {}
 
 func (n NoopMetrics) RecordUp() {}
 
+func (n NoopMetrics) RecordBalance(faucet ftypes.FaucetID, chainID eth.ChainID, balance float64) {}
+
+func (n NoopMetrics) RecordLowBalance(faucet ftypes.FaucetID, chainID eth.ChainID) {}
+
 func (n NoopMetrics) RecordFundAction(faucet ftypes.FaucetID, chainID eth.ChainID, amount eth.ETH) (onDone func(err error)) {
 	return func(err error) {}
 }
