@@ -89,9 +89,10 @@ type Config struct {
 	// If unspecified, the faucet with the lowest faucet-ID for a given chain will be used.
 	Defaults map[eth.ChainID]ftypes.FaucetID `yaml:"defaults,omitempty"`
 
-	// DBPath is the path to the SQLite database for user registration and rate limiting.
-	// Default is "faucet.db".
-	DBPath string `yaml:"db_path,omitempty"`
+	// DBDSN is the PostgreSQL connection string (DSN) for user registration and rate limiting.
+	// Example: "postgres://user:password@host:5432/dbname?sslmode=require"
+	// If empty, rate limiting is disabled.
+	DBDSN string `yaml:"db_dsn,omitempty"`
 
 	// DailyLimitWei is the maximum amount (in wei) a registered user can claim per day.
 	// Default is 0, which means no limit.

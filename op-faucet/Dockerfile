@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:1.25 AS builder
 
 COPY . /src
 WORKDIR /src
@@ -24,7 +24,6 @@ WORKDIR /app
 
 EXPOSE 9000
 EXPOSE 7300
-VOLUME /data
 
 ENTRYPOINT ["op-faucet"]
 CMD ["--config=/app/configs/config.yaml", "--rpc.addr=0.0.0.0", "--rpc.port=9000"]

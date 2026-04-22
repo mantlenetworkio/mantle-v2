@@ -39,16 +39,18 @@ func FromConfig(log log.Logger, m metrics.Metricer, cfg *config.Config, router A
 		m:   m,
 	}
 
-	// Initialize store for user registration and rate limiting
-	dbPath := cfg.DBPath
-	if dbPath == "" {
-		dbPath = "faucet.db"
+	// Initialize store for user registration and rate limiting.
+	// If db_dsn is empty, rate limiting is disabled.
+	if cfg.DBDSN != "" {
+		s, err := store.New(cfg.DBDSN)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open store: %w", err)
+		}
+		b.store = s
+		log.Info("Store initialized (PostgreSQL)")
+	} else {
+		log.Warn("db_dsn not configured, rate limiting is disabled")
 	}
-	s, err := store.New(dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open store: %w", err)
-	}
-	b.store = s
 
 	if cfg.DailyLimitWei != "" {
 		limit, ok := new(big.Int).SetString(cfg.DailyLimitWei, 10)

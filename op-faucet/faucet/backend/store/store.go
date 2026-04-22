@@ -8,18 +8,24 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/lib/pq"
 )
 
 type Store struct {
 	db *sql.DB
 }
 
-func New(dbPath string) (*Store, error) {
-	db, err := sql.Open("sqlite", dbPath)
+// New opens a PostgreSQL connection.
+// dsn example: "postgres://user:password@host:5432/dbname?sslmode=require"
+func New(dsn string) (*Store, error) {
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -34,28 +40,27 @@ func New(dbPath string) (*Store, error) {
 
 func (s *Store) migrate() error {
 	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
+		CREATE TABLE IF NOT EXISTS faucet_users (
 			address TEXT PRIMARY KEY,
-			registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 
-		CREATE TABLE IF NOT EXISTS claims (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		CREATE TABLE IF NOT EXISTS faucet_claims (
+			id BIGSERIAL PRIMARY KEY,
 			address TEXT NOT NULL,
-			amount_wei TEXT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (address) REFERENCES users(address)
+			amount_wei NUMERIC(78,0) NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 
-		CREATE INDEX IF NOT EXISTS idx_claims_address_date ON claims(address, created_at);
+		CREATE INDEX IF NOT EXISTS idx_faucet_claims_address_date ON faucet_claims(address, created_at);
 	`)
 	return err
 }
 
-// RegisterUser registers a new user by address. Returns false if already registered.
+// RegisterUser registers a new user by address. Returns true if newly registered, false if already exists.
 func (s *Store) RegisterUser(addr common.Address) (bool, error) {
 	result, err := s.db.Exec(
-		`INSERT OR IGNORE INTO users (address) VALUES (?)`,
+		`INSERT INTO faucet_users (address) VALUES ($1) ON CONFLICT (address) DO NOTHING`,
 		addr.Hex(),
 	)
 	if err != nil {
@@ -72,7 +77,7 @@ func (s *Store) RegisterUser(addr common.Address) (bool, error) {
 func (s *Store) IsRegistered(addr common.Address) (bool, error) {
 	var count int
 	err := s.db.QueryRow(
-		`SELECT COUNT(*) FROM users WHERE address = ?`,
+		`SELECT COUNT(*) FROM faucet_users WHERE address = $1`,
 		addr.Hex(),
 	).Scan(&count)
 	if err != nil {
@@ -81,12 +86,12 @@ func (s *Store) IsRegistered(addr common.Address) (bool, error) {
 	return count > 0, nil
 }
 
-// DailyClaimedAmount returns the total amount (in wei) claimed by the address today.
+// DailyClaimedAmount returns the total amount (in wei) claimed by the address today (UTC).
 func (s *Store) DailyClaimedAmount(addr common.Address) (*big.Int, error) {
 	todayStart := todayUTCStart()
 	var amountStr sql.NullString
 	err := s.db.QueryRow(
-		`SELECT COALESCE(SUM(CAST(amount_wei AS REAL)), '0') FROM claims WHERE address = ? AND created_at >= ?`,
+		`SELECT COALESCE(SUM(amount_wei)::text, '0') FROM faucet_claims WHERE address = $1 AND created_at >= $2`,
 		addr.Hex(),
 		todayStart,
 	).Scan(&amountStr)
@@ -96,10 +101,7 @@ func (s *Store) DailyClaimedAmount(addr common.Address) (*big.Int, error) {
 
 	amount := new(big.Int)
 	if amountStr.Valid && amountStr.String != "" {
-		// Parse as float first since COALESCE(SUM(CAST(...))) returns float
-		f := new(big.Float)
-		f.SetString(amountStr.String)
-		f.Int(amount)
+		amount.SetString(amountStr.String, 10)
 	}
 	return amount, nil
 }
@@ -107,7 +109,7 @@ func (s *Store) DailyClaimedAmount(addr common.Address) (*big.Int, error) {
 // RecordClaim records a successful claim.
 func (s *Store) RecordClaim(addr common.Address, amountWei *big.Int) error {
 	_, err := s.db.Exec(
-		`INSERT INTO claims (address, amount_wei) VALUES (?, ?)`,
+		`INSERT INTO faucet_claims (address, amount_wei) VALUES ($1, $2)`,
 		addr.Hex(),
 		amountWei.String(),
 	)
