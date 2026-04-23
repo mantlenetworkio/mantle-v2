@@ -14,9 +14,7 @@ use revm::{
     context::{Cfg, ContextTr},
     handler::{EthPrecompiles, PrecompileProvider},
     interpreter::{CallInputs, Gas, InstructionResult, InterpreterResult},
-    precompile::{
-        EthPrecompileResult, PrecompileError, PrecompileOutput, Precompiles, bls12_381_const, bn254,
-    },
+    precompile::{PrecompileError, PrecompileResult, Precompiles, bls12_381_const, bn254},
     primitives::{hardfork::SpecId, hash_map::HashMap},
 };
 
@@ -123,30 +121,28 @@ where
         // 3. If the precompile is not found, return None.
         let output =
             if let Some(accelerated) = self.accelerated_precompiles.get(&inputs.bytecode_address) {
-                let eth_result =
-                    (accelerated)(&input, inputs.gas_limit, &self.hint_writer, &self.oracle_reader);
-                PrecompileOutput::from_eth_result(eth_result, inputs.reservoir)
+                (accelerated)(&input, inputs.gas_limit, &self.hint_writer, &self.oracle_reader)
             } else if let Some(precompile) = self.inner.precompiles.get(&inputs.bytecode_address) {
-                match precompile.execute(&input, inputs.gas_limit, inputs.reservoir) {
-                    Ok(output) => output,
-                    Err(PrecompileError::Fatal(e)) => return Err(e),
-                    Err(PrecompileError::FatalAny(e)) => return Err(alloc::format!("{e:?}")),
-                }
+                precompile.execute(&input, inputs.gas_limit)
             } else {
                 return Ok(None);
             };
 
-        if output.is_halt() {
-            result.result = if output.halt_reason().is_some_and(|r| r.is_oog()) {
-                InstructionResult::PrecompileOOG
-            } else {
-                InstructionResult::PrecompileError
-            };
-        } else {
-            let underflow = result.gas.record_regular_cost(output.gas_used);
-            assert!(underflow, "Gas underflow is not possible");
-            result.result = InstructionResult::Return;
-            result.output = output.bytes;
+        match output {
+            Ok(output) => {
+                let underflow = result.gas.record_cost(output.gas_used);
+                assert!(underflow, "Gas underflow is not possible");
+                result.result = InstructionResult::Return;
+                result.output = output.bytes;
+            }
+            Err(PrecompileError::Fatal(e)) => return Err(e),
+            Err(e) => {
+                result.result = if e.is_oog() {
+                    InstructionResult::PrecompileOOG
+                } else {
+                    InstructionResult::PrecompileError
+                };
+            }
         }
 
         Ok(Some(result))
@@ -164,7 +160,7 @@ where
 }
 
 /// A precompile function that can be accelerated by the FPVM.
-type AcceleratedPrecompileFn<H, O> = fn(&[u8], u64, &H, &O) -> EthPrecompileResult;
+type AcceleratedPrecompileFn<H, O> = fn(&[u8], u64, &H, &O) -> PrecompileResult;
 
 /// A tuple type for accelerated precompiles with an associated [`Address`].
 struct AcceleratedPrecompile<H, O> {
@@ -314,16 +310,15 @@ mod test {
     fn create_call_inputs(address: Address, input: Bytes, gas_limit: u64) -> CallInputs {
         CallInputs {
             input: CallInput::Bytes(input),
-            return_memory_offset: 0..0,
             gas_limit,
-            reservoir: 0,
             bytecode_address: address,
-            known_bytecode: (revm::primitives::KECCAK_EMPTY, revm::bytecode::Bytecode::new()),
             target_address: Address::ZERO,
             caller: Address::ZERO,
             value: revm::interpreter::CallValue::Transfer(alloy_primitives::U256::ZERO),
             scheme: revm::interpreter::CallScheme::Call,
             is_static: false,
+            return_memory_offset: 0..0,
+            known_bytecode: None,
         }
     }
 
@@ -341,12 +336,12 @@ mod test {
         gas_limit: u64,
         _hint_writer: &H,
         _oracle_reader: &O,
-    ) -> EthPrecompileResult
+    ) -> PrecompileResult
     where
         H: HintWriterClient + Send + Sync,
         O: PreimageOracleClient + Send + Sync,
     {
-        Ok(revm::precompile::EthPrecompileOutput::new(gas_limit / 2, Bytes::from_static(b"mock")))
+        Ok(revm::precompile::PrecompileOutput::new(gas_limit / 2, Bytes::from_static(b"mock")))
     }
 
     #[test]
@@ -491,7 +486,7 @@ mod test {
             addrs.sort();
             addrs
         };
-        let karst_addrs: Vec<_> = {
+        let osaka_addrs: Vec<_> = {
             let mut addrs: Vec<_> =
                 karst_provider.accelerated_precompiles.keys().copied().collect();
             addrs.sort();
@@ -501,7 +496,7 @@ mod test {
             jovian_addrs, interop_addrs,
             "INTEROP should use Jovian accelerated precompiles"
         );
-        assert_eq!(jovian_addrs, karst_addrs, "KARST should use Jovian accelerated precompiles");
+        assert_eq!(jovian_addrs, osaka_addrs, "OSAKA should use Jovian accelerated precompiles");
 
         // Verify the non-accelerated precompile sets point to the correct static instances.
         assert!(
@@ -540,16 +535,15 @@ mod test {
         let sha256_addr = revm::precompile::u64_to_address(2);
         let call_inputs = CallInputs {
             input: CallInput::SharedBuffer(0..0),
-            return_memory_offset: 0..0,
             gas_limit: u64::MAX,
-            reservoir: 0,
             bytecode_address: sha256_addr,
-            known_bytecode: (revm::primitives::KECCAK_EMPTY, revm::bytecode::Bytecode::new()),
             target_address: Address::ZERO,
             caller: Address::ZERO,
             value: revm::interpreter::CallValue::Transfer(alloy_primitives::U256::ZERO),
             scheme: revm::interpreter::CallScheme::Call,
             is_static: false,
+            return_memory_offset: 0..0,
+            known_bytecode: None,
         };
 
         let result = precompiles.run(&mut ctx, &call_inputs).unwrap();

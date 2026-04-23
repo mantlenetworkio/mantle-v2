@@ -12,7 +12,8 @@ use reth_optimism_primitives::{
 };
 use reth_primitives_traits::{SealedHeader, header::HeaderMut};
 use reth_provider::{
-    BlockNumReader, DatabaseProviderFactory, StaticFileProviderFactory, StaticFileWriter,
+    BlockNumReader, DBProvider, DatabaseProviderFactory, StaticFileProviderFactory,
+    StaticFileWriter,
 };
 use std::{io::BufReader, sync::Arc};
 use tracing::info;
@@ -98,7 +99,9 @@ impl<C: ChainSpecParser<ChainSpec = OpChainSpec>> InitStateCommandOp<C> {
         info!(target: "reth::cli", "Initiating state dump");
 
         let reader = BufReader::new(reth_fs_util::open(self.init_state.state)?);
-        let hash = init_from_state_dump(reader, &provider_factory, config.stages.etl)?;
+        let hash = init_from_state_dump(reader, &provider_rw, config.stages.etl)?;
+
+        provider_rw.commit()?;
 
         info!(target: "reth::cli", hash = ?hash, "Genesis block written");
         Ok(())

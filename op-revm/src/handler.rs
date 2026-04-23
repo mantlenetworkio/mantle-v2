@@ -24,9 +24,7 @@ use revm::{
         pre_execution::{calculate_caller_fee, validate_account_nonce_and_code_with_components},
     },
     inspector::{Inspector, InspectorEvmTr, InspectorHandler},
-    interpreter::{
-        Gas, InitialAndFloorGas, interpreter::EthInterpreter, interpreter_action::FrameInit,
-    },
+    interpreter::{Gas, interpreter::EthInterpreter, interpreter_action::FrameInit},
     primitives::{U256, hardfork::SpecId},
 };
 use std::{boxed::Box, vec::Vec};
@@ -105,7 +103,6 @@ where
     fn validate_against_state_and_deduct_caller(
         &self,
         evm: &mut Self::Evm,
-        _init_and_floor_gas: &mut InitialAndFloorGas,
     ) -> Result<(), Self::Error> {
         let (block, tx, cfg, journal, chain, _) = evm.ctx().all_mut();
         let spec = cfg.spec();
@@ -197,8 +194,6 @@ where
         let gas = frame_result.gas_mut();
         let remaining = gas.remaining();
         let refunded = gas.refunded();
-        let reservoir = gas.reservoir();
-        let state_gas_spent = gas.state_gas_spent();
 
         // Spend the gas limit. Gas is reimbursed when the tx returns successfully.
         *gas = Gas::new_spent(tx_gas_limit);
@@ -243,10 +238,6 @@ where
                 gas.erase_cost(remaining);
             }
         }
-
-        gas.set_state_gas_spent(state_gas_spent);
-        gas.set_reservoir(reservoir);
-
         Ok(())
     }
 
@@ -314,14 +305,16 @@ where
         };
 
         let l1_cost = l1_block_info.calculate_tx_l1_cost(enveloped_tx, spec);
-        let effective_used =
-            frame_result.gas().used().saturating_sub(frame_result.gas().reservoir());
         let operator_fee_cost = if spec.is_enabled_in(OpSpecId::ISTHMUS) {
-            l1_block_info.operator_fee_charge(enveloped_tx, U256::from(effective_used), spec)
+            l1_block_info.operator_fee_charge(
+                enveloped_tx,
+                U256::from(frame_result.gas().used()),
+                spec,
+            )
         } else {
             U256::ZERO
         };
-        let base_fee_amount = U256::from(basefee.saturating_mul(effective_used as u128));
+        let base_fee_amount = U256::from(basefee.saturating_mul(frame_result.gas().used() as u128));
 
         // Send fees to their respective recipients
         for (recipient, amount) in [
@@ -414,7 +407,7 @@ where
             // clear the journal
             output = Ok(ExecutionResult::Halt {
                 reason: OpHaltReason::FailedDeposit,
-                gas: ResultGas::default().with_total_gas_spent(gas_used),
+                gas: ResultGas::new(gas_limit, gas_used, 0, 0, 0),
                 logs: Vec::new(),
             })
         }
@@ -494,7 +487,7 @@ mod tests {
 
         let gas = call_last_frame_return(ctx, InstructionResult::Revert, Gas::new(90));
         assert_eq!(gas.remaining(), 90);
-        assert_eq!(gas.total_gas_spent(), 10);
+        assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 0);
     }
 
@@ -506,7 +499,7 @@ mod tests {
 
         let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
         assert_eq!(gas.remaining(), 90);
-        assert_eq!(gas.total_gas_spent(), 10);
+        assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 0);
     }
 
@@ -526,12 +519,12 @@ mod tests {
 
         let gas = call_last_frame_return(ctx.clone(), InstructionResult::Stop, ret_gas);
         assert_eq!(gas.remaining(), 90);
-        assert_eq!(gas.total_gas_spent(), 10);
+        assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 2); // min(20, 10/5)
 
         let gas = call_last_frame_return(ctx, InstructionResult::Revert, ret_gas);
         assert_eq!(gas.remaining(), 90);
-        assert_eq!(gas.total_gas_spent(), 10);
+        assert_eq!(gas.spent(), 10);
         assert_eq!(gas.refunded(), 0);
     }
 
@@ -547,7 +540,7 @@ mod tests {
             .with_cfg(CfgEnv::new_with_spec(OpSpecId::BEDROCK));
         let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
         assert_eq!(gas.remaining(), 0);
-        assert_eq!(gas.total_gas_spent(), 100);
+        assert_eq!(gas.spent(), 100);
         assert_eq!(gas.refunded(), 0);
     }
 
@@ -564,7 +557,7 @@ mod tests {
             .with_cfg(CfgEnv::new_with_spec(OpSpecId::BEDROCK));
         let gas = call_last_frame_return(ctx, InstructionResult::Stop, Gas::new(90));
         assert_eq!(gas.remaining(), 100);
-        assert_eq!(gas.total_gas_spent(), 0);
+        assert_eq!(gas.spent(), 0);
         assert_eq!(gas.refunded(), 0);
     }
 
@@ -595,9 +588,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         // Check the account balance is updated.
         let account = evm.ctx().journal_mut().load_account(caller).unwrap();
@@ -638,9 +629,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         // Check the account balance is updated.
         let account = evm.ctx().journal_mut().load_account(caller).unwrap();
@@ -691,9 +680,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert_eq!(
             *evm.ctx().chain(),
@@ -772,9 +759,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert_eq!(
             *evm.ctx().chain(),
@@ -823,9 +808,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert_eq!(
             *evm.ctx().chain(),
@@ -874,9 +857,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert_eq!(
             *evm.ctx().chain(),
@@ -934,9 +915,7 @@ mod tests {
 
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert_eq!(
             *evm.ctx().chain(),
@@ -988,9 +967,7 @@ mod tests {
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
 
         // l1block cost is 1048 fee.
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         // Check the account balance is updated.
         let account = evm.ctx().journal_mut().load_account(caller).unwrap();
@@ -1027,9 +1004,7 @@ mod tests {
 
         // Under Isthmus the operator fee cost is operator_fee_scalar * gas_limit / 1e6 +
         // operator_fee_constant 10_000_000 * 10 / 1_000_000 + 50 = 150
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         // Check the account balance is updated.
         let account = evm.ctx().journal_mut().load_account(caller).unwrap();
@@ -1066,9 +1041,7 @@ mod tests {
 
         // Under Jovian the operator fee cost is operator_fee_scalar * gas_limit * 100 +
         // operator_fee_constant 2 * 10 * 100 + 50 = 2_050
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         let account = evm.ctx().journal_mut().load_account(caller).unwrap();
         assert_eq!(account.info.balance, U256::from(1));
@@ -1103,7 +1076,7 @@ mod tests {
 
         // l1block cost is 1048 fee.
         assert_eq!(
-            handler.validate_against_state_and_deduct_caller(&mut evm, &mut Default::default()),
+            handler.validate_against_state_and_deduct_caller(&mut evm),
             Err(EVMError::Transaction(
                 InvalidTransaction::LackOfFundForMaxFee {
                     fee: Box::new(U256::from(1048)),
@@ -1215,9 +1188,7 @@ mod tests {
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
 
-        handler
-            .validate_against_state_and_deduct_caller(&mut evm, &mut Default::default())
-            .unwrap();
+        handler.validate_against_state_and_deduct_caller(&mut evm).unwrap();
 
         assert!(evm.0.ctx.journal_mut().load_account(Address::ZERO).unwrap().is_touched());
     }
@@ -1292,8 +1263,7 @@ mod tests {
         let handler =
             OpHandler::<_, EVMError<_, OpTransactionError>, EthFrame<EthInterpreter>>::new();
 
-        let result =
-            handler.validate_against_state_and_deduct_caller(&mut evm, &mut Default::default());
+        let result = handler.validate_against_state_and_deduct_caller(&mut evm);
 
         assert!(matches!(
             result.err().unwrap(),

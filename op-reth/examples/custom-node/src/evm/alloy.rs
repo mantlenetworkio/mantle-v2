@@ -46,10 +46,6 @@ where
         self.inner.block()
     }
 
-    fn cfg_env(&self) -> &CfgEnv<OpSpecId> {
-        self.inner.cfg_env()
-    }
-
     fn chain_id(&self) -> u64 {
         self.inner.chain_id()
     }
@@ -73,7 +69,7 @@ where
         self.inner.transact_system_call(caller, contract, data)
     }
 
-    fn finish(self) -> (Self::DB, EvmEnv<Self::Spec, Self::BlockEnv>) {
+    fn finish(self) -> (Self::DB, EvmEnv<Self::Spec>) {
         self.inner.finish()
     }
 
@@ -112,7 +108,7 @@ impl EvmFactory for CustomEvmFactory {
     fn create_evm<DB: Database>(
         &self,
         db: DB,
-        input: EvmEnv<Self::Spec, Self::BlockEnv>,
+        input: EvmEnv<Self::Spec>,
     ) -> Self::Evm<DB, NoOpInspector> {
         CustomEvm::new(self.0.create_evm(db, input))
     }
@@ -120,7 +116,7 @@ impl EvmFactory for CustomEvmFactory {
     fn create_evm_with_inspector<DB: Database, I: Inspector<Self::Context<DB>>>(
         &self,
         db: DB,
-        input: EvmEnv<Self::Spec, Self::BlockEnv>,
+        input: EvmEnv<Self::Spec>,
         inspector: I,
     ) -> Self::Evm<DB, I> {
         CustomEvm::new(self.0.create_evm_with_inspector(db, input, inspector))
