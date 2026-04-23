@@ -209,7 +209,7 @@ func createL2Block(t *testing.T, number int, setWithdrawalsRoot bool) *types.Blo
 		withdrawals = make([]*types.Withdrawal, 0)
 		body.Withdrawals = withdrawals
 		header.WithdrawalsHash = &types.EmptyWithdrawalsHash
-		blockConfig = types.IsthmusBlockConfig
+		//blockConfig = types.IsthmusBlockConfig
 	}
 	return types.NewBlock(header, body, nil, trie.NewStackTrie(nil), blockConfig)
 }
@@ -273,7 +273,7 @@ func (s *stubEngineBackend) StateAt(root common.Hash) (*state.StateDB, error) {
 	panic("unsupported")
 }
 
-func (s *stubEngineBackend) InsertBlockWithoutSetHead(block *types.Block, makeWitness bool) (*stateless.Witness, error) {
+func (s *stubEngineBackend) InsertBlockWithoutSetHead(_ context.Context, block *types.Block, makeWitness bool) (*stateless.Witness, error) {
 	panic("unsupported")
 }
 

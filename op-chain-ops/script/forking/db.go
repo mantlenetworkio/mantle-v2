@@ -10,16 +10,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/ethereum/go-ethereum/triedb"
 )
 
 // ForkDB is a virtual state database: it wraps a forked accounts trie,
 // and can maintain a state diff, so we can mutate the forked state,
 // and even finalize state changes (so we can accurately measure things like cold storage gas cost).
+//
+// It embeds a *state.CachingDB to satisfy the state.Database interface
+// (specifically the Commit method which takes an unexported *stateUpdate type).
+// The embedded CachingDB's Commit is never called in fork usage — fork state
+// is ephemeral. All read/write operations are overridden to route through the
+// ForkedAccountsTrie.
 type ForkDB struct {
-	active *ForkedAccountsTrie
+	*state.CachingDB // provides Commit() to satisfy state.Database interface
+	active           *ForkedAccountsTrie
 }
 
 // Reader for read-only access to a known state. All cold reads go through this.
@@ -42,12 +47,16 @@ func (f *ForkDB) Snapshot() *snapshot.Tree {
 
 var _ state.Database = (*ForkDB)(nil)
 
+// NewForkDB creates a virtual state database backed by the given fork source.
 func NewForkDB(source ForkSource) *ForkDB {
-	return &ForkDB{active: &ForkedAccountsTrie{
-		stateRoot: source.StateRoot(),
-		src:       source,
-		diff:      NewExportDiff(),
-	}}
+	return &ForkDB{
+		CachingDB: state.NewDatabaseForTesting(),
+		active: &ForkedAccountsTrie{
+			stateRoot: source.StateRoot(),
+			src:       source,
+			diff:      NewExportDiff(),
+		},
+	}
 }
 
 // fakeRoot is just a marker; every account we load into the fork-db has this storage-root.
@@ -75,29 +84,6 @@ func (f *ForkDB) OpenStorageTrie(stateRoot common.Hash, address common.Address, 
 		return nil, fmt.Errorf("ForkDB unexpectedly was queried with real looking storage root: %s", root)
 	}
 	return f.active, nil
-}
-
-func (f *ForkDB) CopyTrie(trie state.Trie) state.Trie {
-	if st, ok := trie.(*ForkedAccountsTrie); ok {
-		return st.Copy()
-	}
-	panic(fmt.Errorf("ForkDB tried to copy non-fork trie %v", trie))
-}
-
-func (f *ForkDB) ContractCode(addr common.Address, codeHash common.Hash) ([]byte, error) {
-	return f.active.ContractCode(addr, codeHash)
-}
-
-func (f *ForkDB) ContractCodeSize(addr common.Address, codeHash common.Hash) (int, error) {
-	return f.active.ContractCodeSize(addr, codeHash)
-}
-
-func (f *ForkDB) DiskDB() ethdb.KeyValueStore {
-	panic("DiskDB() during active Fork is not supported")
-}
-
-func (f *ForkDB) PointCache() *utils.PointCache {
-	panic("PointCache() is not supported")
 }
 
 func (f *ForkDB) TrieDB() *triedb.Database {
