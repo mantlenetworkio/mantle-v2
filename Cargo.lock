@@ -11107,6 +11107,7 @@ dependencies = [
  "alloy-op-evm",
  "alloy-op-hardforks",
  "alloy-primitives",
+ "alloy-rpc-types-admin",
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
  "clap",
