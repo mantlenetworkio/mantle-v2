@@ -91,6 +91,14 @@ These are upstream OP Stack audit reports inherited from the Optimism codebase. 
 
 ---
 
+## Mantle Arsia Audit Report
+
+| Audit Time | Reviewer | Report Link                                                                           | Audited Commit |
+|------------|----------|---------------------------------------------------------------------------------------|----------------|
+| 2026-03    | CertiK   | [CertiK - Mantle Network Audit Report](./mantle-arsia/CertiK-REP-Mantle-Network.pdf) |                |
+
+---
+
 ## Notes
 
 - All audit reports are conducted by reputable third-party auditors to ensure the security and robustness of the Mantle network.
