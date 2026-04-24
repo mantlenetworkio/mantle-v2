@@ -747,7 +747,9 @@ func (c *Config) NewPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
 
 // GetPayloadVersion returns the EngineAPIMethod suitable for the chain hard fork version.
 func (c *Config) GetPayloadVersion(timestamp uint64) eth.EngineAPIMethod {
-	if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
+	if c.IsMantleLimb(timestamp) {
+		return eth.GetPayloadV5
+	} else if c.IsIsthmus(timestamp) || c.IsMantleSkadi(timestamp) {
 		return eth.GetPayloadV4
 	} else if c.IsEcotone(timestamp) {
 		// Cancun
