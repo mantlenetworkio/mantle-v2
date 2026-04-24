@@ -19,14 +19,10 @@ contract XDomainSetter3 is CrossDomainOwnable3 {
 contract CrossDomainOwnable3_Test is Messenger_Initializer {
     XDomainSetter3 setter;
 
-    /**
-     * @notice OpenZeppelin Ownable.sol transferOwnership event
-     */
+    /// @notice OpenZeppelin Ownable.sol transferOwnership event
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    /**
-     * @notice CrossDomainOwnable3.sol transferOwnership event
-     */
+    /// @notice CrossDomainOwnable3.sol transferOwnership event
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner, bool isLocal);
 
     function setUp() public override {
@@ -94,7 +90,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
         uint256 mntValue = 0;
         uint256 ethValue = 0;
         uint256 minGasLimit = 0;
-        bytes memory message = abi.encodeWithSelector(XDomainSetter3.set.selector, 1);
+        bytes memory message = abi.encodeCall(XDomainSetter3.set, (1));
 
         bytes32 hash = Hashing.hashCrossDomainMessage(
             Encoding.encodeVersionedNonce(nonce, 1), sender, target, mntValue, ethValue, minGasLimit, message
@@ -164,10 +160,8 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
         assertEq(setter.value(), 2);
     }
 
-    /**
-     * @notice The existing transferOwnership(address) method
-     *         still exists on the contract
-     */
+    /// @notice The existing transferOwnership(address) method
+    ///         still exists on the contract
     function test_transferOwnershipNoLocal_succeeds() public {
         bool isLocal = setter.isLocal();
 
@@ -199,13 +193,7 @@ contract CrossDomainOwnable3_Test is Messenger_Initializer {
         // the L1CrossDomainMessenger
         vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger)));
         L2Messenger.relayMessage(
-            Encoding.encodeVersionedNonce(1, 1),
-            bob,
-            address(setter),
-            0,
-            0,
-            0,
-            abi.encodeWithSelector(XDomainSetter3.set.selector, 2)
+            Encoding.encodeVersionedNonce(1, 1), bob, address(setter), 0, 0, 0, abi.encodeCall(XDomainSetter3.set, (2))
         );
 
         assertEq(setter.value(), 2);

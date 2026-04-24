@@ -107,7 +107,8 @@ func TestSystemConfigMarshaling(t *testing.T) {
 	}
 	j, err := json.Marshal(sysConfig)
 	require.NoError(t, err)
-	require.Equal(t, `{"batcherAddr":"0x4100000000000000000000000000000000000000","overhead":"0x0405060000000000000000000000000000000000000000000000000000000000","scalar":"0x0708090000000000000000000000000000000000000000000000000000000000","gasLimit":1234,"eip1559Params":"0x0000000000000000","operatorFeeParams":"0x0102030000000000000000000000000000000000000000000000000000000000","minBaseFee":0,"daFootprintGasScalar":400}`, string(j))
+	// Mantle has an additional baseFee field that is not present in the upstream.
+	require.Equal(t, `{"batcherAddr":"0x4100000000000000000000000000000000000000","overhead":"0x0405060000000000000000000000000000000000000000000000000000000000","scalar":"0x0708090000000000000000000000000000000000000000000000000000000000","gasLimit":1234,"baseFee":null,"eip1559Params":"0x0000000000000000","operatorFeeParams":"0x0102030000000000000000000000000000000000000000000000000000000000","minBaseFee":0,"daFootprintGasScalar":400}`, string(j))
 	sysConfig.MarshalPreHolocene = true
 	j, err = json.Marshal(sysConfig)
 	require.NoError(t, err)

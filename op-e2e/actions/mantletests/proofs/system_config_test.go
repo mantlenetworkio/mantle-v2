@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-core/forks"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
-	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/bindings"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 )

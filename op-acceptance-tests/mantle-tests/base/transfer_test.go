@@ -21,7 +21,7 @@ func TestTransfer(gt *testing.T) {
 	sys := presets.NewMantleMinimal(t)
 
 	// Create two L2 wallets
-	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
+	alice := sys.FunderL2.NewFundedEOA(eth.ThreeHundredthsEther)
 	aliceBalance := alice.GetBalance()
 	bob := sys.Wallet.NewEOA(sys.L2EL)
 	bobBalance := bob.GetBalance()

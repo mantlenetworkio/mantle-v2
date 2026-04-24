@@ -15,10 +15,17 @@ import { Predeploys } from "src/libraries/Predeploys.sol";
 import { Constants } from "src/libraries/Constants.sol";
 
 // Interfaces
+import { IFeeVault } from "interfaces/L2/IFeeVault.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
+import { IOptimismMintableERC721Factory } from "interfaces/universal/IOptimismMintableERC721Factory.sol";
 import { IProxy } from "interfaces/universal/IProxy.sol";
 import { IGasPriceOracle } from "interfaces/L2/IGasPriceOracle.sol";
 import { IL1Block } from "interfaces/L2/IL1Block.sol";
+import { IL2CrossDomainMessenger } from "interfaces/L2/IL2CrossDomainMessenger.sol";
+import { IL2ERC721Bridge } from "interfaces/L2/IL2ERC721Bridge.sol";
+import { IL2StandardBridge } from "interfaces/L2/IL2StandardBridge.sol";
+import { IL2ToL1MessagePasser } from "interfaces/L2/IL2ToL1MessagePasser.sol";
+import { ISequencerFeeVault } from "interfaces/L2/ISequencerFeeVault.sol";
 
 /// @title L2Genesis
 /// @notice Generates the genesis state for the Mantle L2 network.
@@ -244,8 +251,12 @@ contract L2Genesis is Script {
 
     function setL2ToL1MessagePasser(Input memory _input) internal {
         // L2ToL1MessagePasser has an immutable L1_MNT_ADDRESS
-        bytes memory args = abi.encode(_input.l1MNTAddress);
-        address vault = DeployUtils.create1({ _name: "L2ToL1MessagePasser", _args: args });
+        address vault = DeployUtils.create1({
+            _name: "L2ToL1MessagePasser",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(IL2ToL1MessagePasser.__constructor__, (_input.l1MNTAddress))
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_TO_L1_MESSAGE_PASSER);
         vm.etch(impl, address(vault).code);
@@ -258,8 +269,15 @@ contract L2Genesis is Script {
     /// @notice This predeploy is following the safety invariant #1.
     function setL2CrossDomainMessenger(Input memory _input) internal {
         // L2CrossDomainMessenger has immutables
-        bytes memory args = abi.encode(address(_input.l1CrossDomainMessengerProxy), _input.l1MNTAddress);
-        address messenger = DeployUtils.create1({ _name: "L2CrossDomainMessenger", _args: args });
+        address messenger = DeployUtils.create1({
+            _name: "L2CrossDomainMessenger",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(
+                    IL2CrossDomainMessenger.__constructor__,
+                    (address(_input.l1CrossDomainMessengerProxy), _input.l1MNTAddress)
+                )
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_CROSS_DOMAIN_MESSENGER);
         vm.etch(impl, address(messenger).code);
@@ -280,8 +298,14 @@ contract L2Genesis is Script {
     /// @notice This predeploy is following the safety invariant #1.
     function setL2StandardBridge(Input memory _input) internal {
         // L2StandardBridge has immutables
-        bytes memory args = abi.encode(payable(_input.l1StandardBridgeProxy), _input.l1MNTAddress);
-        address bridge = DeployUtils.create1({ _name: "L2StandardBridge", _args: args });
+        address bridge = DeployUtils.create1({
+            _name: "L2StandardBridge",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(
+                    IL2StandardBridge.__constructor__, (payable(_input.l1StandardBridgeProxy), _input.l1MNTAddress)
+                )
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_STANDARD_BRIDGE);
         vm.etch(impl, address(bridge).code);
@@ -294,8 +318,15 @@ contract L2Genesis is Script {
     /// @notice This predeploy is following the safety invariant #1.
     function setL2ERC721Bridge(Input memory _input) internal {
         // L2ERC721Bridge has immutables
-        bytes memory args = abi.encode(Predeploys.L2_CROSS_DOMAIN_MESSENGER, payable(_input.l1ERC721BridgeProxy));
-        address bridge = DeployUtils.create1({ _name: "L2ERC721Bridge", _args: args });
+        address bridge = DeployUtils.create1({
+            _name: "L2ERC721Bridge",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(
+                    IL2ERC721Bridge.__constructor__,
+                    (address(Predeploys.L2_CROSS_DOMAIN_MESSENGER), payable(_input.l1ERC721BridgeProxy))
+                )
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L2_ERC721_BRIDGE);
         vm.etch(impl, address(bridge).code);
@@ -307,8 +338,12 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #2,
     function setSequencerFeeVault(Input memory _input) internal {
-        bytes memory args = abi.encode(_input.sequencerFeeVaultRecipient);
-        address vault = DeployUtils.create1({ _name: "SequencerFeeVault", _args: args });
+        address vault = DeployUtils.create1({
+            _name: "SequencerFeeVault",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(ISequencerFeeVault.__constructor__, (_input.sequencerFeeVaultRecipient))
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.SEQUENCER_FEE_WALLET);
         vm.etch(impl, address(vault).code);
@@ -321,8 +356,12 @@ contract L2Genesis is Script {
     /// @notice This predeploy is following the safety invariant #1.
     function setOptimismMintableERC20Factory() internal {
         // OptimismMintableERC20Factory has immutables
-        bytes memory args = abi.encode(Predeploys.L2_STANDARD_BRIDGE);
-        address factory = DeployUtils.create1({ _name: "OptimismMintableERC20Factory", _args: args });
+        address factory = DeployUtils.create1({
+            _name: "OptimismMintableERC20Factory",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(IOptimismMintableERC20Factory.__constructor__, (Predeploys.L2_STANDARD_BRIDGE))
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC20_FACTORY);
         vm.etch(impl, address(factory).code);
@@ -334,8 +373,14 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #2,
     function setOptimismMintableERC721Factory(Input memory _input) internal {
-        bytes memory args = abi.encode(Predeploys.L2_ERC721_BRIDGE, _input.l1ChainID);
-        address factory = DeployUtils.create1({ _name: "OptimismMintableERC721Factory", _args: args });
+        address factory = DeployUtils.create1({
+            _name: "OptimismMintableERC721Factory",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(
+                    IOptimismMintableERC721Factory.__constructor__, (Predeploys.L2_ERC721_BRIDGE, _input.l1ChainID)
+                )
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPTIMISM_MINTABLE_ERC721_FACTORY);
         vm.etch(impl, address(factory).code);
@@ -396,8 +441,10 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #2.
     function setBaseFeeVault(Input memory _input) internal {
-        bytes memory args = abi.encode(_input.baseFeeVaultRecipient);
-        address vault = DeployUtils.create1({ _name: "BaseFeeVault", _args: args });
+        address vault = DeployUtils.create1({
+            _name: "BaseFeeVault",
+            _args: DeployUtils.encodeConstructor(abi.encodeCall(IFeeVault.__constructor__, (_input.baseFeeVaultRecipient)))
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.BASE_FEE_VAULT);
         vm.etch(impl, address(vault).code);
@@ -409,8 +456,10 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #2.
     function setL1FeeVault(Input memory _input) internal {
-        bytes memory args = abi.encode(_input.l1FeeVaultRecipient);
-        address vault = DeployUtils.create1({ _name: "L1FeeVault", _args: args });
+        address vault = DeployUtils.create1({
+            _name: "L1FeeVault",
+            _args: DeployUtils.encodeConstructor(abi.encodeCall(IFeeVault.__constructor__, (_input.l1FeeVaultRecipient)))
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L1_FEE_VAULT);
         vm.etch(impl, address(vault).code);
@@ -422,8 +471,12 @@ contract L2Genesis is Script {
 
     /// @notice This predeploy is following the safety invariant #2.
     function setOperatorFeeVault(Input memory _input) internal {
-        bytes memory args = abi.encode(_input.operatorFeeVaultRecipient);
-        address vault = DeployUtils.create1({ _name: "OperatorFeeVault", _args: args });
+        address vault = DeployUtils.create1({
+            _name: "OperatorFeeVault",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(IFeeVault.__constructor__, (_input.operatorFeeVaultRecipient))
+            )
+        });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.OPERATOR_FEE_VAULT);
         vm.etch(impl, address(vault).code);

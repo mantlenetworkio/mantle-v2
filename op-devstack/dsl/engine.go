@@ -34,6 +34,19 @@ func (r *NewPayloadResult) IsValid() *NewPayloadResult {
 	return r
 }
 
+// IsValidOrSyncing accepts either VALID or SYNCING status.
+// VALID: geth when parent is in non-canonical chain (has parent state), reth after queuing+processing.
+// SYNCING: geth/reth when parent is genuinely unavailable.
+func (r *NewPayloadResult) IsValidOrSyncing() *NewPayloadResult {
+	r.T.Require().NoError(r.Err)
+	r.T.Require().NotNil(r.Status, "payload status nil")
+	r.T.Require().True(
+		r.Status.Status == eth.ExecutionValid || r.Status.Status == eth.ExecutionSyncing,
+		"expected VALID or SYNCING, got %s", r.Status.Status,
+	)
+	return r
+}
+
 func (r *NewPayloadResult) IsInvalid() *NewPayloadResult {
 	r.IsPayloadStatus(eth.ExecutionInvalid)
 	r.T.Require().NoError(r.Err)
@@ -63,12 +76,30 @@ func (r *ForkchoiceUpdateResult) IsSyncing() *ForkchoiceUpdateResult {
 	return r
 }
 
+// IsValidOrSyncing accepts either VALID or SYNCING FCU status.
+// On geth, FCU to an unknown/unavailable head returns SYNCING.
+// On reth, the same FCU may return VALID if the block was previously buffered in the engine tree.
+func (r *ForkchoiceUpdateResult) IsValidOrSyncing() *ForkchoiceUpdateResult {
+	r.T.Require().NoError(r.Err)
+	r.T.Require().NotNil(r.Result, "fcu result nil")
+	status := r.Result.PayloadStatus.Status
+	r.T.Require().True(
+		status == eth.ExecutionValid || status == eth.ExecutionSyncing,
+		"expected VALID or SYNCING, got %s", status,
+	)
+	return r
+}
+
 func (r *ForkchoiceUpdateResult) IsValid() *ForkchoiceUpdateResult {
 	r.IsForkchoiceUpdatedStatus(eth.ExecutionValid)
 	r.T.Require().NoError(r.Err)
 	return r
 }
 
+// WaitUntilValid polls the FCU result up to `attempts` times with a 1s fixed
+// interval (total wall-clock budget = attempts × 1s). Bridges reth's async
+// pipeline, where FCU may transiently return SYNCING before transitioning to
+// VALID; on geth (synchronous pipeline) the first attempt typically succeeds.
 func (r *ForkchoiceUpdateResult) WaitUntilValid(attempts int) *ForkchoiceUpdateResult {
 	tryCnt := 0
 	err := retry.Do0(r.T.Ctx(), attempts, &retry.FixedStrategy{Dur: 1 * time.Second},

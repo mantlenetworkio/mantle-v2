@@ -1,9 +1,10 @@
 package withdrawal
 
 import (
+	"testing"
+
 	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
-	"testing"
 )
 
 func TestMain(m *testing.M) {

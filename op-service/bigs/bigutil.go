@@ -17,3 +17,11 @@ func IsPositive(val *big.Int) bool {
 func IsNegative(val *big.Int) bool {
 	return val.Sign() < 0
 }
+
+// Uint64Strict converts a big.Int to a uint64, panicking if the value is not a UInt64.
+func Uint64Strict(val *big.Int) uint64 {
+	if !val.IsUint64() {
+		panic("bigs.Uint64Strict: value does not fit in uint64")
+	}
+	return val.Uint64()
+}

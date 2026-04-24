@@ -11,7 +11,6 @@ import (
 	op_e2e "github.com/ethereum-optimism/optimism/op-e2e"
 
 	"github.com/ethereum-optimism/optimism/op-e2e/bindings"
-	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/geth"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/wait"
 	"github.com/ethereum-optimism/optimism/op-e2e/system/e2esys"
 	"github.com/ethereum-optimism/optimism/op-service/client"
@@ -19,8 +18,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 )
@@ -82,12 +79,13 @@ func TestRequiredProtocolVersionChangeAndHalt(t *testing.T) {
 	// configure halt in verifier op-node
 	cfg.Nodes["verifier"].RollupHalt = "major"
 	// configure halt in verifier op-geth node
-	cfg.GethOptions["verifier"] = append(cfg.GethOptions["verifier"], []geth.GethOption{
-		func(ethCfg *ethconfig.Config, nodeCfg *node.Config) error {
-			ethCfg.RollupHaltOnIncompatibleProtocolVersion = "major"
-			return nil
-		},
-	}...)
+	// Mantle geth not supporting this yet, commenting out for clean linting
+	// cfg.GethOptions["verifier"] = append(cfg.GethOptions["verifier"], []geth.GethOption{
+	// 	func(ethCfg *ethconfig.Config, nodeCfg *node.Config) error {
+	// 		ethCfg.RollupHaltOnIncompatibleProtocolVersion = "major"
+	// 		return nil
+	// 	},
+	// }...)
 
 	sys, err := cfg.Start(t)
 	require.Nil(t, err, "Error starting up system")

@@ -6,6 +6,8 @@
   "maxSequencerDrift": 20,
   "sequencerWindowSize": 100,
   "channelTimeout": 30,
+  "cliqueSignerAddress": "0x0000000000000000000000000000000000000000",
+  "controller": "0x0000000000000000000000000000000000000000",
   "p2pSequencerAddress": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
   "batchInboxAddress": "0x42000000000000000000000000000000000000ff",
   "batchSenderAddress": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
@@ -60,7 +62,9 @@
   "gasPriceOracleOperatorFeeScalar": 0,
   "gasPriceOracleOperatorFeeConstant": 0,
   "gasPriceOracleOverhead": 2100,
+  "gasPriceOracleOwner": "0x0000000000000000000000000000000000000000",
   "gasPriceOracleScalar": 1000000,
+  "gasPriceOracleTokenRatio": 0,
   "minBaseFee": 100,
   "daFootprintGasScalar": 400,
   "enableGovernance": true,
@@ -102,5 +106,7 @@
   "daResolveWindow": 0,
   "daResolverRefundPercentage": 0,
   "useRevenueShare": true,
-  "chainFeesRecipient": "0x0000000000000000000000000000000000000444"
+  "chainFeesRecipient": "0x0000000000000000000000000000000000000444",
+  "l1MantleToken": "0x0000000000000000000000000000000000000000",
+  "portalGuardian": "0x0000000000000000000000000000000000000000"
 }

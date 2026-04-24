@@ -58,7 +58,7 @@ contract SequencerFeeVault_Test is Bridge_Initializer {
         vm.expectCall(
             Predeploys.L2_STANDARD_BRIDGE,
             address(vault).balance,
-            abi.encodeWithSelector(L2StandardBridge.bridgeMNTTo.selector, vault.l1FeeWallet(), 35_000, bytes(""))
+            abi.encodeCall(L2StandardBridge.bridgeMNTTo, (vault.l1FeeWallet(), 35_000, bytes("")))
         );
 
         vault.withdraw();

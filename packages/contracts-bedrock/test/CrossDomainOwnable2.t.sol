@@ -48,7 +48,7 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
         uint256 mntValue = 0;
         uint256 ethValue = 0;
         uint256 minGasLimit = 0;
-        bytes memory message = abi.encodeWithSelector(XDomainSetter2.set.selector, 1);
+        bytes memory message = abi.encodeCall(XDomainSetter2.set, (1));
 
         bytes32 hash = Hashing.hashCrossDomainMessage(
             Encoding.encodeVersionedNonce(nonce, 1), sender, target, mntValue, ethValue, minGasLimit, message
@@ -80,7 +80,7 @@ contract CrossDomainOwnable2_Test is Messenger_Initializer {
             0,
             0,
             0,
-            abi.encodeWithSelector(XDomainSetter2.set.selector, 2)
+            abi.encodeCall(XDomainSetter2.set, (2))
         );
 
         assertEq(setter.value(), 2);

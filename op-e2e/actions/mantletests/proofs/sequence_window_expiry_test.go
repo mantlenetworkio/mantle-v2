@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
-	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/stretchr/testify/require"
 )
 

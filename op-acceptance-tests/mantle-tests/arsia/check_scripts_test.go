@@ -169,8 +169,15 @@ func checkFastLZTransactions(t devtest.T, ctx context.Context, sys *presets.Mini
 		expectedFee, err := dsl.CalculateFjordL1Cost(ctx, l2Client, signedTx.RollupCostData(), receipt.BlockHash)
 		require.NoError(err)
 		require.NotNil(receipt.L1Fee)
-		// Mantle L1 fee is multiplied by token ratio
-		tokenRatio, err := contractio.Read(gasPriceOracle.TokenRatio(), ctx)
+		// Mantle L1 fee is multiplied by token ratio.
+		// Pin tokenRatio read to receipt.BlockHash so it matches the state used by the node
+		// when computing receipt.L1Fee. Reading at "latest" can return a different tokenRatio
+		// if the value was updated between the tx block and the current head.
+		tokenRatio, err := contractio.Read(gasPriceOracle.TokenRatio(), ctx, func(ptx *txplan.PlannedTx) {
+			ptx.AgainstBlock.Fn(func(ctx context.Context) (eth.BlockInfo, error) {
+				return l2Client.InfoByHash(ctx, receipt.BlockHash)
+			})
+		})
 		require.NoError(err)
 		expectedFee = expectedFee.Mul(expectedFee, tokenRatio)
 		dsl.ValidateL1FeeMatches(t, expectedFee, receipt.L1Fee)

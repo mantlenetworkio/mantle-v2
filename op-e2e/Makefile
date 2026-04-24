@@ -71,3 +71,8 @@ gen-binding:
 	./scripts/gen-binding.sh $(CONTRACT)
 endif
 .PHONY: gen-binding
+
+gen-mantle-binding:
+	cd ../packages/contracts-bedrock && just build
+	./scripts/gen-mantle-binding.sh $(CONTRACT)
+.PHONY: gen-mantle-binding

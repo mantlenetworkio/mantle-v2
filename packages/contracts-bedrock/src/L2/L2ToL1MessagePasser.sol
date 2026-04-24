@@ -11,52 +11,38 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { OptimismMintableERC20 } from "../universal/OptimismMintableERC20.sol";
 
-/**
- * @custom:proxied
- * @custom:predeploy 0x4200000000000000000000000000000000000016
- * @title L2ToL1MessagePasser
- * @notice The L2ToL1MessagePasser is a dedicated contract where messages that are being sent from
- *         L2 to L1 can be stored. The storage root of this contract is pulled up to the top level
- *         of the L2 output to reduce the cost of proving the existence of sent messages.
- */
+/// @custom:proxied
+/// @custom:predeploy 0x4200000000000000000000000000000000000016
+/// @title L2ToL1MessagePasser
+/// @notice The L2ToL1MessagePasser is a dedicated contract where messages that are being sent from
+///         L2 to L1 can be stored. The storage root of this contract is pulled up to the top level
+///         of the L2 output to reduce the cost of proving the existence of sent messages.
 contract L2ToL1MessagePasser is Semver {
-    /**
-     * @notice The L1 gas limit set when eth is withdrawn using the receive() function.
-     */
+    /// @notice The L1 gas limit set when eth is withdrawn using the receive() function.
     uint256 internal constant RECEIVE_DEFAULT_GAS_LIMIT = 100_000;
 
-    /**
-     * @notice Current message version identifier.
-     */
+    /// @notice Current message version identifier.
     uint16 public constant MESSAGE_VERSION = 1;
 
-    /**
-     * @notice MNT Token Address on Ethereum
-     */
+    /// @notice MNT Token Address on Ethereum
     address public immutable L1_MNT_ADDRESS;
 
-    /**
-     * @notice Includes the message hashes for all withdrawals
-     */
+    /// @notice Includes the message hashes for all withdrawals
     mapping(bytes32 => bool) public sentMessages;
 
-    /**
-     * @notice A unique value hashed with each withdrawal.
-     */
+    /// @notice A unique value hashed with each withdrawal.
     uint240 internal msgNonce;
 
-    /**
-     * @notice Emitted any time a withdrawal is initiated.
-     *
-     * @param nonce          Unique value corresponding to each withdrawal.
-     * @param sender         The L2 account address which initiated the withdrawal.
-     * @param target         The L1 account address the call will be send to.
-     * @param mntValue       The MNT value submitted for withdrawal, to be forwarded to the target.
-     * @param ethValue       The ETH value submitted for withdrawal, to be forwarded to the target.
-     * @param gasLimit       The minimum amount of gas that must be provided when withdrawing.
-     * @param data           The data to be forwarded to the target on L1.
-     * @param withdrawalHash The hash of the withdrawal.
-     */
+    /// @notice Emitted any time a withdrawal is initiated.
+    ///
+    /// @param nonce          Unique value corresponding to each withdrawal.
+    /// @param sender         The L2 account address which initiated the withdrawal.
+    /// @param target         The L1 account address the call will be send to.
+    /// @param mntValue       The MNT value submitted for withdrawal, to be forwarded to the target.
+    /// @param ethValue       The ETH value submitted for withdrawal, to be forwarded to the target.
+    /// @param gasLimit       The minimum amount of gas that must be provided when withdrawing.
+    /// @param data           The data to be forwarded to the target on L1.
+    /// @param withdrawalHash The hash of the withdrawal.
     event MessagePassed(
         uint256 indexed nonce,
         address indexed sender,
@@ -68,54 +54,47 @@ contract L2ToL1MessagePasser is Semver {
         bytes32 withdrawalHash
     );
 
-    /**
-     * @notice Emitted when the balance of this contract is burned.
-     *
-     * @param amount Amount of MNT that was burned.
-     */
+    /// @notice Emitted when the balance of this contract is burned.
+    ///
+    /// @param amount Amount of MNT that was burned.
     event WithdrawerBalanceBurnt(uint256 indexed amount);
 
-    /**
-     * @custom:semver 1.0.0
-     */
+    /// @custom:semver 1.0.0
     constructor(address _l1mnt) Semver(1, 0, 0) {
         L1_MNT_ADDRESS = _l1mnt;
     }
 
-    /**
-     * @notice Allows users to withdraw MNT by sending directly to this contract.
-     */
+    /// @notice Allows users to withdraw MNT by sending directly to this contract.
     receive() external payable {
         initiateWithdrawal(0, msg.sender, RECEIVE_DEFAULT_GAS_LIMIT, bytes(""));
     }
 
-    /**
-     * @notice Removes all MNT held by this contract from the state. Used to prevent the amount of
-     *         MNT on L2 inflating when MNT is withdrawn. Currently only way to do this is to
-     *         create a contract and self-destruct it to itself. Anyone can call this function. Not
-     *         incentivized since this function is very cheap.
-     */
+    /// @notice Removes all MNT held by this contract from the state. Used to prevent the amount of
+    ///         MNT on L2 inflating when MNT is withdrawn. Currently only way to do this is to
+    ///         create a contract and self-destruct it to itself. Anyone can call this function. Not
+    ///         incentivized since this function is very cheap.
     function burn() external {
         uint256 balance = address(this).balance;
-        (bool success, ) = address(0).call{value: balance}("");
+        (bool success,) = address(0).call{ value: balance }("");
         require(success, "Failed to burn MNT");
         emit WithdrawerBalanceBurnt(balance);
     }
 
-    /**
-     * @notice Sends a message from L2 to L1.
-     *
-     * @param _ethValue eth amount bridged to L1.
-     * @param _target   Address to call on L1 execution.
-     * @param _gasLimit Minimum gas limit for executing the message on L1.
-     * @param _data     Data to forward to L1 target.
-     */
+    /// @notice Sends a message from L2 to L1.
+    ///
+    /// @param _ethValue eth amount bridged to L1.
+    /// @param _target   Address to call on L1 execution.
+    /// @param _gasLimit Minimum gas limit for executing the message on L1.
+    /// @param _data     Data to forward to L1 target.
     function initiateWithdrawal(
         uint256 _ethValue,
         address _target,
         uint256 _gasLimit,
         bytes memory _data
-    ) public payable {
+    )
+        public
+        payable
+    {
         require(_target != L1_MNT_ADDRESS, "Directly calling MNT Token is forbidden");
         if (_ethValue != 0) {
             OptimismMintableERC20(Predeploys.BVM_ETH).burn(msg.sender, _ethValue);
@@ -135,29 +114,18 @@ contract L2ToL1MessagePasser is Semver {
 
         sentMessages[withdrawalHash] = true;
 
-        emit MessagePassed(
-            messageNonce(),
-            msg.sender,
-            _target,
-            msg.value,
-            _ethValue,
-            _gasLimit,
-            _data,
-            withdrawalHash
-        );
+        emit MessagePassed(messageNonce(), msg.sender, _target, msg.value, _ethValue, _gasLimit, _data, withdrawalHash);
 
         unchecked {
             ++msgNonce;
         }
     }
 
-    /**
-     * @notice Retrieves the next message nonce. Message version will be added to the upper two
-     *         bytes of the message nonce. Message version allows us to treat messages as having
-     *         different structures.
-     *
-     * @return Nonce of the next message to be sent, with added message version.
-     */
+    /// @notice Retrieves the next message nonce. Message version will be added to the upper two
+    ///         bytes of the message nonce. Message version allows us to treat messages as having
+    ///         different structures.
+    ///
+    /// @return Nonce of the next message to be sent, with added message version.
     function messageNonce() public view returns (uint256) {
         return Encoding.encodeVersionedNonce(msgNonce, MESSAGE_VERSION);
     }

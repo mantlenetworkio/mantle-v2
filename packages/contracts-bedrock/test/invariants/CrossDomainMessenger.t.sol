@@ -31,9 +31,7 @@ contract RelayActor is StdUtils {
         doFail = _doFail;
     }
 
-    /**
-     * Relays a message to the `L1CrossDomainMessenger` with a random `version`, and `_message`.
-     */
+    /// Relays a message to the `L1CrossDomainMessenger` with a random `version`, and `_message`.
     function relay(uint8 _version, uint8 _mntValue, uint8 _ethValue, bytes memory _message) external {
         address target = address(0x04); // ID precompile
         address sender = Predeploys.L2_CROSS_DOMAIN_MESSENGER;
@@ -56,7 +54,7 @@ contract RelayActor is StdUtils {
 
         // If the message should succeed, supply it `baseGas`. If not, supply it an amount of
         // gas that is too low to complete the call.
-        uint256 gas = doFail ? bound(minGasLimit, 60_000, 80_000) : xdm.baseGas(_message, minGasLimit);
+        uint256 gas = doFail ? bound(minGasLimit, 90_000, 100_000) : xdm.baseGas(_message, minGasLimit);
 
         // Compute the cross domain message hash and store it in `hashes`.
         // The `relayMessage` function will always encode the message as a version 1
@@ -78,8 +76,7 @@ contract RelayActor is StdUtils {
         }
         try xdm.relayMessage{ gas: gas, value: _ethValue }(
             Encoding.encodeVersionedNonce(0, _version), sender, target, _mntValue, _ethValue, minGasLimit, _message
-        ) { }
-        catch {
+        ) { } catch {
             // If any of these calls revert, set `reverted` to true to fail the invariant test.
             // NOTE: This is to get around forge's invariant fuzzer ignoring reverted calls
             // to this function.
@@ -121,21 +118,19 @@ contract XDM_MinGasLimits_Succeeds is XDM_MinGasLimits {
         super.init(false);
     }
 
-    /**
-     * @custom:invariant A call to `relayMessage` should succeed if at least the minimum gas limit
-     *                   can be supplied to the target context, there is enough gas to complete
-     *                   execution of `relayMessage` after the target context's execution is
-     *                   finished, and the target context did not revert.
-     *
-     * There are two minimum gas limits here:
-     *
-     * - The outer min gas limit is for the call from the `OptimismPortal` to the
-     * `L1CrossDomainMessenger`,  and it can be retrieved by calling the xdm's `baseGas` function
-     * with the `message` and inner limit.
-     *
-     * - The inner min gas limit is for the call from the `L1CrossDomainMessenger` to the target
-     * contract.
-     */
+    /// @custom:invariant A call to `relayMessage` should succeed if at least the minimum gas limit
+    ///                   can be supplied to the target context, there is enough gas to complete
+    ///                   execution of `relayMessage` after the target context's execution is
+    ///                   finished, and the target context did not revert.
+    ///
+    /// There are two minimum gas limits here:
+    ///
+    /// - The outer min gas limit is for the call from the `OptimismPortal` to the
+    /// `L1CrossDomainMessenger`,  and it can be retrieved by calling the xdm's `baseGas` function
+    /// with the `message` and inner limit.
+    ///
+    /// - The inner min gas limit is for the call from the `L1CrossDomainMessenger` to the target
+    /// contract.
     function invariant_minGasLimits() external view {
         uint256 length = actor.numHashes();
         for (uint256 i = 0; i < length; ++i) {
@@ -155,22 +150,20 @@ contract XDM_MinGasLimits_Reverts is XDM_MinGasLimits {
         super.init(true);
     }
 
-    /**
-     * @custom:invariant A call to `relayMessage` should assign the message hash to the
-     *                   `failedMessages` mapping if not enough gas is supplied to forward
-     *                   `minGasLimit` to the target context or if there is not enough gas to
-     *                   complete execution of `relayMessage` after the target context's execution
-     *                   is finished.
-     *
-     * There are two minimum gas limits here:
-     *
-     * - The outer min gas limit is for the call from the `OptimismPortal` to the
-     * `L1CrossDomainMessenger`,  and it can be retrieved by calling the xdm's `baseGas` function
-     * with the `message` and inner limit.
-     *
-     * - The inner min gas limit is for the call from the `L1CrossDomainMessenger` to the target
-     * contract.
-     */
+    /// @custom:invariant A call to `relayMessage` should assign the message hash to the
+    ///                   `failedMessages` mapping if not enough gas is supplied to forward
+    ///                   `minGasLimit` to the target context or if there is not enough gas to
+    ///                   complete execution of `relayMessage` after the target context's execution
+    ///                   is finished.
+    ///
+    /// There are two minimum gas limits here:
+    ///
+    /// - The outer min gas limit is for the call from the `OptimismPortal` to the
+    /// `L1CrossDomainMessenger`,  and it can be retrieved by calling the xdm's `baseGas` function
+    /// with the `message` and inner limit.
+    ///
+    /// - The inner min gas limit is for the call from the `L1CrossDomainMessenger` to the target
+    /// contract.
     function invariant_minGasLimits() external view {
         uint256 length = actor.numHashes();
         for (uint256 i = 0; i < length; ++i) {

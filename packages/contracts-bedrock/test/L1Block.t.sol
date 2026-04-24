@@ -137,7 +137,7 @@ contract L1Block_ArsiaTest is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(lb).call(abi.encodePacked(lb.setL1BlockValuesArsia.selector, data));
-        require(success, "Call failed");
+        require(success, "L1Block: call failed");
 
         // Verify values by reading from storage
         // sequenceNumber, blobBaseFeeScalar, and baseFeeScalar are packed in slot 3
@@ -203,7 +203,7 @@ contract L1Block_ArsiaTest is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(lb).call(abi.encodePacked(lb.setL1BlockValuesArsia.selector, data));
-        require(success, "Call failed");
+        require(success, "L1Block: call failed");
 
         assertEq(lb.baseFeeScalar(), baseFeeScalar_);
         assertEq(lb.blobBaseFeeScalar(), blobBaseFeeScalar_);
@@ -262,7 +262,7 @@ contract L1Block_ArsiaTest is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(lb).call(abi.encodePacked(lb.setL1BlockValuesArsia.selector, data));
-        require(success, "Call failed");
+        require(success, "L1Block: call failed");
 
         assertEq(lb.baseFeeScalar(), type(uint32).max);
         assertEq(lb.blobBaseFeeScalar(), type(uint32).max);
@@ -289,7 +289,7 @@ contract L1Block_ArsiaTest is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(lb).call(abi.encodePacked(lb.setL1BlockValuesArsia.selector, data));
-        require(success, "Call failed");
+        require(success, "L1Block: call failed");
 
         assertEq(lb.baseFeeScalar(), 0);
         assertEq(lb.blobBaseFeeScalar(), 0);

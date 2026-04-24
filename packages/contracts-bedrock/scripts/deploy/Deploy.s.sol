@@ -186,9 +186,7 @@ contract Deploy is Deployer {
                 systemConfigConfig: defaultResourceConfig(),
                 optimismPortal: IOptimismPortal(payable(artifacts.mustGetAddress("OptimismPortalProxy"))),
                 l1MNT: cfg.l1MantleToken(),
-                l1CrossDomainMessenger: IL1CrossDomainMessenger(
-                    artifacts.mustGetAddress("L1CrossDomainMessengerProxy")
-                ),
+                l1CrossDomainMessenger: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessengerProxy")),
                 l2OutputOracle: IL2OutputOracle(artifacts.mustGetAddress("L2OutputOracleProxy")),
                 systemConfig: ISystemConfig(artifacts.mustGetAddress("SystemConfigProxy")),
                 l1StandardBridge: IL1StandardBridge(artifacts.mustGetAddress("L1StandardBridgeProxy")),
@@ -241,9 +239,7 @@ contract Deploy is Deployer {
             systemConfigImpl: ISystemConfig(artifacts.mustGetAddress("SystemConfig")),
             systemConfigProxy: ISystemConfig(artifacts.mustGetAddress("SystemConfigProxy")),
             l1CrossDomainMessengerImpl: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessenger")),
-            l1CrossDomainMessengerProxy: IL1CrossDomainMessenger(
-                artifacts.mustGetAddress("L1CrossDomainMessengerProxy")
-            ),
+            l1CrossDomainMessengerProxy: IL1CrossDomainMessenger(artifacts.mustGetAddress("L1CrossDomainMessengerProxy")),
             l1ERC721BridgeImpl: IL1ERC721Bridge(artifacts.mustGetAddress("L1ERC721Bridge")),
             l1ERC721BridgeProxy: IL1ERC721Bridge(artifacts.mustGetAddress("L1ERC721BridgeProxy")),
             l1StandardBridgeImpl: IL1StandardBridge(artifacts.mustGetAddress("L1StandardBridge")),
