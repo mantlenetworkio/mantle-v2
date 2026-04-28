@@ -243,6 +243,18 @@ func (el *L2ELNode) Start() {
 	el.control.L2ELNodeState(el.inner.ID(), stack.Start)
 }
 
+// Wipe removes and recreates the data directory of the EL node, resetting chain state to genesis.
+// Must be called after Stop() and before Start(). No-op if the underlying control plane does not
+// support wipe (e.g. sysext nodes that connect to external networks).
+func (el *L2ELNode) Wipe() {
+	if w, ok := el.control.(stack.WipeableControlPlane); ok {
+		el.log.Info("Wiping data directory", "id", el.inner.ID())
+		w.L2ELNodeWipe(el.inner.ID())
+	} else {
+		el.log.Warn("Control plane does not support wipe; skipping", "id", el.inner.ID())
+	}
+}
+
 func (el *L2ELNode) PeerWith(peer *L2ELNode) {
 	sysgo.ConnectP2P(el.ctx, el.require, el.inner.L2EthClient().RPC(), peer.inner.L2EthClient().RPC())
 }

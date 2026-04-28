@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
-	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

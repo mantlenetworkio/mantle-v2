@@ -35,10 +35,8 @@ contract SystemConfig_GasLimitLowerBound_Invariant is Test {
         targetSelector(selector);
     }
 
-    /**
-     * @custom:invariant The gas limit of the `SystemConfig` contract can never be lower
-     * than the hard-coded lower bound.
-     */
+    /// @custom:invariant The gas limit of the `SystemConfig` contract can never be lower
+    /// than the hard-coded lower bound.
     function invariant_gasLimitLowerBound() external view {
         assertTrue(config.gasLimit() >= config.minimumGasLimit());
     }

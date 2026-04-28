@@ -14,6 +14,18 @@ import { L2CrossDomainMessenger } from "src/L2/L2CrossDomainMessenger.sol";
 import { L1CrossDomainMessenger } from "src/L1/L1CrossDomainMessenger.sol";
 import { L1MantleToken } from "./mocks/TestMantleToken.sol";
 
+/// @notice Interface for the L1CrossDomainMessenger MNT-value sendMessage overload.
+interface IL1Messenger {
+    function sendMessage(
+        uint256 _mntAmount,
+        address _target,
+        bytes calldata _message,
+        uint32 _minGasLimit
+    )
+        external
+        payable;
+}
+
 contract L1StandardBridge_Getter_Test is Bridge_Initializer {
     function test_getters_succeeds() external view {
         assert(L1Bridge.l2TokenBridge() == address(L2Bridge));
@@ -48,15 +60,16 @@ contract L1StandardBridge_Receive_Test is Bridge_Initializer {
 
         vm.expectEmit(true, true, true, true, address(L1Bridge));
         emit ETHBridgeInitiated(alice, alice, 100, hex"");
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.expectCall(
             address(L1Messenger),
-            abi.encodeWithSelector(
-                selector,
-                0,
-                address(L2Bridge),
-                abi.encodeWithSelector(L2StandardBridge.finalizeBridgeETH.selector, alice, alice, 100, hex""),
-                200_000
+            abi.encodeCall(
+                IL1Messenger.sendMessage,
+                (
+                    0,
+                    address(L2Bridge),
+                    abi.encodeCall(L2StandardBridge.finalizeBridgeETH, (alice, alice, 100, hex"")),
+                    200_000
+                )
             )
         );
 
@@ -75,44 +88,28 @@ contract PreBridgeETH is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
-        bytes memory message =
-            abi.encodeWithSelector(L2StandardBridge.finalizeBridgeETH.selector, alice, alice, 500, hex"dead");
+        bytes memory message = abi.encodeCall(L2StandardBridge.finalizeBridgeETH, (alice, alice, 500, hex"dead"));
 
         if (isLegacy) {
-            vm.expectCall(
-                address(L1Bridge), 500, abi.encodeWithSelector(L1Bridge.depositETH.selector, 50000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), 500, abi.encodeCall(L1Bridge.depositETH, (50000, hex"dead")));
         } else {
-            vm.expectCall(address(L1Bridge), 500, abi.encodeWithSelector(L1Bridge.bridgeETH.selector, 50000, hex"dead"));
+            vm.expectCall(address(L1Bridge), 500, abi.encodeCall(L1Bridge.bridgeETH, (50000, hex"dead")));
         }
-        vm.expectCall(address(L1Messenger), 500, abi.encodeWithSelector(selector, 0, address(L2Bridge), message, 50000));
+        vm.expectCall(
+            address(L1Messenger), 500, abi.encodeCall(IL1Messenger.sendMessage, (0, address(L2Bridge), message, 50000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            0,
-            500,
-            50000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 0, 500, 50000, message)
         );
 
         uint64 baseGas = L1Messenger.baseGas(message, 50000);
         vm.expectCall(
             address(op),
             500,
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                500,
-                0,
-                address(L2Messenger),
-                0,
-                baseGas,
-                false,
-                innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (500, 0, address(L2Messenger), 0, baseGas, false, innerMessage)
             )
         );
 
@@ -186,49 +183,31 @@ contract PreBridgeETHTo is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
         if (isLegacy) {
-            vm.expectCall(
-                address(L1Bridge), 600, abi.encodeWithSelector(L1Bridge.depositETHTo.selector, bob, 60000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), 600, abi.encodeCall(L1Bridge.depositETHTo, (bob, 60000, hex"dead")));
         } else {
-            vm.expectCall(
-                address(L1Bridge), 600, abi.encodeWithSelector(L1Bridge.bridgeETHTo.selector, bob, 60000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), 600, abi.encodeCall(L1Bridge.bridgeETHTo, (bob, 60000, hex"dead")));
         }
 
-        bytes memory message =
-            abi.encodeWithSelector(L2StandardBridge.finalizeBridgeETH.selector, alice, bob, 600, hex"dead");
+        bytes memory message = abi.encodeCall(L2StandardBridge.finalizeBridgeETH, (alice, bob, 600, hex"dead"));
 
         // the L1 bridge should call
         // L1CrossDomainMessenger.sendMessage
-        vm.expectCall(address(L1Messenger), abi.encodeWithSelector(selector, 0, address(L2Bridge), message, 60000));
+        vm.expectCall(
+            address(L1Messenger), abi.encodeCall(IL1Messenger.sendMessage, (0, address(L2Bridge), message, 60000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            0,
-            600,
-            60000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 0, 600, 60000, message)
         );
 
         uint64 baseGas = L1Messenger.baseGas(message, 60000);
         vm.expectCall(
             address(op),
             600,
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                600,
-                0,
-                address(L2Messenger),
-                0,
-                baseGas,
-                false,
-                innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (600, 0, address(L2Messenger), 0, baseGas, false, innerMessage)
             )
         );
 
@@ -299,7 +278,6 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
 
         // Deal Alice's ERC20 State
         deal(address(L1Token), alice, 100000, true);
@@ -307,33 +285,26 @@ contract L1StandardBridge_DepositERC20_Test is Bridge_Initializer {
         L1Token.approve(address(L1Bridge), type(uint256).max);
 
         // The L1Bridge should transfer alice's tokens to itself
-        vm.expectCall(
-            address(L1Token), abi.encodeWithSelector(ERC20.transferFrom.selector, alice, address(L1Bridge), 100)
-        );
+        vm.expectCall(address(L1Token), abi.encodeCall(ERC20.transferFrom, (alice, address(L1Bridge), 100)));
 
-        bytes memory message = abi.encodeWithSelector(
-            L2StandardBridge.finalizeBridgeERC20.selector, address(L2Token), address(L1Token), alice, alice, 100, hex""
+        bytes memory message = abi.encodeCall(
+            L2StandardBridge.finalizeBridgeERC20, (address(L2Token), address(L1Token), alice, alice, 100, hex"")
         );
 
         // the L1 bridge should call L1CrossDomainMessenger.sendMessage
-        vm.expectCall(address(L1Messenger), abi.encodeWithSelector(selector, 0, address(L2Bridge), message, 10000));
+        vm.expectCall(
+            address(L1Messenger), abi.encodeCall(IL1Messenger.sendMessage, (0, address(L2Bridge), message, 10000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            0,
-            0,
-            10000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 0, 0, 10000, message)
         );
 
         uint64 baseGas = L1Messenger.baseGas(message, 10000);
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector, 0, 0, address(L2Messenger), 0, baseGas, false, innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (0, 0, address(L2Messenger), 0, baseGas, false, innerMessage)
             )
         );
 
@@ -371,9 +342,7 @@ contract PreBridgeMNT is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
-        bytes memory message =
-            abi.encodeWithSelector(L2StandardBridge.finalizeBridgeMNT.selector, alice, alice, 500, hex"dead");
+        bytes memory message = abi.encodeCall(L2StandardBridge.finalizeBridgeMNT, (alice, alice, 500, hex"dead"));
         uint64 baseGas = L1Messenger.baseGas(message, 50000);
 
         deal(address(l1MNT), alice, 500, true);
@@ -384,37 +353,23 @@ contract PreBridgeMNT is Bridge_Initializer {
         vm.prank(alice, alice);
 
         if (isLegacy) {
-            vm.expectCall(
-                address(L1Bridge), abi.encodeWithSelector(L1Bridge.depositMNT.selector, 500, 50000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), abi.encodeCall(L1Bridge.depositMNT, (500, 50000, hex"dead")));
         } else {
-            vm.expectCall(address(L1Bridge), abi.encodeWithSelector(L1Bridge.bridgeMNT.selector, 500, 50000, hex"dead"));
+            vm.expectCall(address(L1Bridge), abi.encodeCall(L1Bridge.bridgeMNT, (500, 50000, hex"dead")));
         }
 
-        vm.expectCall(address(L1Messenger), abi.encodeWithSelector(selector, 500, address(L2Bridge), message, 50000));
+        vm.expectCall(
+            address(L1Messenger), abi.encodeCall(IL1Messenger.sendMessage, (500, address(L2Bridge), message, 50000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            500,
-            0,
-            50000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 500, 0, 50000, message)
         );
 
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                0,
-                500,
-                address(L2Messenger),
-                500,
-                baseGas,
-                false,
-                innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (0, 500, address(L2Messenger), 500, baseGas, false, innerMessage)
             )
         );
 
@@ -498,52 +453,34 @@ contract PreBridgeMNTTo is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         vm.deal(alice, 1000);
         deal(address(l1MNT), alice, 600);
         vm.prank(alice);
         l1MNT.approve(address(L1Bridge), 600);
 
         if (isLegacy) {
-            vm.expectCall(
-                address(L1Bridge), abi.encodeWithSelector(L1Bridge.depositMNTTo.selector, bob, 600, 60000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), abi.encodeCall(L1Bridge.depositMNTTo, (bob, 600, 60000, hex"dead")));
         } else {
-            vm.expectCall(
-                address(L1Bridge), abi.encodeWithSelector(L1Bridge.bridgeMNTTo.selector, bob, 600, 60000, hex"dead")
-            );
+            vm.expectCall(address(L1Bridge), abi.encodeCall(L1Bridge.bridgeMNTTo, (bob, 600, 60000, hex"dead")));
         }
 
-        bytes memory message =
-            abi.encodeWithSelector(L2StandardBridge.finalizeBridgeMNT.selector, alice, bob, 600, hex"dead");
+        bytes memory message = abi.encodeCall(L2StandardBridge.finalizeBridgeMNT, (alice, bob, 600, hex"dead"));
 
         // the L1 bridge should call
         // L1CrossDomainMessenger.sendMessage
-        vm.expectCall(address(L1Messenger), abi.encodeWithSelector(selector, 600, address(L2Bridge), message, 60000));
+        vm.expectCall(
+            address(L1Messenger), abi.encodeCall(IL1Messenger.sendMessage, (600, address(L2Bridge), message, 60000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            600,
-            0,
-            60000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 600, 0, 60000, message)
         );
 
         uint64 baseGas = L1Messenger.baseGas(message, 60000);
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                0,
-                600,
-                address(L2Messenger),
-                600,
-                baseGas,
-                false,
-                innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (0, 600, address(L2Messenger), 600, baseGas, false, innerMessage)
             )
         );
 
@@ -629,36 +566,30 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         uint256 nonce = L1Messenger.messageNonce();
         uint256 version = 1; // Internal constant in the OptimismPortal: DEPOSIT_VERSION
         address l1MessengerAliased = AddressAliasHelper.applyL1ToL2Alias(address(L1Messenger));
-        bytes4 selector = bytes4(keccak256("sendMessage(uint256,address,bytes,uint32)"));
         deal(address(L1Token), alice, 100000, true);
         vm.store(address(L1Token), bytes32(uint256(0x2)), bytes32(uint256(100000))); //set total supply
 
         vm.prank(alice);
         L1Token.approve(address(L1Bridge), type(uint256).max);
 
-        bytes memory message = abi.encodeWithSelector(
-            L2StandardBridge.finalizeBridgeERC20.selector, address(L2Token), address(L1Token), alice, bob, 1000, hex""
+        bytes memory message = abi.encodeCall(
+            L2StandardBridge.finalizeBridgeERC20, (address(L2Token), address(L1Token), alice, bob, 1000, hex"")
         );
 
         // the L1 bridge should call L1CrossDomainMessenger.sendMessage
-        vm.expectCall(address(L1Messenger), abi.encodeWithSelector(selector, 0, address(L2Bridge), message, 10000));
+        vm.expectCall(
+            address(L1Messenger), abi.encodeCall(IL1Messenger.sendMessage, (0, address(L2Bridge), message, 10000))
+        );
 
-        bytes memory innerMessage = abi.encodeWithSelector(
-            L2CrossDomainMessenger.relayMessage.selector,
-            nonce,
-            address(L1Bridge),
-            address(L2Bridge),
-            0,
-            0,
-            10000,
-            message
+        bytes memory innerMessage = abi.encodeCall(
+            L2CrossDomainMessenger.relayMessage, (nonce, address(L1Bridge), address(L2Bridge), 0, 0, 10000, message)
         );
 
         uint64 baseGas = L1Messenger.baseGas(message, 10000);
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector, 0, 0, address(L2Messenger), 0, baseGas, false, innerMessage
+            abi.encodeCall(
+                OptimismPortal.depositTransaction, (0, 0, address(L2Messenger), 0, baseGas, false, innerMessage)
             )
         );
 
@@ -684,9 +615,7 @@ contract L1StandardBridge_DepositERC20To_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L1Messenger));
         emit SentMessageExtension1(address(L1Bridge), 0, 0);
 
-        vm.expectCall(
-            address(L1Token), abi.encodeWithSelector(ERC20.transferFrom.selector, alice, address(L1Bridge), 1000)
-        );
+        vm.expectCall(address(L1Token), abi.encodeCall(ERC20.transferFrom, (alice, address(L1Bridge), 1000)));
 
         vm.prank(alice);
         L1Bridge.depositERC20To(address(L1Token), address(L2Token), bob, 1000, 10000, hex"");
@@ -714,7 +643,7 @@ contract L1StandardBridge_FinalizeETHWithdrawal_Test is Bridge_Initializer {
 
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         // ensure that the messenger has ETH to call with
@@ -744,7 +673,7 @@ contract L1StandardBridge_FinalizeMNTWithdrawal_Test is Bridge_Initializer {
 
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
 
@@ -791,11 +720,11 @@ contract L1StandardBridge_FinalizeERC20Withdrawal_Test is Bridge_Initializer {
         vm.expectEmit(true, true, true, true, address(L1Bridge));
         emit ERC20BridgeFinalized(address(L1Token), address(L2Token), alice, alice, 100, hex"");
 
-        vm.expectCall(address(L1Token), abi.encodeWithSelector(ERC20.transfer.selector, alice, 100));
+        vm.expectCall(address(L1Token), abi.encodeCall(ERC20.transfer, (alice, 100)));
 
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.prank(address(L1Bridge.messenger()));
@@ -810,7 +739,7 @@ contract L1StandardBridge_FinalizeERC20Withdrawal_TestFail is Bridge_Initializer
     function test_finalizeERC20Withdrawal_notMessenger_reverts() external {
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.prank(address(28));
@@ -821,7 +750,7 @@ contract L1StandardBridge_FinalizeERC20Withdrawal_TestFail is Bridge_Initializer
     function test_finalizeERC20Withdrawal_notOtherBridge_reverts() external {
         vm.mockCall(
             address(L1Bridge.messenger()),
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(address(0)))
         );
         vm.prank(address(L1Bridge.messenger()));
@@ -835,7 +764,7 @@ contract L1StandardBridge_FinalizeBridgeETH_Test is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.deal(messenger, 100);
@@ -853,7 +782,7 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.deal(messenger, 100);
@@ -866,7 +795,7 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.deal(messenger, 100);
@@ -879,7 +808,7 @@ contract L1StandardBridge_FinalizeBridgeETH_TestFail is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.deal(messenger, 100);
@@ -894,7 +823,7 @@ contract L1StandardBridge_FinalizeBridgeMNT_Test is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         vm.deal(messenger, 100);
@@ -915,7 +844,7 @@ contract L1StandardBridge_FinalizeBridgeMNT_TestFail is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         deal(address(l1MNT), messenger, 100);
@@ -931,7 +860,7 @@ contract L1StandardBridge_FinalizeBridgeMNT_TestFail is Bridge_Initializer {
         address messenger = address(L1Bridge.messenger());
         vm.mockCall(
             messenger,
-            abi.encodeWithSelector(CrossDomainMessenger.xDomainMessageSender.selector),
+            abi.encodeCall(CrossDomainMessenger.xDomainMessageSender, ()),
             abi.encode(address(L1Bridge.OTHER_BRIDGE()))
         );
         deal(address(l1MNT), messenger, 100);

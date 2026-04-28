@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
-	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
@@ -261,8 +261,6 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			require.Equal(t, uint64(21784), rUnset.GasUsed)
 
 		case DepositTx:
-			aliceInitialBalance, l1FeeVaultInitialBalance, baseFeeVaultInitialBalance, sequencerFeeVaultInitialBalance, operatorFeeVaultInitialBalance = getCurrentBalances()
-
 			// Mantle-specific deposit transaction (6 parameters)
 			// Get portal address from deploy config
 			portalAddr := env.Dp.DeployConfig.OptimismPortalProxy

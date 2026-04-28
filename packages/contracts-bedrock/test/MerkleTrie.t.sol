@@ -130,6 +130,7 @@ contract MerkleTrie_get_Test is CommonTest {
         assertEq(val, MerkleTrie.get(key, proof, root));
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_nonexistentKey1_reverts() external {
         bytes32 root = 0xd582f99275e227a1cf4284899e5ff06ee56da8859be71b553397c69151bc942f;
         bytes memory key = hex"6b657932";
@@ -143,6 +144,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_nonexistentKey2_reverts() external {
         bytes32 root = 0xd582f99275e227a1cf4284899e5ff06ee56da8859be71b553397c69151bc942f;
         bytes memory key = hex"616e7972616e646f6d6b6579";
@@ -153,6 +155,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_wrongKeyProof_reverts() external {
         bytes32 root = 0x2858eebfa9d96c8a9e6a0cae9d86ec9189127110f132d63f07d3544c2a75a696;
         bytes memory key = hex"6b6579316161";
@@ -166,6 +169,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_corruptedProof_reverts() external {
         bytes32 root = 0x2858eebfa9d96c8a9e6a0cae9d86ec9189127110f132d63f07d3544c2a75a696;
         bytes memory key = hex"6b6579326262";
@@ -182,6 +186,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_invalidDataRemainder_reverts() external {
         bytes32 root = 0x278c88eb59beba4f8b94f940c41614bb0dd80c305859ebffcd6ce07c93ca3749;
         bytes memory key = hex"aa";
@@ -194,6 +199,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_invalidInternalNodeHash_reverts() external {
         bytes32 root = 0xa827dff1a657bb9bb9a1c3abe9db173e2f1359f15eb06f1647ea21ac7c95d8fa;
         bytes memory key = hex"aa";
@@ -207,6 +213,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_zeroBranchValueLength_reverts() external {
         bytes32 root = 0xe04b3589eef96b237cd49ccb5dcf6e654a47682bfa0961d563ab843f7ad1e035;
         bytes memory key = hex"aa";
@@ -218,6 +225,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_zeroLengthKey_reverts() external {
         bytes32 root = 0x54157fd62cdf2f474e7bfec2d3cd581e807bee38488c9590cb887add98936b73;
         bytes memory key = hex"";
@@ -228,6 +236,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_smallerPathThanKey1_reverts() external {
         bytes32 root = 0xa513ba530659356fb7588a2c831944e80fd8aedaa5a4dc36f918152be2be0605;
         bytes memory key = hex"01";
@@ -240,6 +249,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_smallerPathThanKey2_reverts() external {
         bytes32 root = 0xa06abffaec4ebe8ccde595f4547b864b4421b21c1fc699973f94710c9bc17979;
         bytes memory key = hex"aa";
@@ -253,6 +263,7 @@ contract MerkleTrie_get_Test is CommonTest {
         MerkleTrie.get(key, proof, root);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_get_extraProofElements_reverts() external {
         bytes32 root = 0x278c88eb59beba4f8b94f940c41614bb0dd80c305859ebffcd6ce07c93ca3749;
         bytes memory key = hex"aa";
@@ -276,6 +287,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_invalidRoot_reverts(bytes4) external {
         // Get a random test case with a valid trie / proof
         (bytes32 root, bytes memory key,, bytes[] memory proof) = ffi.getMerkleTrieFuzzCase("valid");
@@ -286,6 +298,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_extraProofElements_reverts(bytes4) external {
         // Generate an invalid test case with an extra proof element attached to an otherwise
         // valid proof of inclusion for the passed k/v.
@@ -296,6 +309,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_invalidLargeInternalHash_reverts(bytes4) external {
         // Generate an invalid test case where a long proof element is incorrect for the root.
         (bytes32 root, bytes memory key,, bytes[] memory proof) =
@@ -306,6 +320,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_invalidInternalNodeHash_reverts(bytes4) external {
         // Generate an invalid test case where a small proof element is incorrect for the root.
         (bytes32 root, bytes memory key,, bytes[] memory proof) =
@@ -316,6 +331,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_corruptedProof_reverts(bytes4) external {
         // Generate an invalid test case where the proof is malformed.
         (bytes32 root, bytes memory key,, bytes[] memory proof) = ffi.getMerkleTrieFuzzCase("corrupted_proof");
@@ -325,6 +341,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_invalidDataRemainder_reverts(bytes4) external {
         // Generate an invalid test case where a random element of the proof has more bytes than the
         // length designates within the RLP list encoding.
@@ -335,6 +352,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_prefixedValidKey_reverts(bytes4) external {
         // Get a random test case with a valid trie / proof and a valid key that is prefixed
         // with random bytes
@@ -342,11 +360,12 @@ contract MerkleTrie_get_Test is CommonTest {
 
         // Ambiguous revert check- all that we care is that it *does* fail. This case may
         // fail within different branches.
-        vm.expectRevert();
+        vm.expectRevert(); // nosemgrep: sol-safety-expectrevert-no-args
         MerkleTrie.get(key, proof, root);
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_emptyKey_reverts(bytes4) external {
         // Get a random test case with a valid trie / proof and an empty key
         (bytes32 root, bytes memory key,, bytes[] memory proof) = ffi.getMerkleTrieFuzzCase("empty_key");
@@ -356,6 +375,7 @@ contract MerkleTrie_get_Test is CommonTest {
     }
 
     /// @notice The `bytes4` parameter is to enable parallel fuzz runs; it is ignored.
+    /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_get_partialProof_reverts(bytes4) external {
         // Get a random test case with a valid trie / partially correct proof
         (bytes32 root, bytes memory key,, bytes[] memory proof) = ffi.getMerkleTrieFuzzCase("partial_proof");

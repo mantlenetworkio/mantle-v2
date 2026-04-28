@@ -38,15 +38,17 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         // deposit transaction on the optimism portal should be called
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                0,
-                0,
-                Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-                0,
-                L1Messenger.baseGas(hex"ff", 100),
-                false,
-                Encoding.encodeCrossDomainMessage(L1Messenger.messageNonce(), alice, recipient, 0, 0, 100, hex"ff")
+            abi.encodeCall(
+                OptimismPortal.depositTransaction,
+                (
+                    0,
+                    0,
+                    Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+                    0,
+                    L1Messenger.baseGas(hex"ff", 100),
+                    false,
+                    Encoding.encodeCrossDomainMessage(L1Messenger.messageNonce(), alice, recipient, 0, 0, 100, hex"ff")
+                )
             )
         );
 
@@ -80,15 +82,17 @@ contract L1CrossDomainMessenger_Test is Messenger_Initializer {
         // deposit transaction on the optimism portal should be called
         vm.expectCall(
             address(op),
-            abi.encodeWithSelector(
-                OptimismPortal.depositTransaction.selector,
-                0,
-                0,
-                Predeploys.L2_CROSS_DOMAIN_MESSENGER,
-                0,
-                L1Messenger.baseGas(hex"ff", 100),
-                false,
-                Encoding.encodeCrossDomainMessage(L1Messenger.messageNonce(), alice, recipient, 0, 0, 100, hex"ff")
+            abi.encodeCall(
+                OptimismPortal.depositTransaction,
+                (
+                    0,
+                    0,
+                    Predeploys.L2_CROSS_DOMAIN_MESSENGER,
+                    0,
+                    L1Messenger.baseGas(hex"ff", 100),
+                    false,
+                    Encoding.encodeCrossDomainMessage(L1Messenger.messageNonce(), alice, recipient, 0, 0, 100, hex"ff")
+                )
             )
         );
 

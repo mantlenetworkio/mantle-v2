@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-core/predeploys"
 	actionsHelpers "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/mantletests/proofs/helpers"
-	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	bindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/stretchr/testify/require"

@@ -23,12 +23,10 @@ contract CrossDomainMessenger_BaseGas_Test is Messenger_Initializer {
         L1Messenger.baseGas(hex"ff", _minGasLimit);
     }
 
-    /**
-     * @notice The baseGas function should always return a value greater than
-     *         or equal to the minimum gas limit value on the OptimismPortal.
-     *         This guarantees that the messengers will always pass sufficient
-     *         gas to the OptimismPortal.
-     */
+    /// @notice The baseGas function should always return a value greater than
+    ///         or equal to the minimum gas limit value on the OptimismPortal.
+    ///         This guarantees that the messengers will always pass sufficient
+    ///         gas to the OptimismPortal.
     function testFuzz_baseGas_portalMinGasLimit_succeeds(bytes memory _data, uint32 _minGasLimit) external view {
         vm.assume(_data.length <= type(uint64).max);
         uint64 baseGas = L1Messenger.baseGas(_data, _minGasLimit);
@@ -37,11 +35,9 @@ contract CrossDomainMessenger_BaseGas_Test is Messenger_Initializer {
     }
 }
 
-/**
- * @title ExternalRelay
- * @notice A mock external contract called via the SafeCall inside
- *         the CrossDomainMessenger's `relayMessage` function.
- */
+/// @title ExternalRelay
+/// @notice A mock external contract called via the SafeCall inside
+///         the CrossDomainMessenger's `relayMessage` function.
 contract ExternalRelay is CommonTest {
     address internal op;
     address internal fuzzedSender;
@@ -54,9 +50,7 @@ contract ExternalRelay is CommonTest {
         op = _op;
     }
 
-    /**
-     * @notice Internal helper function to relay a message and perform assertions.
-     */
+    /// @notice Internal helper function to relay a message and perform assertions.
     function _internalRelay(address _innerSender) internal {
         address initialSender = L1Messenger.xDomainMessageSender();
 
@@ -91,9 +85,7 @@ contract ExternalRelay is CommonTest {
         assertEq(initialSender, L1Messenger.xDomainMessageSender());
     }
 
-    /**
-     * @notice externalCallWithMinGas is called by the CrossDomainMessenger.
-     */
+    /// @notice externalCallWithMinGas is called by the CrossDomainMessenger.
     function externalCallWithMinGas() external payable {
         for (uint256 i = 0; i < 10; i++) {
             address _innerSender;
@@ -104,25 +96,19 @@ contract ExternalRelay is CommonTest {
         }
     }
 
-    /**
-     * @notice Helper function to get the callData for an `externalCallWithMinGas
-     */
+    /// @notice Helper function to get the callData for an `externalCallWithMinGas
     function getCallData() public pure returns (bytes memory) {
-        return abi.encodeWithSelector(ExternalRelay.externalCallWithMinGas.selector);
+        return abi.encodeCall(ExternalRelay.externalCallWithMinGas, ());
     }
 
-    /**
-     * @notice Helper function to set the fuzzed sender
-     */
+    /// @notice Helper function to set the fuzzed sender
     function setFuzzedSender(address _fuzzedSender) public {
         fuzzedSender = _fuzzedSender;
     }
 }
 
-/**
- * @title CrossDomainMessenger_RelayMessage_Test
- * @notice Fuzz tests re-entrancy into the CrossDomainMessenger relayMessage function.
- */
+/// @title CrossDomainMessenger_RelayMessage_Test
+/// @notice Fuzz tests re-entrancy into the CrossDomainMessenger relayMessage function.
 contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
     // Storage slot of the l2Sender
     uint256 constant senderSlotIndex = 50;
@@ -134,15 +120,13 @@ contract CrossDomainMessenger_RelayMessage_Test is Messenger_Initializer {
         er = new ExternalRelay(L1Messenger, address(op));
     }
 
-    /**
-     * @dev This test mocks an OptimismPortal call to the L1CrossDomainMessenger via
-     *      the relayMessage function. The relayMessage function will then use SafeCall's
-     *      callWithMinGas to call the target with call data packed in the callMessage.
-     *      For this test, the callWithMinGas will call the mock ExternalRelay test contract
-     *      defined above, executing the externalCallWithMinGas function which will try to
-     *      re-enter the CrossDomainMessenger's relayMessage function, resulting in that message
-     *      being recorded as failed.
-     */
+    /// @dev This test mocks an OptimismPortal call to the L1CrossDomainMessenger via
+    ///      the relayMessage function. The relayMessage function will then use SafeCall's
+    ///      callWithMinGas to call the target with call data packed in the callMessage.
+    ///      For this test, the callWithMinGas will call the mock ExternalRelay test contract
+    ///      defined above, executing the externalCallWithMinGas function which will try to
+    ///      re-enter the CrossDomainMessenger's relayMessage function, resulting in that message
+    ///      being recorded as failed.
     function testFuzz_relayMessageReenter_succeeds(address _sender, uint256 _gasLimit) external {
         vm.assume(_sender != Predeploys.L2_CROSS_DOMAIN_MESSENGER);
         address sender = Predeploys.L2_CROSS_DOMAIN_MESSENGER;

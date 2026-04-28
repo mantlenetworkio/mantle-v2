@@ -31,12 +31,9 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeCrossDomainMessage(L2Messenger.messageNonce(), alice, recipient, 0, 0, 100, hex"ff");
         vm.expectCall(
             address(messagePasser),
-            abi.encodeWithSelector(
-                L2ToL1MessagePasser.initiateWithdrawal.selector,
-                0,
-                address(L1Messenger),
-                L2Messenger.baseGas(hex"ff", 100),
-                xDomainCallData
+            abi.encodeCall(
+                L2ToL1MessagePasser.initiateWithdrawal,
+                (0, address(L1Messenger), L2Messenger.baseGas(hex"ff", 100), xDomainCallData)
             )
         );
 
@@ -80,12 +77,9 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
             Encoding.encodeCrossDomainMessage(L2Messenger.messageNonce(), alice, recipient, 0, 100, 100, hex"ff");
         vm.expectCall(
             address(messagePasser),
-            abi.encodeWithSelector(
-                L2ToL1MessagePasser.initiateWithdrawal.selector,
-                100,
-                address(L1Messenger),
-                L2Messenger.baseGas(hex"ff", 100),
-                xDomainCallData
+            abi.encodeCall(
+                L2ToL1MessagePasser.initiateWithdrawal,
+                (100, address(L1Messenger), L2Messenger.baseGas(hex"ff", 100), xDomainCallData)
             )
         );
 
@@ -123,12 +117,9 @@ contract L2CrossDomainMessenger_Test is Messenger_Initializer {
         vm.expectCall(
             address(messagePasser),
             100,
-            abi.encodeWithSelector(
-                L2ToL1MessagePasser.initiateWithdrawal.selector,
-                0,
-                address(L1Messenger),
-                L2Messenger.baseGas(hex"ff", 100),
-                xDomainCallData
+            abi.encodeCall(
+                L2ToL1MessagePasser.initiateWithdrawal,
+                (0, address(L1Messenger), L2Messenger.baseGas(hex"ff", 100), xDomainCallData)
             )
         );
 

@@ -209,7 +209,7 @@ func createL2Block(t *testing.T, number int, setWithdrawalsRoot bool) *types.Blo
 		withdrawals = make([]*types.Withdrawal, 0)
 		body.Withdrawals = withdrawals
 		header.WithdrawalsHash = &types.EmptyWithdrawalsHash
-		//blockConfig = types.IsthmusBlockConfig
+		blockConfig = types.MantleSkadiBlockConfig
 	}
 	return types.NewBlock(header, body, nil, trie.NewStackTrie(nil), blockConfig)
 }

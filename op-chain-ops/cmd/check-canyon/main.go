@@ -67,17 +67,18 @@ func CalcBaseFee(parent eth.BlockInfo, elasticity uint64, canyonActive bool) *bi
 }
 
 func ManuallyEncodeReceipts(receipts types.Receipts, canyonActive bool) [][]byte {
-	v := uint64(1)
-	for _, receipt := range receipts {
-		if receipt.Type == types.DepositTxType {
-			if canyonActive {
-				receipt.DepositReceiptVersion = &v
-			} else {
-				receipt.DepositReceiptVersion = nil
-			}
+	// Mantle tx recept does not have DepositReceiptVersion, so we don't need to set it
+	// v := uint64(1)
+	// for _, receipt := range receipts {
+	// 	if receipt.Type == types.DepositTxType {
+	// 		if canyonActive {
+	// 			receipt.DepositReceiptVersion = &v
+	// 		} else {
+	// 			receipt.DepositReceiptVersion = nil
+	// 		}
 
-		}
-	}
+	// 	}
+	// }
 	var out [][]byte
 	for i := range receipts {
 		var buf bytes.Buffer

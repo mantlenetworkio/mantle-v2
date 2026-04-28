@@ -206,7 +206,6 @@ func Test_ProgramAction_OperatorFeeConsistency(gt *testing.T) {
 			nextBaseFee := eip1559.CalcBaseFee(
 				env.Sd.L2Cfg.Config,
 				unsafeHeader,
-				unsafeHeader.Time+env.Sd.RollupCfg.BlockTime,
 			)
 
 			l1BlockInfo, err := derive.L1BlockInfoFromBytes(env.Sd.RollupCfg, unsafeHeader.Time, unsafeBlock.Transactions()[0].Data())

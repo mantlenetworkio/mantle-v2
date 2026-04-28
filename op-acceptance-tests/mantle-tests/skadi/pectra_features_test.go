@@ -2,8 +2,9 @@ package skadi
 
 import (
 	"encoding/binary"
-	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"testing"
+
+	"github.com/ethereum-optimism/optimism/op-core/forks"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"

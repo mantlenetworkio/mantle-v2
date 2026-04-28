@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-core/forks"
+	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -167,17 +168,24 @@ func TestEIP1559Params(gt *testing.T) {
 	t.Logf("Expected default EIP-1559 params from rollup config: denominator=%d, elasticity=%d",
 		expectedDefaultDenom, expectedDefaultElasticity)
 
-	// Before any changes: L1 SystemConfig should have both values at zero (initial state),
-	// while L2 block headers should carry the defaults from the rollup config.
+	// Initial L1/L2 EIP-1559 params: in sysgo mode the chain is freshly initialized,
+	// so the initial values must match the rollup config defaults. In sysext mode
+	// the devnet may carry prior SystemConfig writes that differ from defaults,
+	// so we only log the initial state without asserting.
 	origDenom, origElasticity := ep.readL1EIP1559Params(t)
 	t.Logf("Initial L1 SystemConfig EIP-1559 params: denominator=%d, elasticity=%d", origDenom, origElasticity)
-	require.Equal(uint32(0), origDenom, "initial L1 denominator should be zero")
-	require.Equal(uint32(0), origElasticity, "initial L1 elasticity should be zero")
+	if presets.Orchestrator().Type() == compat.SysGo {
+		require.Equal(uint32(0), origDenom, "initial L1 denominator should be zero")
+		require.Equal(uint32(0), origElasticity, "initial L1 elasticity should be zero")
+	}
 
 	l2Denom, l2Elast := ep.readL2EIP1559Params(t)
 	t.Logf("Initial L2 block header EIP-1559 params: denominator=%d, elasticity=%d", l2Denom, l2Elast)
-	require.Equal(expectedDefaultDenom, l2Denom, "L2 denominator should match rollup config default")
-	require.Equal(expectedDefaultElasticity, l2Elast, "L2 elasticity should match rollup config default")
+
+	if presets.Orchestrator().Type() == compat.SysGo {
+		require.Equal(expectedDefaultDenom, l2Denom, "L2 denominator should match rollup config default (sysgo fresh chain)")
+		require.Equal(expectedDefaultElasticity, l2Elast, "L2 elasticity should match rollup config default (sysgo fresh chain)")
+	}
 
 	testCases := []struct {
 		name        string
