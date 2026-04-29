@@ -21,6 +21,7 @@ import (
 
 type APIRouter interface {
 	AddRPC(route string) error
+	AddAPI(api rpc.API) error
 	AddAPIToRPC(route string, api rpc.API) error
 }
 
@@ -90,45 +91,43 @@ func FromConfig(log log.Logger, m metrics.Metricer, cfg *config.Config, router A
 		b.defaults.SetIfMissing(f.chainID, fID)
 	}
 
-	// Set up the faucet routes
-	var faucetErr error
+	// Register shared RPCs (faucet_register, faucet_eligibility) on the root path.
+	// Use the first faucet as the shared backend — register/eligibility use the shared store,
+	// so any faucet instance works (they all share the same store and dailyLimit).
+	var sharedFaucet *Faucet
 	b.faucets.Range(func(id ftypes.FaucetID, f *Faucet) bool {
-		if err := router.AddRPC("/faucet/" + id.String()); err != nil {
-			faucetErr = errors.Join(fmt.Errorf("failed to setup faucet route for %q: %w", id, err))
-			return true
-		}
-		if err := router.AddAPIToRPC("/faucet/"+id.String(), rpc.API{
-			Namespace: "faucet",
-			Service:   frontend.NewFaucetFrontend(f),
-		}); err != nil {
-			faucetErr = errors.Join(faucetErr,
-				fmt.Errorf("failed to setup faucet RPC for %q: %w", id, err))
-		}
-		return true
+		sharedFaucet = f
+		return false // stop after first
 	})
-	if faucetErr != nil {
-		return nil, fmt.Errorf("failed to set up faucet route(s): %w", faucetErr)
+	if sharedFaucet != nil {
+		if err := router.AddAPI(rpc.API{
+			Namespace: "faucet",
+			Service:   frontend.NewSharedFrontend(sharedFaucet),
+		}); err != nil {
+			return nil, fmt.Errorf("failed to setup shared faucet RPC on root: %w", err)
+		}
 	}
 
-	// Set up the faucet aliases per chain
-	var defaultSetupErr error
+	// Register per-chain RPCs (faucet_balance, faucet_requestMNT) on /chain/{chainId}.
+	var chainSetupErr error
 	b.defaults.Range(func(chain eth.ChainID, id ftypes.FaucetID) bool {
 		f, _ := b.faucets.Get(id)
 		if err := router.AddRPC("/chain/" + chain.String()); err != nil {
-			defaultSetupErr = errors.Join(fmt.Errorf("failed to setup chain route for %q: %w", id, err))
+			chainSetupErr = errors.Join(chainSetupErr,
+				fmt.Errorf("failed to setup chain route for %q: %w", chain, err))
 			return true
 		}
 		if err := router.AddAPIToRPC("/chain/"+chain.String(), rpc.API{
 			Namespace: "faucet",
-			Service:   frontend.NewFaucetFrontend(f),
+			Service:   frontend.NewChainFrontend(f),
 		}); err != nil {
-			defaultSetupErr = errors.Join(defaultSetupErr,
-				fmt.Errorf("failed to setup alias for %q: %w", chain, err))
+			chainSetupErr = errors.Join(chainSetupErr,
+				fmt.Errorf("failed to setup chain RPC for %q: %w", chain, err))
 		}
 		return true
 	})
-	if defaultSetupErr != nil {
-		return nil, fmt.Errorf("failed to set up chain alias(es): %w", defaultSetupErr)
+	if chainSetupErr != nil {
+		return nil, fmt.Errorf("failed to set up chain route(s): %w", chainSetupErr)
 	}
 
 	return b, nil

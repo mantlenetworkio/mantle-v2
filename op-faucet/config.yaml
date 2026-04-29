@@ -10,6 +10,17 @@ faucets:
     chain_name: "Mantle Sepolia"
     explorer_url: "https://explorer.sepolia.mantle.xyz"
 
+  mantle-hoodi:
+    el_rpc: "https://rpc.hoodi.mantle.xyz"
+    chain_id: 5001
+    tx_cfg:
+      private_key: "0x520cec15139243f6e5c571d13dac1e9d7a7ca03dfa8d85dc5bf50f0791ec04df"
+    alert_threshold: 30000000000000000000000
+    balance_check_interval: 60
+    lark_webhook_url: "https://open.larksuite.com/open-apis/bot/v2/hook/0c85dfee-3ed2-415d-93b7-93beaeb2a986"
+    chain_name: "Mantle Hoodi"
+    explorer_url: "https://explorer.hoodi.mantle.xyz"
+
 # Local dev: docker postgres on port 5433 (host postgres occupies 5432)
 # Start: docker run -d --name pg -p 5433:5432 -e POSTGRES_PASSWORD=test postgres:16
 db_dsn: "postgresql://postgres:test@localhost:5433/postgres?sslmode=disable"

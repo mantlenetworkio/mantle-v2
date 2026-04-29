@@ -42,7 +42,6 @@ func TestService(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, srv.Start(context.Background()))
 	require.NotEmpty(t, srv.RPC())
-	require.Contains(t, srv.FaucetEndpoint("foobar"), "/faucet/foobar")
 	require.Empty(t, srv.Faucets())
 	require.Empty(t, srv.Defaults())
 	require.False(t, srv.Stopped())

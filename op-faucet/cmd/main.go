@@ -45,7 +45,8 @@ func run(ctx context.Context, w io.Writer, ew io.Writer, args []string, fn fauce
 	app.Name = "op-faucet"
 	app.Usage = "op-faucet hosts configurable faucets to send test-ETH with."
 	app.Description = "Faucet service for devnets.\n" +
-		" Try the faucet RPC on /chain/{CHAIN_ID_HERE} or /faucet/{FAUCET_NAME_HERE}."
+		" Shared RPCs (faucet_register, faucet_eligibility) are on /.\n" +
+		" Per-chain RPCs (faucet_balance, faucet_requestMNT) are on /chain/{CHAIN_ID}."
 	app.Action = cliapp.LifecycleCmd(faucet.Main(app.Version, fn))
 	app.Commands = []*cli.Command{
 		{

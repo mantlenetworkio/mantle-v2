@@ -55,7 +55,10 @@ type Faucet struct {
 	dailyLimit *big.Int
 }
 
-var _ frontend.FaucetBackend = (*Faucet)(nil)
+var (
+	_ frontend.SharedBackend = (*Faucet)(nil)
+	_ frontend.ChainBackend  = (*Faucet)(nil)
+)
 
 // MantleGasPriceEstimatorFn is a custom gas price estimator for Mantle.
 // Mantle does not support eth_blobBaseFee, so we skip it and return 0 for blob fee.

@@ -229,8 +229,8 @@ func (s *Service) RPC() string {
 	return s.httpServer.HTTPEndpoint()
 }
 
-func (s *Service) FaucetEndpoint(id ftypes.FaucetID) string {
-	return fmt.Sprintf("%s/faucet/%s", s.RPC(), id)
+func (s *Service) ChainEndpoint(chainID eth.ChainID) string {
+	return fmt.Sprintf("%s/chain/%s", s.RPC(), chainID)
 }
 
 func (s *Service) Faucets() map[ftypes.FaucetID]eth.ChainID {

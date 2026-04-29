@@ -29,12 +29,18 @@ func (b *testAPI) ChainId() *hexutil.Big {
 }
 
 type testRouter struct {
-	routes []string
-	apis   map[string][]rpc.API
+	routes  []string
+	apis    map[string][]rpc.API
+	rootAPI []rpc.API
 }
 
 func (t *testRouter) AddRPC(route string) error {
 	t.routes = append(t.routes, route)
+	return nil
+}
+
+func (t *testRouter) AddAPI(api rpc.API) error {
+	t.rootAPI = append(t.rootAPI, api)
 	return nil
 }
 
