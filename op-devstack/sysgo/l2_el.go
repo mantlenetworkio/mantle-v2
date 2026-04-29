@@ -22,6 +22,12 @@ type L2ELConfig struct {
 	P2PNodeKeyHex string
 	StaticPeers   []string
 	TrustedPeers  []string
+
+	// EngineFaultInjector, when true, inserts a JSON-RPC aware Engine API
+	// fault-injection proxy in front of the EL's auth RPC. Tests can then
+	// retrieve the proxy and Activate/Deactivate fault rules at runtime.
+	// See op-service/testutils/elfaultinjector.
+	EngineFaultInjector bool
 }
 
 func L2ELWithSupervisor(supervisorID stack.SupervisorID) L2ELOption {
@@ -38,6 +44,17 @@ func L2ELWithP2PConfig(addr string, port int, nodeKeyHex string, staticPeers, tr
 		cfg.P2PNodeKeyHex = nodeKeyHex
 		cfg.StaticPeers = staticPeers
 		cfg.TrustedPeers = trustedPeers
+	})
+}
+
+// L2ELWithEngineFaultInjector enables the Engine API fault-injection proxy
+// for this L2 EL node. Once the option is applied, the resulting OpGeth's
+// EngineFaultInjector() returns a non-nil *elfaultinjector.Proxy that tests
+// can call Activate/Deactivate on at runtime. The proxy starts in an
+// inactive (pure pass-through) state.
+func L2ELWithEngineFaultInjector() L2ELOption {
+	return L2ELOptionFn(func(p devtest.P, id stack.L2ELNodeID, cfg *L2ELConfig) {
+		cfg.EngineFaultInjector = true
 	})
 }
 

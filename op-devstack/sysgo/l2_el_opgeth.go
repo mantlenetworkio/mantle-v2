@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/stack/match"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/geth"
 	"github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/testutils/elfaultinjector"
 	"github.com/ethereum-optimism/optimism/op-service/testutils/tcpproxy"
 )
 
@@ -42,6 +43,11 @@ type OpGeth struct {
 
 	authProxy *tcpproxy.Proxy
 	userProxy *tcpproxy.Proxy
+
+	// faultInjector, when non-nil, is chained between authProxy and the
+	// upstream l2Geth so tests can synthesize INVALID PayloadStatusV1
+	// responses for matching engine_newPayloadV{3,4} requests at runtime.
+	faultInjector *elfaultinjector.Proxy
 }
 
 var _ L2ELNode = (*OpGeth)(nil)
@@ -56,6 +62,14 @@ func (n *OpGeth) EngineRPC() string {
 
 func (n *OpGeth) JWTPath() string {
 	return n.jwtPath
+}
+
+// EngineFaultInjector returns the fault-injection proxy for this node, or
+// nil if the L2EL was not configured with L2ELWithEngineFaultInjector.
+// When non-nil, tests can call Activate / Deactivate to synthesize INVALID
+// PayloadStatusV1 responses for matching engine_newPayloadV{3,4} requests.
+func (n *OpGeth) EngineFaultInjector() *elfaultinjector.Proxy {
+	return n.faultInjector
 }
 
 func (n *OpGeth) hydrate(system stack.ExtensibleSystem) {
@@ -174,7 +188,23 @@ func (n *OpGeth) Start() {
 	require.NoError(err)
 	require.NoError(l2Geth.Node.Start())
 	n.l2Geth = l2Geth
-	n.authProxy.SetUpstream(ProxyAddr(require, l2Geth.AuthRPC().RPC()))
+
+	// If a fault injector is configured, chain it between authProxy and
+	// the live geth auth RPC: op-node → authProxy → faultInjector → l2Geth.
+	// Otherwise the authProxy points directly at l2Geth.
+	if n.cfg != nil && n.cfg.EngineFaultInjector {
+		if n.faultInjector == nil {
+			n.faultInjector = elfaultinjector.New(n.logger.New("proxy", "elfi"), n.jwtSecret)
+			require.NoError(n.faultInjector.Start())
+			n.p.Cleanup(func() {
+				_ = n.faultInjector.Close()
+			})
+		}
+		n.faultInjector.SetUpstream(ProxyAddr(require, l2Geth.AuthRPC().RPC()))
+		n.authProxy.SetUpstream(n.faultInjector.Addr())
+	} else {
+		n.authProxy.SetUpstream(ProxyAddr(require, l2Geth.AuthRPC().RPC()))
+	}
 	n.userProxy.SetUpstream(ProxyAddr(require, l2Geth.UserRPC().RPC()))
 }
 

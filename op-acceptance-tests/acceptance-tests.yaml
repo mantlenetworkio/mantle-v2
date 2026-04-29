@@ -136,6 +136,13 @@ gates:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal
         timeout: 20m
 
+  - id: mantle-elfaultinjector
+    description: "Sysgo-only regression test for the Engine API fault-injection proxy used to reproduce the op-conductor split-brain at unsafe head case study."
+    tests:
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor
+        name: TestConductorLeadershipTransfer
+        timeout: 5m
+
   - id: mantle-temp
     description: "Mantle network tests."
     tests:

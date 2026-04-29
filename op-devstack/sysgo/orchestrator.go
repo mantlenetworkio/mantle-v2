@@ -53,6 +53,7 @@ type Orchestrator struct {
 	rollupBoosts    locks.RWMap[stack.RollupBoostNodeID, *RollupBoostNode]
 	oprbuilderNodes locks.RWMap[stack.OPRBuilderNodeID, *OPRBuilderNode]
 	gasOracles      locks.RWMap[stack.GasOracleID, *GasOracleService]
+	conductors      locks.RWMap[stack.ConductorID, *Conductor]
 
 	// service name => prometheus endpoints to scrape
 	l2MetricsEndpoints locks.RWMap[string, []PrometheusMetricsTarget]
@@ -92,6 +93,25 @@ func (o *Orchestrator) EnableTimeTravel() {
 	if o.timeTravelClock == nil {
 		o.timeTravelClock = clock.NewAdvancingClock(100 * time.Millisecond)
 	}
+}
+
+// RangeL2ELs iterates over the L2 EL nodes registered in this orchestrator's
+// standard l2ELs collection. The callback may return false to halt iteration
+// early. This is intended for tests/presets that need to reach into a
+// specific concrete L2EL implementation (e.g. *OpGeth) for capabilities not
+// exposed through the public stack.L2ELNode interface, such as the
+// EngineFaultInjector accessor.
+func (o *Orchestrator) RangeL2ELs(f func(id stack.L2ELNodeID, n L2ELNode) bool) {
+	o.l2ELs.Range(f)
+}
+
+// RangeConductors iterates over the in-process op-conductor instances
+// registered on this orchestrator. Mirrors RangeL2ELs and lets presets
+// harvest the concrete *Conductor wrapper (for AddVoter / Resume /
+// ConsensusEndpoint / HTTPEndpoint) — capabilities not exposed through
+// the public stack.Conductor interface.
+func (o *Orchestrator) RangeConductors(f func(id stack.ConductorID, c *Conductor) bool) {
+	o.conductors.Range(f)
 }
 
 // GetL2EL attempts to find an L2 EL node by checking various collections of EL-like nodes.
@@ -163,6 +183,7 @@ func (o *Orchestrator) Hydrate(sys stack.ExtensibleSystem) {
 	o.batchers.Range(rangeHydrateFn[stack.L2BatcherID, *L2Batcher](sys))
 	o.challengers.Range(rangeHydrateFn[stack.L2ChallengerID, *L2Challenger](sys))
 	o.proposers.Range(rangeHydrateFn[stack.L2ProposerID, *L2Proposer](sys))
+	o.conductors.Range(rangeHydrateFn[stack.ConductorID, *Conductor](sys))
 	if o.syncTester != nil {
 		o.syncTester.hydrate(sys)
 	}

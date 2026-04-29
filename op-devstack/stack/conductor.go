@@ -1,6 +1,8 @@
 package stack
 
 import (
+	"log/slog"
+
 	conductorRpc "github.com/ethereum-optimism/optimism/op-conductor/rpc"
 )
 
@@ -10,6 +12,10 @@ const ConductorKind Kind = "Conductor"
 
 func (id ConductorID) String() string {
 	return genericID(id).string(ConductorKind)
+}
+
+func (id ConductorID) LogValue() slog.Value {
+	return slog.StringValue(id.String())
 }
 
 func (id ConductorID) MarshalText() ([]byte, error) {
