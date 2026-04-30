@@ -8,9 +8,10 @@ use reth_node_core::version::version_metadata;
 use reth_optimism_chainspec::OpChainSpec;
 use reth_optimism_primitives::OpPrimitives;
 use reth_optimism_trie::{
-    InitializationJob, OpProofsProviderRO, OpProofsStore, db::MdbxProofsStorage,
+    InitializationJob, OpProofsProviderRO, OpProofsStore, RethTrieStorageLayout,
+    db::MdbxProofsStorage,
 };
-use reth_provider::{BlockNumReader, DBProvider, DatabaseProviderFactory};
+use reth_provider::{BlockNumReader, DBProvider, DatabaseProviderFactory, StorageSettingsCache};
 use std::{path::PathBuf, sync::Arc};
 use tracing::info;
 
@@ -81,11 +82,16 @@ impl<C: ChainSpecParser<ChainSpec = OpChainSpec>> InitCommand<C> {
 
         // Run the backfill job
         {
+            let trie_layout = if provider_factory.cached_storage_settings().is_v2() {
+                RethTrieStorageLayout::Packed
+            } else {
+                RethTrieStorageLayout::Legacy
+            };
             let db_provider =
                 provider_factory.database_provider_ro()?.disable_long_read_transaction_safety();
             let db_tx = db_provider.into_tx();
 
-            InitializationJob::new(storage, db_tx).run(best_number, best_hash)?;
+            InitializationJob::new(storage, db_tx, trie_layout).run(best_number, best_hash)?;
         }
 
         info!(

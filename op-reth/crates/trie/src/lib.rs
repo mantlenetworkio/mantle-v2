@@ -22,7 +22,7 @@ pub use api::{
 };
 
 pub mod initialize;
-pub use initialize::InitializationJob;
+pub use initialize::{InitializationJob, RethTrieStorageLayout};
 
 pub mod in_memory;
 pub use in_memory::{
