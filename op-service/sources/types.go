@@ -65,6 +65,9 @@ type RPCHeader struct {
 	// RequestsHash was added by EIP-7685 and is ignored in legacy headers.
 	RequestsHash *common.Hash `json:"requestsHash,omitempty" rlp:"optional"`
 
+	// SlotNumber was added by EIP-7843 and is ignored in legacy headers.
+	SlotNumber *uint64 `json:"slotNumber" rlp:"optional"`
+
 	// untrusted info included by RPC, may have to be checked
 	Hash common.Hash `json:"hash"`
 }
@@ -122,6 +125,8 @@ func (hdr *RPCHeader) CreateGethHeader() *types.Header {
 		ParentBeaconRoot: hdr.ParentBeaconRoot,
 		// Prague
 		RequestsHash: hdr.RequestsHash,
+		// Amsterdam
+		SlotNumber: hdr.SlotNumber,
 	}
 }
 
