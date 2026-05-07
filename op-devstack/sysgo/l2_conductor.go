@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -252,11 +255,50 @@ func (c *Conductor) Start() {
 	}
 	c.service = svc
 	c.httpURL = svc.HTTPEndpoint()
+
+	// Pin the OS-allocated ports back into cfg so subsequent Stop/Start
+	// cycles bind the SAME HTTP and consensus addresses. This is what
+	// makes the dsl.Conductor wrapper survive a conductor restart: its
+	// shim caches an *rpc.Client dialled to the original c.httpURL
+	// (see hydrate above), so a recovered conductor that came up on a
+	// fresh ephemeral port would be unreachable from previously-built
+	// dsl wrappers. The same logic applies to the raft consensus port:
+	// other voters know the recovered server by its original address
+	// (raft membership records it), and re-binding to a different port
+	// on restart would break AppendEntries/RequestVote.
+	if c.cfg.RPC.ListenPort == 0 {
+		if u, err := url.Parse(c.httpURL); err == nil {
+			if portStr := u.Port(); portStr != "" {
+				if port, perr := strconv.Atoi(portStr); perr == nil {
+					c.cfg.RPC.ListenPort = port
+				}
+			}
+		}
+	}
+	if c.cfg.ConsensusPort == 0 {
+		// ConsensusEndpoint() returns "host:port" (no scheme).
+		if _, portStr, err := net.SplitHostPort(svc.ConsensusEndpoint()); err == nil {
+			if port, perr := strconv.Atoi(portStr); perr == nil {
+				c.cfg.ConsensusPort = port
+			}
+		}
+	}
+
 	c.logger.Info("started op-conductor",
 		"id", c.id,
 		"http", c.httpURL,
 		"raft", svc.ConsensusEndpoint(),
 	)
+}
+
+// IsRunning reports whether the underlying op-conductor service is
+// currently up. Tests use this to skip already-stopped conductors after
+// destructive scenarios — calling RPC on a stopped conductor will hang
+// or error since its HTTP server is gone.
+func (c *Conductor) IsRunning() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.service != nil
 }
 
 // Stop shuts down the underlying conductor service. Safe to call

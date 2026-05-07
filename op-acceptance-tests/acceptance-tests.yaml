@@ -136,11 +136,32 @@ gates:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal
         timeout: 20m
 
-  - id: mantle-elfaultinjector
-    description: "Sysgo-only regression test for the Engine API fault-injection proxy used to reproduce the op-conductor split-brain at unsafe head case study."
+  - id: mantle-conductor
+    description: "Sysgo-only acceptance suite covering op-conductor failure scenarios (leadership transfer, split-brain at unsafe head, op-node failures, conductor crashes, quorum loss). Each scenario lives in its own package so it gets a freshly bootstrapped orchestrator and tests cannot pollute each other."
     tests:
-      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor
-        name: TestConductorLeadershipTransfer
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/leadership_transfer
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/split_brain
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/non_leader_commit_blocked
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/non_leader_sequencer_stopped
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/active_opnode_failure
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/one_conductor_failure
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/two_conductor_failures
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/two_follower_opnodes_failure
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/active_plus_follower_opnodes_failure
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/two_conductor_failures_active_plus_follower
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/recovered_leader_election_during_sync
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/replace_voter_with_spare
         timeout: 5m
 
   - id: mantle-temp

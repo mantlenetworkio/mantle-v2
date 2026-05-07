@@ -53,6 +53,16 @@ type DefaultMantleConductorSystemIDs struct {
 	CondB stack.ConductorID
 	CondC stack.ConductorID
 
+	// Optional 4th sequencer-eligible EL/CL pair + paused op-conductor.
+	// Populated unconditionally so callers can refer to the IDs, but
+	// the actual sysgo nodes are only spun up when
+	// DefaultMantleConductorSystemWithSpare is used. The spare's
+	// conductor never gets AddVoter'd during cluster bootstrap; it
+	// stays out of the raft cluster until a test explicitly adds it.
+	L2ELD stack.L2ELNodeID
+	L2CLD stack.L2CLNodeID
+	CondD stack.ConductorID
+
 	L2Batcher  stack.L2BatcherID
 	L2Proposer stack.L2ProposerID
 }
@@ -74,9 +84,12 @@ func NewDefaultMantleConductorSystemIDs(l1ID, l2ID eth.ChainID) DefaultMantleCon
 		L2CLB:      stack.NewL2CLNodeID("sequencer-b", l2ID),
 		L2ELC:      stack.NewL2ELNodeID("sequencer-c", l2ID),
 		L2CLC:      stack.NewL2CLNodeID("sequencer-c", l2ID),
+		L2ELD:      stack.NewL2ELNodeID("sequencer-d", l2ID),
+		L2CLD:      stack.NewL2CLNodeID("sequencer-d", l2ID),
 		CondA:      stack.ConductorID("a"),
 		CondB:      stack.ConductorID("b"),
 		CondC:      stack.ConductorID("c"),
+		CondD:      stack.ConductorID("d"),
 		L2Batcher:  stack.NewL2BatcherID("main", l2ID),
 		L2Proposer: stack.NewL2ProposerID("main", l2ID),
 	}
@@ -105,10 +118,23 @@ func NewDefaultMantleConductorSystemIDs(l1ID, l2ID eth.ChainID) DefaultMantleCon
 //   - 1× faucet on the L1 EL + the L2 EL of A.
 func DefaultMantleConductorSystem(dest *DefaultMantleConductorSystemIDs) stack.Option[*Orchestrator] {
 	ids := NewDefaultMantleConductorSystemIDs(DefaultL1ID, DefaultL2AID)
-	return defaultMantleConductorSystemOpts(&ids, dest)
+	return defaultMantleConductorSystemOpts(&ids, dest, false)
 }
 
-func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest *DefaultMantleConductorSystemIDs) stack.CombinedOption[*Orchestrator] {
+// DefaultMantleConductorSystemWithSpare is identical to
+// DefaultMantleConductorSystem but additionally provisions a 4th
+// sequencer-eligible EL/CL pair plus a 4th op-conductor instance
+// ("d"). The spare conductor is started up and reaches a paused steady
+// state, but is NOT seated in the raft cluster during bootstrap — its
+// AddVoter must be issued by the test. This is the topology used to
+// exercise raft membership-change scenarios such as
+// "start a 4th sequencer and replace one of the existing 3".
+func DefaultMantleConductorSystemWithSpare(dest *DefaultMantleConductorSystemIDs) stack.Option[*Orchestrator] {
+	ids := NewDefaultMantleConductorSystemIDs(DefaultL1ID, DefaultL2AID)
+	return defaultMantleConductorSystemOpts(&ids, dest, true)
+}
+
+func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest *DefaultMantleConductorSystemIDs, withSpare bool) stack.CombinedOption[*Orchestrator] {
 	opt := stack.Combine[*Orchestrator]()
 	opt.Add(stack.BeforeDeploy(func(o *Orchestrator) {
 		o.P().Logger().Info("Setting up mantle conductor cluster",
@@ -136,6 +162,9 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 	opt.Add(WithL2ELNode(ids.L2ELA))
 	opt.Add(WithL2ELNode(ids.L2ELB))
 	opt.Add(WithL2ELNode(ids.L2ELC))
+	if withSpare {
+		opt.Add(WithL2ELNode(ids.L2ELD))
+	}
 
 	// Per-conductor RPC URL slots. Each op-node gets a lazy resolver that
 	// blocks until its conductor's Start() populates the slot. This
@@ -148,6 +177,11 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 	rpcSlotA.Store("")
 	rpcSlotB.Store("")
 	rpcSlotC.Store("")
+	var rpcSlotD *atomic.Value
+	if withSpare {
+		rpcSlotD = &atomic.Value{}
+		rpcSlotD.Store("")
+	}
 
 	makeResolver := func(slot *atomic.Value, condID stack.ConductorID) nodeConfig.ConductorRPCFunc {
 		return func(ctx context.Context) (string, error) {
@@ -175,6 +209,9 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 	opt.Add(WithL2CLNode(ids.L2CLA, ids.L1CL, ids.L1EL, ids.L2ELA, clOpts(rpcSlotA, ids.CondA)...))
 	opt.Add(WithL2CLNode(ids.L2CLB, ids.L1CL, ids.L1EL, ids.L2ELB, clOpts(rpcSlotB, ids.CondB)...))
 	opt.Add(WithL2CLNode(ids.L2CLC, ids.L1CL, ids.L1EL, ids.L2ELC, clOpts(rpcSlotC, ids.CondC)...))
+	if withSpare {
+		opt.Add(WithL2CLNode(ids.L2CLD, ids.L1CL, ids.L1EL, ids.L2ELD, clOpts(rpcSlotD, ids.CondD)...))
+	}
 
 	// Stand up the three op-conductor instances. Only A bootstraps; B and
 	// C come up paused. WithSysgoConductor sets Paused=!bootstrap, so
@@ -182,6 +219,15 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 	opt.Add(WithSysgoConductor(ids.CondA, ids.L2, ids.L2CLA, ids.L2ELA, true))
 	opt.Add(WithSysgoConductor(ids.CondB, ids.L2, ids.L2CLB, ids.L2ELB, false))
 	opt.Add(WithSysgoConductor(ids.CondC, ids.L2, ids.L2CLC, ids.L2ELC, false))
+	if withSpare {
+		// The spare comes up paused like B and C, but is NOT added to
+		// the raft cluster during bootstrap (see Finally below). It
+		// stays a non-member with raft.NumServers=1 (only itself, from
+		// its own bootstrap=false config) and a stopped sequencer
+		// until a test promotes it via AddNonvoter+AddVoter and
+		// Resume.
+		opt.Add(WithSysgoConductor(ids.CondD, ids.L2, ids.L2CLD, ids.L2ELD, false))
+	}
 
 	// Populate the per-op-node RPC slots once each conductor is up. This
 	// must run after WithSysgoConductor (which is AfterDeploy) but before
@@ -200,6 +246,9 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 		publish(rpcSlotA, ids.CondA)
 		publish(rpcSlotB, ids.CondB)
 		publish(rpcSlotC, ids.CondC)
+		if withSpare {
+			publish(rpcSlotD, ids.CondD)
+		}
 	}))
 
 	// Pairwise static P2P peering between the three op-nodes. Without
@@ -210,6 +259,15 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 	opt.Add(WithL2CLP2PConnection(ids.L2CLA, ids.L2CLB))
 	opt.Add(WithL2CLP2PConnection(ids.L2CLA, ids.L2CLC))
 	opt.Add(WithL2CLP2PConnection(ids.L2CLB, ids.L2CLC))
+	if withSpare {
+		// The spare must also receive gossip from whichever node is
+		// the active sequencer; otherwise after AddVoter+Resume its
+		// EL would be too far behind to ever match the unsafe-head
+		// gate inside compareUnsafeHead.
+		opt.Add(WithL2CLP2PConnection(ids.L2CLA, ids.L2CLD))
+		opt.Add(WithL2CLP2PConnection(ids.L2CLB, ids.L2CLD))
+		opt.Add(WithL2CLP2PConnection(ids.L2CLC, ids.L2CLD))
+	}
 
 	// Batcher and proposer pinned to A. Correct as long as raft
 	// leadership stays on A; tests that rotate leadership should not

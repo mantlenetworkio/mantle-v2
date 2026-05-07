@@ -1,4 +1,4 @@
-package conductor
+package leadership_transfer
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor/conductorhelpers"
 )
 
 type conductorWithInfo struct {
@@ -44,6 +46,12 @@ func TestConductorLeadershipTransfer(gt *testing.T) {
 
 		_, span = tracer.Start(ctx, fmt.Sprintf("test chain %s", chainId))
 		defer span.End()
+
+		// Suite-wide baseline: cluster has stable leader, leader is
+		// sequencing, leader EL is advancing, and every follower is
+		// within 1 block of the leader. See
+		// conductorhelpers.RequireHealthyConductorCluster.
+		conductorhelpers.RequireHealthyConductorCluster(t, sys.L2Chain, l2Chain, conductors)
 
 		membership := conductors[0].FetchClusterMembership()
 		require.Equal(t, len(membership.Servers), len(conductors), "cluster membership does not match the number of conductors", "chainId", chainId)
@@ -91,6 +99,19 @@ func TestConductorLeadershipTransfer(gt *testing.T) {
 				testTransferLeadershipAndCheck(t, oldLeader, newLeader)
 			}
 		})
+
+		// After the rotation completes, leadership has cycled back to
+		// the original leader. Verify the chain is still producing
+		// blocks under it. Without this check, every per-transfer
+		// IsLeader / SequencerHealthy assertion could pass while the
+		// chain is silently stuck — sysgo's no-op SequencerHealthMonitor
+		// reports healthy=true regardless of whether op-node is actually
+		// building blocks, so "all healthy" alone is not a uptime
+		// guarantee. sys.L2EL was selected at hydration via
+		// match.WithSequencerActive against the original leader's CL,
+		// which is again the active sequencer at this point.
+		conductorhelpers.AssertChainAdvances(t, sys.L2EL,
+			fmt.Sprintf("chain %s: post-rotation under restored leader", chainId))
 	}
 }
 

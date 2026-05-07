@@ -119,3 +119,60 @@ func NewMantleMinimalWithFaultyConductors(t devtest.T) *MantleMinimalWithFaultyC
 		SysgoConductors:             sysgoConductors,
 	}
 }
+
+// WithMantleMinimalWithSpareConductor extends the 3-conductor minimal
+// topology with a 4th sequencer-eligible EL/CL pair plus a 4th paused
+// op-conductor. The spare conductor (id "d") is started but NOT seated in
+// the raft cluster during bootstrap; tests that exercise raft
+// membership-change scenarios — e.g. "promote the 4th sequencer and
+// evict one of the original 3" — drive the AddNonvoter+AddVoter and
+// RemoveServer transitions themselves.
+//
+// On Persistent/Kurtosis backends the sysgo-specific option is a no-op
+// and the spare won't appear; tests should fall back to skipping when
+// the sysgo conductor map doesn't include the spare ID.
+func WithMantleMinimalWithSpareConductor() stack.CommonOption {
+	return stack.Combine(
+		stack.MakeCommon(sysgo.DefaultMantleConductorSystemWithSpare(&sysgo.DefaultMantleConductorSystemIDs{})),
+		WithCompatibleTypes(
+			compat.Persistent,
+			compat.Kurtosis,
+			compat.SysGo,
+		),
+	)
+}
+
+// MantleMinimalWithSpareConductor exposes the 3-voter-plus-spare topology
+// to tests. SysgoConductors includes ALL four in-process conductors (a, b,
+// c, d) when the active backend is sysgo, so a test can both query the
+// raft cluster (a/b/c) and drive the spare (d). On non-sysgo backends,
+// SysgoConductors is empty and tests should skip.
+type MantleMinimalWithSpareConductor struct {
+	*MantleMinimalWithConductors
+	SysgoConductors map[stack.ConductorID]*sysgo.Conductor
+	// SpareConductorID is the deterministic ID of the 4th non-cluster
+	// conductor pre-provisioned by the topology. Tests can use this to
+	// look up the spare in SysgoConductors.
+	SpareConductorID stack.ConductorID
+}
+
+// NewMantleMinimalWithSpareConductor hydrates the 4-node conductor
+// topology and exposes the in-process conductor wrappers — including
+// the spare — to tests.
+func NewMantleMinimalWithSpareConductor(t devtest.T) *MantleMinimalWithSpareConductor {
+	base := NewMantleMinimalWithConductors(t)
+
+	sysgoConductors := make(map[stack.ConductorID]*sysgo.Conductor)
+	if orch, ok := Orchestrator().(*sysgo.Orchestrator); ok {
+		orch.RangeConductors(func(id stack.ConductorID, c *sysgo.Conductor) bool {
+			sysgoConductors[id] = c
+			return true
+		})
+	}
+
+	return &MantleMinimalWithSpareConductor{
+		MantleMinimalWithConductors: base,
+		SysgoConductors:             sysgoConductors,
+		SpareConductorID:            stack.ConductorID("d"),
+	}
+}
