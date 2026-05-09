@@ -37,7 +37,7 @@ func (c *Config) IsMantleArsia(timestamp uint64) bool {
 	return c.IsMantleForkActive(forks.MantleArsia, timestamp)
 }
 
-// IsMantleElysium returns true if the MantleArsia hardfork is active at or past the given timestamp.
+// IsMantleElysium returns true if the MantleElysium hardfork is active at or past the given timestamp.
 func (c *Config) IsMantleElysium(timestamp uint64) bool {
 	return c.IsMantleForkActive(forks.MantleElysium, timestamp)
 }

@@ -275,8 +275,8 @@ func (d *UpgradeScheduleDeployConfig) SetMantleForkTimeOffset(fork rollup.Mantle
 		d.L2GenesisMantleLimbTimeOffset = (*hexutil.Uint64)(offset)
 	case forks.MantleArsia:
 		d.L2GenesisMantleArsiaTimeOffset = (*hexutil.Uint64)(offset)
-	//case forks.MantleElysium:
-	//	d.L2GenesisMantleElysiumTimeOffset = (*hexutil.Uint64)(offset)
+	case forks.MantleElysium:
+		d.L2GenesisMantleElysiumTimeOffset = (*hexutil.Uint64)(offset)
 	default:
 		panic(fmt.Sprintf("unsupported mantle fork: %s", fork))
 	}

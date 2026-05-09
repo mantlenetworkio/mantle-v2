@@ -657,7 +657,7 @@ func isMantleArsiaButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64)
 	return rollupCfg.IsMantleArsia(l2Timestamp) && !rollupCfg.IsMantleArsiaActivationBlock(l2Timestamp)
 }
 
-// isMantleElysiumButNotFirstBlock returns whether the specified block is subject to the Ecotone upgrade,
+// isMantleElysiumButNotFirstBlock returns whether the specified block is subject to the Mantle Elysium upgrade,
 // but is not the activation block itself.
 func isMantleElysiumButNotFirstBlock(rollupCfg *rollup.Config, l2Timestamp uint64) bool {
 	return rollupCfg.IsMantleElysium(l2Timestamp) && !rollupCfg.IsMantleElysiumActivationBlock(l2Timestamp)
