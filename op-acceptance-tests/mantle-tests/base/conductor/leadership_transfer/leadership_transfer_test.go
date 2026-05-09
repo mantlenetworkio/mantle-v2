@@ -104,10 +104,11 @@ func TestConductorLeadershipTransfer(gt *testing.T) {
 		// the original leader. Verify the chain is still producing
 		// blocks under it. Without this check, every per-transfer
 		// IsLeader / SequencerHealthy assertion could pass while the
-		// chain is silently stuck — sysgo's no-op SequencerHealthMonitor
-		// reports healthy=true regardless of whether op-node is actually
-		// building blocks, so "all healthy" alone is not a uptime
-		// guarantee. sys.L2EL was selected at hydration via
+		// chain is silently stuck — even with the production
+		// SequencerHealthMonitor wired in, "all healthy" alone proves
+		// only that op-node SyncStatus + p2p peer count look fine, not
+		// that the active sequencer is actually advancing the chain.
+		// sys.L2EL was selected at hydration via
 		// match.WithSequencerActive against the original leader's CL,
 		// which is again the active sequencer at this point.
 		conductorhelpers.AssertChainAdvances(t, sys.L2EL,

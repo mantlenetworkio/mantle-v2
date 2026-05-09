@@ -373,10 +373,11 @@ func defaultMantleConductorSystemOpts(ids *DefaultMantleConductorSystemIDs, dest
 			require.NoError(err, "failed to resume conductor %s", c.ServerID())
 		}
 
-		// 5. Wait for SequencerHealthy on every conductor. With the
-		// no-op health monitor injected by Conductor.Start(), this is a
-		// fast positive check (c.healthy stays true forever); we still
-		// poll to surface unexpected initialisation failures.
+		// 5. Wait for SequencerHealthy on every conductor. The production
+		// SequencerHealthMonitor wired in Conductor.Start() needs at
+		// least Interval (1s) to tick, plus time for op-node SyncStatus
+		// to succeed and the static-mesh peer count to reach
+		// MinPeerCount=1; we poll generously to allow for it.
 		for _, c := range cluster {
 			err = retry.Do0(ctx, 60, retry.Fixed(500*time.Millisecond), func() error {
 				if !c.SequencerHealthy(ctx) {

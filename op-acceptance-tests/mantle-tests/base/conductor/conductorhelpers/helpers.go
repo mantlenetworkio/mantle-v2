@@ -103,10 +103,11 @@ func RequireHealthyConductorCluster(
 		chainID, stabilityBudget)
 
 	// 2. Leader's op-node is actively sequencing. SequencerActive is
-	//    routed to op-node's RollupAPI; on sysgo this is the only RPC
-	//    that gives an honest answer about whether op-node has called
-	//    its driver.StartSequencer (the no-op SequencerHealthMonitor
-	//    cannot be used as a signal — it always reports healthy).
+	//    routed to op-node's RollupAPI; this is the only RPC that gives
+	//    a direct answer about whether op-node has called its
+	//    driver.StartSequencer (the production SequencerHealthMonitor's
+	//    SequencerHealthy reports liveness inputs but is not itself a
+	//    proof that the leader is producing blocks).
 	leaderCL := CLPairedWithConductor(chain, leaderID)
 	r.NotNil(leaderCL,
 		"chain %s: cannot resolve L2CL paired with raft leader %s",
@@ -270,13 +271,14 @@ func NodeKeyForConductor(conductorID string) (string, bool) {
 // Tests whose success criteria includes "leaving the cluster with an
 // active sequencer" should call this last. Asserting that raft has a
 // leader, that the conductor is unpaused, and that SequencerHealthy
-// returns true is HOLLOW on its own — sysgo's no-op health monitor
-// makes the latter trivially true regardless of EL state, and a
-// conductor that thinks it's the leader but never called StartSequencer
-// (or whose op-node accepted the call but didn't actually build blocks)
-// would still pass those checks. The only direct, falsifiable proof
-// that the cluster ended in a usable state is that fresh blocks are
-// being committed to L2.
+// returns true is HOLLOW on its own — the production
+// SequencerHealthMonitor reports liveness inputs (op-node SyncStatus +
+// p2p peer count), not whether op-node actually called StartSequencer.
+// A conductor that thinks it's the leader but never called
+// StartSequencer (or whose op-node accepted the call but didn't
+// actually build blocks) would still pass those checks. The only
+// direct, falsifiable proof that the cluster ended in a usable state
+// is that fresh blocks are being committed to L2.
 //
 // The 12s window / +3 delta is ~5 blocks at the 2s L2 block time,
 // plus margin for the conductor action-loop tick that drives
@@ -299,9 +301,12 @@ func AssertChainAdvances(t devtest.T, activeEL *dsl.L2ELNode, label string) {
 // ConductorStatus is a small status snapshot of a single conductor.
 // "active" here means "not paused" (op-conductor's RPC API has both
 // Active and Paused; we use !Paused to keep the existing dsl.FetchPaused
-// helper). "healthy" is what the conductor's own SequencerHealthy reports
-// — which on sysgo is wired to a no-op health monitor that never flips,
-// so it stays true even under EL divergence.
+// helper). "healthy" is what the conductor's own SequencerHealthy
+// reports — under the production SequencerHealthMonitor wired in
+// op-devstack/sysgo/l2_conductor.go, this reflects op-node SyncStatus
+// + p2p peer count + (optionally) EL P2P. Under the sysgo static mesh
+// (A↔B, A↔C, B↔C only), killing 2 of 3 op-nodes leaves the survivor
+// with 0 peers and trips MinPeerCount=1 → SequencerHealthy=false.
 type ConductorStatus struct {
 	ID       stack.ConductorID
 	IsLeader bool
@@ -332,9 +337,12 @@ func SnapshotConductorStatuses(conductors dsl.ConductorSet) []ConductorStatus {
 //   - every node is active (not paused) — bootstrap conductor was Resume'd
 //     after raft converged, followers were Resume'd after AddVoter
 //     (see DefaultMantleConductorSystem's bootstrap Finally);
-//   - every node reports SequencerHealthy. On sysgo this is trivially
-//     true via the no-op health monitor; on a real backend it's a real
-//     claim about op-node + op-geth liveness.
+//   - every node reports SequencerHealthy. Under the production
+//     SequencerHealthMonitor wired in op-devstack/sysgo/l2_conductor.go,
+//     this requires op-node SyncStatus to succeed AND p2p peer count
+//     ≥ MinPeerCount. In a freshly bootstrapped cluster all three
+//     op-nodes are connected via the static mesh, so all three report
+//     healthy.
 func AssertExpectedSteadyState(
 	r *testreq.Assertions,
 	chainID stack.L2NetworkID,

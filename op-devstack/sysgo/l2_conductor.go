@@ -16,7 +16,6 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-conductor/conductor"
 	"github.com/ethereum-optimism/optimism/op-conductor/consensus"
-	"github.com/ethereum-optimism/optimism/op-conductor/health"
 	"github.com/ethereum-optimism/optimism/op-conductor/metrics"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/shim"
@@ -172,8 +171,10 @@ func (c *Conductor) ClusterMembership(ctx context.Context) (*consensus.ClusterMe
 }
 
 // SequencerHealthy reports whether this conductor regards its op-node /
-// op-geth pair as healthy. With the no-op health monitor injected by
-// Start, this stays true for the lifetime of the conductor.
+// op-geth pair as healthy. The production SequencerHealthMonitor
+// (constructed by initHealthMonitor) flips this atomic on every tick of
+// cfg.HealthCheck.Interval based on op-node SyncStatus, peer count, and
+// (optionally) safe-head progression.
 func (c *Conductor) SequencerHealthy(ctx context.Context) bool {
 	c.mu.Lock()
 	svc := c.service
@@ -232,12 +233,21 @@ func (c *Conductor) Start() {
 		return
 	}
 	c.logger.Info("starting op-conductor", "id", c.id)
-	// We inject a no-op health monitor so the conductor's leader-election
-	// logic does not depend on op-node P2P peer count, EL P2P peers, or
-	// safe-head progression — none of which are reliably present in a
-	// single-process sysgo topology. The rest of the conductor stack
-	// (sequencer control, raft, RPC) runs unmodified.
-	hmon := newNoopHealthMonitor()
+	// Pass nil for the health monitor so NewOpConductor.initHealthMonitor
+	// constructs the production SequencerHealthMonitor from c.cfg.HealthCheck.
+	// This matches production behaviour: leader-election reacts to real
+	// op-node sync-status / peer-count signals, and an op-node going down
+	// triggers automatic transferLeader on the conductor side.
+	//
+	// sysgo topology constraint: the only L2 P2P peers are the static
+	// pairwise mesh wired in mantle_system_conductor.go (A↔B, A↔C, B↔C,
+	// plus the optional spare D). MinPeerCount must therefore be ≥1 and
+	// killing N-1 followers' op-nodes will drop the leader's peer count
+	// below the threshold, intentionally. Tests that need to suppress
+	// the real monitor (e.g. exercising raft-only behaviour without
+	// health dependencies) can re-introduce a noop monitor locally and
+	// pass it via a Start variant that takes a health.HealthMonitor
+	// argument — see the explanatory comment at the bottom of this file.
 	svc, err := conductor.NewOpConductor(
 		context.Background(),
 		c.cfg,
@@ -246,7 +256,7 @@ func (c *Conductor) Start() {
 		"dev",
 		nil, // sequencer control: built from cfg.NodeRPC + cfg.ExecutionRPC
 		nil, // consensus: built from cfg consensus fields
-		hmon,
+		nil, // health monitor: nil → initHealthMonitor builds production SequencerHealthMonitor from cfg.HealthCheck
 	)
 	c.p.Require().NoError(err, "failed to construct op-conductor %s", c.id)
 	if err := svc.Start(context.Background()); err != nil {
@@ -373,9 +383,13 @@ func WithSysgoConductor(
 			// conductor (raft single-voter at boot) starts unpaused.
 			Paused: !bootstrap,
 			HealthCheck: conductor.HealthCheckConfig{
-				// MinPeerCount must be > 0 to satisfy cfg.Check();
-				// runtime peer-count enforcement is bypassed by the
-				// no-op health monitor injected in Conductor.Start().
+				// HealthCheckConfig.Check() requires Interval>0,
+				// SafeInterval>0, and MinPeerCount>0; sysgo's static
+				// L2 mesh (A↔B, A↔C, B↔C) gives every op-node 2
+				// peers in the steady state, so MinPeerCount=1 is
+				// production-faithful and survives a single follower
+				// op-node outage but trips when both followers go
+				// down (intended: the leader has no peers left).
 				Interval:       1,
 				UnsafeInterval: 60,
 				SafeEnabled:    false,
@@ -411,31 +425,9 @@ func WithSysgoConductor(
 	})
 }
 
-// noopHealthMonitor is a health.HealthMonitor that never produces
-// updates. It satisfies the interface and lets the conductor stack run
-// without needing real op-node P2P peers, safe-head progression, or EL
-// P2P endpoints — none of which are reliable in a single-process sysgo
-// devstack.
-//
-// The conductor initialises its internal `healthy` atomic to true on
-// construction and only flips it on a value received from this channel.
-// Since we never send, it stays true for the lifetime of the conductor.
-type noopHealthMonitor struct {
-	ch chan error
-}
-
-func newNoopHealthMonitor() *noopHealthMonitor {
-	return &noopHealthMonitor{ch: make(chan error)}
-}
-
-func (n *noopHealthMonitor) Subscribe() <-chan error         { return n.ch }
-func (n *noopHealthMonitor) Start(ctx context.Context) error { return nil }
-func (n *noopHealthMonitor) Stop() error {
-	// Channel is intentionally not closed: closing would cause the
-	// conductor's loop to receive a zero-value (nil error => "healthy")
-	// repeatedly. The conductor's Stop tears down its own goroutines
-	// via shutdownCtx, so an unread channel is harmless.
-	return nil
-}
-
-var _ health.HealthMonitor = (*noopHealthMonitor)(nil)
+// noopHealthMonitor was retained when sysgo conductors used a no-op
+// monitor to keep `oc.healthy` pinned true. The production
+// SequencerHealthMonitor is now wired in unconditionally (see
+// Conductor.Start). The type was removed; if a future test genuinely
+// needs to suppress the real monitor, re-introduce it locally and pass
+// it into a Start variant that takes a health.HealthMonitor argument.

@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/ethereum-optimism/optimism/op-conductor/consensus"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
 	"github.com/ethereum-optimism/optimism/op-devstack/dsl"
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
@@ -66,18 +65,16 @@ func TestActiveOpNodeFailureAndRecovery(gt *testing.T) {
 //	 sequencer failure and start to transfer leadership to another
 //	 node, which will start sequencing instead."
 //
-// Sysgo caveat — modeling "Conductor will detect"
-//
-// On the sysgo backend, op-conductor is wired to a no-op
-// SequencerHealthMonitor (op-devstack/sysgo/l2_conductor.go:237 +
-// noopHealthMonitor at line 391). That monitor never produces health
-// events, so SequencerHealthy stays true and the conductor's automatic
-// "unhealthy → transfer leadership" action loop never triggers. We
-// therefore cannot cause AUTOMATIC failover on sysgo — what we drive
-// here is the post-detection consequence: once leadership is
-// transferred to a healthy node (which is exactly what either a real
-// health monitor or a human operator would do), that node MUST resume
-// sequencing and the L2 chain MUST advance again.
+// With the production SequencerHealthMonitor wired into sysgo conductors
+// (op-devstack/sysgo/l2_conductor.go: Conductor.Start passes nil →
+// NewOpConductor.initHealthMonitor builds the real monitor), automatic
+// failover IS the flow under test: the test only kills the active
+// op-node and waits — it does NOT manually transfer leadership. The
+// conductor's action loop on the leader observes
+// (leader && !healthy && active), stops its sequencer, and calls
+// transferLeader(); raft picks a healthy voter as the new leader; that
+// new leader's action loop calls startSequencer on its own op-node,
+// which begins producing blocks.
 //
 // State left for the recovery subtest:
 //   - sys.L2CL: stopped (its op-node is dead)
@@ -121,118 +118,137 @@ func runFailure(t devtest.T, sys *presets.MantleMinimalWithFaultyConductors) {
 		r.NotEmpty(oldLeaderID,
 			"chain %s: empty leader ID before failover", chainID)
 
-		// 3. Pick a healthy follower as the failover target.
-		membership := conductors[0].FetchClusterMembership()
-
-		var oldLeaderDsl, newLeaderDsl *dsl.Conductor
-		var newLeaderInfo consensus.ServerInfo
+		// Bind oldLeaderDsl so we can later assert it's NOT the leader
+		// post-failover.
+		var oldLeaderDsl *dsl.Conductor
 		for _, c := range conductors {
 			id := strings.TrimPrefix(
 				c.String(), stack.ConductorKind.String()+"-")
 			if id == oldLeaderID {
 				oldLeaderDsl = c
-				continue
-			}
-			if newLeaderDsl != nil {
-				continue
-			}
-			// First non-leader voter wins. Skip nonvoters: transferring
-			// to a nonvoter is rejected by raft.
-			for _, mi := range membership.Servers {
-				if mi.ID == id && mi.Suffrage == consensus.Voter {
-					newLeaderInfo = mi
-					newLeaderDsl = c
-					break
-				}
+				break
 			}
 		}
 		r.NotNil(oldLeaderDsl,
 			"chain %s: dsl.Conductor for old leader %s not found",
 			chainID, oldLeaderID)
-		r.NotNil(newLeaderDsl,
-			"chain %s: no eligible voter to promote as new leader",
-			chainID)
 
 		baseline := sys.L2EL.BlockRefByLabel(eth.Unsafe).Number
 		logger.Info("Pre-failover cluster state",
 			"chain", chainID,
 			"oldLeaderID", oldLeaderID,
-			"newLeaderID", newLeaderInfo.ID,
 			"activeCL", activeCLID,
 			"baselineUnsafe", baseline)
 
-		// 4. Stop the active sequencer's op-node. We deliberately do
+		// 3. Stop the active sequencer's op-node. We deliberately do
 		//    NOT register a t.Cleanup restart — the recovery subtest
 		//    owns the restart-and-rejoin proof.
+		//
+		//    From this point the production health monitor on the
+		//    leader conductor will fail its checkNodeSyncStatus poll
+		//    (op-node RPC is down) and emit ErrSequencerConnectionDown
+		//    on the next tick (cfg.HealthCheck.Interval = 1s). The
+		//    leader's action loop then enters the
+		//    (leader && !healthy && active) branch, stops its sequencer,
+		//    and calls transferLeader().
 		sys.L2CL.Stop()
 
-		// 5. Trigger the failover.
-		logger.Info("Transferring leadership to healthy follower",
-			"chain", chainID,
-			"from", oldLeaderID,
-			"to", newLeaderInfo.ID)
-		oldLeaderDsl.TransferLeadershipTo(newLeaderInfo)
-
-		// Wait until raft reports the transfer is complete on both
-		// ends.
-		transferDeadline := time.Now().Add(10 * time.Second)
-		var transferred bool
-		for time.Now().Before(transferDeadline) {
-			if newLeaderDsl.IsLeader() && !oldLeaderDsl.IsLeader() {
-				transferred = true
+		// 4. Wait for raft to autonomously rotate leadership to a healthy
+		//    voter. We poll every conductor's IsLeader to identify the
+		//    new leader without relying on the dead leader's RPC (which
+		//    may itself be racing the rotation).
+		const failoverDeadline = 30 * time.Second
+		failoverEnd := time.Now().Add(failoverDeadline)
+		var newLeaderDsl *dsl.Conductor
+		var newLeaderID string
+		for time.Now().Before(failoverEnd) {
+			for _, c := range conductors {
+				id := strings.TrimPrefix(
+					c.String(), stack.ConductorKind.String()+"-")
+				if id == oldLeaderID {
+					continue
+				}
+				if c.IsLeader() {
+					newLeaderDsl = c
+					newLeaderID = id
+					break
+				}
+			}
+			if newLeaderDsl != nil {
 				break
 			}
 			time.Sleep(250 * time.Millisecond)
 		}
-		r.True(transferred,
-			"chain %s: leadership transfer %s -> %s did not complete "+
-				"within 10s — README scenario #1 cannot recover if raft "+
-				"refuses to promote the healthy follower",
-			chainID, oldLeaderID, newLeaderInfo.ID)
+		r.NotNil(newLeaderDsl,
+			"chain %s: no healthy follower acquired raft leadership "+
+				"within %s after the active op-node was stopped — the "+
+				"production health monitor's auto-failover did not "+
+				"trigger", chainID, failoverDeadline)
+		r.False(oldLeaderDsl.IsLeader(),
+			"chain %s: old leader %s still reports IsLeader=true after "+
+				"%s — leadership transfer did not complete",
+			chainID, oldLeaderID, failoverDeadline)
 
-		newLeaderEL := conductorhelpers.ELPairedWithConductor(sys.L2Chain, newLeaderInfo.ID)
+		newLeaderEL := conductorhelpers.ELPairedWithConductor(sys.L2Chain, newLeaderID)
 		r.NotNil(newLeaderEL,
 			"chain %s: could not locate L2EL paired with new leader %s",
-			chainID, newLeaderInfo.ID)
+			chainID, newLeaderID)
+		newLeaderCL := conductorhelpers.CLPairedWithConductor(sys.L2Chain, newLeaderID)
+		r.NotNil(newLeaderCL,
+			"chain %s: could not locate L2CL paired with new leader %s",
+			chainID, newLeaderID)
 
+		logger.Info("Auto-failover detected new leader",
+			"chain", chainID,
+			"oldLeaderID", oldLeaderID,
+			"newLeaderID", newLeaderID)
+
+		// 5. Wait for the new leader's action loop to call
+		//    startSequencer on its op-node.
+		const sequencerStartDeadline = 15 * time.Second
+		startEnd := time.Now().Add(sequencerStartDeadline)
+		var newActive bool
+		var lastNewErr error
+		for time.Now().Before(startEnd) {
+			probeCtx, cancelProbe := context.WithTimeout(
+				t.Ctx(), 2*time.Second)
+			newActive, lastNewErr = newLeaderCL.RollupAPI().
+				SequencerActive(probeCtx)
+			cancelProbe()
+			if lastNewErr == nil && newActive {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+		r.NoError(lastNewErr,
+			"chain %s: SequencerActive RPC failed on new leader CL %s",
+			chainID, newLeaderCL.ID())
+		r.True(newActive,
+			"chain %s, new leader CL %s: SequencerActive=false after "+
+				"leadership rotated — the surviving healthy follower "+
+				"never started sequencing, so the cluster is effectively "+
+				"bricked despite raft having a leader",
+			chainID, newLeaderCL.ID())
+
+		// 6. Block production resumed on the new leader's EL.
 		const observationWindow = 12 * time.Second
 		time.Sleep(observationWindow)
-
-		// 5c. Block production resumed on the new leader's EL.
 		const expectedDelta uint64 = 3
 		head := newLeaderEL.BlockRefByLabel(eth.Unsafe).Number
 		r.GreaterOrEqual(head, baseline+expectedDelta,
 			"chain %s: new leader EL %s unsafe head did not advance past "+
-				"baseline+%d (baseline=%d, head=%d) after failover — "+
+				"baseline+%d (baseline=%d, head=%d) after auto-failover — "+
 				"this is the README guarantee that 'the new leader will "+
 				"start sequencing instead'",
 			chainID, newLeaderEL.Escape().ID(),
 			expectedDelta, baseline, head)
 
-		// 5d. The new leader is in fact actively sequencing.
-		newLeaderCL := conductorhelpers.CLPairedWithConductor(sys.L2Chain, newLeaderInfo.ID)
-		r.NotNil(newLeaderCL,
-			"chain %s: could not locate L2CL paired with new leader %s",
-			chainID, newLeaderInfo.ID)
-		seqProbeCtx, cancelSeqProbe := context.WithTimeout(
-			t.Ctx(), 3*time.Second)
-		newLeaderActive, err := newLeaderCL.RollupAPI().SequencerActive(
-			seqProbeCtx)
-		cancelSeqProbe()
-		r.NoError(err,
-			"chain %s: SequencerActive RPC failed on new leader %s",
-			chainID, newLeaderInfo.ID)
-		r.True(newLeaderActive,
-			"chain %s: new leader CL %s reports SequencerActive=false "+
-				"after failover — conductor leader-takeover did not "+
-				"propagate into op-node sequencing state",
-			chainID, newLeaderCL.ID())
-
 		logger.Info("README scenario #1 verified: active op-node down, "+
-			"leadership transferred to healthy follower, chain advancing",
+			"production health monitor auto-rotated leadership to "+
+			"healthy follower, chain advancing",
 			"chain", chainID,
 			"oldLeaderID", oldLeaderID,
-			"newLeaderID", newLeaderInfo.ID,
+			"newLeaderID", newLeaderID,
 			"baselineUnsafe", baseline,
 			"observedUnsafe", head,
 			"advancedBy", head-baseline)

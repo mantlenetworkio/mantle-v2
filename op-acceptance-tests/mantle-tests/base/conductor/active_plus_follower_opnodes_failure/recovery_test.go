@@ -18,24 +18,37 @@ import (
 //   - sys.L2CL is stopped (was the active sequencer at test start);
 //   - one follower op-node is stopped, identified via
 //     deadFollowerCLs[chainID];
-//   - leadership has rotated to the surviving healthy follower, which
-//     is now actively sequencing.
+//   - every voter's conductor reports SequencerHealthy=false (the
+//     sysgo-faithful peer-degraded state established by Failure: the
+//     lone surviving op-node has zero peers because its only
+//     static-mesh peers were the two killed op-nodes, so its
+//     conductor's MinPeerCount=1 check fails);
+//   - the lone-live-op-node voter is latched into escape-hatch
+//     sequencing (op-conductor/conductor/service.go:748 + the
+//     shouldWaitForHealthRecovery latch at service.go:760), so the
+//     chain has been advancing on its EL even though the conductor
+//     reports SequencerHealthy=false.
 //
 // Recovery (per the project's strict definition) means BOTH:
 //
-//  1. A sequencer is producing blocks (the rotated leader, since
-//     leadership does NOT roll back), AND
+//  1. A sequencer is producing blocks (whichever voter the cluster
+//     elects once the peer-count constraint is satisfied), AND
 //  2. The conductor cluster is healthy with 3 members (all 3 op-nodes
 //     synced to within 1 block of the leader).
 //
-// The two restarted op-nodes recover via the standard P2P unsafe
-// payload subscription path: each op-node's onUnsafeL2Payload feeds the
-// rotated leader's gossiped blocks through engine_newPayload + FCU into
-// its local op-geth. Conductor-side, no membership change is needed —
-// neither conductor was ever stopped, just their op-nodes; the action
-// loop simply observes its op-node back online and resumes whatever
-// IsLeader-driven sequencing or follower-side StopSequencer state it
-// was previously driving.
+// The recovery mechanism is straightforward: restarting the two
+// crashed op-nodes restores the A↔B, A↔C, B↔C static mesh, every
+// op-node reconnects to its 2 peers, every conductor's health
+// monitor flips SequencerHealthy=true on its next tick (the latched
+// survivor exits the (T,F,T) shape and settles into (T,T,T) — the
+// shouldWaitForHealthRecovery latch is naturally released because
+// healthy=T no longer takes the unhealthy-active branch), and the
+// survivor continues sequencing as a now-genuinely-healthy leader.
+// The two recovering op-nodes catch up to the leader's head via the
+// standard P2P unsafe-payload subscription path: each op-node's
+// onUnsafeL2Payload feeds gossiped blocks through engine_newPayload +
+// FCU into its local op-geth. No conductor membership change is
+// needed — neither conductor was ever stopped, just their op-nodes.
 func runRecovery(t devtest.T, sys *presets.MantleMinimalWithFaultyConductors, deadFollowerCLs map[stack.L2NetworkID]stack.L2CLNodeID) {
 	logger := testlog.Logger(t, log.LevelInfo).With(
 		"Test", "TestActivePlusFollowerOpNodesFailureAndRecovery/Recovery",

@@ -17,30 +17,36 @@ import (
 // namely:
 //
 //   - both follower op-nodes are stopped;
-//   - the active sequencer (sys.L2CL) is unchanged and still leading;
-//   - raft leader is unchanged (no rotation in this scenario).
+//   - the active leader's op-node (sys.L2CL) is still alive but its
+//     conductor reports SequencerHealthy=false because the static-mesh
+//     peers (the two dead follower op-nodes) are gone, so PeerStats
+//     returns 0 and MinPeerCount=1 fails;
+//   - raft leader may have rotated away from the original leader as
+//     its action loop saw (leader && !healthy && active) and called
+//     transferLeader();
+//   - no node is sustainably sequencing.
 //
 // Recovery (per the project's strict definition) means BOTH:
 //
-//  1. A sequencer is producing blocks (the original leader; never
-//     rotated in this scenario), AND
+//  1. A sequencer is producing blocks (whichever voter the cluster
+//     currently has as raft leader, once the peer-count constraint is
+//     satisfied), AND
 //  2. The conductor cluster is healthy with 3 members (all 3 op-nodes
 //     synced to within 1 block of the leader).
 //
-// During the failure window the op-nodes ARE the lagging members; raft
-// itself is fine (heartbeats are conductor-to-conductor and quorum is
-// preserved), but the two follower ELs cannot apply new payloads
-// because their op-nodes are dead. After restart, op-node resubscribes
-// to the unsafe-payload P2P topic and feeds gossiped payloads through
-// engine_newPayload + FCU into the local op-geth — that is the
-// op-conductor side recovery path we exercise.
+// The recovery mechanism is straightforward: restarting the two
+// crashed follower op-nodes restores the A↔B, A↔C, B↔C static mesh,
+// every op-node reconnects to its 2 peers, every conductor's health
+// monitor flips SequencerHealthy=true on its next tick, and whichever
+// voter is currently raft leader resumes sequencing. The two
+// recovering op-nodes catch up via standard P2P unsafe-payload
+// subscription + engine_newPayload into the local op-geth.
 //
 // We re-derive the follower CL set in Recovery by the same rule
-// runFailure used (every L2 CL except sys.L2CL). Since runFailure
-// asserted no leadership rotation occurred, sys.L2CL is still the
-// active sequencer, so the "everything-except-active" set picks the
-// same two stopped op-nodes and we don't need to thread state across
-// subtests.
+// runFailure used (every L2 CL except sys.L2CL). sys.L2CL.ID() is
+// fixed by the preset, so the "everything-except-sys.L2CL" set
+// continues to pick the same two stopped op-nodes regardless of any
+// raft leadership rotation that occurred during Failure.
 func runRecovery(t devtest.T, sys *presets.MantleMinimalWithFaultyConductors) {
 	logger := testlog.Logger(t, log.LevelInfo).With(
 		"Test", "TestTwoFollowerOpNodesFailureAndRecovery/Recovery",
@@ -80,9 +86,9 @@ func runRecovery(t devtest.T, sys *presets.MantleMinimalWithFaultyConductors) {
 
 		// THE recovery assertion: re-run RequireHealthyConductorCluster.
 		// This proves both criteria of the recovery definition:
-		//   (1) a sequencer is producing blocks (leader was never
-		//       rotated — the same leader from baseline still
-		//       sequences), AND
+		//   (1) a sequencer is producing blocks (whichever voter is
+		//       currently raft leader; the helper finds whoever is
+		//       leading and asserts EL advance), AND
 		//   (2) the conductor cluster is healthy with 3 members —
 		//       both restarted follower op-nodes are caught up to
 		//       within 1 block of the leader's unsafe head.
