@@ -50,9 +50,10 @@ members = [
   # Alloy OP Hardforks
   "alloy-op-hardforks/",
 
-  # Op-Revm
-  "op-revm/",
+  # Op-Revm: 改为从 mantle-xyz/revm @ mantle-elysium 拉取(workspace.dependencies 里直接 git 引用),本地 op-revm/ 不参与构建
+  # "op-revm/",
 ]
+exclude = ["op-revm"]
 default-members = [
   "kona/bin/host",
   "kona/bin/client",
@@ -391,6 +392,7 @@ reth-trie-common = { git = "https://github.com/paradigmxyz/reth", rev = "88505c7
 reth-trie-db = { git = "https://github.com/paradigmxyz/reth", rev = "88505c7fcbfdebfd3b56d88c86b62e950043c6c4" }
 
 # ==================== REVM (latest: op-reth versions) ====================
+# ==================== REVM (重定向到 mantle-xyz/revm @ mantle-elysium via [patch.crates-io],声明版本保持上游一致以满足 transitive 约束) ====================
 revm = { version = "38.0.0", default-features = false }
 revm-bytecode = { version = "10.0.0", default-features = false }
 revm-database = { version = "13.0.0", default-features = false }
@@ -398,7 +400,7 @@ revm-state = { version = "11.0.0", default-features = false }
 revm-primitives = { version = "23.0.0", default-features = false }
 revm-interpreter = { version = "35.0.0", default-features = false }
 revm-database-interface = { version = "11.0.0", default-features = false }
-op-revm = { version = "20.0.0", path = "op-revm/", default-features = false }
+op-revm = { version = "19.0.0", default-features = false }
 revm-inspectors = "0.39.0"
 
 # ==================== ALLOY ====================
@@ -664,3 +666,19 @@ snmalloc-rs = { version = "0.3.8", features = ["build_cc"] }
 
 # K/V database
 rocksdb = { version = "0.24.0", default-features = false }
+
+# ==================== PATCH: 把所有 revm 系列(包括 transitive 依赖里的)重定向到 mantle-xyz/revm @ mantle-elysium ====================
+[patch.crates-io]
+revm = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-bytecode = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-context = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-context-interface = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-database = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-database-interface = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-handler = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-inspector = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-interpreter = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-precompile = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-primitives = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+revm-state = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
+op-revm = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
