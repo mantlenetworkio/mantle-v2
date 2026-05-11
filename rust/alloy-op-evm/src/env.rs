@@ -232,7 +232,8 @@ mod tests {
         }
     }
 
-    #[test_case::test_case(FakeHardfork::karst(), OpSpecId::KARST; "Karst")]
+    // [MANTLE] OpSpecId::KARST 在 mantle-elysium 不存在 — 测试用例移除
+    // #[test_case::test_case(FakeHardfork::karst(), OpSpecId::KARST; "Karst")]
     #[test_case::test_case(FakeHardfork::interop(), OpSpecId::INTEROP; "Interop")]
     #[test_case::test_case(FakeHardfork::jovian(), OpSpecId::JOVIAN; "Jovian")]
     #[test_case::test_case(FakeHardfork::isthmus(), OpSpecId::ISTHMUS; "Isthmus")]

@@ -480,6 +480,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         assert_eq!(tx.source_hash(), Some(B256::with_last_byte(42)));
@@ -498,6 +500,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: false,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         assert_eq!(tx.source_hash(), Some(B256::default()));
@@ -517,6 +521,8 @@ mod tests {
             gas_limit: 100000,
             is_system_transaction: false,
             input: Bytes::from_static(&[1, 2, 3]),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         assert_eq!(tx.source_hash(), Some(B256::default()));
@@ -547,6 +553,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         let mut buffer = BytesMut::new();
@@ -567,6 +575,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -589,6 +599,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
@@ -605,6 +617,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -627,6 +641,8 @@ mod tests {
             gas_limit: 50000,
             is_system_transaction: true,
             input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: None,
         };
 
         let total_len = tx_deposit.network_encoded_length();
