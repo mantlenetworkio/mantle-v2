@@ -212,6 +212,9 @@ impl FromTxWithEncoded<TxDeposit> for FpvmOpTx {
             source_hash: tx.source_hash,
             mint: Some(tx.mint),
             is_system_transaction: tx.is_system_transaction,
+            // Mantle BVM_ETH fields: develop 的 TxDeposit 没有这些字段,默认 None
+            eth_value: None,
+            eth_tx_value: None,
         };
         Self(OpTransaction { base, enveloped_tx: Some(encoded), deposit })
     }

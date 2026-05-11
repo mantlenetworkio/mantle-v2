@@ -8,7 +8,8 @@ use alloy_primitives::{Address, Bytes};
 use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use op_revm::{
     OpSpecId,
-    precompiles::{fjord, granite, isthmus, jovian, karst},
+    // mantle-elysium 的 op-revm v19 没有 karst() precompile(KARST 是 OP v20 引入,Mantle 用 OSAKA/ARSIA)
+    precompiles::{fjord, granite, isthmus, jovian},
 };
 use revm::{
     context::{Cfg, ContextTr},
@@ -51,8 +52,9 @@ where
             OpSpecId::FJORD => fjord(),
             OpSpecId::GRANITE | OpSpecId::HOLOCENE => granite(),
             OpSpecId::ISTHMUS => isthmus(),
-            OpSpecId::JOVIAN => jovian(),
-            OpSpecId::KARST | OpSpecId::INTEROP => karst(),
+            // mantle-elysium 的 OpSpecId 没有 KARST,多了 OSAKA / ARSIA。
+            // jovian() 是 mantle-elysium 提供的最新 precompile set,作为 newer-than-jovian 的兜底
+            OpSpecId::JOVIAN | OpSpecId::OSAKA | OpSpecId::ARSIA | OpSpecId::INTEROP => jovian(),
         };
 
         let accelerated_precompiles = match spec {
@@ -62,8 +64,11 @@ where
             OpSpecId::ECOTONE | OpSpecId::FJORD => accelerated_ecotone::<H, O>(),
             OpSpecId::GRANITE | OpSpecId::HOLOCENE => accelerated_granite::<H, O>(),
             OpSpecId::ISTHMUS => accelerated_isthmus::<H, O>(),
-            OpSpecId::JOVIAN => accelerated_jovian::<H, O>(),
-            OpSpecId::KARST | OpSpecId::INTEROP => accelerated_karst::<H, O>(),
+            // mantle-elysium 没有 KARST,多了 OSAKA / ARSIA。
+            // accelerated_jovian 兜底所有 newer-than-jovian
+            OpSpecId::JOVIAN | OpSpecId::OSAKA | OpSpecId::ARSIA | OpSpecId::INTEROP => {
+                accelerated_jovian::<H, O>()
+            }
         };
 
         Self {

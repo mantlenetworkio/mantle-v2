@@ -35,7 +35,9 @@ pub fn spec_by_timestamp_after_bedrock(chain_spec: impl OpHardforks, timestamp: 
         };
     }
     check_forks! {
-        is_karst_active_at_timestamp => KARST,
+        // mantle-elysium 的 OpSpecId 没有 KARST variant(KARST 是 OP v20 引入,mantle-elysium 仍在 v19)
+        // Mantle 用 OSAKA/ARSIA,不通过此 chain_spec hook 触发
+        // is_karst_active_at_timestamp => KARST,
         is_interop_active_at_timestamp => INTEROP,
         is_jovian_active_at_timestamp => JOVIAN,
         is_isthmus_active_at_timestamp => ISTHMUS,

@@ -618,12 +618,13 @@ where
         let canonical_gas_used = evm_gas_used.saturating_sub(post_exec_refund);
         let l1_block_info = self.l1_block_info(spec_id)?;
         let encoded = tx.tx().encoded_2718();
+        // mantle-elysium 的 operator_fee_charge 签名是 (input, gas_limit) 两参,
+        // develop 的 v20 版本多一个 spec_id 参数。这里去掉 spec_id 适配 mantle-elysium 签名
         let raw_fee =
-            l1_block_info.operator_fee_charge(encoded.as_ref(), U256::from(evm_gas_used), spec_id);
+            l1_block_info.operator_fee_charge(encoded.as_ref(), U256::from(evm_gas_used));
         let canonical_fee = l1_block_info.operator_fee_charge(
             encoded.as_ref(),
             U256::from(canonical_gas_used),
-            spec_id,
         );
         let operator_fee_balance_delta = raw_fee.saturating_sub(canonical_fee);
 
