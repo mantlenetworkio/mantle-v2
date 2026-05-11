@@ -36,6 +36,13 @@ pub use jovian::Jovian;
 mod karst;
 pub use karst::Karst;
 
+// [MANTLE] Arsia hardfork (Mantle protocol) + MantleHardforks registry.
+mod arsia;
+pub use arsia::Arsia;
+
+mod mantle_forks;
+pub use mantle_forks::MantleHardforks;
+
 mod utils;
 pub(crate) use utils::upgrade_to_calldata;
 
