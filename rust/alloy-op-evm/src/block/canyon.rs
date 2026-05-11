@@ -1,3 +1,7 @@
+// [MANTLE] ensure_create2_deployer 不被调用(见 block/mod.rs 中的注释),
+// 此模块整体未使用,允许 dead_code 以避免编译警告
+#![allow(dead_code)]
+
 use alloy_evm::Database;
 use alloy_op_hardforks::OpHardforks;
 use alloy_primitives::{Address, B256, Bytes, address, b256, hex};

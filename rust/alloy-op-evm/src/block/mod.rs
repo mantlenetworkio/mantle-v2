@@ -18,7 +18,8 @@ use alloy_evm::{
 };
 use alloy_op_hardforks::{OpChainHardforks, OpHardforks};
 use alloy_primitives::{Address, B256, Bytes, U256};
-use canyon::ensure_create2_deployer;
+// [MANTLE] Disabled — see comment near the (commented-out) call site below
+// use canyon::ensure_create2_deployer;
 use op_alloy::consensus::{
     OpDepositReceipt, OpTransaction as OpConsensusTransaction, POST_EXEC_TX_TYPE_ID,
     PostExecPayload, SDMGasEntry,
@@ -707,12 +708,15 @@ where
         // blocks will always have at least a single transaction in them (the L1 info transaction),
         // so we can safely assume that this will always be triggered upon the transition and that
         // the above check for empty blocks will never be hit on OP chains.
-        ensure_create2_deployer(
-            &self.spec,
-            self.evm.block().timestamp().saturating_to(),
-            self.evm.db_mut(),
-        )
-        .map_err(BlockExecutionError::other)?;
+        //
+        // [MANTLE] DISABLED: Mantle 不沿用 OP Canyon 的 force-deploy create2 deployer
+        // 逻辑(Mantle 已通过其他途径处理 create2 deployer 部署),保留代码注释以便对照
+        // ensure_create2_deployer(
+        //     &self.spec,
+        //     self.evm.block().timestamp().saturating_to(),
+        //     self.evm.db_mut(),
+        // )
+        // .map_err(BlockExecutionError::other)?;
 
         Ok(())
     }
@@ -938,11 +942,10 @@ where
                         // when set. The state transition process ensures
                         // this is only set for post-Canyon deposit
                         // transactions.
-                        deposit_receipt_version: (is_deposit &&
-                            self.spec.is_canyon_active_at_timestamp(
-                                self.evm.block().timestamp().saturating_to(),
-                            ))
-                        .then_some(1),
+                        // [MANTLE] Always None: Mantle 用 MNT 作为 native gas token,
+                        // ETH 以 ERC-20 (BVM_ETH) 形式表示,deposit receipt 不沿用 OP Canyon
+                        // 的 version 字段语义
+                        deposit_receipt_version: None,
                     })
                 }
             },
