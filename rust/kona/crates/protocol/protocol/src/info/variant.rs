@@ -214,7 +214,7 @@ impl L1BlockInfoTx {
             value: U256::ZERO,
             gas_limit: 150_000_000,
             is_system_transaction: true,
-            // L1 info deposit (system tx) 不涉及 BVM_ETH
+            // L1 info deposit (a system tx) has no BVM_ETH semantics.
             eth_value: 0,
             input: l1_info.encode_calldata(),
             eth_tx_value: None,

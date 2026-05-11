@@ -619,8 +619,9 @@ where
         let canonical_gas_used = evm_gas_used.saturating_sub(post_exec_refund);
         let l1_block_info = self.l1_block_info(spec_id)?;
         let encoded = tx.tx().encoded_2718();
-        // mantle-elysium 的 operator_fee_charge 签名是 (input, gas_limit) 两参,
-        // develop 的 v20 版本多一个 spec_id 参数。这里去掉 spec_id 适配 mantle-elysium 签名
+        // mantle-elysium's operator_fee_charge takes (input, gas_limit) — two args.
+        // develop's op-revm v20 added a third spec_id parameter. Drop it here to match
+        // mantle-elysium's signature.
         let raw_fee =
             l1_block_info.operator_fee_charge(encoded.as_ref(), U256::from(evm_gas_used));
         let canonical_fee = l1_block_info.operator_fee_charge(
@@ -709,8 +710,9 @@ where
         // so we can safely assume that this will always be triggered upon the transition and that
         // the above check for empty blocks will never be hit on OP chains.
         //
-        // [MANTLE] DISABLED: Mantle 不沿用 OP Canyon 的 force-deploy create2 deployer
-        // 逻辑(Mantle 已通过其他途径处理 create2 deployer 部署),保留代码注释以便对照
+        // [MANTLE] DISABLED: Mantle does not use OP Canyon's force-deploy of the create2
+        // deployer (Mantle handles create2 deployer deployment via a separate path).
+        // Original upstream code retained below as a comment for reference.
         // ensure_create2_deployer(
         //     &self.spec,
         //     self.evm.block().timestamp().saturating_to(),
@@ -942,9 +944,9 @@ where
                         // when set. The state transition process ensures
                         // this is only set for post-Canyon deposit
                         // transactions.
-                        // [MANTLE] Always None: Mantle 用 MNT 作为 native gas token,
-                        // ETH 以 ERC-20 (BVM_ETH) 形式表示,deposit receipt 不沿用 OP Canyon
-                        // 的 version 字段语义
+                        // [MANTLE] Always None: Mantle uses MNT as the native gas token
+                        // and represents ETH as an ERC-20 (BVM_ETH). The deposit receipt
+                        // does not follow OP Canyon's `deposit_receipt_version` semantics.
                         deposit_receipt_version: None,
                     })
                 }

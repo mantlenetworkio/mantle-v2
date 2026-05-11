@@ -385,8 +385,8 @@ impl From<TxDeposit> for alloy_rpc_types_eth::TransactionRequest {
             gas_limit,
             is_system_transaction: _,
             input,
-            // Mantle BVM_ETH 字段: 转换到 alloy_rpc_types_eth::TransactionRequest
-            // (Ethereum 标准类型,无 BVM_ETH 概念),忽略
+            // Mantle BVM_ETH fields: target is alloy_rpc_types_eth::TransactionRequest,
+            // a standard Ethereum type with no BVM_ETH concept — ignore.
             eth_value: _,
             eth_tx_value: _,
         } = tx;
@@ -730,9 +730,9 @@ pub(super) mod serde_bincode_compat {
 
     impl<'a> From<TxDeposit<'a>> for super::TxDeposit {
         fn from(value: TxDeposit<'a>) -> Self {
-            // TODO(mantle): bincode_compat::TxDeposit 也需要加 eth_value/eth_tx_value
-            // 才能在 bincode 往返中保留 Mantle BVM_ETH 信息。当前默认 0/None,
-            // bincode 还原会丢失 BVM_ETH 数据
+            // TODO(mantle): bincode_compat::TxDeposit itself needs eth_value/eth_tx_value
+            // fields to preserve Mantle BVM_ETH data across a bincode round-trip. Defaulting
+            // to 0/None here means bincode-decoded deposits lose BVM_ETH information.
             Self {
                 source_hash: value.source_hash,
                 from: value.from,

@@ -110,9 +110,11 @@ impl TryFrom<OpTxError> for OpInvalidTransactionError {
             OpTransactionError::HaltedDepositPostRegolith => Ok(Self::HaltedDepositPostRegolith),
             OpTransactionError::MissingEnvelopedTx => Ok(Self::MissingEnvelopedTx),
             OpTransactionError::Base(err) => Err(err),
-            // TODO(mantle): mantle-elysium 加了 BvmEth / TxL1CostOutOfRange 两个 Mantle-specific 错误,
-            // 后续需要给 OpInvalidTransactionError 加对应 variants 并映射到合适的 RPC 错误码。
-            // 暂时占位映射到 MissingEnvelopedTx,保持编译通过
+            // TODO(mantle): mantle-elysium adds two Mantle-specific OpTransactionError
+            // variants (BvmEth and TxL1CostOutOfRange). The proper fix is to extend
+            // OpInvalidTransactionError with matching variants and map them to dedicated
+            // RPC error codes. For now we map both onto MissingEnvelopedTx as a placeholder
+            // so the workspace compiles — revisit before production.
             OpTransactionError::BvmEth(_) | OpTransactionError::TxL1CostOutOfRange => {
                 Ok(Self::MissingEnvelopedTx)
             }

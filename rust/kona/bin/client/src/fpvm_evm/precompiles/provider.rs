@@ -8,7 +8,8 @@ use alloy_primitives::{Address, Bytes};
 use kona_preimage::{HintWriterClient, PreimageOracleClient};
 use op_revm::{
     OpSpecId,
-    // mantle-elysium 的 op-revm v19 没有 karst() precompile(KARST 是 OP v20 引入,Mantle 用 OSAKA/ARSIA)
+    // mantle-elysium's op-revm v19 does not expose a karst() precompile set (KARST was
+    // introduced in upstream op-revm v20; Mantle uses OSAKA/ARSIA instead).
     precompiles::{fjord, granite, isthmus, jovian},
 };
 use revm::{
@@ -52,8 +53,9 @@ where
             OpSpecId::FJORD => fjord(),
             OpSpecId::GRANITE | OpSpecId::HOLOCENE => granite(),
             OpSpecId::ISTHMUS => isthmus(),
-            // mantle-elysium 的 OpSpecId 没有 KARST,多了 OSAKA / ARSIA。
-            // jovian() 是 mantle-elysium 提供的最新 precompile set,作为 newer-than-jovian 的兜底
+            // mantle-elysium's OpSpecId has no KARST and adds OSAKA / ARSIA. jovian() is the
+            // latest precompile set it provides, used here as a fallback for every newer-than-jovian
+            // hardfork to keep the match exhaustive.
             OpSpecId::JOVIAN | OpSpecId::OSAKA | OpSpecId::ARSIA | OpSpecId::INTEROP => jovian(),
         };
 
@@ -64,8 +66,8 @@ where
             OpSpecId::ECOTONE | OpSpecId::FJORD => accelerated_ecotone::<H, O>(),
             OpSpecId::GRANITE | OpSpecId::HOLOCENE => accelerated_granite::<H, O>(),
             OpSpecId::ISTHMUS => accelerated_isthmus::<H, O>(),
-            // mantle-elysium 没有 KARST,多了 OSAKA / ARSIA。
-            // accelerated_jovian 兜底所有 newer-than-jovian
+            // mantle-elysium has no KARST and adds OSAKA / ARSIA. accelerated_jovian is the
+            // fallback for every newer-than-jovian hardfork to keep the match exhaustive.
             OpSpecId::JOVIAN | OpSpecId::OSAKA | OpSpecId::ARSIA | OpSpecId::INTEROP => {
                 accelerated_jovian::<H, O>()
             }

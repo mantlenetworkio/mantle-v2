@@ -50,7 +50,8 @@ members = [
   # Alloy OP Hardforks
   "alloy-op-hardforks/",
 
-  # Op-Revm: 改为从 mantle-xyz/revm @ mantle-elysium 拉取(workspace.dependencies 里直接 git 引用),本地 op-revm/ 不参与构建
+  # Op-Revm: sourced from mantle-xyz/revm @ mantle-elysium via [patch.crates-io]
+  # below; the local op-revm/ subtree is intentionally excluded from the workspace.
   # "op-revm/",
 ]
 exclude = ["op-revm"]
@@ -392,7 +393,7 @@ reth-trie-common = { git = "https://github.com/paradigmxyz/reth", rev = "88505c7
 reth-trie-db = { git = "https://github.com/paradigmxyz/reth", rev = "88505c7fcbfdebfd3b56d88c86b62e950043c6c4" }
 
 # ==================== REVM (latest: op-reth versions) ====================
-# ==================== REVM (重定向到 mantle-xyz/revm @ mantle-elysium via [patch.crates-io],声明版本保持上游一致以满足 transitive 约束) ====================
+# ==================== REVM (redirected to mantle-xyz/revm @ mantle-elysium via [patch.crates-io]; declared versions track upstream to satisfy transitive constraints) ====================
 revm = { version = "38.0.0", default-features = false }
 revm-bytecode = { version = "10.0.0", default-features = false }
 revm-database = { version = "13.0.0", default-features = false }
@@ -667,7 +668,7 @@ snmalloc-rs = { version = "0.3.8", features = ["build_cc"] }
 # K/V database
 rocksdb = { version = "0.24.0", default-features = false }
 
-# ==================== PATCH: 把所有 revm 系列(包括 transitive 依赖里的)重定向到 mantle-xyz/revm @ mantle-elysium ====================
+# ==================== PATCH: redirect every revm-* crate (including those pulled transitively) to mantle-xyz/revm @ mantle-elysium ====================
 [patch.crates-io]
 revm = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }
 revm-bytecode = { git = "https://github.com/mantle-xyz/revm", branch = "mantle-elysium" }

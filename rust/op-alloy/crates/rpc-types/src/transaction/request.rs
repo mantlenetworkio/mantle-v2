@@ -141,7 +141,7 @@ impl From<TxDeposit> for OpTransactionRequest {
             gas_limit,
             is_system_transaction: _,
             input,
-            // Mantle BVM_ETH 字段: OpTransactionRequest 无对应概念,忽略
+            // Mantle BVM_ETH fields: OpTransactionRequest has no corresponding concept — ignore.
             eth_value: _,
             eth_tx_value: _,
         } = tx;

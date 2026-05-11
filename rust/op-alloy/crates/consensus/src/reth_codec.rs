@@ -108,10 +108,11 @@ impl From<&TxDeposit> for CompactTxDeposit {
 
 impl From<CompactTxDeposit> for TxDeposit {
     fn from(tx: CompactTxDeposit) -> Self {
-        // TODO(mantle): CompactTxDeposit 也需要加 eth_value / eth_tx_value 字段
-        // 以保留 Mantle BVM_ETH 信息在 reth Compact 存储中。当前默认 0/None,
-        // 意味着从 Compact 还原的 deposit 会丢失 BVM_ETH 数据。Mantle 生产 reth
-        // 通常另有自己的 fork,这里的 codec 是否实际被使用待业务确认。
+        // TODO(mantle): CompactTxDeposit itself needs eth_value / eth_tx_value fields
+        // to preserve Mantle BVM_ETH data in reth's Compact storage. Defaulting to 0/None
+        // here means deposits decoded from Compact lose BVM_ETH information. Production
+        // Mantle reth typically uses its own fork — confirm with the team whether this
+        // codec is actually exercised before relying on lossless round-trips.
         Self {
             source_hash: tx.source_hash,
             from: tx.from,

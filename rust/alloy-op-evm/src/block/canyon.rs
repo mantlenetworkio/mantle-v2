@@ -1,5 +1,6 @@
-// [MANTLE] ensure_create2_deployer 不被调用(见 block/mod.rs 中的注释),
-// 此模块整体未使用,允许 dead_code 以避免编译警告
+// [MANTLE] ensure_create2_deployer is never called (see the [MANTLE] comment in
+// block/mod.rs). The whole module is therefore unused; allow dead_code so it does
+// not spam compile warnings.
 #![allow(dead_code)]
 
 use alloy_evm::Database;
