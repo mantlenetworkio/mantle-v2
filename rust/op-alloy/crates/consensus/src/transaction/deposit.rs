@@ -112,17 +112,22 @@ impl TxDeposit {
         if !header.list {
             return Err(alloy_rlp::Error::UnexpectedString);
         }
-        let remaining = buf.len();
-
-        if header.payload_length > remaining {
+        if header.payload_length > buf.len() {
             return Err(alloy_rlp::Error::InputTooShort);
         }
 
-        let this = Self::rlp_decode_fields(buf)?;
+        // [MANTLE] Decode fields strictly within this RLP payload so trailing bytes (e.g. the
+        // next tx in a stream) are never interpreted as the optional `eth_tx_value` field of
+        // the current tx. Equivalent to mantle-xyz/op-alloy commit 6637567 — supports
+        // stream-style decoding without rejecting trailing data.
+        let (payload, rest) = buf.split_at(header.payload_length);
+        let mut payload_buf = payload;
+        let this = Self::rlp_decode_fields(&mut payload_buf)?;
 
-        if buf.len() + header.payload_length != remaining {
+        if !payload_buf.is_empty() {
             return Err(alloy_rlp::Error::UnexpectedLength);
         }
+        *buf = rest;
 
         Ok(this)
     }
