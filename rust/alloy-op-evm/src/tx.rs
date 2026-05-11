@@ -248,9 +248,10 @@ impl FromTxWithEncoded<TxDeposit> for OpTx {
             source_hash: tx.source_hash,
             mint: Some(tx.mint),
             is_system_transaction: tx.is_system_transaction,
-            // Mantle BVM_ETH fields: develop's TxDeposit 没有这些字段,默认 None
-            eth_value: None,
-            eth_tx_value: None,
+            // Mantle BVM_ETH: TxDeposit.eth_value (u128) -> DepositTransactionParts.eth_value (Option<u128>)
+            // 0 表示无 mint,转 None;否则 Some(...)
+            eth_value: if tx.eth_value == 0 { None } else { Some(tx.eth_value) },
+            eth_tx_value: tx.eth_tx_value,
         };
         Self(OpTransaction { base, enveloped_tx: Some(encoded), deposit })
     }
