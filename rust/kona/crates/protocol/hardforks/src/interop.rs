@@ -177,6 +177,8 @@ impl Interop {
                 gas_limit: 1_100_000,
                 is_system_transaction: false,
                 input: Self::l2_to_l2_xdm_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::upgrade_l2_to_l2_xdm_proxy_source(),
@@ -187,6 +189,8 @@ impl Interop {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: super::upgrade_to_calldata(Self::NEW_L2_TO_L2_XDM_IMPL),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::deploy_superchain_eth_bridge_source(),
@@ -197,6 +201,8 @@ impl Interop {
                 gas_limit: 500_000,
                 is_system_transaction: false,
                 input: Self::superchain_eth_bridge_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::upgrade_superchain_eth_bridge_proxy_source(),
@@ -207,6 +213,8 @@ impl Interop {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: super::upgrade_to_calldata(Self::NEW_SUPERCHAIN_ETH_BRIDGE_IMPL),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::deploy_eth_liquidity_source(),
@@ -217,6 +225,8 @@ impl Interop {
                 gas_limit: 375_000,
                 is_system_transaction: false,
                 input: Self::eth_liquidity_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::upgrade_eth_liquidity_proxy_source(),
@@ -227,6 +237,8 @@ impl Interop {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: super::upgrade_to_calldata(Self::NEW_ETH_LIQUIDITY_IMPL),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::fund_eth_liquidity_source(),
@@ -237,6 +249,8 @@ impl Interop {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: Self::eth_liquidity_fund_calldata(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
         ])
         .into_iter()
@@ -258,6 +272,8 @@ impl Interop {
                 gas_limit: 420_000,
                 is_system_transaction: false,
                 input: Self::cross_l2_inbox_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::upgrade_cross_l2_inbox_proxy_source(),
@@ -268,6 +284,8 @@ impl Interop {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: super::upgrade_to_calldata(Self::NEW_CROSS_L2_INBOX_IMPL),
+                eth_value: 0,
+                eth_tx_value: None,
             },
         ])
         .into_iter()

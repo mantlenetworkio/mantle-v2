@@ -107,6 +107,8 @@ impl Jovian {
                 gas_limit: 447_315,
                 is_system_transaction: false,
                 input: Self::l1_block_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::l1_block_proxy_update(),
@@ -117,6 +119,8 @@ impl Jovian {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: upgrade_to_calldata(Self::l1_block_address()),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::gas_price_oracle(),
@@ -127,6 +131,8 @@ impl Jovian {
                 gas_limit: 1_750_714,
                 is_system_transaction: false,
                 input: Self::gas_price_oracle_deployment_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::gas_price_oracle_proxy_update(),
@@ -137,6 +143,8 @@ impl Jovian {
                 gas_limit: 50_000,
                 is_system_transaction: false,
                 input: upgrade_to_calldata(Self::gas_price_oracle_address()),
+                eth_value: 0,
+                eth_tx_value: None,
             },
             TxDeposit {
                 source_hash: Self::gas_price_oracle_enable_jovian(),
@@ -147,6 +155,8 @@ impl Jovian {
                 gas_limit: 90_000,
                 is_system_transaction: false,
                 input: Self::gas_price_oracle_enable_jovian_bytecode(),
+                eth_value: 0,
+                eth_tx_value: None,
             },
         ])
         .into_iter()
