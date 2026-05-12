@@ -55,6 +55,11 @@ alloy-provider = { workspace = true, features = ["reqwest"], optional = true }
 alloy-rpc-client = { workspace = true, optional = true }
 alloy-transport = { workspace = true, optional = true }
 alloy-transport-http = { workspace = true, optional = true }
+# [MANTLE] Extra optional deps used by the Mantle additions to test_utils.rs
+# (alloy-chains for chain helpers, reqwest/url for direct HTTP fixture fetching).
+alloy-chains = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 
 # Mirrors the optional `test-utils` feature deps so `cargo test -p kona-executor`
 # compiles the `test_utils` module (and the post-exec unit tests in `core`) without
@@ -75,6 +80,7 @@ tokio = { workspace = true, features = ["full"] }
 
 [features]
 test-utils = [
+	"dep:alloy-chains",
 	"dep:alloy-provider",
 	"dep:alloy-rpc-client",
 	"dep:alloy-rpc-types-engine",
@@ -82,11 +88,13 @@ test-utils = [
 	"dep:alloy-transport-http",
 	"dep:kona-registry",
 	"dep:rand",
+	"dep:reqwest",
 	"dep:rocksdb",
 	"dep:rstest",
 	"dep:serde",
 	"dep:serde_json",
 	"dep:tempfile",
 	"dep:tokio",
+	"dep:url",
 	"kona-protocol/test-utils",
 ]

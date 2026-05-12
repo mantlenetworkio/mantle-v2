@@ -177,7 +177,8 @@ pub fn compute_receipts_root(
     // the receipt root calculation does not include the deposit nonce in the
     // receipt encoding. In the Regolith hardfork, we must strip the deposit nonce
     // from the receipt encoding to match the receipt root calculation.
-    if config.is_regolith_active(timestamp) && !config.is_canyon_active(timestamp) {
+
+    if config.is_mantle_skadi_active(timestamp) {
         let receipts = receipts
             .iter()
             .cloned()

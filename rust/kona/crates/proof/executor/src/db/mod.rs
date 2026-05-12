@@ -218,11 +218,18 @@ where
             // Compute the path to the account in the trie.
             let account_path = Nibbles::unpack(hashed_address.as_slice());
 
-            // If the account was destroyed, delete it from the trie.
+            // If the account was destroyed, delete it from the trie and wipe its storage.
+            // For DestroyedChanged accounts the account was re-created after destruction, so
+            // fall through to re-insert the new state rather than skipping it.
             if bundle_account.was_destroyed() {
-                self.root_node.delete(&account_path, &self.fetcher, &self.hinter)?;
+                match self.root_node.delete(&account_path, &self.fetcher, &self.hinter) {
+                    Ok(()) | Err(TrieNodeError::KeyNotFound) => {}
+                    Err(e) => return Err(e.into()),
+                }
                 self.storage_roots.remove(address);
-                continue;
+                if bundle_account.account_info().is_none() {
+                    continue;
+                }
             }
 
             let account_info =
@@ -411,8 +418,10 @@ where
 mod tests {
     use super::*;
     use alloy_consensus::Sealable;
-    use alloy_primitives::b256;
+    use alloy_primitives::{U256, b256};
     use kona_mpt::NoopTrieHinter;
+    use revm::database::{AccountStatus, BundleAccount};
+    
 
     fn new_test_db() -> TrieDB<NoopTrieDBProvider, NoopTrieHinter> {
         TrieDB::new(Header::default().seal_slow(), NoopTrieDBProvider, NoopTrieHinter)
@@ -468,5 +477,139 @@ mod tests {
             block_hash,
             b256!("78dec18c6d7da925bbe773c315653cdc70f6444ed6c1de9ac30bdb36cff74c3b")
         );
+    }
+
+    fn bundle_with_account(address: Address, account: BundleAccount) -> BundleState {
+        let mut state = HashMap::default();
+        state.insert(address, account);
+        BundleState { state, ..Default::default() }
+    }
+
+    /// Pre-populate the trie with a live account so subsequent destroy bundles have a real leaf
+    /// to delete (covers the non–`KeyNotFound` delete path).
+    fn insert_account(db: &mut TrieDB<NoopTrieDBProvider, NoopTrieHinter>, address: Address) {
+        let account = BundleAccount::new(
+            None,
+            Some(AccountInfo { balance: U256::from(100u64), ..Default::default() }),
+            Default::default(),
+            AccountStatus::InMemoryChange,
+        );
+        db.state_root(&bundle_with_account(address, account)).unwrap();
+    }
+
+    #[test]
+    fn test_destroyed_account_absent() {
+        let mut db = new_test_db();
+        let address = Address::repeat_byte(0x01);
+        insert_account(&mut db, address);
+
+        let root = db
+            .state_root(&bundle_with_account(
+                address,
+                BundleAccount::new(
+                    Some(AccountInfo::default()),
+                    None,
+                    Default::default(),
+                    AccountStatus::Destroyed,
+                ),
+            ))
+            .unwrap();
+        assert_eq!(root, EMPTY_ROOT_HASH, "Destroyed account should not appear in trie");
+    }
+
+    #[test]
+    fn test_destroyed_changed_account_reinserted() {
+        let mut db = new_test_db();
+        let address = Address::repeat_byte(0x02);
+        insert_account(&mut db, address);
+
+        let new_info =
+            AccountInfo { balance: U256::from(1_000_000_000_000_000_000u64), ..Default::default() };
+        let root = db
+            .state_root(&bundle_with_account(
+                address,
+                BundleAccount::new(
+                    Some(AccountInfo::default()),
+                    Some(new_info),
+                    Default::default(),
+                    AccountStatus::DestroyedChanged,
+                ),
+            ))
+            .unwrap();
+        assert_ne!(root, EMPTY_ROOT_HASH, "DestroyedChanged account must be re-inserted into trie");
+    }
+
+    /// Exercises `storage_roots` rebuild (`or_insert_with(EMPTY_ROOT_HASH)`) after a destroy wipe;
+    /// asserts the trie is non-empty (slot-level wipe vs. survive is not checked without proofs).
+    #[test]
+    fn test_destroyed_changed_account_storage_wiped_and_reinserted() {
+        let mut db = new_test_db();
+        let address = Address::repeat_byte(0x04);
+        insert_account(&mut db, address);
+
+        let mut storage = HashMap::default();
+        let slot_key = U256::from(1u64);
+        storage.insert(slot_key, StorageSlot::new_changed(U256::ZERO, U256::from(42u64)));
+        let new_info =
+            AccountInfo { balance: U256::from(1_000_000_000_000_000_000u64), ..Default::default() };
+        let root = db
+            .state_root(&bundle_with_account(
+                address,
+                BundleAccount::new(
+                    Some(AccountInfo::default()),
+                    Some(new_info),
+                    storage,
+                    AccountStatus::DestroyedChanged,
+                ),
+            ))
+            .unwrap();
+        assert_ne!(
+            root, EMPTY_ROOT_HASH,
+            "DestroyedChanged account with storage must appear in trie",
+        );
+    }
+
+    #[test]
+    fn test_destroyed_changed_new_account_never_in_trie() {
+        let mut db = new_test_db();
+        let address = Address::repeat_byte(0x05);
+
+        let new_info =
+            AccountInfo { balance: U256::from(1_000_000_000_000_000_000u64), ..Default::default() };
+        let root = db
+            .state_root(&bundle_with_account(
+                address,
+                BundleAccount::new(
+                    None,
+                    Some(new_info),
+                    Default::default(),
+                    AccountStatus::DestroyedChanged,
+                ),
+            ))
+            .unwrap();
+        assert_ne!(
+            root, EMPTY_ROOT_HASH,
+            "DestroyedChanged account never in parent trie must be re-inserted",
+        );
+    }
+
+    #[test]
+    fn test_destroyed_again_account_absent() {
+        let mut db = new_test_db();
+        let address = Address::repeat_byte(0x03);
+        insert_account(&mut db, address);
+
+        let root = db
+            .state_root(&bundle_with_account(
+                address,
+                BundleAccount::new(
+                    Some(AccountInfo::default()),
+                    None,
+                    Default::default(),
+                    AccountStatus::DestroyedAgain,
+                ),
+            ))
+            .unwrap();
+        assert_eq!(root, EMPTY_ROOT_HASH, "DestroyedAgain account should not appear in trie");
     }
 }
