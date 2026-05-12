@@ -2,7 +2,7 @@ module github.com/ethereum-optimism/optimism
 
 go 1.24.0
 
-toolchain go1.24.10
+toolchain go1.24.13
 
 require (
 	cloud.google.com/go/kms v1.20.1
@@ -15,7 +15,7 @@ require (
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/coder/websocket v1.8.13
-	github.com/consensys/gnark-crypto v0.18.0
+	github.com/consensys/gnark-crypto v0.18.1
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
@@ -77,7 +77,6 @@ require (
 	golang.org/x/time v0.11.0
 	gonum.org/v1/plot v0.16.0
 	google.golang.org/api v0.215.0
-	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -312,6 +311,7 @@ require (
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
+	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/grpc v1.69.4 // indirect
@@ -322,9 +322,9 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.4.3-0.20260210061856-50716285fee9
+replace github.com/ethereum/go-ethereum => github.com/mantlenetworkio/op-geth v1.5.4
 
-// replace github.com/ethereum/go-ethereum => ../op-geth
+//replace github.com/ethereum/go-ethereum => ../op-geth
 
 // replace github.com/ethereum-optimism/superchain-registry/superchain => ../superchain-registry/superchain
 // This release keeps breaking Go builds. Stop that.

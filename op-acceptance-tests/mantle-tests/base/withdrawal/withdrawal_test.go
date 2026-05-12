@@ -1,6 +1,9 @@
 package withdrawal
 
 import (
+	"testing"
+	"time"
+
 	"github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/custom_gas_token"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/devkeys"
 	"github.com/ethereum-optimism/optimism/op-devstack/devtest"
@@ -10,8 +13,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txintent/bindings"
-	"testing"
-	"time"
 )
 
 func TestWithdrawalMNT(gt *testing.T) {

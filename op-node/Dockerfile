@@ -33,9 +33,11 @@ RUN <<-EOF
     tar -xzf "${DOWNLOAD_PATH}" -C /usr/local/bin forge
 EOF
 
-FROM --platform=$BUILDPLATFORM golang:1.24.10-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.13-bookworm AS builder
 
-ARG VERSION=v0.0.0
+ARG VERSION
+ARG GIT_COMMIT
+ARG GIT_DATE
 
 # Install dependencies (Debian-based, similar to CircleCI's cimg/base:2024.01)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -137,7 +139,15 @@ RUN just copy-contract-artifacts
 
 WORKDIR /app/op-node
 
-RUN make op-node VERSION="$VERSION"
+ARG TARGETOS TARGETARCH
+
+RUN GITCOMMIT="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || true)}" && \
+    GITDATE="${GIT_DATE:-$(git show -s --format='%ct' 2>/dev/null || true)}" && \
+    if [ -n "${VERSION:-}" ]; then \
+      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" VERSION="$VERSION" GOOS=$TARGETOS GOARCH=$TARGETARCH op-node; \
+    else \
+      just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" GOOS=$TARGETOS GOARCH=$TARGETARCH op-node; \
+    fi
 
 FROM alpine:3.21
 

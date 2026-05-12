@@ -1,6 +1,9 @@
 package dsl
 
 import (
+	"context"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
@@ -40,7 +43,12 @@ func (f *Faucet) Fund(addr common.Address, amount eth.ETH) {
 		return
 	}
 	err := retry.Do0(f.ctx, 3, retry.Exponential(), func() error {
-		err := f.inner.API().RequestETH(f.ctx, addr, amount)
+		// Use a per-attempt context so HTTP timeouts don't propagate to f.ctx and
+		// abort the retry loop. retry.Do0 treats f.ctx.DeadlineExceeded as
+		// non-retryable and stops immediately.
+		reqCtx, cancel := context.WithTimeout(f.ctx, 30*time.Second)
+		defer cancel()
+		err := f.inner.API().RequestETH(reqCtx, addr, amount)
 		if err != nil {
 			f.log.Warn("Failed to fund address", "addr", addr, "amount", amount, "err", err)
 		}

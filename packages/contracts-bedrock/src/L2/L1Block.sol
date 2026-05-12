@@ -6,112 +6,75 @@ import { Constants } from "src/libraries/Constants.sol";
 
 import { Semver } from "../universal/Semver.sol";
 
-// // Interfaces
-// import { ISemver } from "interfaces/universal/ISemver.sol";
-
-/**
- * @custom:proxied
- * @custom:predeploy 0x4200000000000000000000000000000000000015
- * @title L1Block
- * @notice The L1Block predeploy gives users access to information about the last known L1 block.
- *         Values within this contract are updated once per epoch (every L1 block) and can only be
- *         set by the "depositor" account, a special system address. Depositor account transactions
- *         are created by the protocol whenever we move to a new epoch.
- */
+/// @custom:proxied
+/// @custom:predeploy 0x4200000000000000000000000000000000000015
+/// @title L1Block
+/// @notice The L1Block predeploy gives users access to information about the last known L1 block.
+///         Values within this contract are updated once per epoch (every L1 block) and can only be
+///         set by the "depositor" account, a special system address. Depositor account transactions
+///         are created by the protocol whenever we move to a new epoch.
 contract L1Block is Semver {
     /// @notice Address of the special depositor account.
     function DEPOSITOR_ACCOUNT() public pure returns (address addr_) {
         addr_ = Constants.DEPOSITOR_ACCOUNT;
     }
-    /**
-     * @notice The latest L1 block number known by the L2 system.
-     */
+    /// @notice The latest L1 block number known by the L2 system.
 
     uint64 public number;
 
-    /**
-     * @notice The latest L1 timestamp known by the L2 system.
-     */
+    /// @notice The latest L1 timestamp known by the L2 system.
     uint64 public timestamp;
 
-    /**
-     * @notice The latest L1 basefee.
-     */
+    /// @notice The latest L1 basefee.
     uint256 public basefee;
 
-    /**
-     * @notice The latest L1 blockhash.
-     */
+    /// @notice The latest L1 blockhash.
     bytes32 public hash;
 
-    /**
-     * @notice The number of L2 blocks in the same epoch.
-     */
+    /// @notice The number of L2 blocks in the same epoch.
     uint64 public sequenceNumber;
 
-    /**
-     * @notice The scalar value applied to the L1 blob base fee portion of the blob-capable L1 cost func.
-     */
+    /// @notice The scalar value applied to the L1 blob base fee portion of the blob-capable L1 cost func.
     uint32 public blobBaseFeeScalar;
 
-    /**
-     * @notice The scalar value applied to the L1 base fee portion of the blob-capable L1 cost func.
-     */
+    /// @notice The scalar value applied to the L1 base fee portion of the blob-capable L1 cost func.
     uint32 public baseFeeScalar;
 
-    /**
-     * @notice The versioned hash to authenticate the batcher by.
-     */
+    /// @notice The versioned hash to authenticate the batcher by.
     bytes32 public batcherHash;
 
-    /**
-     * @notice The overhead value applied to the L1 portion of the transaction
-     *         fee.
-     */
+    /// @notice The overhead value applied to the L1 portion of the transaction
+    ///         fee.
     uint256 public l1FeeOverhead;
 
-    /**
-     * @notice The scalar value applied to the L1 portion of the transaction fee.
-     */
+    /// @notice The scalar value applied to the L1 portion of the transaction fee.
     uint256 public l1FeeScalar;
 
-    /**
-     * @notice The latest L1 blob base fee.
-     */
+    /// @notice The latest L1 blob base fee.
     uint256 public blobBaseFee;
 
-    /**
-     * @notice The constant value applied to the operator fee.
-     */
+    /// @notice The constant value applied to the operator fee.
     uint64 public operatorFeeConstant;
 
-    /**
-     * @notice The scalar value applied to the operator fee.
-     */
+    /// @notice The scalar value applied to the operator fee.
     uint32 public operatorFeeScalar;
 
-    /**
-     * @notice The DA footprint gas scalar.
-     */
+    /// @notice The DA footprint gas scalar.
     uint16 public daFootprintGasScalar;
 
-    /**
-     * @custom:semver 1.1.0
-     */
+    /// @custom:semver 1.1.0
     constructor() Semver(1, 1, 0) { }
 
-    /**
-     * @notice Updates the L1 block values.
-     *
-     * @param _number         L1 blocknumber.
-     * @param _timestamp      L1 timestamp.
-     * @param _basefee        L1 basefee.
-     * @param _hash           L1 blockhash.
-     * @param _sequenceNumber Number of L2 blocks since epoch start.
-     * @param _batcherHash    Versioned hash to authenticate batcher by.
-     * @param _l1FeeOverhead  L1 fee overhead.
-     * @param _l1FeeScalar    L1 fee scalar.
-     */
+    /// @notice Updates the L1 block values.
+    ///
+    /// @param _number         L1 blocknumber.
+    /// @param _timestamp      L1 timestamp.
+    /// @param _basefee        L1 basefee.
+    /// @param _hash           L1 blockhash.
+    /// @param _sequenceNumber Number of L2 blocks since epoch start.
+    /// @param _batcherHash    Versioned hash to authenticate batcher by.
+    /// @param _l1FeeOverhead  L1 fee overhead.
+    /// @param _l1FeeScalar    L1 fee scalar.
     function setL1BlockValues(
         uint64 _number,
         uint64 _timestamp,

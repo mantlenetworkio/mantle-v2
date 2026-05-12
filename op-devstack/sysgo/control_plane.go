@@ -35,6 +35,23 @@ func (c *ControlPlane) L2ELNodeState(id stack.L2ELNodeID, mode stack.ControlActi
 	control(s, mode)
 }
 
+// L2ELNodeWipe wipes the data directory of the given L2 EL node, resetting it to genesis.
+// Only op-reth nodes persist chain data to disk and can be wiped; for other node types
+// (e.g. op-geth which uses an in-memory DB) this is a no-op with a warning.
+func (c *ControlPlane) L2ELNodeWipe(id stack.L2ELNodeID) {
+	s, ok := c.o.l2ELs.Get(id)
+	c.o.P().Require().True(ok, "need l2el node to wipe")
+	reth, ok := s.(*OpReth)
+	if !ok {
+		c.o.P().Logger().Warn("L2ELNodeWipe called on non-reth node; no persistent data to wipe, skipping", "id", id)
+		return
+	}
+	reth.Wipe()
+}
+
+var _ stack.ControlPlane = (*ControlPlane)(nil)
+var _ stack.WipeableControlPlane = (*ControlPlane)(nil)
+
 func (c *ControlPlane) FakePoSState(id stack.L1CLNodeID, mode stack.ControlAction) {
 	s, ok := c.o.l1CLs.Get(id)
 	c.o.P().Require().True(ok, "need l1cl node to change state of fakePoS module")
@@ -53,5 +70,3 @@ func (c *ControlPlane) RollupBoostNodeState(id stack.RollupBoostNodeID, mode sta
 	c.o.P().Require().True(ok, "need rollup boost node to change state")
 	control(s, mode)
 }
-
-var _ stack.ControlPlane = (*ControlPlane)(nil)

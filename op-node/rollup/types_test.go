@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -222,6 +223,30 @@ func TestRandomConfigDescription(t *testing.T) {
 		require.Contains(t, out, fmt.Sprintf("Jovian: @ %d ~ ", j))
 		require.Contains(t, out, fmt.Sprintf("Interop: @ %d ~ ", it))
 	})
+	t.Run("mantle forks check, date", func(t *testing.T) {
+		config := randConfig()
+		bf := uint64(1677119344)
+		config.MantleBaseFeeTime = &bf
+		ev := uint64(1677119345)
+		config.MantleEverestTime = &ev
+		eu := uint64(1677119346)
+		config.MantleEuboeaTime = &eu
+		sk := uint64(1677119347)
+		config.MantleSkadiTime = &sk
+		li := uint64(1677119348)
+		config.MantleLimbTime = &li
+		ar := uint64(1677119349)
+		config.MantleArsiaTime = &ar
+
+		out := config.Description(nil)
+		// Don't check human-readable part of the date, it's timezone-dependent.
+		require.Contains(t, out, fmt.Sprintf("MantleBaseFee: @ %d ~ ", bf))
+		require.Contains(t, out, fmt.Sprintf("MantleEverest: @ %d ~ ", ev))
+		require.Contains(t, out, fmt.Sprintf("MantleEuboea: @ %d ~ ", eu))
+		require.Contains(t, out, fmt.Sprintf("MantleSkadi: @ %d ~ ", sk))
+		require.Contains(t, out, fmt.Sprintf("MantleLimb: @ %d ~ ", li))
+		require.Contains(t, out, fmt.Sprintf("MantleArsia: @ %d ~ ", ar))
+	})
 }
 
 // TestConfig_ActivationTime tests that all getters and setters for all scheduleable forks are
@@ -375,6 +400,7 @@ func TestActivations(t *testing.T) {
 type mockL2Client struct {
 	chainID *big.Int
 	Hash    common.Hash
+	err     error
 }
 
 func (m *mockL2Client) ChainID(context.Context) (*big.Int, error) {
@@ -382,6 +408,9 @@ func (m *mockL2Client) ChainID(context.Context) (*big.Int, error) {
 }
 
 func (m *mockL2Client) L2BlockRefByNumber(ctx context.Context, number uint64) (eth.L2BlockRef, error) {
+	if m.err != nil {
+		return eth.L2BlockRef{}, m.err
+	}
 	return eth.L2BlockRef{
 		Hash:   m.Hash,
 		Number: 100,
@@ -394,7 +423,8 @@ func TestValidateL2Config(t *testing.T) {
 	config.Genesis.L2.Number = 100
 	config.Genesis.L2.Hash = [32]byte{0x01}
 	mockClient := mockL2Client{chainID: big.NewInt(100), Hash: common.Hash{0x01}}
-	err := config.ValidateL2Config(context.TODO(), &mockClient, false)
+	logger := testlog.Logger(t, log.LvlInfo)
+	err := config.ValidateL2Config(context.TODO(), logger, &mockClient, false)
 	assert.NoError(t, err)
 }
 
@@ -404,10 +434,11 @@ func TestValidateL2ConfigInvalidChainIdFails(t *testing.T) {
 	config.Genesis.L2.Number = 100
 	config.Genesis.L2.Hash = [32]byte{0x01}
 	mockClient := mockL2Client{chainID: big.NewInt(100), Hash: common.Hash{0x01}}
-	err := config.ValidateL2Config(context.TODO(), &mockClient, false)
+	logger := testlog.Logger(t, log.LvlInfo)
+	err := config.ValidateL2Config(context.TODO(), logger, &mockClient, false)
 	assert.Error(t, err)
 	config.L2ChainID = big.NewInt(99)
-	err = config.ValidateL2Config(context.TODO(), &mockClient, false)
+	err = config.ValidateL2Config(context.TODO(), logger, &mockClient, false)
 	assert.Error(t, err)
 }
 
@@ -417,10 +448,11 @@ func TestValidateL2ConfigInvalidGenesisHashFails(t *testing.T) {
 	config.Genesis.L2.Number = 100
 	config.Genesis.L2.Hash = [32]byte{0x00}
 	mockClient := mockL2Client{chainID: big.NewInt(100), Hash: common.Hash{0x01}}
-	err := config.ValidateL2Config(context.TODO(), &mockClient, false)
+	logger := testlog.Logger(t, log.LvlInfo)
+	err := config.ValidateL2Config(context.TODO(), logger, &mockClient, false)
 	assert.Error(t, err)
 	config.Genesis.L2.Hash = [32]byte{0x02}
-	err = config.ValidateL2Config(context.TODO(), &mockClient, false)
+	err = config.ValidateL2Config(context.TODO(), logger, &mockClient, false)
 	assert.Error(t, err)
 }
 
@@ -430,10 +462,11 @@ func TestValidateL2ConfigInvalidGenesisHashSkippedWhenRequested(t *testing.T) {
 	config.Genesis.L2.Number = 100
 	config.Genesis.L2.Hash = [32]byte{0x00}
 	mockClient := mockL2Client{chainID: big.NewInt(100), Hash: common.Hash{0x01}}
-	err := config.ValidateL2Config(context.TODO(), &mockClient, true)
+	logger := testlog.Logger(t, log.LvlInfo)
+	err := config.ValidateL2Config(context.TODO(), logger, &mockClient, true)
 	assert.NoError(t, err)
 	config.Genesis.L2.Hash = [32]byte{0x02}
-	err = config.ValidateL2Config(context.TODO(), &mockClient, true)
+	err = config.ValidateL2Config(context.TODO(), logger, &mockClient, true)
 	assert.NoError(t, err)
 }
 
@@ -449,18 +482,66 @@ func TestCheckL2ChainID(t *testing.T) {
 }
 
 func TestCheckL2BlockRefByNumber(t *testing.T) {
+	logger := testlog.Logger(t, log.LvlInfo)
 	config := randConfig()
 	config.Genesis.L2.Number = 100
 	config.Genesis.L2.Hash = [32]byte{0x01}
 	mockClient := mockL2Client{chainID: big.NewInt(100), Hash: common.Hash{0x01}}
-	err := config.CheckL2GenesisBlockHash(context.TODO(), &mockClient)
+	err := config.CheckL2GenesisBlockHash(context.TODO(), logger, &mockClient)
 	assert.NoError(t, err)
 	mockClient.Hash = common.Hash{0x02}
-	err = config.CheckL2GenesisBlockHash(context.TODO(), &mockClient)
+	err = config.CheckL2GenesisBlockHash(context.TODO(), logger, &mockClient)
 	assert.Error(t, err)
 	mockClient.Hash = common.Hash{0x00}
-	err = config.CheckL2GenesisBlockHash(context.TODO(), &mockClient)
+	err = config.CheckL2GenesisBlockHash(context.TODO(), logger, &mockClient)
 	assert.Error(t, err)
+
+	// Test NotFound tolerance: when L2 genesis block is not available
+	// (e.g. snapshot-imported EL), the check should be skipped gracefully.
+	mockClient.err = errors.New("block not found")
+	err = config.CheckL2GenesisBlockHash(context.Background(), logger, &mockClient)
+	assert.NoError(t, err)
+}
+
+func TestCheckL2GenesisBlockHashNotFound(t *testing.T) {
+	logger := testlog.Logger(t, log.LvlInfo)
+	config := randConfig()
+	config.Genesis.L2.Number = 100
+	config.Genesis.L2.Hash = [32]byte{0x01}
+
+	tests := []struct {
+		name      string
+		err       error
+		expectErr bool
+	}{
+		{
+			name:      "not found error is tolerated",
+			err:       fmt.Errorf("failed to determine L2BlockRef of height 100, could not get payload: %w", ethereum.NotFound),
+			expectErr: false,
+		},
+		{
+			name:      "block not found string is tolerated",
+			err:       errors.New("block not found"),
+			expectErr: false,
+		},
+		{
+			name:      "other errors are not tolerated",
+			err:       errors.New("connection refused"),
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &mockL2Client{chainID: big.NewInt(100), err: tt.err}
+			err := config.CheckL2GenesisBlockHash(context.Background(), logger, mockClient)
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestConfig_Check(t *testing.T) {

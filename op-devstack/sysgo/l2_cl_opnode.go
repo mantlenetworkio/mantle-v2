@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-node/p2p"
 	p2pcli "github.com/ethereum-optimism/optimism/op-node/p2p/cli"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/driver"
+	enginekind "github.com/ethereum-optimism/optimism/op-node/rollup/engine"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/interop"
 	nodeSync "github.com/ethereum-optimism/optimism/op-node/rollup/sync"
 	"github.com/ethereum-optimism/optimism/op-service/client"
@@ -56,6 +58,21 @@ type OpNode struct {
 }
 
 var _ L2CLNode = (*OpNode)(nil)
+
+// devstackL2ELKindEnv is the environment variable that selects the L2 EL client kind
+// (e.g. "op-reth"). This constant is used by devstackL2ELKind() and must match the
+// variable consumed by WithL2ELNode when selecting the EL implementation.
+const devstackL2ELKindEnv = "DEVSTACK_L2EL_KIND"
+
+// devstackL2ELKind maps the DEVSTACK_L2EL_KIND environment variable (same one used by
+// WithL2ELNode) to the engine.Kind type, defaulting to Geth when unset or unrecognized.
+// This keeps the op-node sync config consistent with the actual EL being used.
+func devstackL2ELKind() enginekind.Kind {
+	if os.Getenv(devstackL2ELKindEnv) == "op-reth" {
+		return enginekind.Reth
+	}
+	return enginekind.Geth
+}
 
 func (n *OpNode) hydrate(system stack.ExtensibleSystem) {
 	require := system.T().Require()
@@ -313,7 +330,7 @@ func WithOpNode(l2CLID stack.L2CLNodeID, l1CLID stack.L1CLNodeID, l1ELID stack.L
 				SyncMode:                       syncMode,
 				SyncModeReqResp:                cfg.UseReqRespSync,
 				SkipSyncStartCheck:             false,
-				SupportsPostFinalizationELSync: false,
+				SupportsPostFinalizationELSync: devstackL2ELKind().SupportsPostFinalizationELSync(),
 				UnsafeOnly:                     unsafeOnly,
 				L2FollowSourceEndpoint:         "",
 				NeedInitialResetEngine:         cfg.IsSequencer && unsafeOnly,

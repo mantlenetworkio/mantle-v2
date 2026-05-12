@@ -493,9 +493,16 @@ func initL1BeaconAPI(ctx context.Context, cfg *config.Config, node *OpNode) (*so
 	if cfg.Rollup.EcotoneTime == nil && cfg.Rollup.MantleEverestTime == nil {
 		return nil, nil
 	}
-	// Once the Ecotone upgrade is scheduled, we must have initialized the Beacon API settings.
+	// Once the Ecotone/MantleEverest upgrade is scheduled, we must have initialized the Beacon API settings.
 	if cfg.Beacon == nil {
-		return nil, fmt.Errorf("missing L1 Beacon Endpoint configuration: this API is mandatory for Ecotone upgrade at t=%d", *cfg.Rollup.EcotoneTime)
+		var forkDesc string
+		switch {
+		case cfg.Rollup.EcotoneTime != nil:
+			forkDesc = fmt.Sprintf("Ecotone upgrade at t=%d", *cfg.Rollup.EcotoneTime)
+		case cfg.Rollup.MantleEverestTime != nil:
+			forkDesc = fmt.Sprintf("MantleEverest upgrade at t=%d", *cfg.Rollup.MantleEverestTime)
+		}
+		return nil, fmt.Errorf("missing L1 Beacon Endpoint configuration: this API is mandatory for %s", forkDesc)
 	}
 
 	// We always initialize a client. We will get an error on requests if the client does not work.
@@ -563,7 +570,7 @@ func initL2(ctx context.Context, cfg *config.Config, node *OpNode) (*sources.Eng
 		return nil, nil, nil, nil, fmt.Errorf("failed to create Engine client: %w", err)
 	}
 
-	if err := cfg.Rollup.ValidateL2Config(ctx, l2Source, cfg.Sync.SyncMode == sync.ELSync); err != nil {
+	if err := cfg.Rollup.ValidateL2Config(ctx, node.log, l2Source, cfg.Sync.SyncMode == sync.ELSync); err != nil {
 		return nil, nil, nil, nil, err
 	}
 

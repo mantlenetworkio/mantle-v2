@@ -2,6 +2,7 @@ package attributes
 
 import (
 	"math/rand" // nosemgrep
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
@@ -106,31 +107,36 @@ func jovianArgsInconsistentMinBaseFee() matchArgs {
 	return args
 }
 
+// Arsia activates jovian, holocene, ecotone, and canyon at the same time
 func holoceneArgs() matchArgs {
 	args := jovianArgs()
-	args.envelope.ExecutionPayload.ExtraData = eth.BytesMax32(eip1559.EncodeHoloceneExtraData(
-		*defaultOpConfig.EIP1559DenominatorCanyon, defaultOpConfig.EIP1559Elasticity))
-	args.attrs.EIP1559Params = new(eth.Bytes8)
-	args.attrs.MinBaseFee = nil
 	return args
 }
 
 func ecotoneArgs() matchArgs {
 	args := holoceneArgs()
-	args.attrs.EIP1559Params = nil
-	args.envelope.ExecutionPayload.ExtraData = nil
 	return args
 }
 
 func canyonArgs() matchArgs {
 	args := ecotoneArgs()
-	args.attrs.ParentBeaconBlockRoot = nil
-	args.envelope.ParentBeaconBlockRoot = nil
 	return args
 }
 
 func bedrockArgs() matchArgs {
 	args := canyonArgs()
+	// jovian >> holocene
+	args.envelope.ExecutionPayload.ExtraData = eth.BytesMax32(eip1559.EncodeHoloceneExtraData(
+		*defaultOpConfig.EIP1559DenominatorCanyon, defaultOpConfig.EIP1559Elasticity))
+	args.attrs.EIP1559Params = new(eth.Bytes8)
+	args.attrs.MinBaseFee = nil
+	// holocene >> ecotone
+	args.attrs.EIP1559Params = nil
+	args.envelope.ExecutionPayload.ExtraData = nil
+	// ecotone >> canyon
+	args.attrs.ParentBeaconBlockRoot = nil
+	args.envelope.ParentBeaconBlockRoot = nil
+	// canyon >> bedrock
 	args.attrs.Withdrawals = nil
 	args.envelope.ExecutionPayload.Withdrawals = nil
 	return args
@@ -222,6 +228,11 @@ func TestAttributesMatch(t *testing.T) {
 	cfg := func(fork rollup.ForkName) *rollup.Config {
 		cfg := &rollup.Config{ChainOpConfig: defaultOpConfig}
 		cfg.ActivateAtGenesis(fork)
+		if fork >= forks.Canyon {
+			cfg.MantleActivateAtGenesis(forks.MantleArsia)
+		} else {
+			cfg.MantleActivateAtGenesis(forks.MantleBaseFee)
+		}
 		return cfg
 	}
 
@@ -603,14 +614,26 @@ func TestCheckEIP1559ParamsMatch(t *testing.T) {
 	} {
 		t.Run(test.desc, func(t *testing.T) {
 			pastTime := uint64(0)
-			futureTime := uint64(3)
 			cfg := &rollup.Config{
 				CanyonTime:    &pastTime,
 				HoloceneTime:  &pastTime,
 				IsthmusTime:   &pastTime,
-				JovianTime:    &futureTime,
+				JovianTime:    &pastTime,
 				ChainOpConfig: defaultOpConfig}
-			err := checkExtraDataParamsMatch(cfg, uint64(2), test.attrParams, nil, test.blockExtraData)
+			cfg.MantleActivateAtGenesis(forks.MantleArsia)
+			var blockExtraData []byte
+			var minBaseFee *uint64
+			if len(test.blockExtraData) == 9 {
+				blockExtraData = append(test.blockExtraData, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
+				if blockExtraData[0] == 0 {
+					blockExtraData[0] = 1
+				}
+				minBaseFee = ptr(uint64(0))
+			}
+			if test.err != "" && strings.Contains(test.err, "holocene extraData version byte should be 0") {
+				test.err = strings.Replace(test.err, "holocene extraData version byte should be 0", "MinBaseFee extraData version byte should be 1", 1)
+			}
+			err := checkExtraDataParamsMatch(cfg, uint64(2), test.attrParams, minBaseFee, blockExtraData)
 			if test.err == "" {
 				require.NoError(t, err)
 			} else {

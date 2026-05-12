@@ -1,6 +1,8 @@
 package dsl
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -216,6 +218,66 @@ func (of *OperatorFee) ValidateTransactionFees(from *EOA, to *EOA, amount *big.I
 
 func (of *OperatorFee) RestoreOriginalConfig() {
 	of.SetOperatorFee(of.originalScalar, of.originalConstant)
+}
+
+// RestoreOriginalConfigWithCtx restores operator fee to the values captured at
+// construction, using the caller-provided ctx instead of of.ctx. Use this from
+// t.Cleanup with an independent context: of.ctx is the parent test context and
+// may be near-exhausted after long-running sub-tests, leaving insufficient time
+// for the L1 write + L2 sync poll.
+//
+// Returns an error (instead of require.NoError) so t.Cleanup can report via
+// t.Errorf without panicking outside the test goroutine.
+func (of *OperatorFee) RestoreOriginalConfigWithCtx(ctx context.Context) error {
+	systemOwner := of.GetSystemOwner()
+
+	_, err := contractio.Write(
+		of.systemConfig.SetOperatorFeeScalars(of.originalScalar, of.originalConstant),
+		ctx,
+		systemOwner.Plan(),
+		txplan.WithRetryInclusion(of.l1Client.Escape().EthClient(), 12, retry.Exponential()),
+	)
+	if err != nil {
+		return fmt.Errorf("RestoreOriginalConfig: set scalars on L1: %w", err)
+	}
+	of.t.Logf("Restored operator fee to original: scalar=%d, constant=%d",
+		of.originalScalar, of.originalConstant)
+
+	// Poll until L2 reflects the restored values, using ctx as the sole deadline.
+	// time.After sits inside select{} so cancel doesn't stall for 5s.
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("RestoreOriginalConfig: context expired waiting for L2 sync: %w", ctx.Err())
+		default:
+		}
+		scalar, err := contractio.Read(of.l1Block.OperatorFeeScalar(), ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("RestoreOriginalConfig: context expired during poll: %w", ctx.Err())
+			case <-time.After(5 * time.Second):
+			}
+			continue
+		}
+		constant, err := contractio.Read(of.l1Block.OperatorFeeConstant(), ctx)
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("RestoreOriginalConfig: context expired during poll: %w", ctx.Err())
+			case <-time.After(5 * time.Second):
+			}
+			continue
+		}
+		if scalar == of.originalScalar && constant == of.originalConstant {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("RestoreOriginalConfig: context expired waiting for sync: %w", ctx.Err())
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
 
 func RunOperatorFeeTest(t devtest.T, l2Chain *L2Network, l1EL *L1ELNode, funderL1, funderL2 *Funder) {

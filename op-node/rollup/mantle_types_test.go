@@ -3,7 +3,6 @@ package rollup
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,11 +10,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-core/forks"
 	"github.com/ethereum/go-ethereum/params"
 )
-
-// u64Ptr is a helper function to create a pointer to uint64
-func u64Ptr(v uint64) *uint64 {
-	return &v
-}
 
 // TestMantleActivations tests the activation condition of the various Mantle upgrades.
 func TestMantleActivations(t *testing.T) {
@@ -175,14 +169,9 @@ func TestConfig_MantleActivationTime(t *testing.T) {
 			require.NotNil(t, gts)
 			require.Equal(t, ts, *gts, "activation time for fork %s", fork)
 
-			// Reflectively call IsMantle<ForkName>
-			name := string(fork)
-			// Convert "mantle_base_fee" to "IsMantleBaseFee"
-			parts := strings.Split(name, "_")
-			methodName := "IsMantle"
-			for _, part := range parts[1:] { // Skip "mantle" prefix
-				methodName += strings.ToUpper(part[:1]) + part[1:]
-			}
+			// Reflectively call Is<MantleForkName> (e.g. MantleBaseFee -> IsMantleBaseFee).
+			// Fork constants use PascalCase in op-core/forks (not snake_case mantle_base_fee).
+			methodName := "Is" + string(fork)
 			m := reflect.ValueOf(&cfg).MethodByName(methodName)
 			require.True(t, m.IsValid(), "method %s not found", methodName)
 			out := m.Call([]reflect.Value{reflect.ValueOf(ts)})
@@ -346,7 +335,7 @@ func TestCheckMantleForks(t *testing.T) {
 				everestTime := uint64(2)
 				cfg.MantleEverestTime = &everestTime
 			},
-			expectedErr: fmt.Errorf("mantle fork mantle_everest set (to 2), but prior fork mantle_base_fee missing"),
+			expectedErr: fmt.Errorf("mantle fork MantleEverest set (to 2), but prior fork MantleBaseFee missing"),
 		},
 		{
 			name: "PriorForkHasHigherOffset",
@@ -356,7 +345,7 @@ func TestCheckMantleForks(t *testing.T) {
 				cfg.MantleBaseFeeTime = &baseFeeTime
 				cfg.MantleEverestTime = &everestTime
 			},
-			expectedErr: fmt.Errorf("mantle fork mantle_everest set to 1, but prior fork mantle_base_fee has higher offset 2"),
+			expectedErr: fmt.Errorf("mantle fork MantleEverest set to 1, but prior fork MantleBaseFee has higher offset 2"),
 		},
 		{
 			name: "LaterForkMissing",

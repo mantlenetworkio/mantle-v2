@@ -1,5 +1,8 @@
 # Getting Started
 
+> **Warning**
+> Kurtosis Devnet is **not supported** at this time. The instructions below are retained for reference only. Do not rely on this tooling for active development or testing until further notice.
+
 Welcome to the Kurtosis Devnet! This tool helps you quickly spin up local development networks for testing and development purposes. Whether you're working on simple test networks or complex interoperability scenarios, this devnet environment has you covered.
 
 Running a Kurtosis Devnet has the following prerequisites:

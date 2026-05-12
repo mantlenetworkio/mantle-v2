@@ -2,6 +2,7 @@
 # node_modules, packages (contains git submodules and node modules etc.), devnet dirs etc. all add up a lot.
 *
 
+!/.git
 !/cannon
 !/devnet-sdk
 !/op-core

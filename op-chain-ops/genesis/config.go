@@ -217,6 +217,8 @@ func (d *L2VaultsDeployConfig) Check(log log.Logger) error {
 	if d.OperatorFeeVaultRecipient == (common.Address{}) {
 		return fmt.Errorf("%w: OperatorFeeVaultRecipient cannot be address(0)", ErrInvalidDeployConfig)
 	}
+	// At present, all fee vaults on Mantle have the same withdrawal network: L1.
+	// We temporarily comment out this check and keep it for future reference.
 	// if !d.BaseFeeVaultWithdrawalNetwork.Valid() {
 	// 	return fmt.Errorf("%w: BaseFeeVaultWithdrawalNetwork can only be 0 (L1) or 1 (L2)", ErrInvalidDeployConfig)
 	// }
@@ -940,16 +942,16 @@ func (d *SuperchainL1DeployConfig) Check(log log.Logger) error {
 	// Superchain is not supported on Mantle
 	return nil
 
-	if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
-		log.Warn("RequiredProtocolVersion is empty")
-	}
-	if d.RecommendedProtocolVersion == (params.ProtocolVersion{}) {
-		log.Warn("RecommendedProtocolVersion is empty")
-	}
-	if d.SuperchainConfigGuardian == (common.Address{}) {
-		return fmt.Errorf("%w: SuperchainConfigGuardian cannot be address(0)", ErrInvalidDeployConfig)
-	}
-	return nil
+	// if d.RequiredProtocolVersion == (params.ProtocolVersion{}) {
+	// 	log.Warn("RequiredProtocolVersion is empty")
+	// }
+	// if d.RecommendedProtocolVersion == (params.ProtocolVersion{}) {
+	// 	log.Warn("RecommendedProtocolVersion is empty")
+	// }
+	// if d.SuperchainConfigGuardian == (common.Address{}) {
+	// 	return fmt.Errorf("%w: SuperchainConfigGuardian cannot be address(0)", ErrInvalidDeployConfig)
+	// }
+	// return nil
 }
 
 // OutputOracleDeployConfig configures the legacy OutputOracle deployment to L1.

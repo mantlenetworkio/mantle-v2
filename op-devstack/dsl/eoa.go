@@ -74,7 +74,7 @@ func (u *EOA) Plan() txplan.Option {
 		txplan.WithAgainstLatestBlock(elClient),
 		txplan.WithEstimator(elClient, true),
 		txplan.WithRetrySubmission(elClient, 5, retry.Exponential()),
-		txplan.WithRetryInclusion(elClient, 5, retry.Exponential()),
+		txplan.WithRetryInclusion(elClient, 8, retry.Exponential()), // 15s -> 45s
 		txplan.WithBlockInclusionInfo(elClient),
 	)
 }

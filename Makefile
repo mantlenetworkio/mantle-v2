@@ -20,13 +20,28 @@ build-contracts:
 	(cd packages/contracts-bedrock && just build)
 .PHONY: build-contracts
 
+LINT_PKGS := \
+	./devnet-sdk/... \
+	./gas-oracle/... \
+	./op-acceptance-tests/... \
+	./op-batcher/... \
+	./op-chain-ops/... \
+	./op-core/... \
+	./op-deployer/... \
+	./op-devstack/... \
+	./op-e2e/... \
+	./op-node/... \
+	./op-proposer/... \
+	./op-service/... \
+	./op-sync-tester/...
+
 lint-go: ## Lints Go code with specific linters
-	golangci-lint run ./...
+	golangci-lint run $(LINT_PKGS)
 	go mod tidy -diff
 .PHONY: lint-go
 
 lint-go-fix: ## Lints Go code with specific linters and fixes reported issues
-	golangci-lint run ./... --fix
+	golangci-lint run $(LINT_PKGS) --fix
 .PHONY: lint-go-fix
 
 golang-docker: ## Builds Docker images for Go components using buildx
@@ -62,7 +77,7 @@ cross-op-node: ## Builds cross-platform Docker image for op-node
 	GIT_DATE=$$(git show -s --format='%ct') \
 	IMAGE_TAGS=$$(git rev-parse HEAD),latest \
 	PLATFORMS="linux/arm64" \
-	GIT_VERSION=$(shell tags=$$(git tag --points-at $(GITCOMMIT) | grep '^op-node/' | sed 's/op-node\///' | sort -V); \
+	GIT_VERSION=$(shell tags=$$(git tag --points-at $(GITCOMMIT) | grep '^v' | sort -V); \
              preferred_tag=$$(echo "$$tags" | grep -v -- '-rc' | tail -n 1); \
              if [ -z "$$preferred_tag" ]; then \
                  if [ -z "$$tags" ]; then \
@@ -257,6 +272,23 @@ RPC_TEST_PKGS := \
 # All test packages used by CI (combination of all package groups)
 ALL_TEST_PACKAGES := $(TEST_PKGS) $(RPC_TEST_PKGS) $(FRAUD_PROOF_TEST_PKGS)
 
+# Mantle test packages
+MANTLE_TEST_PKGS := \
+	./gas-oracle/... \
+	./op-batcher/... \
+	./op-chain-ops/... \
+	./op-node/... \
+	./op-proposer/... \
+	./op-service/... \
+	./op-e2e/system/mantleda/... \
+	./op-e2e/system/mantlep2p/... \
+	./op-e2e/mantleopgeth/... \
+	./op-e2e/actions/mantletests/... \
+	./op-e2e/actions/mantleupgrades/... \
+	./devnet-sdk/... \
+	./op-devstack/... \
+	./op-sync-tester/... \
+
 # Common test environment variables
 # For setting PARALLEL, nproc is for linux, sysctl for Mac and then fallback to 4 if neither is available
 define DEFAULT_TEST_ENV_VARS
@@ -288,6 +320,16 @@ go-tests-short: $(TEST_DEPS) ## Runs comprehensive Go tests with -short flag
 	$(DEFAULT_TEST_ENV_VARS) && \
 	go test -short -parallel=$$PARALLEL -timeout=$(TEST_TIMEOUT) $(TEST_PKGS)
 .PHONY: go-tests-short
+
+mantle-tests: $(TEST_DEPS)
+	$(DEFAULT_TEST_ENV_VARS) && \
+	go test -parallel=$$PARALLEL -timeout=$(TEST_TIMEOUT) $(MANTLE_TEST_PKGS)
+.PHONY: mantle-tests
+
+mantle-tests-ci: ## Runs Mantle Go tests for CI (assumes deps already built or not needed)
+	$(DEFAULT_TEST_ENV_VARS) && \
+	go test -parallel=$$PARALLEL -timeout=$(TEST_TIMEOUT) $(MANTLE_TEST_PKGS)
+.PHONY: mantle-tests-ci
 
 # Internal target for running Go tests with gotestsum for CI
 # Usage: make _go-tests-ci-internal GO_TEST_FLAGS="-short"

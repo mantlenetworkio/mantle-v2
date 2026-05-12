@@ -6,10 +6,16 @@ import { GasPriceOracle } from "src/L2/GasPriceOracle.sol";
 import { L1Block } from "src/L2/L1Block.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 
+/// @notice Legacy GasPriceOracle interface for functions removed in bedrock.
+interface ILegacyGasPriceOracle {
+    function setGasPrice(uint256 _gasPrice) external;
+    function setL1BaseFee(uint256 _baseFee) external;
+}
+
 contract GasPriceOracle_Test is CommonTest {
-    event OverheadUpdated(uint256);
-    event ScalarUpdated(uint256);
-    event DecimalsUpdated(uint256);
+    event OverheadUpdated(uint256 overhead);
+    event ScalarUpdated(uint256 scalar);
+    event DecimalsUpdated(uint256 decimals);
 
     GasPriceOracle gasOracle;
     L1Block l1Block;
@@ -91,7 +97,7 @@ contract GasPriceOracle_Test is CommonTest {
     // Removed in bedrock
     function test_setGasPrice_doesNotExist_reverts() external {
         (bool success, bytes memory returndata) =
-            address(gasOracle).call(abi.encodeWithSignature("setGasPrice(uint256)", 1));
+            address(gasOracle).call(abi.encodeCall(ILegacyGasPriceOracle.setGasPrice, (1)));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
@@ -100,7 +106,7 @@ contract GasPriceOracle_Test is CommonTest {
     // Removed in bedrock
     function test_setL1BaseFee_doesNotExist_reverts() external {
         (bool success, bytes memory returndata) =
-            address(gasOracle).call(abi.encodeWithSignature("setL1BaseFee(uint256)", 1));
+            address(gasOracle).call(abi.encodeCall(ILegacyGasPriceOracle.setL1BaseFee, (1)));
 
         assertEq(success, false);
         assertEq(returndata, hex"");
@@ -196,6 +202,7 @@ contract GasPriceOracle_Ownership_Test is CommonTest {
     }
 
     function testFuzz_setTokenRatio_succeeds(uint256 newRatio) external {
+        newRatio = bound(newRatio, 1, type(uint64).max);
         vm.prank(operator);
         gasOracle.setTokenRatio(newRatio);
         assertEq(gasOracle.tokenRatio(), newRatio);
@@ -240,7 +247,7 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
 
         vm.prank(depositor);
         (bool success,) = address(l1Block).call(abi.encodePacked(l1Block.setL1BlockValuesArsia.selector, data));
-        require(success, "L1Block setup failed");
+        require(success, "GasPriceOracle: L1Block setup failed");
 
         // Enable Arsia using depositor account
         vm.prank(depositor);
@@ -295,7 +302,8 @@ contract GasPriceOracle_Arsia_Test is CommonTest {
 
     function test_getL1FeeRegression_succeeds() external view {
         // fastlzSize: 235, inc signature
-        bytes memory data = hex"1d2c3ec4f5a9b3f3cd2c024e455c1143a74bbd637c324adcbd4f74e346786ac44e23e78f47d932abedd8d1"
+        bytes memory data =
+            hex"1d2c3ec4f5a9b3f3cd2c024e455c1143a74bbd637c324adcbd4f74e346786ac44e23e78f47d932abedd8d1"
             hex"06daadcea350be16478461046273101034601364012364701331dfad43729dc486abd134bcad61b34d6ca1"
             hex"f2eb31655b7d61ca33ba6d172cdf7d8b5b0ef389a314ca7a9a831c09fc2ca9090d059b4dd25194f3de297b"
             hex"dba6d6d796e4f80be94f8a9151d685607826e7ba25177b40cb127ea9f1438470";

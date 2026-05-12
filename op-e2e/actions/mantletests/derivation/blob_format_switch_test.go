@@ -3,6 +3,7 @@ package derivation
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
@@ -383,4 +384,243 @@ func TestBlobFormatSwitchBeforeArsia(gt *testing.T) {
 	t.Log("Key verifications:")
 	t.Log("  1. Safe head advanced (data parsed successfully)")
 	t.Log("  2. Format switch log captured")
+}
+
+// TestBlobFormatSwitchResetCycle tests that after the DataSourceFactory switches
+// to standard blob format, a pipeline reset (via L1 reorg) resets the toggle so
+// old Mantle-format blobs are accepted again, and a subsequent new-format blob
+// triggers the switch a second time.
+//
+// Flow:
+//  1. Submit new-format blob → format switch fires, blobSourceChanged = true
+//  2. L1 reorg → pipeline reset → DataSourceFactory.Reset() → blobSourceChanged = false
+//  3. Submit old-format (Mantle) blob → accepted via MantleBlobDataSource
+//  4. Submit new-format blob → format switch fires again
+func TestBlobFormatSwitchResetCycle(gt *testing.T) {
+	t := helpers.NewDefaultTesting(gt)
+
+	p := &e2eutils.TestParams{
+		MaxSequencerDrift:   40,
+		SequencerWindowSize: 120,
+		ChannelTimeout:      120,
+		L1BlockTime:         12,
+		AllocType:           config.DefaultAllocType,
+	}
+	dp := e2eutils.MakeMantleDeployParams(t, p)
+
+	arsiaTimeOffset := hexutil.Uint64(48)
+	upgradesHelpers.ApplyArsiaTimeOffset(dp, &arsiaTimeOffset)
+
+	sd := e2eutils.SetupMantleNormal(t, dp, helpers.DefaultAlloc)
+
+	verifLog := testlog.Logger(t, log.LevelDebug)
+	verifLogHandler := testlog.WrapCaptureLogger(verifLog.Handler())
+	verifLogger := log.NewLogger(verifLogHandler)
+
+	miner, seqEngine, sequencer := helpers.SetupSequencerTest(t, sd, testlog.Logger(t, log.LevelInfo))
+	miner.ActL1SetFeeRecipient(common.Address{'A'})
+
+	_, verifier := helpers.SetupVerifier(t, sd, verifLogger, miner.L1Client(t, sd.RollupCfg),
+		miner.BlobStore(), &sync.Config{})
+
+	rollupSeqCl := sequencer.RollupClient()
+	batcher := helpers.NewL2Batcher(testlog.Logger(t, log.LevelInfo), sd.RollupCfg, &helpers.BatcherCfg{
+		MinL1TxSize:              0,
+		MaxL1TxSize:              128_000,
+		BatcherKey:               dp.Secrets.Batcher,
+		DataAvailabilityType:     batcherFlags.BlobsType,
+		ForceSubmitSingularBatch: true,
+		EnableCellProofs:         true,
+	}, rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
+
+	sequencer.ActL2PipelineFull(t)
+	verifier.ActL2PipelineFull(t)
+
+	genesisTime := sd.L1Cfg.Timestamp
+	arsiaActivationTime := genesisTime + uint64(arsiaTimeOffset)
+
+	// ======================================================================
+	// PHASE 1: Build baseline — submit Mantle-format batch before Arsia
+	// ======================================================================
+	t.Log("=== PHASE 1: Baseline Mantle-format batch ===")
+
+	miner.ActEmptyBlock(t)
+	miner.ActL1SafeNext(t)
+	miner.ActL1FinalizeNext(t)
+
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	baselineL2 := seqEngine.L2Chain().CurrentBlock().Number.Uint64()
+	require.Greater(t, baselineL2, uint64(0))
+
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+	batchTX := batcher.LastSubmitted
+
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(batchTX.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+	safeAfterBaseline := verifier.L2Safe()
+	require.Equal(t, baselineL2, safeAfterBaseline.Number)
+	t.Logf("Baseline safe head: block %d", safeAfterBaseline.Number)
+
+	// ======================================================================
+	// PHASE 2: Advance past Arsia, submit new-format blob → trigger switch
+	// ======================================================================
+	t.Log("=== PHASE 2: New-format blob → trigger format switch ===")
+
+	targetL1Time := arsiaActivationTime + 120
+	for miner.L1Chain().CurrentBlock().Time < targetL1Time {
+		miner.ActEmptyBlock(t)
+	}
+
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	postArsiaL2 := seqEngine.L2Chain().CurrentBlock().Number.Uint64()
+	require.Greater(t, postArsiaL2, baselineL2)
+
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	frameData1 := batcher.ReadNextOutputFrame(t)
+
+	postArsiaTime := arsiaActivationTime + 10
+	batcher.ActL2BatchSubmitMantleRawAtTime(t, frameData1, postArsiaTime)
+	newFmtTX1 := batcher.LastSubmitted
+
+	miner.ActL1SetFeeRecipient(common.Address{'A', 2})
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(newFmtTX1.Hash())(t)
+	miner.ActL1EndBlock(t)
+	switchL1Block := miner.L1Chain().CurrentBlock()
+
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	safeAfterSwitch := verifier.L2Safe()
+	require.Greater(t, safeAfterSwitch.Number, safeAfterBaseline.Number,
+		"safe head should advance after format switch")
+	t.Logf("Safe head after first format switch: block %d", safeAfterSwitch.Number)
+
+	capturingHandler, ok := verifLogHandler.(*testlog.CapturingHandler)
+	require.True(t, ok)
+
+	switchLog1 := capturingHandler.FindLog(
+		testlog.NewMessageContainsFilter("Mantle format decode failed, falling back to standard blob format"),
+	)
+	require.NotNil(t, switchLog1, "first format switch log should be present")
+	t.Log("First format switch logged")
+
+	// ======================================================================
+	// PHASE 3: L1 reorg → pipeline reset → blobSourceChanged back to false
+	// ======================================================================
+	t.Log("=== PHASE 3: L1 reorg to reset pipeline ===")
+
+	miner.ActL1RewindToParent(t)
+
+	miner.ActL1SetFeeRecipient(common.Address{'B', 1})
+	miner.ActEmptyBlock(t)
+	miner.ActL1SetFeeRecipient(common.Address{'B', 2})
+	miner.ActEmptyBlock(t)
+
+	reorgBlock := miner.L1Chain().CurrentBlock()
+	require.NotEqual(t, switchL1Block.Hash(), reorgBlock.Hash(), "L1 should have reorged")
+
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	safeAfterReorg := verifier.L2Safe()
+	require.Less(t, safeAfterReorg.Number, safeAfterSwitch.Number,
+		"safe head should rewind after L1 reorg")
+	t.Logf("Safe head rewound to block %d after reorg", safeAfterReorg.Number)
+
+	// Clear logs so we can detect the second switch distinctly
+	capturingHandler.Clear()
+
+	// ======================================================================
+	// PHASE 4: Submit old-format (Mantle) blob — should be accepted again
+	// ======================================================================
+	t.Log("=== PHASE 4: Old-format (Mantle) blob after reset ===")
+
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActL2PipelineFull(t)
+	batcher.Reset()
+
+	sequencer.ActBuildToL1Head(t)
+
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	batcher.ActL2BatchSubmitMantle(t)
+	oldFmtTX := batcher.LastSubmitted
+
+	miner.ActL1SetFeeRecipient(common.Address{'B', 3})
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(oldFmtTX.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	safeAfterOldFmt := verifier.L2Safe()
+	require.Greater(t, safeAfterOldFmt.Number, safeAfterReorg.Number,
+		"safe head should advance with old-format blob after reset")
+	t.Logf("Safe head after old-format blob: block %d", safeAfterOldFmt.Number)
+
+	noSwitchLog := capturingHandler.FindLog(
+		testlog.NewMessageContainsFilter("Mantle format decode failed, falling back to standard blob format"),
+	)
+	require.Nil(t, noSwitchLog,
+		"no format switch log expected — Mantle format should decode successfully")
+	t.Log("Old-format blob accepted without fallback (factory was reset)")
+
+	// ======================================================================
+	// PHASE 5: Submit new-format blob again → second format switch
+	// ======================================================================
+	t.Log("=== PHASE 5: Second new-format blob → second format switch ===")
+
+	miner.ActEmptyBlock(t)
+	sequencer.ActL1HeadSignal(t)
+	sequencer.ActBuildToL1Head(t)
+
+	batcher.ActBufferAll(t)
+	batcher.ActL2ChannelClose(t)
+	frameData2 := batcher.ReadNextOutputFrame(t)
+
+	batcher.ActL2BatchSubmitMantleRawAtTime(t, frameData2, postArsiaTime)
+	newFmtTX2 := batcher.LastSubmitted
+
+	miner.ActL1SetFeeRecipient(common.Address{'B', 4})
+	miner.ActL1StartBlock(12)(t)
+	miner.ActL1IncludeTxByHash(newFmtTX2.Hash())(t)
+	miner.ActL1EndBlock(t)
+
+	verifier.ActL1HeadSignal(t)
+	verifier.ActL2PipelineFull(t)
+
+	safeAfterSecondSwitch := verifier.L2Safe()
+	require.Greater(t, safeAfterSecondSwitch.Number, safeAfterOldFmt.Number,
+		"safe head should advance after second format switch")
+	t.Logf("Safe head after second format switch: block %d", safeAfterSecondSwitch.Number)
+
+	switchLog2 := capturingHandler.FindLog(
+		testlog.NewMessageContainsFilter("Mantle format decode failed, falling back to standard blob format"),
+	)
+	require.NotNil(t, switchLog2, "second format switch log should be present")
+	t.Log("Second format switch logged")
+
+	// ======================================================================
+	// Summary
+	// ======================================================================
+	t.Log("=== SUMMARY ===")
+	t.Logf("  Baseline safe head:                %d", safeAfterBaseline.Number)
+	t.Logf("  After 1st new-format blob:         %d (switch fired)", safeAfterSwitch.Number)
+	t.Logf("  After L1 reorg (reset):            %d (rewound)", safeAfterReorg.Number)
+	t.Logf("  After old-format blob (re-accepted): %d (no switch)", safeAfterOldFmt.Number)
+	t.Logf("  After 2nd new-format blob:         %d (switch fired again)", safeAfterSecondSwitch.Number)
+	t.Log("Test PASSED: DataSourceFactory reset cycle verified")
 }

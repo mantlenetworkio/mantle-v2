@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
-	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 )
@@ -49,9 +49,7 @@ func runProposerTest(gt *testing.T, isSpanBatch bool, allocType config.AllocType
 			rollupSeqCl, miner.EthClient(), seqEngine.EthClient(), seqEngine.EngineClient(t, sd.RollupCfg))
 	}
 
-	var proposer *actionsHelpers.MantleL2Proposer
-
-	proposer = actionsHelpers.NewMantleL2Proposer(t, log, &actionsHelpers.MantleProposerCfg{
+	var proposer *actionsHelpers.MantleL2Proposer = actionsHelpers.NewMantleL2Proposer(t, log, &actionsHelpers.MantleProposerCfg{
 		OutputOracleAddr:      &sd.DeploymentsL1.L2OutputOracleProxy,
 		ProposerKey:           dp.Secrets.Proposer,
 		ProposalRetryInterval: 3 * time.Second,

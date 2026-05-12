@@ -1,8 +1,9 @@
 package conductor
 
 import (
-	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 	"testing"
+
+	"github.com/ethereum-optimism/optimism/op-devstack/compat"
 
 	"github.com/ethereum-optimism/optimism/op-devstack/presets"
 )

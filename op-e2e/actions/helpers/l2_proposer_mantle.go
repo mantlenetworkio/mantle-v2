@@ -18,7 +18,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-e2e/bindings"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
-	mantlebindings "github.com/ethereum-optimism/optimism/op-e2e/mantlebindings/bindings"
+	"github.com/ethereum-optimism/optimism/op-e2e/mantlebindings"
 	"github.com/ethereum-optimism/optimism/op-proposer/metrics"
 	"github.com/ethereum-optimism/optimism/op-proposer/proposer"
 	"github.com/ethereum-optimism/optimism/op-proposer/proposer/source"
@@ -149,9 +149,7 @@ func (p *MantleL2Proposer) sendMantleTx(t Testing, data []byte) {
 	nonce, err := p.l1.NonceAt(t.Ctx(), p.address, nil)
 	require.NoError(t, err)
 
-	var addr common.Address
-
-	addr = *p.l2OutputOracleAddr
+	var addr common.Address = *p.l2OutputOracleAddr
 
 	gasLimit, err := estimateGasPending(t.Ctx(), p.l1, ethereum.CallMsg{
 		From:      p.address,
