@@ -16,6 +16,17 @@ when synchronizing future upstream changes via `git subtree pull`.
 | `git subtree add` commit | `ba2cc4514` ("Add 'rust/' from commit '1ad181f05...'") |
 | Rust toolchain | 1.94 (see `rust/rust-toolchain.toml`) |
 
+### Migration status
+
+| Phase | Scope | Status |
+|---|---|---|
+| Pre-Phase | Bridge repo + subtree add + backup tags | ✅ |
+| Phase 0 | wire mantle-elysium revm + op-alloy/alloy-op-evm adaptations | ✅ |
+| Phase 1 (a–g) | kona Mantle protocol migration | ✅ |
+| Phase 1.5 (B1–B3) | drop Mantle vendored-but-unused code (≈1066 lines removed) | ✅ |
+| Phase 2 | op-succinct upgrade (independent fork) | ⏸️ |
+| Phase 3 | kona security patch follow-up | ⏸️ |
+
 ## 2. Architecture decisions
 
 ### 2.1 revm sourced from mantle-xyz/revm @ mantle-elysium
@@ -33,13 +44,25 @@ revm-precompile, revm-primitives, revm-state, op-revm
 BVM_ETH, token_ratio, DA footprint, Arsia fee validation). This avoids re-implementing
 those changes inside `rust/op-revm/`; that subtree is excluded from the workspace.
 
+`reth-revm` is a reth-internal wrapper (from `paradigmxyz/reth`); not a member of the
+bluealloy revm family. Its internal `revm` dependency is still patched to mantle-elysium
+via `[patch.crates-io]`, so the actual EVM execution path is 100% on mantle-elysium.
+
 ### 2.2 Version skew with mantle-elysium
 
 | Dimension | What develop expects | What mantle-elysium provides | Reconciliation |
 |---|---|---|---|
 | revm major version | v38 | v38 ✅ | — |
 | op-revm major version | v20 | v19 ⚠️ | Adapt Mantle consumers to v19 API |
-| `OpSpecId` variants | Includes `KARST` | No `KARST`; includes `OSAKA` + `ARSIA` | Replace KARST references with OSAKA fallbacks or comment them out |
+| `OpSpecId` variants | Includes `KARST` | No `KARST`; includes `OSAKA` + `ARSIA` | Replace KARST references with OSAKA/JOVIAN/ARSIA fallbacks or comment them out |
+
+### 2.3 Mantle data sources use the upstream `EthereumDataSource`
+
+Post Mantle Arsia, all blob submission uses the standard blob format. The Mantle fork
+shipped `MantleBlobSource` and `MantleEthereumDataSource` files but **never wired them
+into any pipeline** — every real call site (providers-alloy, bin/host, bin/client)
+constructs the upstream `EthereumDataSource` with the standard `BlobSource`. Phase 1.5
+removed these two orphan modules; see §3.11.
 
 ## 3. Mantle changes registry
 
@@ -73,15 +96,55 @@ Corresponds to mantle-xyz/op-alloy commits `5f0b879`, `5330f5a`, `79d78a4`, `da4
 | `op-alloy/crates/consensus/src/nuts/mod.rs` | NutBundle upgrade-tx literal fills 0/None. |
 | `op-alloy/crates/rpc-types/src/transaction/request.rs` | OpTransactionRequest destructure adds `_` ignores for the new fields. |
 
-### 3.3 kona — adapts to TxDeposit's BVM_ETH fields
+### 3.3 kona-hardforks — Arsia + MantleHardforks
+
+Vendored from mantle-xyz/kona in Phase 1a; registered in Phase 1b.
 
 | File | Change |
 |---|---|
-| `kona/crates/protocol/protocol/src/info/variant.rs` | L1Info deposit literal fills 0/None. |
-| `kona/crates/protocol/hardforks/src/{ecotone,fjord,interop,isthmus,jovian}.rs` | 31 OP hardfork upgrade-tx literals filled 0/None via the script in §6. |
+| `kona/crates/protocol/hardforks/src/arsia.rs` | New file. `Arsia` upgrade-tx bundle (332 lines, 7 deposit txs: L1Block, GasPriceOracle, OperatorFeeVault deployments + proxy updates). |
+| `kona/crates/protocol/hardforks/src/mantle_forks.rs` | New file. `MantleHardforks` registry exposing `MantleHardforks::ARSIA`. |
+| `kona/crates/protocol/hardforks/src/bytecode/arsia_{gpo,l1_block,ofv}.hex` | New bytecode fixtures referenced by `arsia.rs`. |
+| `kona/crates/protocol/hardforks/src/lib.rs` | `mod arsia; pub use arsia::Arsia;` and `mod mantle_forks; pub use mantle_forks::MantleHardforks;`. |
+
+### 3.4 kona-genesis — RollupConfig / SystemConfig Mantle additions
+
+The largest sub-phase. Adds Mantle predicates, hardfork timestamps, and BaseFee config plumbing.
+
+| File | Change |
+|---|---|
+| `kona/crates/protocol/genesis/src/rollup.rs` | `RollupConfig` gains `pub mantle_hardforks: MantleHardForkConfig` field. New methods: `is_mantle`, `revm_spec_id`, `is_mantle_skadi_active`, `is_mantle_limb_active`, `is_mantle_arsia_active`, `is_first_mantle_arsia_block`. `Default::default` switches `chain_op_config` to `MANTLE_BASE_FEE_CONFIG`. Existing `is_jovian_active` etc. get Mantle gating. New helper `default_mantle_base_fee_config` for serde defaulting. |
+| `kona/crates/protocol/genesis/src/chain/mantle_hardfork.rs` | New file. `MantleHardForkConfig` struct with the Mantle upgrade timestamps. |
+| `kona/crates/protocol/genesis/src/chain/mod.rs` | `MANTLE_MAINNET_CHAIN_ID = 5000` / `MANTLE_SEPOLIA_CHAIN_ID = 5003`; register `mod mantle_hardfork`. |
+| `kona/crates/protocol/genesis/src/chain/config.rs` | `ChainConfig::rollup_config` initialises `mantle_hardforks: MantleHardForkConfig::default()`. |
+| `kona/crates/protocol/genesis/src/updates/base_fee.rs` | New file. `BaseFeeUpdate` type (187 lines), with `apply()` and `TryFrom<&SystemConfigLog>`. |
+| `kona/crates/protocol/genesis/src/updates/mod.rs` | `mod base_fee; pub use base_fee::BaseFeeUpdate;`. |
+| `kona/crates/protocol/genesis/src/system/kind.rs` | Insert `SystemConfigUpdateKind::BaseFee = 4`; shift `Eip1559/OperatorFee/MinBaseFee/DaFootprintGasScalar` to 5–8. **Wire-format change** intentional per Mantle protocol. |
+| `kona/crates/protocol/genesis/src/system/errors.rs` | Add `BaseFeeUpdateError` enum (6 variants) + `SystemConfigUpdateError::BaseFee` arm. |
+| `kona/crates/protocol/genesis/src/system/{mod,log,update}.rs` | Plumb `BaseFee` through re-exports, log dispatch, and `SystemConfigUpdate::BaseFee` variant + apply. |
+| `kona/crates/protocol/genesis/src/system/config.rs` | `SystemConfig` gains `pub base_fee: Option<U256>` field; serde alias updated. |
+| `kona/crates/protocol/genesis/src/params.rs` | New consts `MANTLE_EIP1559_ELASTICITY_MULTIPLIER`, `MANTLE_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR`, `MANTLE_BASE_FEE_PARAMS`, `MANTLE_BASE_FEE_CONFIG`; route Mantle chain IDs to them from `base_fee_params` / `base_fee_params_canyon` / `base_fee_config`. |
+| `kona/crates/protocol/genesis/src/lib.rs` | Re-export the new Mantle constants/types (`MANTLE_BASE_FEE_*`, `MANTLE_*_CHAIN_ID`, `MantleHardForkConfig`, `BaseFeeUpdate`, `BaseFeeUpdateError`). |
+| `kona/crates/protocol/genesis/src/genesis.rs` | Add `base_fee: None` to a test `SystemConfig` literal. |
+
+### 3.5 kona-derive — Mantle upgrade-tx routing + provider hook
+
+| File | Change |
+|---|---|
+| `kona/crates/protocol/derive/src/attributes/stateful.rs` | On Mantle chains (`is_mantle()`), the upgrade-tx emission path emits only `MantleHardforks::ARSIA` at its activation; OP hardfork bundles are skipped. Non-Mantle chains keep the full upstream OP path (ECOTONE/FJORD/ISTHMUS/JOVIAN/KARST/INTEROP+CrossL2Inbox). |
+| `kona/crates/protocol/protocol/src/info/variant.rs` | L1Info deposit literal fills `eth_value: 0, eth_tx_value: None`. |
+| `kona/crates/protocol/hardforks/src/{ecotone,fjord,interop,isthmus,jovian}.rs` | 31 OP hardfork upgrade-tx literals filled `eth_value: 0, eth_tx_value: None` via the script in §6. |
+
+### 3.6 kona-proof — executor uses Mantle-aware revm spec
+
+| File | Change |
+|---|---|
+| `kona/crates/proof/executor/src/builder/env.rs` | `evm_cfg_env` calls `self.config.revm_spec_id(timestamp)` (Mantle-aware) instead of `spec_id(timestamp)`. `spec_id` continues to drive kona protocol-layer feature checks; `revm_spec_id` is the executor-facing variant that gates Jovian/Holocene/Granite behind `mantle_arsia` on Mantle chains. |
+| `kona/crates/proof/executor/src/test_utils.rs` | Test infrastructure additions (`alloy_chains::Chain`, `reqwest::Url` imports; `StatelessL2Builder::new` takes `&rollup_config`; placeholder `Ok(true)` return for `create_static_fixture`). |
+| `kona/crates/proof/executor/Cargo.toml` | Declare optional deps `alloy-chains`, `reqwest`, `url`; list `dep:alloy-chains` under the `test-utils` feature. |
 | `kona/bin/client/src/fpvm_evm/tx.rs` | `FromTxWithEncoded<TxDeposit>` reads `tx.eth_value` / `tx.eth_tx_value` into `DepositTransactionParts` using the 0→None convention. |
 
-### 3.4 alloy-op-evm — Mantle protocol changes
+### 3.7 alloy-op-evm — Mantle protocol changes
 
 Corresponds to mantle-xyz/evm commits `5f383c5`, `9fe2c85`, `760129f`.
 
@@ -96,19 +159,19 @@ Corresponds to mantle-xyz/evm commits `5f383c5`, `9fe2c85`, `760129f`.
 | same | Drops the `spec_id` argument from `operator_fee_charge` in two call sites to match mantle-elysium's older 2-arg signature. |
 | `alloy-op-evm/src/block/canyon.rs` | Adds `#![allow(dead_code)]` because the function is now unreachable. |
 
-### 3.5 kona-client fpvm — adapts to mantle-elysium op-revm v19
+### 3.8 kona-client fpvm — adapts to mantle-elysium op-revm v19
 
 | File | Change |
 |---|---|
 | `kona/bin/client/src/fpvm_evm/precompiles/provider.rs` | Drop the `karst` import. Collapse the `KARST` match arms into `JOVIAN \| OSAKA \| ARSIA \| INTEROP` and route them to `jovian()` / `accelerated_jovian` so the match remains exhaustive. |
 
-### 3.6 op-reth/rpc — handles the Mantle-specific OpTransactionError variants
+### 3.9 op-reth/rpc — handles the Mantle-specific OpTransactionError variants
 
 | File | Change |
 |---|---|
 | `op-reth/crates/rpc/src/error.rs` | `TryFrom<OpTxError>` adds an arm for `BvmEth(_) \| TxL1CostOutOfRange`. Placeholder maps to `MissingEnvelopedTx`. **TODO**: extend `OpInvalidTransactionError` with proper variants and dedicated RPC error codes. |
 
-### 3.7 op-core — vendored data (outside the rust/ subtree)
+### 3.10 op-core — vendored data (outside the rust/ subtree)
 
 | File | Change |
 |---|---|
@@ -117,6 +180,20 @@ Corresponds to mantle-xyz/evm commits `5f383c5`, `9fe2c85`, `760129f`.
 **Note**: this file is *outside* `rust/`, so `git subtree pull` will not sync it. If a
 future upstream build.rs looks for additional bundle files, add the corresponding JSONs
 under `op-core/nuts/bundles/` manually.
+
+### 3.11 Intentionally absent — Mantle modules removed after review
+
+Phase 1.5 dropped three blocks of vendored-but-unused Mantle code after the code review
+in §B confirmed there are no real consumers. **Do not re-add these in a future sync.**
+
+| Item | Origin | Why removed |
+|---|---|---|
+| `kona/crates/protocol/derive/src/sources/mantle_blob.rs` (817 lines) + `testdata/*.hex` | Mantle fork (originally vendored in Phase 1a) | Orphan code. Mantle's own fork constructs `EthereumDataSource::new_from_parts` everywhere — `MantleBlobSource` was never wired into any pipeline. The `mantle_format_failed` fallback is obsolete because post-Arsia all submissions use the standard blob format. |
+| `kona/crates/protocol/derive/src/sources/mantle_ethereum.rs` (222 lines) | Mantle fork (originally vendored in Phase 1a) | Orphan code. Even in Mantle's own fork, every pipeline call site uses the upstream `EthereumDataSource`. The file was an unfinished refactor. |
+| `DataAvailabilityProvider::reset()` trait method + `L1Retrieval::reset` calling `self.provider.reset()` | Phase 1d addition | Existed solely to clear `MantleBlobSource::mantle_format_failed` — moot after the above two deletions. The trait method was a default-empty no-op with no overriders. |
+
+If a future Mantle hardfork brings non-standard blob submission back, build new code on
+top of develop's `EthereumDataSource` / `BlobSource` instead of resurrecting these files.
 
 ## 4. Sync workflow
 
@@ -181,8 +258,11 @@ git push -u origin rust/sync-$(date +%Y%m)
 |---|---|---|
 | `op-alloy/.../deposit.rs` | TxDeposit is a frequently edited struct. | Verify BVM_ETH field positions and RLP order are preserved. |
 | `alloy-op-evm/src/block/mod.rs` | The block executor is a high-churn area upstream. | Re-verify `deposit_receipt_version = None`, the commented-out `ensure_create2_deployer`, and the 2-arg `operator_fee_charge` call sites. |
-| `kona/bin/client/.../provider.rs` (the `OpSpecId` match arms) | Any new upstream hardfork variant breaks exhaustiveness. | If `cargo check` flags non-exhaustive matches, add the new variant to the appropriate arm. |
-| `kona/.../hardforks/src/*.rs` (TxDeposit literals) | Each new hardfork adds new upgrade-tx literals missing BVM_ETH fields. | Run the script in §6 on the newly added files. |
+| `kona/crates/protocol/genesis/src/rollup.rs` | RollupConfig and its predicates evolve with every hardfork. | Verify `mantle_hardforks` field + all `is_mantle_*` predicates survive; `Default::default` still routes `chain_op_config` to `MANTLE_BASE_FEE_CONFIG`. |
+| `kona/crates/protocol/derive/src/attributes/stateful.rs` | Upgrade-tx emission gains new hardfork branches over time. | Re-check that the `if is_mantle() { ARSIA } else { OP path }` split is preserved. |
+| `kona/bin/client/src/fpvm_evm/precompiles/provider.rs` (the `OpSpecId` match arms) | Any new upstream hardfork variant breaks exhaustiveness. | If `cargo check` flags non-exhaustive matches, add the new variant to the appropriate arm. |
+| `kona/crates/protocol/hardforks/src/*.rs` (TxDeposit literals) | Each new hardfork adds new upgrade-tx literals missing BVM_ETH fields. | Run the script in §6 on the newly added files. |
+| `kona/crates/protocol/genesis/src/system/kind.rs` | Upstream may add new `SystemConfigUpdateKind` variants. | Variants must not collide with Mantle's `BaseFee = 4`; new ones go after `DaFootprintGasScalar = 8`. |
 
 ### 5.2 Time bombs (need active monitoring)
 
@@ -192,6 +272,7 @@ git push -u origin rust/sync-$(date +%Y%m)
 | **op-revm v19 → v20+ drift widens** | mantle-elysium does not track upstream op-revm. | Let `cargo check` surface the differences and adapt site-by-site (potentially extending the `OpTxTr` impl, adjusting signatures, etc.). |
 | **New OpSpecId variant** | Upstream introduces a new hardfork. | `cargo check` will flag the non-exhaustive match; extend the relevant arm. |
 | **mantle-xyz/revm becomes unreachable** | Network, credentials, or repo permission issues. | Temporarily vendor a copy of mantle-elysium under `mantle-v2/` and switch the patch entries from `git = ...` to `path = ...`. |
+| **Mantle reverts to non-standard blob** | A future Mantle hardfork ships a custom blob format. | Build on top of the upstream `BlobSource`; do not resurrect `MantleBlobSource` (see §3.11 rationale). |
 
 ## 6. Helper script — batch-patch new TxDeposit literals
 
@@ -268,4 +349,6 @@ When you add, modify, or remove a Mantle change:
 2. Register the change under the appropriate subsection of §3.
 3. If the change is structural (new field, new method, signature change), evaluate
    whether §5.1 needs a new hot spot entry.
-4. Reference this file in the commit message so future contributors can find their way back.
+4. If you *remove* a Mantle module after concluding it is dead code, log it in §3.11
+   with the rationale so the next sync engineer does not reintroduce it from the fork.
+5. Reference this file in the commit message so future contributors can find their way back.
