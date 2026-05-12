@@ -1,0 +1,290 @@
+{
+  "name": "mantle-mainnet-fork2",
+  "features": [
+    "mantle"
+  ],
+  "l1": {
+    "name": "l1",
+    "id": "1",
+    "config": {
+      "chainId": 1,
+      "homesteadBlock": 1150000,
+      "eip150Block": 2463000,
+      "eip155Block": 2675000,
+      "eip158Block": 2675000,
+      "byzantiumBlock": 4370000,
+      "constantinopleBlock": 7280000,
+      "petersburgBlock": 7280000,
+      "istanbulBlock": 9069000,
+      "muirGlacierBlock": 9200000,
+      "berlinBlock": 12244000,
+      "londonBlock": 12965000,
+      "arrowGlacierBlock": 13773000,
+      "grayGlacierBlock": 15050000,
+      "shanghaiTime": 1681338455,
+      "cancunTime": 1710338135,
+      "pragueTime": 1746612311,
+      "osakaTime": 1764798551,
+      "bpo1Time": 1765290071,
+      "bpo2Time": 1767747671
+    },
+    "nodes": [
+      {
+        "name": "l1-forknet",
+        "services": {
+          "el": {
+            "name": "ethereum-forknet",
+            "endpoints": {
+              "rpc": {
+                "host": "mainnet-fork2-mantle-ethereum-forknet-http-ywfjmtc5.stack0.gomantle.org",
+                "port": 443,
+                "scheme": "https"
+              }
+            }
+          },
+          "cl": {
+            "name": "ethereum-forknet-beacon",
+            "endpoints": {
+              "http": {
+                "host": "mainnet-fork2-mantle-ethereum-forknet-beacon-ywfjmtc5.stack0.gomantle.org",
+                "port": 443,
+                "scheme": "https"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "addresses": {
+      "AddressManager": "0x6968f3F16C3e64003F02E121cf0D5CCBf5625a42",
+      "L1CrossDomainMessenger": "0xb8DE82551fA4BA3bE4B3d9097763EDBeED541308",
+      "L1CrossDomainMessengerProxy": "0x676A795fe6E43C17c668de16730c3F690FEB7120",
+      "L1StandardBridgeProxy": "0x95fC37A27a2f68e3A647CDc081F0A89bb47c3012",
+      "ProxyAdmin": "0xca35F8338054739D138884685e08b39EE2217794",
+      "SystemConfigProxy": "0x427Ea0710FA5252057F0D88274f7aeb308386cAf",
+      "OptimismMintableERC20FactoryProxy": "0x3b96c878cc334a7d9EA994Ec4B6C28BdDde00Eb2",
+      "OptimismPortalProxy": "0xc54cb22944F2bE476E02dECfCD7e3E7d3e15A8Fb",
+      "L1ERC721BridgeProxy": "0xCAF8938b6C4A27a96AaAfbb7228Fd613D40EA70a",
+      "L2OutputOracleProxy": "0x31d543e7BE1dA6eFDc2206Ef7822879045B9f481",
+      "PortalSender": "0x65ca5f4eAfC1509909d0DDE211fFc6eA2A3E0502",
+      "SystemDictatorProxy": "0x6Cbc0cB1eA40781Ab4CB80EAac97ea2401BD3FaC",
+      "L1MantleToken": "0x3c3a81e81dc49a522a592e7622a7e711c06bf354"
+    },
+    "wallets": {
+      "l1Faucet": {
+        "address": "0x70313457950E4c780e3aFF5E8F41De4EADD0dBaa",
+        "private_key": "1f6b2eb7251ca860a1b3256b79a6457368c386845b58587515422ddb1c181c20"
+      },
+      "l1MNTFaucet": {
+        "address": "0x7466BE349B17A0f966F97dDEefe393894B9FAf06",
+        "private_key": "8ea2a06ed49d36fe74f373525f4d65986eb5bf2666c1b67a41ab6c9cb5049d05"
+      }
+    }
+  },
+  "l2": [
+    {
+      "name": "l2",
+      "id": "5000",
+      "config": {
+        "chainId": 5000,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0,
+        "arrowGlacierBlock": 0,
+        "grayGlacierBlock": 0,
+        "mergeNetsplitBlock": 0,
+        "shanghaiTime": 0,
+        "cancunTime": 0,
+        "bedrockBlock": 0,
+        "regolithTime": 0,
+        "pragueTime": 1775044800,
+        "baseFeeTime": 0,
+        "bvmETHMintUpgradeTime": 0,
+        "metaTxV2UpgradeTime": 0,
+        "metaTxV3UpgradeTime": 0,
+        "mantleEverestTime": 1742367600,
+        "mantleEuboeaTime": 1742367600,
+        "mantleSkadiTime": 1756278000,
+        "mantleLimbTime": 1768374000,
+        "mantleArsiaTime": 1775044800,
+        "terminalTotalDifficulty": 0,
+        "depositContractAddress": "0x0000000000000000000000000000000000000000",
+        "optimism": {
+          "eip1559Elasticity": 2,
+          "eip1559Denominator": 8
+        }
+      },
+      "services": {
+        "batcher": [
+          {
+            "name": "op-batcher",
+            "endpoints": {
+              "http": {
+                "host": "mainnet-fork2-mantle-op-batcher-rpc-ywfjmtc5.stack0.gomantle.org",
+                "scheme": "https"
+              }
+            }
+          }
+        ]
+      },
+      "nodes": [
+        {
+          "name": "sequencer",
+          "services": {
+            "el": {
+              "name": "op-geth",
+              "endpoints": {
+                "rpc": {
+                  "host": "mainnet-fork2-mantle-op-geth-http-ywfjmtc5.stack0.gomantle.org",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node",
+              "endpoints": {
+                "rpc": {
+                  "host": "mainnet-fork2-mantle-op-node-rpc-ywfjmtc5.stack0.gomantle.org",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "rpc1",
+          "services": {
+            "el": {
+              "name": "op-geth-rpc1",
+              "endpoints": {
+                "rpc": {
+                  "host": "mainnet-fork2-mantle-op-geth-rpc1-http-ywfjmtc5.stack0.gomantle.org",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node-rpc1",
+              "endpoints": {
+                "rpc": {
+                  "host": "mainnet-fork2-mantle-op-node-rpc1-rpc-ywfjmtc5.stack0.gomantle.org",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "wallets": {
+        "user1": {
+          "address": "0x70313457950E4c780e3aFF5E8F41De4EADD0dBaa",
+          "private_key": "1f6b2eb7251ca860a1b3256b79a6457368c386845b58587515422ddb1c181c20"
+        }
+      },
+      "l1_wallets": {
+        "systemConfigOwner": {
+          "address": "0xa56d68542736342F003396b1298E3A67D5a4900C",
+          "private_key": "095f4e5b82e9896c51fb6b35df7c5c30cb471f037e6fc0b4aba51f1c83bcdfa2"
+        },
+        "deployer": {
+          "address": "0x70313457950E4c780e3aFF5E8F41De4EADD0dBaa",
+          "private_key": "1f6b2eb7251ca860a1b3256b79a6457368c386845b58587515422ddb1c181c20"
+        },
+        "blocksigner": {
+          "address": "0xD7334Fab84361Def6827Ef0b25E9E8Fe6ABd148B",
+          "private_key": "45c156d217d3acb8ba34cf0edf0b83981089d6e6bc25f509ee8beede77e9d5c8"
+        },
+        "addrowner": {
+          "address": "0xa56d68542736342F003396b1298E3A67D5a4900C",
+          "private_key": "095f4e5b82e9896c51fb6b35df7c5c30cb471f037e6fc0b4aba51f1c83bcdfa2"
+        },
+        "proposer": {
+          "address": "0x0f01309F7b91a177e78187787A53E0600ecE41a3",
+          "private_key": "46f4f635351da94c897134020775bb877c801a99e6b547ec0dcb977bccf830e0"
+        },
+        "batcher": {
+          "address": "0x396B3649aE21005D6F9c77Abd6bFF7a7DC366f72",
+          "private_key": "4e5fc632abc0ea2a460da2a95c59f16bdc8aca127beb11e282f59fb2987926b8"
+        },
+        "gasoracle": {
+          "address": "0x120b3b5d2088A4Dc3d229E6BE889c017aAf3051c",
+          "private_key": "7d89541a1e82be46b7b19d2c9151e73a296fb28692a4089862ff36fd8cdeeba6"
+        },
+        "feewallet": {
+          "address": "0x7329D3072b271A55D702A181a8D64B39691df61B",
+          "private_key": "82eb80b4e8f57618875cfd8d20f33ff2a80f00bdd0da4cc94d701730a2e177bc"
+        },
+        "l2Faucet": {
+          "address": "0x7466BE349B17A0f966F97dDEefe393894B9FAf06",
+          "private_key": "8ea2a06ed49d36fe74f373525f4d65986eb5bf2666c1b67a41ab6c9cb5049d05"
+        },
+        "l1Faucet": {
+          "address": "0x70313457950E4c780e3aFF5E8F41De4EADD0dBaa",
+          "private_key": "1f6b2eb7251ca860a1b3256b79a6457368c386845b58587515422ddb1c181c20"
+        },
+        "l1MNTFaucet": {
+          "address": "0x7466BE349B17A0f966F97dDEefe393894B9FAf06",
+          "private_key": "8ea2a06ed49d36fe74f373525f4d65986eb5bf2666c1b67a41ab6c9cb5049d05"
+        }
+      },
+      "addresses": {
+        "addressManager": "0x6968f3F16C3e64003F02E121cf0D5CCBf5625a42",
+        "l1CrossDomainMessengerProxy": "0x676A795fe6E43C17c668de16730c3F690FEB7120",
+        "l1StandardBridgeProxy": "0x95fC37A27a2f68e3A647CDc081F0A89bb47c3012",
+        "proxyAdmin": "0xca35F8338054739D138884685e08b39EE2217794",
+        "systemConfigProxy": "0x427Ea0710FA5252057F0D88274f7aeb308386cAf",
+        "optimismMintableERC20FactoryProxy": "0x3b96c878cc334a7d9EA994Ec4B6C28BdDde00Eb2",
+        "optimismPortalProxy": "0xc54cb22944F2bE476E02dECfCD7e3E7d3e15A8Fb",
+        "l1ERC721BridgeProxy": "0xCAF8938b6C4A27a96AaAfbb7228Fd613D40EA70a",
+        "l2OutputOracleProxy": "0x31d543e7BE1dA6eFDc2206Ef7822879045B9f481",
+        "portalSender": "0x65ca5f4eAfC1509909d0DDE211fFc6eA2A3E0502",
+        "systemDictatorProxy": "0x6Cbc0cB1eA40781Ab4CB80EAac97ea2401BD3FaC",
+        "l1MantleTokenProxy": "0x3c3a81e81dc49a522a592e7622a7e711c06bf354"
+      },
+      "rollup_config": {
+        "genesis": {
+          "l1": {
+            "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "number": 0
+          },
+          "l2": {
+            "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "number": 0
+          },
+          "l2_time": 0,
+          "system_config": {
+            "batcherAddr": "0x396B3649aE21005D6F9c77Abd6bFF7a7DC366f72",
+            "overhead": "0x0000000000000000000000000000000000000000000000000000000000000834",
+            "scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+            "gasLimit": 1125899906842624,
+            "baseFee": 1000000000
+          }
+        },
+        "block_time": 2,
+        "max_sequencer_drift": 600,
+        "seq_window_size": 3600,
+        "channel_timeout": 300,
+        "l1_chain_id": 1,
+        "l2_chain_id": 5000,
+        "regolith_time": 0,
+        "batch_inbox_address": "0xff00000000000000000000000000000000000000",
+        "deposit_contract_address": "0xc54cb22944F2bE476E02dECfCD7e3E7d3e15A8Fb",
+        "l1_system_config_address": "0x427Ea0710FA5252057F0D88274f7aeb308386cAf",
+        "mantle_da_switch": false,
+        "datalayr_service_manager_addr": ""
+      }
+    }
+  ]
+}

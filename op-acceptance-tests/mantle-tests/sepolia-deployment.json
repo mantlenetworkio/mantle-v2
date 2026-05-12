@@ -1,0 +1,204 @@
+{
+  "name": "mantle-sepolia",
+  "features": [
+    "mantle"
+  ],
+  "l1": {
+    "name": "l1",
+    "id": "11155111",
+    "config": {
+      "chainId": 11155111
+    },
+    "nodes": [
+      {
+        "name": "l1-geth",
+        "services": {
+          "el": {
+            "name": "geth",
+            "endpoints": {
+              "rpc": {
+                "host": "rpc.sepolia.org",
+                "port": 443,
+                "scheme": "https"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "addresses": {
+      "AddressManager": "0x1183d0ec537175827C4683f579e92FdfE2466F89",
+      "L1CrossDomainMessengerProxy": "0x37dAC5312e31Adb8BB0802Fc72Ca84DA5cDfcb4c",
+      "L1StandardBridgeProxy": "0x21F308067241B2028503c07bd7cB3751FFab0Fb2",
+      "ProxyAdmin": "0x2EFAE081b4DC3D7D31aeDf865c1C39599C7eEcac",
+      "SystemConfigProxy": "0x04B34526C91424e955D13C7226Bc4385e57E6706",
+      "OptimismMintableERC20FactoryProxy": "0x247704aDA40aeB8aEbC3e8B17A2DC49fDb28D061",
+      "OptimismPortalProxy": "0xB3db4bd5bc225930eD674494F9A4F6a11B8EFBc8",
+      "L1ERC721BridgeProxy": "0x3938D52ba5B26c710512a75bC7907f2C01b2269f",
+      "L2OutputOracleProxy": "0x4121dc8e48Bc6196795eb4867772A5e259fecE07",
+      "PortalSender": "0x58Bf31C4aaAB388877715C0a36a02529850Fe01d",
+      "SystemDictator": "0x67F08efeA5A55d9526c0e4f1C1cd55b1E9D6D8B5",
+      "SystemDictatorProxy": "0x7081C28DB8795aE32e044F8f1fA732D62A5C59fc",
+      "L1MantleToken": "0x65e37B558F64E2BE5768DB46DF22F93d85741A9E"
+    },
+    "wallets": {
+      "l1Faucet": {
+        "address": "<MANUAL: need Sepolia ETH>",
+        "private_key": "<MANUAL>"
+      },
+      "l1MNTFaucet": {
+        "address": "<MANUAL: need L1 MNT token balance>",
+        "private_key": "<MANUAL>"
+      }
+    }
+  },
+  "l2": [
+    {
+      "name": "l2",
+      "id": "5003",
+      "config": {
+        "chainId": 5003,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0,
+        "arrowGlacierBlock": 0,
+        "grayGlacierBlock": 0,
+        "mergeNetsplitBlock": 0,
+        "shanghaiTime": 0,
+        "cancunTime": 0,
+        "bedrockBlock": 0,
+        "regolithTime": 0,
+        "baseFeeTime": 0,
+        "bvmETHMintUpgradeTime": 0,
+        "metaTxV2UpgradeTime": 0,
+        "metaTxV3UpgradeTime": 0,
+        "mantleEverestTime": 0,
+        "mantleSkadiTime": 0,
+        "terminalTotalDifficulty": 0,
+        "depositContractAddress": "0x0000000000000000000000000000000000000000",
+        "optimism": {
+          "eip1559Elasticity": 2,
+          "eip1559Denominator": 8
+        }
+      },
+      "nodes": [
+        {
+          "name": "rpc0",
+          "services": {
+            "el": {
+              "name": "op-geth-rpc0",
+              "endpoints": {
+                "rpc": {
+                  "host": "rpc.sepolia.mantle.xyz",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node-rpc0",
+              "endpoints": {
+                "rpc": {
+                  "host": "op-node.sepolia.mantle.xyz",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "rpc1",
+          "services": {
+            "el": {
+              "name": "op-geth-rpc1",
+              "endpoints": {
+                "rpc": {
+                  "host": "rpc.sepolia.mantle.xyz",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node-rpc1",
+              "endpoints": {
+                "rpc": {
+                  "host": "op-node.sepolia.mantle.xyz",
+                  "port": 443,
+                  "scheme": "https"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "wallets": {
+        "user1": {
+          "address": "<MANUAL: need MNT>",
+          "private_key": "<MANUAL>"
+        }
+      },
+      "l1_wallets": {
+        "l2Faucet": {
+          "address": "<MANUAL: need L2 assets>",
+          "private_key": "<MANUAL>"
+        }
+      },
+      "addresses": {
+        "addressManager": "0x1183d0ec537175827C4683f579e92FdfE2466F89",
+        "l1CrossDomainMessengerProxy": "0x37dAC5312e31Adb8BB0802Fc72Ca84DA5cDfcb4c",
+        "l1StandardBridgeProxy": "0x21F308067241B2028503c07bd7cB3751FFab0Fb2",
+        "proxyAdmin": "0x2EFAE081b4DC3D7D31aeDf865c1C39599C7eEcac",
+        "systemConfigProxy": "0x04B34526C91424e955D13C7226Bc4385e57E6706",
+        "optimismMintableERC20FactoryProxy": "0x247704aDA40aeB8aEbC3e8B17A2DC49fDb28D061",
+        "optimismPortalProxy": "0xB3db4bd5bc225930eD674494F9A4F6a11B8EFBc8",
+        "l1ERC721BridgeProxy": "0x3938D52ba5B26c710512a75bC7907f2C01b2269f",
+        "l2OutputOracleProxy": "0x4121dc8e48Bc6196795eb4867772A5e259fecE07",
+        "portalSender": "0x58Bf31C4aaAB388877715C0a36a02529850Fe01d",
+        "systemDictator": "0x67F08efeA5A55d9526c0e4f1C1cd55b1E9D6D8B5",
+        "systemDictatorProxy": "0x7081C28DB8795aE32e044F8f1fA732D62A5C59fc"
+      },
+      "rollup_config": {
+        "genesis": {
+          "l1": {
+            "hash": "<MANUAL>",
+            "number": 0
+          },
+          "l2": {
+            "hash": "<MANUAL>",
+            "number": 0
+          },
+          "l2_time": 0,
+          "system_config": {
+            "batcherAddr": "0xf9a155245800de564da3de33c34a3e6a83906ac0",
+            "overhead": "0x0000000000000000000000000000000000000000000000000000000000000834",
+            "scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+            "gasLimit": 1125899906842624,
+            "baseFee": 1000000000
+          }
+        },
+        "block_time": 2,
+        "max_sequencer_drift": 600,
+        "seq_window_size": 3600,
+        "channel_timeout": 300,
+        "l1_chain_id": 11155111,
+        "l2_chain_id": 5003,
+        "regolith_time": 0,
+        "batch_inbox_address": "0xff00000000000000000000000000000000000000",
+        "deposit_contract_address": "0xB3db4bd5bc225930eD674494F9A4F6a11B8EFBc8",
+        "l1_system_config_address": "0x04B34526C91424e955D13C7226Bc4385e57E6706",
+        "mantle_da_switch": false,
+        "datalayr_service_manager_addr": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,471 @@
+{
+  "name": "sepolia-qa7",
+  "features": [
+    "mantle"
+  ],
+  "l1": {
+    "name": "l1",
+    "id": "11155111",
+    "config": {
+      "chainId": 11155111,
+      "homesteadBlock": 0,
+      "eip150Block": 0,
+      "eip155Block": 0,
+      "eip158Block": 0,
+      "byzantiumBlock": 0,
+      "constantinopleBlock": 0,
+      "petersburgBlock": 0,
+      "istanbulBlock": 0,
+      "berlinBlock": 0,
+      "londonBlock": 0,
+      "mergeNetsplitBlock": 1735371,
+      "terminalTotalDifficulty": 17000000000000000,
+      "terminalTotalDifficultyPassed": true,
+      "shanghaiTime": 1677557088,
+      "cancunTime": 1706655072,
+      "pragueTime": 1741159776,
+      "osakaTime": 1760427360,
+      "bpo1Time": 1761017184,
+      "bpo2Time": 1761607008,
+      "blobSchedule": {
+        "cancun": {
+          "target": 3,
+          "max": 6,
+          "baseFeeUpdateFraction": 3338477
+        },
+        "prague": {
+          "target": 6,
+          "max": 9,
+          "baseFeeUpdateFraction": 5007716
+        },
+        "osaka": {
+          "target": 6,
+          "max": 9,
+          "baseFeeUpdateFraction": 5007716
+        },
+        "bpo1": {
+          "target": 10,
+          "max": 15,
+          "baseFeeUpdateFraction": 8346193
+        },
+        "bpo2": {
+          "target": 14,
+          "max": 21,
+          "baseFeeUpdateFraction": 11684671
+        }
+      },
+      "depositContractAddress": "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
+    },
+    "nodes": [
+      {
+        "name": "l1-geth",
+        "services": {
+          "el": {
+            "name": "geth",
+            "endpoints": {
+              "rpc": {
+                "host": "sepolia1.infra",
+                "port": 8545
+              }
+            }
+          },
+          "cl": {
+            "name": "beacon-chain",
+            "endpoints": {
+              "http": {
+                "host": "sepolia1.infra",
+                "port": 5052
+              }
+            }
+          }
+        }
+      }
+    ],
+    "addresses": {
+      "L1CrossDomainMessenger": "0x4D8D242dc3A67Cf850F4E226DaE21153eE047cEe",
+      "L1ERC721Bridge": "0xBb1c280De8b26A68d1956de5008DD43c50e0e839",
+      "L1ERC721BridgeProxy": "0x9511e536AeB55CA6733ddB27cC3069557dfE74A4",
+      "L1StandardBridge": "0xe1FD4B7e5e56962B0D463DbAbf7FAb96084a7bb4",
+      "L2OutputOracle": "0xb29eE6BaF165E79F3b7f1D6d1C8ad9b65385D2bD",
+      "L2OutputOracleProxy": "0x8615D989EE3c3986128aD30D7F61593f809E8963",
+      "AddressManager": "0xEF1A4b07C5C1f7D3ed7A7Bee8dC48027905FB30a",
+      "OptimismMintableERC20Factory": "0x6833fF14136eC63f68F90ac2Da757D636a673f06",
+      "OptimismMintableERC20FactoryProxy": "0x489c6c405Ebab72eE78622533Ee90574cD21633A",
+      "OptimismPortal": "0xa5E8EeA8EF4D5D1a19fd4B1Dc08f56646528dA6A",
+      "OptimismPortalProxy": "0x75d12B1F53331AFd1C759C834f53E6ADd261a1eB",
+      "PortalSender": "0xC96Cbe5A3B0358c66ae6362CC64654C83cEc6D80",
+      "ProxyAdmin": "0x20EAEE4A40e5450eEB0dE6b3b687801a973e0412",
+      "L1CrossDomainMessengerProxy": "0xC34fC7be3FC3Bae09eaE245F105c1b5417EcD385",
+      "L1StandardBridgeProxy": "0x7AA4515D86fD43BCd2Ef87719A63F3935A31C66F",
+      "SystemConfig": "0xF70b1b18284C0d80e8119f3Bfa55B50B2Ead2149",
+      "SystemConfigProxy": "0xE6440E8384E74c4d22Cc2ce7b6Bf9919E07745F2",
+      "SystemDictator": "0x1D3B383DAd08C1CDC6B93ca6f531F2C495615f57",
+      "SystemDictatorProxy": "0x37cC5193462cB403D9FE024cC4d3e632bCE6f264"
+    },
+    "wallets": {
+      "l1Faucet": {
+        "address": "0x3448128E55d64b869DE7566C5BfC03500b09E74d",
+        "private_key": "25d11476911b85f122ff880a9538d2b5d399e610ad6d8067e32a81f92e5da587"
+      }
+    }
+  },
+  "l2": [
+    {
+      "name": "l2",
+      "id": "1115511107",
+      "config": {
+        "chainId": 1115511107,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0,
+        "arrowGlacierBlock": 0,
+        "grayGlacierBlock": 0,
+        "mergeNetsplitBlock": 0,
+        "shanghaiTime": 0,
+        "cancunTime": 0,
+        "pragueTime": 0,
+        "bedrockBlock": 0,
+        "regolithTime": 0,
+        "baseFeeTime": 0,
+        "bvmETHMintUpgradeTime": 0,
+        "metaTxV2UpgradeTime": 0,
+        "metaTxV3UpgradeTime": 0,
+        "mantleEverestTime": 0,
+        "mantleSkadiTime": 0,
+        "terminalTotalDifficulty": 0,
+        "depositContractAddress": "0x0000000000000000000000000000000000000000",
+        "optimism": {
+          "eip1559Elasticity": 2,
+          "eip1559Denominator": 8
+        }
+      },
+      "services": {
+        "batcher": [
+          {
+            "name": "op-batcher",
+            "endpoints": {
+              "http": {
+                "host": "mantle-op-batcher.sepolia-qa7",
+                "port": 80
+              }
+            }
+          }
+        ],
+        "proposer": [
+          {
+            "name": "op-proposer",
+            "endpoints": {
+              "http": {
+                "host": "mantle-op-proposer.sepolia-qa7",
+                "port": 80
+              }
+            }
+          }
+        ]
+      },
+      "nodes": [
+        {
+          "name": "rpc0",
+          "services": {
+            "el": {
+              "name": "op-geth-rpc0",
+              "endpoints": {
+                "rpc": {
+                  "host": "mantle-op-geth-rpc0.sepolia-qa7",
+                  "port": 80
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node-rpc0",
+              "endpoints": {
+                "rpc": {
+                  "host": "mantle-op-node-rpc0.sepolia-qa7",
+                  "port": 80
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "sequencer",
+          "services": {
+            "el": {
+              "name": "op-geth",
+              "endpoints": {
+                "rpc": {
+                  "host": "mantle-op-geth.sepolia-qa7",
+                  "port": 80
+                }
+              }
+            },
+            "cl": {
+              "name": "op-node",
+              "endpoints": {
+                "rpc": {
+                  "host": "mantle-op-node.sepolia-qa7",
+                  "port": 80
+                }
+              }
+            }
+          }
+        }
+      ],
+      "wallets": {
+        "user1": {
+          "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          "private_key": "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        },
+        "dev-account-0": {
+          "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          "private_key": "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        }
+      },
+      "addresses": {
+        "l1CrossDomainMessenger": "0x4D8D242dc3A67Cf850F4E226DaE21153eE047cEe",
+        "l1ERC721Bridge": "0xBb1c280De8b26A68d1956de5008DD43c50e0e839",
+        "l1ERC721BridgeProxy": "0x9511e536AeB55CA6733ddB27cC3069557dfE74A4",
+        "l1StandardBridge": "0xe1FD4B7e5e56962B0D463DbAbf7FAb96084a7bb4",
+        "l2OutputOracle": "0xb29eE6BaF165E79F3b7f1D6d1C8ad9b65385D2bD",
+        "l2OutputOracleProxy": "0x8615D989EE3c3986128aD30D7F61593f809E8963",
+        "addressManager": "0xEF1A4b07C5C1f7D3ed7A7Bee8dC48027905FB30a",
+        "optimismMintableERC20Factory": "0x6833fF14136eC63f68F90ac2Da757D636a673f06",
+        "optimismMintableERC20FactoryProxy": "0x489c6c405Ebab72eE78622533Ee90574cD21633A",
+        "optimismPortal": "0xa5E8EeA8EF4D5D1a19fd4B1Dc08f56646528dA6A",
+        "optimismPortalProxy": "0x75d12B1F53331AFd1C759C834f53E6ADd261a1eB",
+        "portalSender": "0xC96Cbe5A3B0358c66ae6362CC64654C83cEc6D80",
+        "proxyAdmin": "0x20EAEE4A40e5450eEB0dE6b3b687801a973e0412",
+        "l1CrossDomainMessengerProxy": "0xC34fC7be3FC3Bae09eaE245F105c1b5417EcD385",
+        "l1StandardBridgeProxy": "0x7AA4515D86fD43BCd2Ef87719A63F3935A31C66F",
+        "systemConfig": "0xF70b1b18284C0d80e8119f3Bfa55B50B2Ead2149",
+        "systemConfigProxy": "0xE6440E8384E74c4d22Cc2ce7b6Bf9919E07745F2",
+        "systemDictator": "0x1D3B383DAd08C1CDC6B93ca6f531F2C495615f57",
+        "systemDictatorProxy": "0x37cC5193462cB403D9FE024cC4d3e632bCE6f264"
+      },
+      "l1_wallets": {
+        "deployer": {
+          "address": "0x3448128E55d64b869DE7566C5BfC03500b09E74d",
+          "private_key": "25d11476911b85f122ff880a9538d2b5d399e610ad6d8067e32a81f92e5da587"
+        },
+        "blocksigner": {
+          "address": "0x9b1724eA71e9a1298De7632eC449F852ed37E481",
+          "private_key": "fa56c4bc3432a248b9f42369b880a482dd9b216b472558ae86b8b231a48c1ac7"
+        },
+        "addrowner": {
+          "address": "0x9072C5694b431453417f923DA34CAE721703cF72",
+          "private_key": "a4401e5be4acc4149205fc53365c17d3213d7cf9e4a28bd9b26d493ff375a4e9"
+        },
+        "sequencer": {
+          "address": "0x05F780bA49767F1d7894EdC55C67bD5641EF4D8f",
+          "private_key": "82eacf230bdb2efbee37f35769e56fb78c53ab0021ef7d53a07f90d06b9017dc"
+        },
+        "proposer": {
+          "address": "0xA4632BE99CEE13742ad4337A8eFAc2E91E4E1cB8",
+          "private_key": "ca4e5feb437bac20894029693751bce414cd042607bfebf85894f5ea181005cf"
+        },
+        "mtbatcher": {
+          "address": "0x0E86a62c0E3F0cF9c5C5e191cC387176b70C6493",
+          "private_key": "9dc622114532767e21b6d113f48a2c257fcf0a8f48043e66b0a63b5711953d27"
+        },
+        "mtbatcherfee": {
+          "address": "0x73B516D0FFF15e8427FD34B83ca5b6a31746fb0b",
+          "private_key": "0ea7b041cead1578b115ad14606c6640c865bf7ace190557346b653061a53b3e"
+        },
+        "feewallet": {
+          "address": "0xC30EcaeA8B22Fd856eb8F0809C49A71539C7F26d",
+          "private_key": "4e10f15520d9e7fd653b7e36bc5de1b8423d9a281fbd8914464af82f005e34cb"
+        },
+        "verifier": {
+          "address": "0x6D5f20f7036a3D0f695aE627Ae9b148b4dF5aD38",
+          "private_key": "0a5cc14ae8d9453f58c7cf65d3ec53edd58e108f7efbaeeb8cd9657ba51b5053"
+        },
+        "tssmanager": {
+          "address": "0x821EC51F93dF1cC3851Cd500C3e6Eef436c9E7d1",
+          "private_key": "73b5ae07eb5ac9536fa162ce0a21563f145c4b39eaf6defaec5257daf987d9f6"
+        },
+        "tssnode0": {
+          "address": "0x64e33D71c6D8cA413Dcc5F06E506e3569902c968",
+          "private_key": "a1e7bec3a1019745fa9c0d50bae740d78f9a81b3a13b3fd892976224f11b278d"
+        },
+        "tssnode1": {
+          "address": "0x2812199C45dE22e446Ca11586B79F0c0f819C188",
+          "private_key": "10dc75262651d2e611477f0bbb9db578a05e205886395d11eff37dde2afcd344"
+        },
+        "tssstaker0": {
+          "address": "0x0611D91e1267F6Ae310952C34197Cc4A796ae2CB",
+          "private_key": "05bae62190cab77b7a236af7adf9fe202ba1486182382fd04d5c517a2fb31061"
+        },
+        "tssstaker1": {
+          "address": "0x7dCc513d5A6AD2F48C7ea5Aaf378574f7F505728",
+          "private_key": "ff94363f1161eda4d92f05d3a406305bdc8602a983aad30fcf29deea3a48bef3"
+        },
+        "verifier1signer": {
+          "address": "0x6954E56e5a8F1996cF43ebA7AB9bB2aeE8C9B697",
+          "private_key": "b792899484f9ff591816df28727f65be3db501d5d8f3548d6005bfe2bdd268c1"
+        },
+        "fpstaker0": {
+          "address": "0x2b1057238E4630140d0DFeA18B1d9fE8dEa43870",
+          "private_key": "ba04409321b85ce1616cd35de9607fedb77bc44ed04ff38b3f1a366e1d0fcd82"
+        },
+        "fpstaker1": {
+          "address": "0x9E58868D2BAB6ccA2cD35b179fCebF1eaD3c6892",
+          "private_key": "4e904efa7570c4950cd930665045fb7c363176b108445bbabaef792b1966db23"
+        },
+        "gasoracle": {
+          "address": "0xe7386048d40a2e935fc793a061D4ae38AFa23B39",
+          "private_key": "683572e351141c50f12458008d212dc57740606355cd79c1d8fa27fbf9473414"
+        },
+        "jwtSecret": {
+          "address": "0x89aE1da4BCe5CB77b16b88b633Fa8a1C5c6425A5",
+          "private_key": "946e6cb860e841a3db6e7d0d905a2a170622bf43995c5ea5f02d86fd74440146"
+        },
+        "p2pNodeKeySequencer": {
+          "address": "0xf03D5aD5213B0EEe9A0777A9341579b01cC53b40",
+          "private_key": "167eeb493b6548e3d798b9093d5cf0350f3f5dc703a3dabe842bad41f4754894"
+        },
+        "p2pNodeKeyReplica": {
+          "address": "0x6d0d8Af3808bE777544b8683Ad001A993a792129",
+          "private_key": "2786d668b0c5d3c9c4cc65a4b835daa195674642f8d8972655f4ab8bd195b27b"
+        },
+        "p2pNodeKeyVerifier": {
+          "address": "0xEfB2997a71e202348d631c3d1F0390F7225010dE",
+          "private_key": "1b4baeab85f6a6c4422d185b994a8f14a4cc9df747a1dfb52855542370392025"
+        },
+        "tssnode2": {
+          "address": "0xe323A17FEa9bAFdc11B60200d81E8E99962158aC",
+          "private_key": "50a83e7b61704a014d555364851e98d0d33814b95552fff53a1c379a665bcfd6"
+        },
+        "tssnode3": {
+          "address": "0x7E2CE798373987aEFe9c5d979b1678C0cE0A99FB",
+          "private_key": "187d693136a430903de7408a49202fb2313ebd6dc011ec80754211236789be8d"
+        },
+        "tssnode4": {
+          "address": "0x19489cb40397b4476Cf07ce491d6a003a46Fb9f9",
+          "private_key": "1245c3d49d3115362a417cfd4b2d95c3b969d771c6b5435061aa297ab99e657f"
+        },
+        "tssnode5": {
+          "address": "0x9425fE4df16c0abfBb0dbb6fFAe92aD55a3b99Bc",
+          "private_key": "61d8e64fe3ba48a8b65df04bac47b1a9d1568af7057ff9a15337939999aca250"
+        },
+        "tssnode6": {
+          "address": "0x3f40cD965729De3767Ed6eD930E9608bbeF0c377",
+          "private_key": "3c54154156ce293e5b913d3e87b53e3de0e90fe4b11da68ba0c393a28787fccd"
+        },
+        "tssstaker2": {
+          "address": "0x66E8B7754025b9Ae6a9a3d71a40Aa888782c7De1",
+          "private_key": "ec8e9b0aaef3916c96bf84ac7362796b09aac682a5669bdfa85f69ad83bfcd5f"
+        },
+        "tssstaker3": {
+          "address": "0x806269e55dfC6aDe0E49ff17BeF5fAEB4124A245",
+          "private_key": "c87b2a1d04047ed1d88aecac6372c108f69672f67704f0273c4744d6ef688f6f"
+        },
+        "tssstaker4": {
+          "address": "0x73f5cD5bF234a4872Fa7B9B8960105cfd576A951",
+          "private_key": "636ef58164196a47a57d50f7352eccd9243b36d6982748b1b36ae4bb28b66816"
+        },
+        "tssstaker5": {
+          "address": "0x924fE95259B7264FD6cb7811C411066B88Ce96D6",
+          "private_key": "05afb95f7caf67c0d582c14907722bc40bd774b8705750c936eea04a1d20de06"
+        },
+        "tssstaker6": {
+          "address": "0x2AbbFa2974821c6dE204A5F98cf856e468DcA9C7",
+          "private_key": "5c744e90e48d2d9f080239cd01c77f5ebb07072141ba7cfaf0b100b1e58c8d4a"
+        },
+        "p2pSequencerKey": {
+          "address": "0x366305221072Aa66C6CD1f018DA1732d461c91AA",
+          "private_key": "ebda5284f2755cba14295ef3a9c25a11e86c05084e5dab35449736afb3fbbd2b"
+        },
+        "p2pNodekeyrpc1": {
+          "address": "0x9290Ae24c9365aA50A39D49653619c121Ff217Bd",
+          "private_key": "670d5634189e3b3e4e2a577e283cda5f14e3845331423c057ddbb84691238a63"
+        },
+        "p2pNodekeyrpc2": {
+          "address": "0xe731711fF0a6B4f1f2d22B6998ed606EA56cFb20",
+          "private_key": "a0a8a4f61a67713f60631da8fc525aba8738d789dca53a1ea9757b9f88ed5248"
+        },
+        "bootnode": {
+          "address": "0xF22e706332D4e3f51CC67D6cDdD9b9a2cae0eD6e",
+          "private_key": "29917d5ceeb28002294c1812d962c88a0132249e8a21c299de4446fc079dd968"
+        },
+        "test0": {
+          "address": "0x00000500e87ee83a1bfa233512af25a4003836c8",
+          "private_key": "dd888cfabd6d3c3eeb683063657706fb660416ec4972bb5761204e0dbf59e33c"
+        },
+        "test1": {
+          "address": "0x11110bb26a1587f490b7a8b31ed20647f0d9a394",
+          "private_key": "68a77eeacbd7d189ee80737b48de2610dafd7e0682e4b34929ff2c020da5d7c7"
+        },
+        "test2": {
+          "address": "0x222203a1cd8d1bc8371353392967bbec2e66c586",
+          "private_key": "2810e19676b3445a8b8bf12fa5ab39b93708bd59274d777b5e499bfc74bdd87a"
+        },
+        "test3": {
+          "address": "0x33330c42d36dd96b67509e4eaa698f2dd0e9855b",
+          "private_key": "28e232e87cb6b8093a4dce808e613ba52b7e0cd48e5cf3aaa69ac118d8541c07"
+        },
+        "test4": {
+          "address": "0x444406770804b1e812d11bf4dc3c0e77503254a0",
+          "private_key": "520cec15139243f6e5c571d13dac1e9d7a7ca03dfa8d85dc5bf50f0791ec04df"
+        },
+        "l1ProxyAdmin": {
+          "address": "0x9072C5694b431453417f923DA34CAE721703cF72",
+          "private_key": "a4401e5be4acc4149205fc53365c17d3213d7cf9e4a28bd9b26d493ff375a4e9"
+        },
+        "systemConfigOwner": {
+          "address": "0x9072C5694b431453417f923DA34CAE721703cF72",
+          "private_key": "a4401e5be4acc4149205fc53365c17d3213d7cf9e4a28bd9b26d493ff375a4e9"
+        },
+        "l2Faucet": {
+          "address": "0x3448128E55d64b869DE7566C5BfC03500b09E74d",
+          "private_key": "25d11476911b85f122ff880a9538d2b5d399e610ad6d8067e32a81f92e5da587"
+        },
+        "l1MNTFaucet": {
+          "address": "0x7466BE349B17A0f966F97dDEefe393894B9FAf06",
+          "private_key": "8ea2a06ed49d36fe74f373525f4d65986eb5bf2666c1b67a41ab6c9cb5049d05"
+        }
+      },
+      "rollup_config": {
+        "genesis": {
+          "l1": {
+            "hash": "0xffa703a4060ec7077775d519d35df79527a19ca0c54702d0c8d9e0a13115f8b3",
+            "number": 10369365
+          },
+          "l2": {
+            "hash": "0x954b79c1fefc622705cdd189f8f678dc710b3e830bf6c1e22deb6c2b5a26753f",
+            "number": 0
+          },
+          "l2_time": 1772464956,
+          "system_config": {
+            "batcherAddr": "0x05f780ba49767f1d7894edc55c67bd5641ef4d8f",
+            "overhead": "0x0000000000000000000000000000000000000000000000000000000000000834",
+            "scalar": "0x00000000000000000000000000000000000000000000000000000000000f4240",
+            "gasLimit": 1125899906842624,
+            "baseFee": 1000000000
+          }
+        },
+        "block_time": 2,
+        "max_sequencer_drift": 600,
+        "seq_window_size": 3600,
+        "channel_timeout": 300,
+        "l1_chain_id": 11155111,
+        "l2_chain_id": 1115511107,
+        "regolith_time": 0,
+        "batch_inbox_address": "0xff00000000000000000000000000000000000000",
+        "deposit_contract_address": "0x75d12b1f53331afd1c759c834f53e6add261a1eb",
+        "l1_system_config_address": "0xe6440e8384e74c4d22cc2ce7b6bf9919e07745f2",
+        "mantle_da_switch": false,
+        "datalayr_service_manager_addr": "",
+        "mantle_limb_time": 0,
+        "mantle_arsia_time": 1773039600
+      }
+    }
+  ]
+}

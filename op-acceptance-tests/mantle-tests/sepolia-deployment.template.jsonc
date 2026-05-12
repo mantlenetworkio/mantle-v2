@@ -1,0 +1,302 @@
+// Mantle Sepolia Deployment JSON Template
+// =========================================
+//
+// 字段标注说明：
+//   [MANUAL]       — 必须手动填充，无法自动获取
+//   [AUTO:fixup]   — fixupMantleDevnetConfig() 会从 L2 CL 节点的 optimism_rollupConfig RPC 自动拉取
+//   [AUTO:fixup-l1] — fixupDevnetConfig() 会自动用 go-ethereum 内置的 well-known L1 ChainConfig 替换
+//   [AUTO:default] — fixupDevnetConfig() 会根据 chain ID 自动生成默认值
+//   [OPTIONAL]     — 非必需，部分测试可能用到
+//
+// 使用方式：
+//   1. 复制为 sepolia-deployment.json
+//   2. 删除所有注释（JSON 不支持注释）
+//   3. 填充所有 [MANUAL] 标注的字段
+//   4. 设置环境变量: DEVNET_ENV_URL=file:///path/to/sepolia-deployment.json
+//
+{
+  // ── 顶层字段 ──────────────────────────────────────────────────
+  "name": "mantle-sepolia",                    // [MANUAL] 网络名称
+
+  "features": ["mantle"],                      // [MANUAL] 必须包含 "mantle"，触发 Mantle fixup 逻辑
+
+  // ── L1 配置 ───────────────────────────────────────────────────
+  "l1": {
+    "name": "l1",                              // [MANUAL] L1 链标识
+    "id": "11155111",                          // [MANUAL] Sepolia chain ID（字符串）
+
+    // L1 ChainConfig
+    // [AUTO:fixup-l1] Sepolia 是 well-known 链，fixupMantleDevnetConfig 会自动用
+    // go-ethereum 内置的 Sepolia ChainConfig 替换。所以这里可以只填 chainId，
+    // 其余 fork 时间会被自动覆盖。
+    "config": {
+      "chainId": 11155111
+    },
+
+    // L1 节点列表 — 测试通过 nodes[0].services["el"] 获取 L1 RPC
+    "nodes": [
+      {
+        "name": "l1-geth",                     // [MANUAL] 节点名
+        "services": {
+          "el": {                              // [MANUAL] L1 执行层 — 测试必须用这个连 L1
+            "name": "geth",
+            "endpoints": {
+              "rpc": {
+                "host": "<L1_RPC_HOST>",       // [MANUAL] 例如 "rpc.sepolia.org" 或内网地址
+                "port": 8545                   // [MANUAL] RPC 端口，如果是标准 HTTPS 可设 443
+                // "scheme": "https"           // [OPTIONAL] 默认 "http"，公网通常需要 "https"
+              }
+            }
+          },
+          "cl": {                              // [OPTIONAL] L1 信标链 — 部分测试可能需要
+            "name": "beacon-chain",
+            "endpoints": {
+              "http": {
+                "host": "<L1_BEACON_HOST>",    // [OPTIONAL] Sepolia beacon API 地址
+                "port": 5052
+              }
+            }
+          }
+        }
+      }
+    ],
+
+    // L1 合约地址
+    "addresses": {                             // [MANUAL] 从 Mantle Sepolia 部署记录获取
+      "L1CrossDomainMessenger": "0x...",
+      "L1CrossDomainMessengerProxy": "0x...",
+      "L1StandardBridge": "0x...",
+      "L1StandardBridgeProxy": "0x...",
+      "L1ERC721Bridge": "0x...",
+      "L1ERC721BridgeProxy": "0x...",
+      "OptimismPortal": "0x...",
+      "OptimismPortalProxy": "0x...",
+      "SystemConfig": "0x...",
+      "SystemConfigProxy": "0x...",
+      "L2OutputOracle": "0x...",
+      "L2OutputOracleProxy": "0x...",
+      "AddressManager": "0x...",
+      "OptimismMintableERC20Factory": "0x...",
+      "OptimismMintableERC20FactoryProxy": "0x...",
+      "ProxyAdmin": "0x..."
+    },
+
+    // L1 钱包 — 需要有 Sepolia ETH 余额用于测试发送 L1 交易
+    "wallets": {
+      "l1Faucet": {                            // [MANUAL] 测试框架用这个给测试账户打钱
+        "address": "0x...",
+        "private_key": "..."                   // [MANUAL] ⚠️ 需要有足够 Sepolia ETH
+      }
+    }
+  },
+
+  // ── L2 配置 ───────────────────────────────────────────────────
+  "l2": [
+    {
+      "name": "l2",                            // [MANUAL] L2 链标识
+      "id": "5003",                            // [MANUAL] Mantle Sepolia chain ID（字符串）
+
+      // L2 ChainConfig — Mantle 特有的 fork 时间
+      "config": {                              // [MANUAL] 需要与链实际状态一致
+        "chainId": 5003,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "berlinBlock": 0,
+        "londonBlock": 0,
+        "arrowGlacierBlock": 0,
+        "grayGlacierBlock": 0,
+        "mergeNetsplitBlock": 0,
+        "shanghaiTime": 0,
+        "cancunTime": 0,
+        "pragueTime": 0,                      // [MANUAL] 如果 Sepolia 已激活 Prague
+        "bedrockBlock": 0,
+        "regolithTime": 0,
+        "baseFeeTime": 0,                     // [MANUAL] Mantle BaseFee 激活时间
+        "bvmETHMintUpgradeTime": 0,
+        "metaTxV2UpgradeTime": 0,
+        "metaTxV3UpgradeTime": 0,
+        "mantleEverestTime": 0,               // [MANUAL] Everest fork 时间
+        "mantleSkadiTime": 0,                 // [MANUAL] Skadi fork 时间
+        "terminalTotalDifficulty": 0,
+        "depositContractAddress": "0x0000000000000000000000000000000000000000",
+        "optimism": {
+          "eip1559Elasticity": 2,              // [MANUAL] 需要与链配置一致
+          "eip1559Denominator": 8
+        }
+      },
+
+      // L2 服务组件
+      "services": {                            // [OPTIONAL] 当前测试代码未直接调用 batcher/proposer RPC
+        "batcher": [
+          {
+            "name": "op-batcher",
+            "endpoints": {
+              "http": {
+                "host": "<BATCHER_HOST>",
+                "port": 80
+              }
+            }
+          }
+        ],
+        "proposer": [
+          {
+            "name": "op-proposer",
+            "endpoints": {
+              "http": {
+                "host": "<PROPOSER_HOST>",
+                "port": 80
+              }
+            }
+          }
+        ]
+      },
+
+      // L2 节点列表
+      // - nodes[0] 被 ext_config_helper.go 用来获取 L2 EL endpoint
+      // - "cl" 服务被 fixupMantleDevnetConfig 用来获取 rollup config
+      "nodes": [
+        {
+          "name": "rpc0",                      // [MANUAL] 用于测试的 RPC 节点z
+          "services": {
+            "el": {                            // [MANUAL] L2 执行层 — 测试的主要入口
+              "name": "op-geth",
+              "endpoints": {
+                "rpc": {
+                  "host": "<L2_RPC_HOST>",     // [MANUAL] 例如 "rpc.sepolia.mantle.xyz"
+                  "port": 443
+                  // "scheme": "https"         // [OPTIONAL] 公网需要
+                }
+              }
+            },
+            "cl": {                            // [MANUAL] L2 共识层 (op-node) — fixup 会调 optimism_rollupConfig
+              "name": "op-node",
+              "endpoints": {
+                "rpc": {
+                  "host": "<L2_OPNODE_HOST>",  // [MANUAL] op-node RPC 地址
+                  "port": 8547
+                }
+              }
+            }
+          }
+        }
+      ],
+
+      // L2 钱包 — 测试用的 L2 账户
+      "wallets": {
+        "user1": {                             // [MANUAL] FunderL2 用这个给测试 EOA 打钱
+          "address": "0x...",
+          "private_key": "..."                 // [MANUAL] ⚠️ 需要有足够 Mantle Sepolia MNT/ETH
+        }
+      },
+
+      // L2 关联的 L1 钱包 — 基础设施角色
+      "l1_wallets": {
+        "deployer": {                          // [MANUAL] 部署者
+          "address": "0x...",
+          "private_key": "..."
+        },
+        "sequencer": {                         // [MANUAL] 排序器
+          "address": "0x...",
+          "private_key": "..."
+        },
+        "proposer": {                          // [MANUAL] 提议者
+          "address": "0x...",
+          "private_key": "..."
+        },
+        "mtbatcher": {                         // [MANUAL] Mantle batcher
+          "address": "0x...",
+          "private_key": "..."
+        },
+        "l2Faucet": {                          // [MANUAL] L2 水龙头 — 测试框架用这个 fund L2 账户
+          "address": "0x...",
+          "private_key": "..."                 // [MANUAL] ⚠️ 需要有足够的 L2 资产
+        },
+        "systemConfigOwner": {                 // [OPTIONAL] 只有改链配置的测试需要，公网无法用
+          "address": "0x...",
+          "private_key": "..."
+        },
+        "gasoracle": {                         // [OPTIONAL] GasPriceOracle owner
+          "address": "0x...",
+          "private_key": "..."
+        }
+        // 其他角色按需添加:
+        // "l1ProxyAdmin", "addrowner", "feewallet",
+        // "tssmanager", "tssnode0"..."tssnode6",
+        // "tssstaker0"..."tssstaker6",
+        // "fpstaker0", "fpstaker1", "verifier", etc.
+      },
+
+      // L2 合约地址 — 与 L1 addresses 对应但用 camelCase
+      "addresses": {                           // [MANUAL] 从 Mantle Sepolia 部署记录获取
+        "l1CrossDomainMessenger": "0x...",
+        "l1CrossDomainMessengerProxy": "0x...",
+        "l1StandardBridge": "0x...",
+        "l1StandardBridgeProxy": "0x...",
+        "l1ERC721Bridge": "0x...",
+        "l1ERC721BridgeProxy": "0x...",
+        "optimismPortal": "0x...",
+        "optimismPortalProxy": "0x...",
+        "systemConfig": "0x...",
+        "systemConfigProxy": "0x...",
+        "l2OutputOracle": "0x...",
+        "l2OutputOracleProxy": "0x...",
+        "addressManager": "0x...",
+        "optimismMintableERC20Factory": "0x...",
+        "optimismMintableERC20FactoryProxy": "0x...",
+        "proxyAdmin": "0x..."
+      },
+
+      // Rollup 配置
+      // [AUTO:fixup] fixupMantleDevnetConfig 会从 L2 CL 节点的
+      // optimism_rollupConfig RPC 自动拉取完整的 rollup config（包括所有 fork 时间）。
+      // 如果 CL 节点可达，这里只需要提供最基本的字段；
+      // 如果 CL 节点不可达，需要手动填完整。
+      "rollup_config": {
+        "genesis": {                           // [MANUAL] 如果 CL 不可达
+          "l1": {
+            "hash": "0x...",                   // [MANUAL] L1 起始区块 hash
+            "number": 0                        // [MANUAL] L1 起始区块号
+          },
+          "l2": {
+            "hash": "0x...",                   // [MANUAL] L2 创世区块 hash
+            "number": 0                        // [MANUAL] L2 创世区块号
+          },
+          "l2_time": 0,                        // [MANUAL] L2 创世时间戳
+          "system_config": {
+            "batcherAddr": "0x...",             // [MANUAL] batcher 地址
+            "overhead": "0x...",
+            "scalar": "0x...",
+            "gasLimit": 30000000,
+            "baseFee": 1000000000
+          }
+        },
+        "block_time": 2,                       // [MANUAL] L2 出块间隔（秒）
+        "max_sequencer_drift": 600,            // [MANUAL]
+        "seq_window_size": 3600,               // [MANUAL]
+        "channel_timeout": 300,                // [MANUAL]
+        "l1_chain_id": 11155111,               // [MANUAL]
+        "l2_chain_id": 5003,                   // [MANUAL]
+        "regolith_time": 0,                    // [AUTO:fixup] 从 CL RPC 获取
+        "batch_inbox_address": "0x...",        // [MANUAL]
+        "deposit_contract_address": "0x...",   // [MANUAL] = OptimismPortalProxy
+        "l1_system_config_address": "0x...",   // [MANUAL] = SystemConfigProxy
+
+        // Mantle 特有字段 — 全部可从 CL RPC 自动获取
+        "mantle_da_switch": false,             // [AUTO:fixup]
+        "datalayr_service_manager_addr": "",   // [AUTO:fixup]
+        "mantle_base_fee_time": 0,             // [AUTO:fixup]
+        "mantle_everest_time": 0,              // [AUTO:fixup]
+        "mantle_skadi_time": 0,                // [AUTO:fixup]
+        "mantle_limb_time": 0,                 // [AUTO:fixup]
+        "mantle_arsia_time": 0                 // [AUTO:fixup]
+      }
+    }
+  ]
+}

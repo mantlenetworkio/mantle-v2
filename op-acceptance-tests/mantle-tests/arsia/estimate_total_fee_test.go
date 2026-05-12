@@ -58,10 +58,6 @@ func weiHex(n int64) *hexutil.Big {
 	return bigHex(big.NewInt(n))
 }
 
-func gwei(n int64) *hexutil.Big {
-	return bigHex(new(big.Int).Mul(big.NewInt(n), big.NewInt(1e9)))
-}
-
 // rpcEstimateTotalFee calls eth_estimateTotalFee with an optional block param.
 func rpcEstimateTotalFee(ctx context.Context, rpc client.RPC, args estimateArgs, block ...string) (*big.Int, error) {
 	var result hexutil.Big
@@ -98,6 +94,19 @@ func rpcGasPrice(ctx context.Context, rpc client.RPC) (*big.Int, error) {
 		return nil, err
 	}
 	return result.ToInt(), nil
+}
+
+// currentBaseFee returns the suggested gas price from the network (>= baseFee).
+func currentBaseFee(ctx context.Context, rpc client.RPC) *big.Int {
+	var result hexutil.Big
+	_ = rpc.CallContext(ctx, &result, "eth_gasPrice")
+	return result.ToInt()
+}
+
+// aboveBaseFee returns suggestedGasPrice * multiplier, ensuring the value works on any network.
+func aboveBaseFee(ctx context.Context, rpc client.RPC, multiplier int64) *hexutil.Big {
+	base := currentBaseFee(ctx, rpc)
+	return bigHex(new(big.Int).Mul(base, big.NewInt(multiplier)))
 }
 
 func requireRelativeErrorLE(t devtest.T, name string, estimated, actual *big.Int, maxPercent int64) {
@@ -215,7 +224,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T0_01_LegacySimpleTransfer", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			Value: weiHex(1e18), GasPrice: gwei(1),
+			Value: weiHex(1e18), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -224,7 +233,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 
 	t.Run("T0_02_LegacyContractDeploy", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, Data: withData(deployBytecode), GasPrice: gwei(1),
+			From: &aliceAddr, Data: withData(deployBytecode), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -235,7 +244,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		// Call to precompile (identity) as a proxy for contract call
 		precompile := common.BytesToAddress([]byte{0x4})
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &precompile, Data: withData(data256), GasPrice: gwei(1),
+			From: &aliceAddr, To: &precompile, Data: withData(data256), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -243,7 +252,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 
 	t.Run("T0_04_LegacyLargeData", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, Data: withData(data1KB), GasPrice: gwei(1),
+			From: &aliceAddr, To: &bobAddr, Data: withData(data1KB), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -262,7 +271,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T0_06_LegacyHighGasPrice", func(t devtest.T) {
 		// Keep gas price very high but still affordable in test account balance.
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1000),
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 100),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -273,7 +282,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T1_01_EmptyAccessList", func(t devtest.T) {
 		emptyAL := types.AccessList{}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: &emptyAL,
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1), AccessList: &emptyAL,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -283,7 +292,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		// storageKeys must be encoded as an empty array (not omitted/null).
 		al := types.AccessList{{Address: someContract, StorageKeys: []common.Hash{}}}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: &al,
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -292,7 +301,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T1_03_SingleAddrMultiKeys", func(t devtest.T) {
 		al := types.AccessList{{Address: someContract, StorageKeys: []common.Hash{storageKey1, storageKey2, storageKey3}}}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: &al,
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -305,7 +314,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			{Address: addr2, StorageKeys: []common.Hash{storageKey3}},
 		}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: &al,
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -324,7 +333,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			}
 		}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: &al,
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -345,7 +354,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T2_01_EIP1559Standard", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1000),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -354,7 +363,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T2_02_EIP1559ContractDeploy", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, Data: withData(deployBytecode),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -364,7 +373,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		precompile := common.BytesToAddress([]byte{0x4})
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &precompile, Data: withData(data256),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -374,7 +383,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		al := types.AccessList{{Address: someContract, StorageKeys: []common.Hash{storageKey1}}}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2), AccessList: &al,
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -386,7 +395,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		t.Require().NoError(err)
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Data: withData(bigData),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -396,7 +405,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T2_06_EIP1559ZeroValue", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(0),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0, "zero-value tx should still have gas cost")
@@ -405,7 +414,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("T2_07_EIP1559SelfTransfer", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &aliceAddr,
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -415,7 +424,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		zero := common.Address{}
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &zero,
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -431,7 +440,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		tokenAddr := common.HexToAddress("0xcccc000000000000000000000000000000000001")
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &tokenAddr, Data: withData(calldata),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -444,8 +453,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			From: &aliceAddr, To: &bobAddr,
 			BlobHashes:           []common.Hash{{0x01, 0x01}},
 			BlobFeeCap:           bigHex(big.NewInt(1e9)),
-			MaxFeePerGas:         gwei(10),
-			MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas:         aboveBaseFee(ctx, rpc, 2),
+			MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().Error(err, "blob tx should be rejected by eth_estimateTotalFee")
 		t.Require().Contains(strings.ToLower(err.Error()), "blob")
@@ -456,8 +465,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			From: &aliceAddr, To: &bobAddr,
 			BlobHashes:           []common.Hash{{0x01, 0x01}, {0x01, 0x02}, {0x01, 0x03}},
 			BlobFeeCap:           bigHex(big.NewInt(1e9)),
-			MaxFeePerGas:         gwei(10),
-			MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas:         aboveBaseFee(ctx, rpc, 2),
+			MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().Error(err, "blob tx should be rejected by eth_estimateTotalFee")
 		t.Require().Contains(strings.ToLower(err.Error()), "blob")
@@ -468,7 +477,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		_, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
 			BlobHashes: []common.Hash{{0x01, 0x01}}, BlobFeeCap: bigHex(big.NewInt(1e9)),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2), AccessList: &al,
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().Error(err, "blob tx should be rejected by eth_estimateTotalFee")
 		t.Require().Contains(strings.ToLower(err.Error()), "blob")
@@ -478,7 +487,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		_, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From:       &aliceAddr,
 			BlobHashes: []common.Hash{{0x01, 0x01}}, BlobFeeCap: bigHex(big.NewInt(1e9)),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().Error(err, "blob tx without to should fail")
 	})
@@ -487,7 +496,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
 			BlobFeeCap:   bigHex(big.NewInt(1e9)),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		// Without blobHashes, should fall back to DynamicFee type
 		t.Require().NoError(err)
@@ -515,8 +524,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"from":                 aliceAddr,
 			"to":                   aliceAddr,
 			"authorizationList":    []types.SetCodeAuthorization{auth},
-			"maxFeePerGas":         gwei(10),
-			"maxPriorityFeePerGas": gwei(2),
+			"maxFeePerGas":         aboveBaseFee(ctx, rpc, 2),
+			"maxPriorityFeePerGas": aboveBaseFee(ctx, rpc, 1),
 		}, "latest")
 		t.Require().NoError(err)
 		t.Require().True(result.ToInt().Sign() > 0)
@@ -534,8 +543,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"from":                 aliceAddr,
 			"to":                   aliceAddr,
 			"authorizationList":    []types.SetCodeAuthorization{auth1, auth2, auth3},
-			"maxFeePerGas":         gwei(10),
-			"maxPriorityFeePerGas": gwei(2),
+			"maxFeePerGas":         aboveBaseFee(ctx, rpc, 2),
+			"maxPriorityFeePerGas": aboveBaseFee(ctx, rpc, 1),
 		}, "latest")
 		t.Require().NoError(err)
 		t.Require().True(result.ToInt().Sign() > 0)
@@ -551,8 +560,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"to":                   aliceAddr,
 			"authorizationList":    []types.SetCodeAuthorization{auth},
 			"accessList":           al,
-			"maxFeePerGas":         gwei(10),
-			"maxPriorityFeePerGas": gwei(2),
+			"maxFeePerGas":         aboveBaseFee(ctx, rpc, 2),
+			"maxPriorityFeePerGas": aboveBaseFee(ctx, rpc, 1),
 		}, "latest")
 		t.Require().NoError(err)
 		t.Require().True(result.ToInt().Sign() > 0)
@@ -565,7 +574,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		err := rpc.CallContext(ctx, &result, "eth_estimateTotalFee", map[string]interface{}{
 			"from":              aliceAddr,
 			"authorizationList": []types.SetCodeAuthorization{auth},
-			"maxFeePerGas":      gwei(10),
+			"maxFeePerGas":      aboveBaseFee(ctx, rpc, 2),
 		}, "latest")
 		t.Require().Error(err, "SetCode tx without To should fail")
 	})
@@ -576,7 +585,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"from":              aliceAddr,
 			"to":                bobAddr,
 			"authorizationList": []types.SetCodeAuthorization{},
-			"maxFeePerGas":      gwei(10),
+			"maxFeePerGas":      aboveBaseFee(ctx, rpc, 2),
 		}, "latest")
 		t.Require().Error(err, "empty auth list should be rejected")
 	})
@@ -588,7 +597,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"from":              aliceAddr,
 			"to":                aliceAddr,
 			"authorizationList": []types.SetCodeAuthorization{auth},
-			"gasPrice":          gwei(1),
+			"gasPrice":          aboveBaseFee(ctx, rpc, 1),
 		}, "latest")
 		// Compatibility behavior:
 		// - Some implementations reject SetCode+gasPrice as invalid fee field mix.
@@ -606,15 +615,16 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	// ---- Cross-Type Comparisons (TX) ----
 
 	t.Run("TX01_LegacyVsDynamic", func(t devtest.T) {
+		baseGas := aboveBaseFee(ctx, rpc, 1)
 		legacyFee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1000),
-			GasPrice: gwei(1),
+			GasPrice: baseGas,
 		})
 		t.Require().NoError(err)
 
 		dynamicFee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1000),
-			MaxFeePerGas: gwei(1), MaxPriorityFeePerGas: bigHex(big.NewInt(0)),
+			MaxFeePerGas: baseGas, MaxPriorityFeePerGas: bigHex(big.NewInt(0)),
 		})
 		t.Require().NoError(err)
 
@@ -625,7 +635,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 	t.Run("TX02_WithVsWithoutAccessList", func(t devtest.T) {
 		noAL, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 
@@ -638,7 +648,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		}
 		withAL, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2), AccessList: &al,
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1), AccessList: &al,
 		})
 		t.Require().NoError(err)
 		t.Require().True(withAL.Cmp(noAL) > 0,
@@ -649,7 +659,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		// DynamicFee: simple transfer
 		dynamicFee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1000),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 
@@ -661,8 +671,8 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 			"to":                   aliceAddr,
 			"value":                weiHex(1000),
 			"authorizationList":    []types.SetCodeAuthorization{auth},
-			"maxFeePerGas":         gwei(10),
-			"maxPriorityFeePerGas": gwei(2),
+			"maxFeePerGas":         aboveBaseFee(ctx, rpc, 2),
+			"maxPriorityFeePerGas": aboveBaseFee(ctx, rpc, 1),
 		}, "latest")
 		t.Require().NoError(err)
 		setCodeFee := setCodeResult.ToInt()
@@ -674,7 +684,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 
 	t.Run("TX04_SmallVsLargeData", func(t devtest.T) {
 		small, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1),
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 
@@ -682,7 +692,7 @@ func TestEstimateTotalFee_TransactionTypes(gt *testing.T) {
 		_, err = rand.Read(big10KB)
 		t.Require().NoError(err)
 		large, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, Data: withData(big10KB), GasPrice: gwei(1),
+			From: &aliceAddr, To: &bobAddr, Data: withData(big10KB), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(large.Cmp(small) > 0,
@@ -710,32 +720,32 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 
 	base := estimateArgs{From: &aliceAddr, To: &bobAddr, Value: weiHex(1)}
 
-	// P-01: Legacy gasPrice=1gwei
+	// P-01: Legacy gasPrice at baseFee level
 	t.Run("P01_Legacy1Gwei", func(t devtest.T) {
 		args := base
-		args.GasPrice = gwei(1)
+		args.GasPrice = aboveBaseFee(ctx, rpc, 1)
 		fee, err := rpcEstimateTotalFee(ctx, rpc, args)
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
 		t.Logf("P-01 fee=%s", fee)
 	})
 
-	// P-02: Legacy gasPrice=100gwei (should be higher than P-01)
+	// P-02: Higher gasPrice should produce higher fee
 	t.Run("P02_Legacy100Gwei", func(t devtest.T) {
 		info, err := sys.L2EL.Escape().EthClient().InfoByLabel(ctx, "latest")
 		t.Require().NoError(err)
 		blockHex := hexutil.EncodeUint64(info.NumberU64())
 
-		fee1gwei, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: gwei(1),
+		feeLow, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
+			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: aboveBaseFee(ctx, rpc, 1),
 		}, blockHex)
 		t.Require().NoError(err)
-		fee100gwei, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: gwei(100),
+		feeHigh, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
+			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: aboveBaseFee(ctx, rpc, 10),
 		}, blockHex)
 		t.Require().NoError(err)
-		t.Require().True(fee100gwei.Cmp(fee1gwei) > 0,
-			"100gwei(%s) should > 1gwei(%s)", fee100gwei, fee1gwei)
+		t.Require().True(feeHigh.Cmp(feeLow) > 0,
+			"highGasPrice(%s) should > lowGasPrice(%s)", feeHigh, feeLow)
 	})
 
 	// P-03: gasPrice=0 → fallback
@@ -751,7 +761,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 	t.Run("P04_EIP1559FullParams", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -762,15 +772,24 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 		info, err := sys.L2EL.Escape().EthClient().InfoByLabel(ctx, "latest")
 		t.Require().NoError(err)
 		blockHex := hexutil.EncodeUint64(info.NumberU64())
+		baseFee := info.BaseFee()
+		tipVal := new(big.Int).Div(baseFee, big.NewInt(2)) // tip = baseFee/2
+		tip := bigHex(tipVal)
 
+		// highCap well above baseFee+tip → effective = baseFee+tip
+		highCapVal := new(big.Int).Mul(baseFee, big.NewInt(10))
 		highCap, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-			MaxFeePerGas: gwei(100), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: bigHex(highCapVal), MaxPriorityFeePerGas: tip,
 		}, blockHex)
 		t.Require().NoError(err)
+
+		// lowCap just above baseFee → effective = lowCap (capped), tip must be <= lowCap
+		lowCapVal := new(big.Int).Add(baseFee, big.NewInt(1))
+		lowTip := bigHex(big.NewInt(1)) // minimal tip to stay below lowCap
 		lowCap, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-			MaxFeePerGas: gwei(2), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: bigHex(lowCapVal), MaxPriorityFeePerGas: lowTip,
 		}, blockHex)
 		t.Require().NoError(err)
 		t.Require().True(lowCap.Cmp(highCap) < 0,
@@ -781,7 +800,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 	t.Run("P06_OnlyMaxFee", func(t devtest.T) {
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-			MaxFeePerGas: gwei(10),
+			MaxFeePerGas: aboveBaseFee(ctx, rpc, 2),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -798,7 +817,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 
 		onlyTip, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-			MaxPriorityFeePerGas: gwei(2),
+			MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		}, blockHex)
 		if err != nil {
 			t.Require().Contains(strings.ToLower(err.Error()), "max priority fee per gas higher than max fee per gas")
@@ -819,9 +838,10 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 		baseFee := info.BaseFee()
 		blockHex := hexutil.EncodeUint64(info.NumberU64())
 
-		tip := gwei(2)
-		lowCap := gwei(3)
-		highCap := gwei(20)
+		baseFeeP15 := currentBaseFee(ctx, rpc)
+		tip := bigHex(new(big.Int).Div(baseFeeP15, big.NewInt(2)))                                   // baseFee/2
+		lowCap := bigHex(new(big.Int).Add(baseFeeP15, tip.ToInt()))                                   // baseFee + tip (just capped)
+		highCap := bigHex(new(big.Int).Mul(baseFeeP15, big.NewInt(3)))                                // baseFee * 3 (uncapped)
 
 		argsLow := estimateArgs{
 			From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
@@ -867,7 +887,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 	t.Run("P09_ConflictGasPriceMaxFee", func(t devtest.T) {
 		_, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			GasPrice: gwei(1), MaxFeePerGas: gwei(2),
+			GasPrice: aboveBaseFee(ctx, rpc, 1), MaxFeePerGas: aboveBaseFee(ctx, rpc, 2),
 		})
 		t.Require().Error(err)
 		t.Require().Contains(strings.ToLower(err.Error()), "gasprice")
@@ -877,7 +897,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 	t.Run("P10_ConflictGasPriceTip", func(t devtest.T) {
 		_, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			GasPrice: gwei(1), MaxPriorityFeePerGas: gwei(1),
+			GasPrice: aboveBaseFee(ctx, rpc, 1), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpc, 1),
 		})
 		t.Require().Error(err)
 	})
@@ -886,7 +906,7 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 	t.Run("P11_HugeGasPrice", func(t devtest.T) {
 		// Keep this large for overflow checks, but avoid triggering insufficient-funds in test env.
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1000),
+			From: &aliceAddr, To: &bobAddr, GasPrice: aboveBaseFee(ctx, rpc, 100),
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -915,10 +935,11 @@ func TestEstimateTotalFee_FeeParams(gt *testing.T) {
 
 	// P-14: tip near maxFee; effective price still capped by maxFee
 	t.Run("P14_HugeTipCapped", func(t devtest.T) {
+		capVal := aboveBaseFee(ctx, rpc, 2)
 		fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &aliceAddr, To: &bobAddr,
-			MaxFeePerGas:         gwei(5),
-			MaxPriorityFeePerGas: gwei(5),
+			MaxFeePerGas:         capVal,
+			MaxPriorityFeePerGas: capVal,
 		})
 		t.Require().NoError(err)
 		t.Require().True(fee.Sign() > 0)
@@ -1103,7 +1124,7 @@ func TestEstimateTotalFee_ErrorHandling(gt *testing.T) {
 		huge := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000))
 		_, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 			From: &poorAddr, To: &bobAddr,
-			Value: bigHex(huge), GasPrice: gwei(100),
+			Value: bigHex(huge), GasPrice: aboveBaseFee(ctx, rpc, 10),
 		})
 		t.Require().Error(err, "insufficient balance should fail estimate")
 		t.Require().True(
@@ -1346,6 +1367,8 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 	aliceAddr := alice.Address()
 	bobAddr := bob.Address()
 
+	baseGasPrice := aboveBaseFee(ctx, rpc, 1)
+
 	// C-01: Data size monotonic
 	t.Run("C01_DataSizeMonotonic", func(t devtest.T) {
 		sizes := []int{0, 32, 256, 1024, 4096}
@@ -1362,7 +1385,7 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 				d = withData(data)
 			}
 			fee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-				From: &aliceAddr, To: &bobAddr, Data: d, GasPrice: gwei(1),
+				From: &aliceAddr, To: &bobAddr, Data: d, GasPrice: baseGasPrice,
 			})
 			t.Require().NoError(err)
 			if prevFee != nil {
@@ -1376,16 +1399,16 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 
 	// C-02: GasPrice scales L2 fee
 	t.Run("C02_GasPriceScales", func(t devtest.T) {
-		prices := []int64{1, 2, 5, 10}
-		fees := make([]*big.Int, len(prices))
-		for i, p := range prices {
+		multipliers := []int64{1, 2, 5, 10}
+		fees := make([]*big.Int, len(multipliers))
+		for i, m := range multipliers {
 			var err error
 			fees[i], err = rpcEstimateTotalFee(ctx, rpc, estimateArgs{
 				From: &aliceAddr, To: &bobAddr, Value: weiHex(1),
-				GasPrice: gwei(p),
+				GasPrice: aboveBaseFee(ctx, rpc, m),
 			})
 			t.Require().NoError(err)
-			t.Logf("C-02 gasPrice=%dgwei fee=%s", p, fees[i])
+			t.Logf("C-02 gasPrice=%dx fee=%s", m, fees[i])
 		}
 		for i := 1; i < len(fees); i++ {
 			t.Require().True(fees[i].Cmp(fees[i-1]) > 0)
@@ -1399,7 +1422,7 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 		for i, v := range values {
 			var err error
 			fees[i], err = rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-				From: &aliceAddr, To: &bobAddr, Value: bigHex(v), GasPrice: gwei(1),
+				From: &aliceAddr, To: &bobAddr, Value: bigHex(v), GasPrice: baseGasPrice,
 			})
 			t.Require().NoError(err)
 		}
@@ -1459,14 +1482,14 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 
 		// EOA transfer: just value, no code execution
 		eoaFee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: gwei(1),
+			From: &aliceAddr, To: &bobAddr, Value: weiHex(1), GasPrice: baseGasPrice,
 		})
 		t.Require().NoError(err)
 
 		// Contract call: triggers SSTORE (cold), costs more gas
 		calldata := common.LeftPadBytes(big.NewInt(999).Bytes(), 32)
 		contractFee, err := rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-			From: &aliceAddr, To: &contractAddr, Data: withData(calldata), GasPrice: gwei(1),
+			From: &aliceAddr, To: &contractAddr, Data: withData(calldata), GasPrice: baseGasPrice,
 		})
 		t.Require().NoError(err)
 		t.Logf("C-05 EOA=%s, Contract(SSTORE)=%s", eoaFee, contractFee)
@@ -1476,7 +1499,7 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 
 	// C-06: Repeated calls same block → identical
 	t.Run("C06_RepeatedIdentical", func(t devtest.T) {
-		args := estimateArgs{From: &aliceAddr, To: &bobAddr, Value: weiHex(42), GasPrice: gwei(1)}
+		args := estimateArgs{From: &aliceAddr, To: &bobAddr, Value: weiHex(42), GasPrice: baseGasPrice}
 		info, err := sys.L2EL.Escape().EthClient().InfoByLabel(ctx, "latest")
 		t.Require().NoError(err)
 		blockHex := hexutil.EncodeUint64(info.NumberU64())
@@ -1508,7 +1531,7 @@ func TestEstimateTotalFee_ControlVariable(gt *testing.T) {
 			}
 			var err error
 			fees[i], err = rpcEstimateTotalFee(ctx, rpc, estimateArgs{
-				From: &aliceAddr, To: &bobAddr, GasPrice: gwei(1), AccessList: alPtr,
+				From: &aliceAddr, To: &bobAddr, GasPrice: baseGasPrice, AccessList: alPtr,
 			})
 			t.Require().NoError(err)
 			t.Logf("C-07 AL size=%d fee=%s", n, fees[i])
@@ -1756,7 +1779,7 @@ func TestEstimateTotalFee_VsActualCost(gt *testing.T) {
 		toAddr := bob.Address()
 
 		estimated, err := rpcEstimateTotalFee(ctx, rpcCli, estimateArgs{
-			From: &fromAddr, To: &toAddr, Value: weiHex(1000), GasPrice: gwei(1),
+			From: &fromAddr, To: &toAddr, Value: weiHex(1000), GasPrice: aboveBaseFee(ctx, rpcCli, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(estimated.Sign() > 0)
@@ -1772,7 +1795,7 @@ func TestEstimateTotalFee_VsActualCost(gt *testing.T) {
 
 		estimated, err := rpcEstimateTotalFee(ctx, rpcCli, estimateArgs{
 			From: &fromAddr, To: &toAddr, Value: weiHex(1000),
-			MaxFeePerGas: gwei(10), MaxPriorityFeePerGas: gwei(2),
+			MaxFeePerGas: aboveBaseFee(ctx, rpcCli, 2), MaxPriorityFeePerGas: aboveBaseFee(ctx, rpcCli, 1),
 		})
 		t.Require().NoError(err)
 		t.Require().True(estimated.Sign() > 0)

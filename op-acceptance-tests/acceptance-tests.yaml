@@ -116,15 +116,185 @@ gates:
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/tests/custom_gas_token
         timeout: 10m
 
-  - id: mantle
-    description: "Mantle network tests."
+  - id: mantle-temp
+    description: "Temporary gate for re-running failed tests."
     tests:
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
+        timeout: 10m
+
+  # ── Mantle Public Network ────────────────────────────────────
+  # Tests that can run on any external network (public or fork).
+  # Only needs: L1/L2 RPC endpoints + funded faucet wallets.
+  # No admin keys, no infrastructure control, no TimeTravel.
+
+  - id: mantle-public
+    description: "Mantle tests for public/external networks — standard tx, RPC reads, deposits. No admin keys or infra control."
+    tests:
+      # Smoke / base — RPC connectivity, faucet, block advance
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
+        name: TestFaucetFund
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
+        name: TestRPCConnectivity
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
+        name: TestCLAdvance
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
+        name: TestPublicRpcAdvance
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
+        timeout: 5m
+      # Arsia — deploy contracts, send txs, read state, bridge
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestCalldataCost
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestCheckArsiaScript
+        timeout: 5m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestERC20Bridge
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestWithdrawalRoot
+        timeout: 5m
+      # EstimateTotalFee — only tests that do NOT call SetOperatorFee or use vault balance diffs
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_Smoke
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_TransactionTypes
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_FeeParams
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_BlockParam
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_ErrorHandling
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_CrossValidation
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_ControlVariable
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_ContractInteractions
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_Performance
+        timeout: 10m
+
+  # ── Mantle Public Serial ──────────────────────────────────────
+  # Tests that can run on public networks but compare vault balance diffs,
+  # so they must run with --serial to avoid interference from concurrent txs.
+
+  - id: mantle-public-serial
+    description: "Mantle tests requiring --serial — shared faucet nonce or vault balance diff calculations."
+    tests:
+      # Deposit (L1→L2) — shares l1MNTFaucet key, nonce conflicts if parallel
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
+        timeout: 10m
+      # Transfer — validates fee distribution to vaults via balance diffs
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
+        name: TestTransfer
+        timeout: 5m
+      # L1FeeAccuracy — compares estimateTotalFee vs actual cost using vault diffs
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_L1FeeAccuracy
+        timeout: 10m
+
+  # ── Mantle Private/Admin Network ───────────────────────────────
+  # Tests that require admin keys (SystemConfigOwner, GPO operator),
+  # infrastructure control (Stop/Start nodes, ControlPlane, TimeTravel),
+  # or specialized services (Faucet service, SyncTester, Conductor).
+
+  - id: mantle-private
+    description: "Mantle tests requiring admin keys or infrastructure control — only for controlled environments."
+    tests:
+      # Arsia — require SystemConfigOwner or SetOperatorFee
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestFees
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestOperatorFee
+        timeout: 10m
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
         name: TestMinBaseFee
         timeout: 10m
-  - id: mantle-temp
-    description: "Mantle network tests."
-    tests:
-      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/limb
-        name: TestEstimateTotalFee_PreArsiaRejected
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestDAFootprint
         timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_VsActualCost
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
+        name: TestEstimateTotalFee_OperatorFee
+        timeout: 10m
+      # Tokenratio — require GPO operator key
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/tokenratio
+        timeout: 10m
+      # Withdrawal — require TimeTravel (AdvanceTime for finalization)
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/withdrawal
+        timeout: 10m
+      # Skadi — require Faucet service + Archive node
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/skadi
+        timeout: 5m
+      # Batcher — require ControlPlane, TestSequencer, Stop/Start
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/batcher
+        timeout: 10m
+      # Conductor — require ConductorSets
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/conductor
+        timeout: 10m
+      # Fusaka — require L1 blob spam + fork timing control
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/fusaka
+        timeout: 10m
+      # SafeHeadDB — require Stop/Start nodes
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/safeheaddb_clsync
+        timeout: 10m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/safeheaddb_elsync
+        timeout: 10m
+  - id: mantle-onlysysgo
+    description: "Mantle tests requiring admin keys or infrastructure control — only for controlled environments."
+    tests:
+      # Sync — require Stop/Start nodes
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/unsafe_only
+      - timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/manual
+      - timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/clsync/gap_clp2p
+      - timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/elsync/gap_clp2p
+      - timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/elsync/gap_elp2p
+      - timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync/elsync/reorg
+      - timeout: 15m
+      # DepReqRes — require node disconnection/reconnection
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/depreqres/reqressyncdisabled
+        timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/depreqres/reqressyncdisabled/clsync
+        timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/depreqres/reqressyncdisabled/elsync
+        timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/depreqres/syncmodereqressync/clsync
+        timeout: 15m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/depreqres/syncmodereqressync/elsync
+        timeout: 15m
+      # Sync tester — require SyncTester infrastructure
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_e2e
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_elsync
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_elsync_multi
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_hfs
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_ext_el
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_hfs_ext
+        timeout: 20m
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/sync_tester/sync_tester_unsafe_only_ext
+        timeout: 20m
