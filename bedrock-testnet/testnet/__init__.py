@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description='Bedrock testnet launcher')
 parser.add_argument('--monorepo-dir', help='Directory of the monorepo', default=os.getcwd())
 parser.add_argument('--rpc-url', help='RPC URL of the L1 network', default='http://localhost:8545')
 parser.add_argument('--private-key', help='Private key of the deployer account', default='0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
+parser.add_argument('--chain-id', help='Chain ID of the L1 network', default=11155111)
 
 
 
@@ -27,6 +28,7 @@ def main():
     args = parser.parse_args()
     rpc_url = args.rpc_url
     private_key = args.private_key
+    chain_id = args.chain_id
 
     pjoin = os.path.join
     monorepo_dir = os.path.abspath(args.monorepo_dir)
@@ -43,11 +45,11 @@ def main():
 
     # Fetch chain ID from localhost:8545 AFTER L1 is up
     log.info(f'Fetching chain ID from l1 endpoint: {rpc_url}...')
-    chain_id = get_chain_id_from_rpc(rpc_url)
-    if chain_id is None:
-        log.error(f'Failed to fetch chain ID from l1 endpoint: {rpc_url} after L1 startup')
-        raise Exception('Cannot determine L1 chain ID')
-    log.info(f'Using chain ID {chain_id} from l1 endpoint: {rpc_url}')
+    # chain_id = get_chain_id_from_rpc(rpc_url)
+    # if chain_id is None:
+    #     log.error(f'Failed to fetch chain ID from l1 endpoint: {rpc_url} after L1 startup')
+    #     raise Exception('Cannot determine L1 chain ID')
+    # log.info(f'Using chain ID {chain_id} from l1 endpoint: {rpc_url}')
 
     # Update deployment_json_path with actual chain_id
     deployment_json_path = pjoin(deployment_dir, f'{chain_id}-deploy.json')
