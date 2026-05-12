@@ -27,6 +27,9 @@ pub use params::{
     OP_SEPOLIA_EIP1559_DEFAULT_BASE_FEE_MAX_CHANGE_DENOMINATOR,
     OP_SEPOLIA_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER, base_fee_config, base_fee_params,
     base_fee_params_canyon,
+    // [MANTLE] Mantle-specific base fee constants.
+    MANTLE_BASE_FEE_CONFIG, MANTLE_BASE_FEE_PARAMS, MANTLE_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR,
+    MANTLE_EIP1559_ELASTICITY_MULTIPLIER,
 };
 
 mod superchain;
@@ -37,13 +40,13 @@ pub use superchain::{
 
 mod updates;
 pub use updates::{
-    BatcherUpdate, DaFootprintGasScalarUpdate, Eip1559Update, GasConfigUpdate, GasLimitUpdate,
-    MinBaseFeeUpdate, OperatorFeeUpdate, UnsafeBlockSignerUpdate,
+    BaseFeeUpdate, BatcherUpdate, DaFootprintGasScalarUpdate, Eip1559Update, GasConfigUpdate,
+    GasLimitUpdate, MinBaseFeeUpdate, OperatorFeeUpdate, UnsafeBlockSignerUpdate,
 };
 
 mod system;
 pub use system::{
-    BatcherUpdateError, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,
+    BaseFeeUpdateError, BatcherUpdateError, CONFIG_UPDATE_EVENT_VERSION_0, CONFIG_UPDATE_TOPIC,
     DaFootprintGasScalarUpdateError, EIP1559UpdateError, GasConfigUpdateError, GasLimitUpdateError,
     LogProcessingError, MinBaseFeeUpdateError, OperatorFeeUpdateError, SystemConfig,
     SystemConfigLog, SystemConfigUpdate, SystemConfigUpdateError, SystemConfigUpdateKind,
@@ -53,7 +56,8 @@ pub use system::{
 mod chain;
 pub use chain::{
     AddressList, AltDAConfig, BASE_MAINNET_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID, ChainConfig,
-    HardForkConfig, L1ChainConfig, OP_MAINNET_CHAIN_ID, OP_SEPOLIA_CHAIN_ID, Roles,
+    HardForkConfig, L1ChainConfig, MANTLE_MAINNET_CHAIN_ID, MANTLE_SEPOLIA_CHAIN_ID,
+    MantleHardForkConfig, OP_MAINNET_CHAIN_ID, OP_SEPOLIA_CHAIN_ID, Roles,
 };
 
 pub mod interop;

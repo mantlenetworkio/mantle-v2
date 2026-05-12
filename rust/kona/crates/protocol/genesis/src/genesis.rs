@@ -57,6 +57,7 @@ mod tests {
                 overhead: uint!(0xbc_U256),
                 scalar: uint!(0xa6fe0_U256),
                 gas_limit: 30000000,
+                base_fee: None,
                 base_fee_scalar: None,
                 blob_base_fee_scalar: None,
                 eip1559_denominator: None,

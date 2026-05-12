@@ -7,18 +7,20 @@
 pub enum SystemConfigUpdateKind {
     /// Batcher update type
     Batcher = 0,
-    /// Gas config update type
+    /// Gas config update type (FEE_SCALARS)
     GasConfig = 1,
     /// Gas limit update type
     GasLimit = 2,
     /// Unsafe block signer update type
     UnsafeBlockSigner = 3,
+    /// [MANTLE] Base fee update type — inserted at 4, shifts subsequent variants by one.
+    BaseFee = 4,
     /// EIP-1559 parameters update type
-    Eip1559 = 4,
+    Eip1559 = 5,
     /// Operator fee parameter update
-    OperatorFee = 5,
+    OperatorFee = 6,
     /// Min base fee parameter update
-    MinBaseFee = 6,
+    MinBaseFee = 7,
     /// DA footprint gas scalar update type
-    DaFootprintGasScalar = 7,
+    DaFootprintGasScalar = 8,
 }

@@ -26,6 +26,8 @@ pub struct SystemConfig {
     pub scalar: U256,
     /// Gas limit value
     pub gas_limit: u64,
+    /// [MANTLE] Base fee value, updated via the BaseFee SystemConfig update.
+    pub base_fee: Option<U256>,
     /// Base fee scalar value
     pub base_fee_scalar: Option<u64>,
     /// Blob base fee scalar value
@@ -71,6 +73,7 @@ impl<'a> serde::Deserialize<'a> for SystemConfig {
             overhead: U256,
             scalar: U256,
             gas_limit: u64,
+            base_fee: Option<U256>,
             base_fee_scalar: Option<u64>,
             blob_base_fee_scalar: Option<u64>,
             eip1559_params: Option<B64>,
@@ -104,6 +107,7 @@ impl<'a> serde::Deserialize<'a> for SystemConfig {
             overhead: alias.overhead,
             scalar: alias.scalar,
             gas_limit: alias.gas_limit,
+            base_fee: alias.base_fee,
             base_fee_scalar: alias.base_fee_scalar,
             blob_base_fee_scalar: alias.blob_base_fee_scalar,
             eip1559_denominator: alias.eip1559_denominator,

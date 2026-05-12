@@ -23,7 +23,7 @@ pub use kind::SystemConfigUpdateKind;
 
 mod errors;
 pub use errors::{
-    BatcherUpdateError, DaFootprintGasScalarUpdateError, EIP1559UpdateError, GasConfigUpdateError,
-    GasLimitUpdateError, LogProcessingError, MinBaseFeeUpdateError, OperatorFeeUpdateError,
-    SystemConfigUpdateError, UnsafeBlockSignerUpdateError,
+    BaseFeeUpdateError, BatcherUpdateError, DaFootprintGasScalarUpdateError, EIP1559UpdateError,
+    GasConfigUpdateError, GasLimitUpdateError, LogProcessingError, MinBaseFeeUpdateError,
+    OperatorFeeUpdateError, SystemConfigUpdateError, UnsafeBlockSignerUpdateError,
 };

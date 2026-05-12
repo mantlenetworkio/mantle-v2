@@ -1,8 +1,8 @@
 //! Contains the [`SystemConfigUpdate`].
 
 use crate::{
-    BatcherUpdate, Eip1559Update, GasConfigUpdate, GasLimitUpdate, OperatorFeeUpdate, SystemConfig,
-    SystemConfigUpdateKind, UnsafeBlockSignerUpdate,
+    BaseFeeUpdate, BatcherUpdate, Eip1559Update, GasConfigUpdate, GasLimitUpdate, OperatorFeeUpdate,
+    SystemConfig, SystemConfigUpdateKind, UnsafeBlockSignerUpdate,
     updates::{DaFootprintGasScalarUpdate, MinBaseFeeUpdate},
 };
 
@@ -19,6 +19,8 @@ pub enum SystemConfigUpdate {
     GasLimit(GasLimitUpdate),
     /// The unsafe block signer update.
     UnsafeBlockSigner(UnsafeBlockSignerUpdate),
+    /// [MANTLE] The base fee update.
+    BaseFee(BaseFeeUpdate),
     /// The EIP-1559 parameters update.
     Eip1559(Eip1559Update),
     /// The operator fee parameter update.
@@ -37,6 +39,7 @@ impl SystemConfigUpdate {
             Self::GasConfig(update) => update.apply(config),
             Self::GasLimit(update) => update.apply(config),
             Self::UnsafeBlockSigner(_) => { /* Ignored in derivation */ }
+            Self::BaseFee(update) => update.apply(config),
             Self::Eip1559(update) => update.apply(config),
             Self::OperatorFee(update) => update.apply(config),
             Self::MinBaseFee(update) => update.apply(config),
@@ -51,6 +54,7 @@ impl SystemConfigUpdate {
             Self::GasConfig(_) => SystemConfigUpdateKind::GasConfig,
             Self::GasLimit(_) => SystemConfigUpdateKind::GasLimit,
             Self::UnsafeBlockSigner(_) => SystemConfigUpdateKind::UnsafeBlockSigner,
+            Self::BaseFee(_) => SystemConfigUpdateKind::BaseFee,
             Self::Eip1559(_) => SystemConfigUpdateKind::Eip1559,
             Self::OperatorFee(_) => SystemConfigUpdateKind::OperatorFee,
             Self::MinBaseFee(_) => SystemConfigUpdateKind::MinBaseFee,

@@ -28,6 +28,9 @@ pub enum SystemConfigUpdateError {
     /// An unsafe block signer update error.
     #[error("Unsafe block signer update error: {0}")]
     UnsafeBlockSigner(UnsafeBlockSignerUpdateError),
+    /// [MANTLE] A base fee update error.
+    #[error("Base fee update error: {0}")]
+    BaseFee(BaseFeeUpdateError),
     /// A min base fee parameter update error.
     #[error("Min base fee parameter update error: {0}")]
     MinBaseFee(MinBaseFeeUpdateError),
@@ -130,6 +133,30 @@ pub enum GasConfigUpdateError {
     /// Failed to decode the scalar argument from the gas config update log.
     #[error("Failed to decode gas config update log: scalar")]
     ScalarDecodingError,
+}
+
+/// [MANTLE] An error for updating the base fee on the [`crate::SystemConfig`].
+#[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum BaseFeeUpdateError {
+    /// Invalid data length.
+    #[error("Invalid config update log: invalid data length: {0}")]
+    InvalidDataLen(usize),
+    /// Failed to decode the data pointer argument from the base fee update log.
+    #[error("Failed to decode base fee update log: data pointer")]
+    PointerDecodingError,
+    /// The data pointer is invalid.
+    #[error("Invalid config update log: invalid data pointer: {0}")]
+    InvalidDataPointer(u64),
+    /// Failed to decode the data length argument from the base fee update log.
+    #[error("Failed to decode base fee update log: data length")]
+    LengthDecodingError,
+    /// The data length is invalid.
+    #[error("Invalid config update log: invalid data length: {0}")]
+    InvalidDataLength(u64),
+    /// Failed to decode the base fee argument from the base fee update log.
+    #[error("Failed to decode base fee update log: base fee")]
+    BaseFeeDecodingError,
 }
 
 /// An error for updating the min base fee on the [`crate::SystemConfig`].

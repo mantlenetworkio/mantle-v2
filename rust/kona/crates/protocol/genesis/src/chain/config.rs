@@ -9,8 +9,9 @@ use alloy_primitives::Address;
 use crate::FJORD_MAX_SEQUENCER_DRIFT;
 use crate::{
     AddressList, AltDAConfig, BaseFeeConfig, ChainGenesis, GRANITE_CHANNEL_TIMEOUT, HardForkConfig,
-    Roles, RollupConfig, SuperchainLevel, base_fee_params, base_fee_params_canyon,
-    params::base_fee_config,
+    // [MANTLE] Pull in the Mantle hardfork config so RollupConfig can initialize it.
+    MantleHardForkConfig, Roles, RollupConfig, SuperchainLevel, base_fee_params,
+    base_fee_params_canyon, params::base_fee_config,
 };
 
 /// L1 chain configuration from the `alloy-genesis` crate.
@@ -187,6 +188,8 @@ impl ChainConfig {
             fjord_max_sequencer_drift: FJORD_MAX_SEQUENCER_DRIFT,
             chain_op_config: self.base_fee_config(),
             alt_da_config: self.alt_da.clone(),
+            // [MANTLE] Mantle hardfork timestamps default to off until explicitly configured.
+            mantle_hardforks: MantleHardForkConfig::default(),
         }
     }
 }
