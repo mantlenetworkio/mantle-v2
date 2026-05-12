@@ -7,7 +7,7 @@ use core::{fmt::Display, ops::Deref};
 use kona_genesis::L1ChainConfig;
 
 use alloy_chains::NamedChain;
-use alloy_primitives::{Address, U256, address, map::HashMap};
+use alloy_primitives::{Address, U256, address, hex::NIL, map::HashMap};
 
 /// L1 chain configuration.
 /// Simple wrapper around the [`L1ChainConfig`] type from the `alloy-genesis` crate.
@@ -70,18 +70,18 @@ impl L1Config {
                 alloy_hardforks::EthereumHardfork::Prague.name().to_string().to_lowercase(),
                 BlobParams::prague(),
             ),
-            (
-                alloy_hardforks::EthereumHardfork::Osaka.name().to_string().to_lowercase(),
-                BlobParams::osaka(),
-            ),
-            (
-                alloy_hardforks::EthereumHardfork::Bpo1.name().to_string().to_lowercase(),
-                BlobParams::bpo1(),
-            ),
-            (
-                alloy_hardforks::EthereumHardfork::Bpo2.name().to_string().to_lowercase(),
-                BlobParams::bpo2(),
-            ),
+            // (
+            //     alloy_hardforks::EthereumHardfork::Osaka.name().to_string().to_lowercase(),
+            //     BlobParams::osaka(),
+            // ),
+            // (
+            //     alloy_hardforks::EthereumHardfork::Bpo1.name().to_string().to_lowercase(),
+            //     BlobParams::bpo1(),
+            // ),
+            // (
+            //     alloy_hardforks::EthereumHardfork::Bpo2.name().to_string().to_lowercase(),
+            //     BlobParams::bpo2(),
+            // ),
         ])
     }
 

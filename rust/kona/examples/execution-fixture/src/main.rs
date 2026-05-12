@@ -21,7 +21,7 @@ use clap::Parser;
 use kona_cli::{LogArgs, LogConfig};
 use kona_executor::test_utils::ExecutorTestFixtureCreator;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -40,6 +40,80 @@ pub struct ExecutionFixtureCommand {
     /// The output directory for the fixture.
     #[arg(long, short = 'o')]
     pub output_dir: Option<PathBuf>,
+    /// Number of blocks to process (default: 1)
+    #[arg(long, default_value = "1")]
+    pub block_count: u64,
+    /// Skip saving data to disk (use temporary directory)
+    #[arg(long, default_value = "false")]
+    pub skip_save: bool,
+}
+
+/// Execution statistics tracker
+#[derive(Debug, Default)]
+struct BlockExecutionStats {
+    success_count: u64,
+    failure_count: u64,
+    failed_blocks: Vec<u64>,
+}
+
+impl BlockExecutionStats {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn record_success(&mut self) {
+        self.success_count += 1;
+    }
+
+    fn record_failure(&mut self, block_number: u64) {
+        self.failure_count += 1;
+        self.failed_blocks.push(block_number);
+    }
+
+    fn print_summary(&self) {
+        let total = self.success_count + self.failure_count;
+        if total == 0 {
+            info!("No blocks were processed");
+            return;
+        }
+
+        let success_percent = (self.success_count as f64 / total as f64) * 100.0;
+        let failure_percent = (self.failure_count as f64 / total as f64) * 100.0;
+
+        // Print summary statistics
+        println!("\n╔════════════════════════════════════════════════════════════════╗");
+        println!("║                  📊 Block Execution Summary                   ║");
+        println!("╠════════════════════════════════════════════════════════════════╣");
+        println!("║  Total Blocks: {:<47}  ║", total);
+        println!(
+            "║  ✅ Success: {:<6} ({:.1}%)                                   ║",
+            self.success_count, success_percent
+        );
+        println!(
+            "║  ❌ Failed: {:<6} ({:.1}%)                                    ║",
+            self.failure_count, failure_percent
+        );
+        println!("╚════════════════════════════════════════════════════════════════╝");
+
+        // Print failed blocks
+        if !self.failed_blocks.is_empty() {
+            println!("\n╔════════════════════════════════════════════════════════════════╗");
+            println!("║                    📋 Failed Block Details                    ║");
+            println!("╠═══════════════════╦══════════════════════════════════════════╣");
+            println!("║   Block Number    ║               Explorer Link               ║");
+            println!("╠═══════════════════╬══════════════════════════════════════════╣");
+
+            for block_num in &self.failed_blocks {
+                println!(
+                    "║  {:<16} ║  https://explorer.mantle.xyz/block/{}?tab=txs  ║",
+                    block_num, block_num
+                );
+            }
+            println!("╚═══════════════════╩══════════════════════════════════════════╝");
+        }
+
+        println!("\n🏁 Execution Completed!");
+    }
 }
 
 #[tokio::main]
@@ -65,10 +139,41 @@ async fn main() -> Result<()> {
             .join("crates/proof/executor/testdata")
     };
 
-    ExecutorTestFixtureCreator::new(cli.l2_rpc.as_str(), cli.block_number, output_dir)
-        .create_static_fixture()
-        .await;
+    let mut stats = BlockExecutionStats::new();
 
-    info!(target: "execution_fixture", block_number = cli.block_number, "Successfully created static test fixture");
+    info!(
+        "Starting block processing from block {} for {} blocks",
+        cli.block_number, cli.block_count
+    );
+
+    for i in 0..cli.block_count {
+        let current_block = cli.block_number + i;
+        let fixture_creator = ExecutorTestFixtureCreator::new_with_options(
+            cli.l2_rpc.as_str(),
+            current_block,
+            output_dir.clone(),
+            cli.skip_save,
+        );
+
+        info!(block_number = current_block, "Processing block");
+
+        match fixture_creator.create_static_fixture().await {
+            Ok(success) => {
+                if success {
+                    stats.record_success();
+                    info!(block_number = current_block, "Block execution succeeded");
+                } else {
+                    stats.record_failure(current_block);
+                    warn!(block_number = current_block, "Block execution failed");
+                }
+            }
+            Err(_) => {
+                stats.record_failure(current_block);
+                error!(block_number = current_block, "Block execution error");
+            }
+        }
+    }
+
+    stats.print_summary();
     Ok(())
 }
