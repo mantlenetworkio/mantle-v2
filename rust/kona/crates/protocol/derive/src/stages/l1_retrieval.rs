@@ -129,10 +129,6 @@ where
     ) -> PipelineResult<()> {
         self.prev.reset(l1_origin, system_config).await?;
         self.provider.clear();
-        // [MANTLE] Also reset the data-source toggle (e.g. MantleBlobSource's
-        // `mantle_format_failed` flag) so the fallback state does not persist
-        // across a pipeline reset.
-        self.provider.reset();
         self.next = self.prev.origin();
         Ok(())
     }
