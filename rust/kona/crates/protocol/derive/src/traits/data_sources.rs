@@ -40,4 +40,9 @@ pub trait DataAvailabilityProvider {
 
     /// Clears the data source for the next block ref.
     fn clear(&mut self);
+
+    /// Resets the data source on pipeline reset (e.g. L1 reorg).
+    /// Matches Go's `DataSourceFactory.Reset()` which clears the `blobSourceChanged` toggle.
+    /// Default implementation is a no-op for sources that don't need reset.
+    fn reset(&mut self) {}
 }

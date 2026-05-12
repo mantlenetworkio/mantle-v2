@@ -12,7 +12,7 @@ use alloy_consensus::{
     Transaction, TxEip4844Variant, TxEnvelope, TxType, transaction::SignerRecoverable,
 };
 use alloy_eips::eip4844::IndexedBlobHash;
-use alloy_primitives::{Address, Bytes};
+use alloy_primitives::{Address, B256, Bytes};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use kona_protocol::BlockInfo;
@@ -179,8 +179,11 @@ where
             return Ok(());
         }
 
+        // [MANTLE] develop's BlobProvider trait expects `&[B256]`; the source-side
+        // extract_blob_data returns Vec<IndexedBlobHash>, so map to the raw hashes.
+        let raw_hashes: Vec<B256> = blob_hashes.iter().map(|h| h.hash).collect();
         let blobs =
-            self.blob_fetcher.get_and_validate_blobs(block_ref, &blob_hashes).await.map_err(
+            self.blob_fetcher.get_and_validate_blobs(block_ref, &raw_hashes).await.map_err(
                 |e| {
                     warn!(target: "mantle_blob_source", "Failed to fetch blobs: {e}");
                     BlobProviderError::Backend(e.to_string())

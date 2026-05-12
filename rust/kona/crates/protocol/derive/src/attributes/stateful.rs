@@ -12,7 +12,8 @@ use alloy_rlp::Encodable;
 use alloy_rpc_types_engine::PayloadAttributes;
 use async_trait::async_trait;
 use kona_genesis::{L1ChainConfig, RollupConfig};
-use kona_hardforks::{Hardfork, Hardforks, Interop};
+// [MANTLE] Skip every OP hardfork upgrade-tx bundle; emit only the Mantle ARSIA bundle.
+use kona_hardforks::{Hardfork, Hardforks, Interop, MantleHardforks};
 use kona_interop::DependencySet;
 use kona_protocol::{
     DEPOSIT_EVENT_ABI_HASH, L1BlockInfoTx, L2BlockInfo, Predeploys, decode_deposit,
@@ -163,54 +164,63 @@ where
             ));
         }
 
-        let mut upgrade_transactions: Vec<Bytes> =
+        let mut upgrade_transactions: Vec<Bytes> = vec![];
+        // Starting with Karst, OP upgrade transactions carry their own gas budget; Mantle's
+        // Arsia bundle does not contribute to this counter.
+        let mut upgrade_gas: u64 = 0;
+
+        if self.rollup_cfg.is_mantle() {
+            // [MANTLE] Mantle chains skip every OP hardfork upgrade-tx bundle and only emit
+            // the Arsia bundle at its activation block.
+            if self.rollup_cfg.is_mantle_arsia_active(next_l2_time) &&
+                !self.rollup_cfg.is_mantle_arsia_active(l2_parent.block_info.timestamp)
+            {
+                upgrade_transactions.append(&mut MantleHardforks::ARSIA.txs().collect());
+            }
+        } else {
             if self.rollup_cfg.is_ecotone_active(next_l2_time) &&
                 !self.rollup_cfg.is_ecotone_active(l2_parent.block_info.timestamp)
             {
-                Hardforks::ECOTONE.txs().collect()
-            } else {
-                vec![]
-            };
-        if self.rollup_cfg.is_fjord_active(next_l2_time) &&
-            !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
-        {
-            upgrade_transactions.append(&mut Hardforks::FJORD.txs().collect());
-        }
-        if self.rollup_cfg.is_isthmus_active(next_l2_time) &&
-            !self.rollup_cfg.is_isthmus_active(l2_parent.block_info.timestamp)
-        {
-            upgrade_transactions.append(&mut Hardforks::ISTHMUS.txs().collect());
-        }
-        if self.rollup_cfg.is_jovian_active(next_l2_time) &&
-            !self.rollup_cfg.is_jovian_active(l2_parent.block_info.timestamp)
-        {
-            upgrade_transactions.append(&mut Hardforks::JOVIAN.txs().collect());
-        }
-        // Starting with Karst, upgrade transactions carry their own gas budget that is
-        // added to the block gas limit at the fork activation block.
-        let mut upgrade_gas: u64 = 0;
-        if self.rollup_cfg.is_karst_active(next_l2_time) &&
-            !self.rollup_cfg.is_karst_active(l2_parent.block_info.timestamp)
-        {
-            upgrade_transactions.append(&mut Hardforks::KARST.txs().collect());
-            upgrade_gas += Hardforks::KARST.upgrade_gas();
-        }
-        if self.rollup_cfg.is_interop_active(next_l2_time) &&
-            !self.rollup_cfg.is_interop_active(l2_parent.block_info.timestamp)
-        {
-            // Base 7 txs: always emitted on interop activation.
-            upgrade_transactions.append(&mut Hardforks::INTEROP.txs().collect());
+                upgrade_transactions = Hardforks::ECOTONE.txs().collect();
+            }
+            if self.rollup_cfg.is_fjord_active(next_l2_time) &&
+                !self.rollup_cfg.is_fjord_active(l2_parent.block_info.timestamp)
+            {
+                upgrade_transactions.append(&mut Hardforks::FJORD.txs().collect());
+            }
+            if self.rollup_cfg.is_isthmus_active(next_l2_time) &&
+                !self.rollup_cfg.is_isthmus_active(l2_parent.block_info.timestamp)
+            {
+                upgrade_transactions.append(&mut Hardforks::ISTHMUS.txs().collect());
+            }
+            if self.rollup_cfg.is_jovian_active(next_l2_time) &&
+                !self.rollup_cfg.is_jovian_active(l2_parent.block_info.timestamp)
+            {
+                upgrade_transactions.append(&mut Hardforks::JOVIAN.txs().collect());
+            }
+            if self.rollup_cfg.is_karst_active(next_l2_time) &&
+                !self.rollup_cfg.is_karst_active(l2_parent.block_info.timestamp)
+            {
+                upgrade_transactions.append(&mut Hardforks::KARST.txs().collect());
+                upgrade_gas += Hardforks::KARST.upgrade_gas();
+            }
+            if self.rollup_cfg.is_interop_active(next_l2_time) &&
+                !self.rollup_cfg.is_interop_active(l2_parent.block_info.timestamp)
+            {
+                // Base 7 txs: always emitted on interop activation.
+                upgrade_transactions.append(&mut Hardforks::INTEROP.txs().collect());
 
-            // CrossL2Inbox pair: only emitted when the dependency set has >1 chains.
-            // Matches op-node's gate at op-node/rollup/derive/attributes.go:178.
-            // `dependency_set` is guaranteed Some(_) here because the constructor
-            // panics when interop_time.is_some() && dependency_set.is_none(), and
-            // we only reach this branch when interop is active.
-            let dependency_set = self.dependency_set.as_ref().expect(
-                "dependency_set must be Some when interop is active — constructor invariant",
-            );
-            if dependency_set.dependencies.len() > 1 {
-                upgrade_transactions.extend(Interop::cross_l2_inbox_txs());
+                // CrossL2Inbox pair: only emitted when the dependency set has >1 chains.
+                // Matches op-node's gate at op-node/rollup/derive/attributes.go:178.
+                // `dependency_set` is guaranteed Some(_) here because the constructor
+                // panics when interop_time.is_some() && dependency_set.is_none(), and
+                // we only reach this branch when interop is active.
+                let dependency_set = self.dependency_set.as_ref().expect(
+                    "dependency_set must be Some when interop is active — constructor invariant",
+                );
+                if dependency_set.dependencies.len() > 1 {
+                    upgrade_transactions.extend(Interop::cross_l2_inbox_txs());
+                }
             }
         }
 
