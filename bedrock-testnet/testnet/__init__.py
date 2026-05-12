@@ -74,6 +74,7 @@ def main():
             'forge', 'script', 'scripts/deploy/Deploy.s.sol',
             '--rpc-url', rpc_url,
             '--private-key', private_key,
+            '--gas-estimate-multiplier', '250',
             '--broadcast'
           ],
           env={'DEPLOY_CONFIG_PATH': testnet_cfg_orig},
