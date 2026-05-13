@@ -10,10 +10,12 @@ when synchronizing future upstream changes via `git subtree pull`.
 
 | Item | Value |
 |---|---|
-| Upstream tracking point | optimism `develop` @ `1ad181f05` (2026-05-11) |
-| Bridge tag | `rust-develop-20260511` |
+| Upstream tracking point | optimism `kona-client/v1.5.1` @ `fbbf9089` (2026-05-12) |
+| Bridge tag | `rust-kona-client-v1.5.1` (= bridge split `a6c46d8a`) |
+| Bridge branch (last sync source) | `sync-kona-client-v1.5.1` |
 | Bridge repo | https://github.com/mantle-xyz/optimism-rust-bridge |
 | `git subtree add` commit | `ba2cc4514` ("Add 'rust/' from commit '1ad181f05...'") |
+| Last subtree-pull merge commit | `5a629e1a` ("rust: subtree pull from bridge (sync-kona-client-v1.5.1)") |
 | Rust toolchain | 1.94 (see `rust/rust-toolchain.toml`) |
 
 ### Migration status
@@ -24,6 +26,8 @@ when synchronizing future upstream changes via `git subtree pull`.
 | Phase 0 | wire mantle-elysium revm + op-alloy/alloy-op-evm adaptations | ✅ |
 | Phase 1 (a–g) | kona Mantle protocol migration | ✅ |
 | Phase 1.5 (B1–B3) | drop Mantle vendored-but-unused code (≈1066 lines removed) | ✅ |
+| Phase 4 | redirect `alloy-evm` to `mantle-xyz/evm @ mantle-v0.34.0` | ✅ |
+| Sync `rust-develop-20260511` → `rust-kona-client-v1.5.1` | 7 upstream commits, 38 files, 1 trivial conflict + 1 KARST fix | ✅ |
 | Phase 2 | op-succinct upgrade (independent fork) | ⏸️ |
 | Phase 3 | kona security patch follow-up | ⏸️ |
 
@@ -113,7 +117,7 @@ The largest sub-phase. Adds Mantle predicates, hardfork timestamps, and BaseFee 
 
 | File | Change |
 |---|---|
-| `kona/crates/protocol/genesis/src/rollup.rs` | `RollupConfig` gains `pub mantle_hardforks: MantleHardForkConfig` field. New methods: `is_mantle`, `revm_spec_id`, `is_mantle_skadi_active`, `is_mantle_limb_active`, `is_mantle_arsia_active`, `is_first_mantle_arsia_block`. `Default::default` switches `chain_op_config` to `MANTLE_BASE_FEE_CONFIG`. Existing `is_jovian_active` etc. get Mantle gating. New helper `default_mantle_base_fee_config` for serde defaulting. |
+| `kona/crates/protocol/genesis/src/rollup.rs` | `RollupConfig` gains `pub mantle_hardforks: MantleHardForkConfig` field. New methods: `is_mantle`, `revm_spec_id`, `is_mantle_skadi_active`, `is_mantle_limb_active`, `is_mantle_arsia_active`, `is_first_mantle_arsia_block`. `Default::default` switches `chain_op_config` to `MANTLE_BASE_FEE_CONFIG`. Existing `is_jovian_active` etc. get Mantle gating. New helper `default_mantle_base_fee_config` for serde defaulting. Comment out the `is_karst_active → OpSpecId::KARST` arm in `spec_id` — mantle-elysium's op-revm v19 has no KARST variant (post-sync addition, see §2.2 / §5.2). |
 | `kona/crates/protocol/genesis/src/chain/mantle_hardfork.rs` | New file. `MantleHardForkConfig` struct with the Mantle upgrade timestamps. |
 | `kona/crates/protocol/genesis/src/chain/mod.rs` | `MANTLE_MAINNET_CHAIN_ID = 5000` / `MANTLE_SEPOLIA_CHAIN_ID = 5003`; register `mod mantle_hardfork`. |
 | `kona/crates/protocol/genesis/src/chain/config.rs` | `ChainConfig::rollup_config` initialises `mantle_hardforks: MantleHardForkConfig::default()`. |

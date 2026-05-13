@@ -202,8 +202,11 @@ impl RollupConfig {
     pub fn spec_id(&self, timestamp: u64) -> op_revm::OpSpecId {
         if self.is_interop_active(timestamp) {
             op_revm::OpSpecId::INTEROP
-        } else if self.is_karst_active(timestamp) {
-            op_revm::OpSpecId::KARST
+        // [MANTLE] mantle-elysium op-revm v19 has no `KARST` variant (added in v20).
+        // Skip the KARST arm so post-Karst timestamps fall through to JOVIAN. See
+        // MANTLE_CHANGES.md §2.2 for the wider op-revm v19↔v20 reconciliation rule.
+        // } else if self.is_karst_active(timestamp) {
+        //     op_revm::OpSpecId::KARST
         } else if self.is_jovian_active(timestamp) {
             op_revm::OpSpecId::JOVIAN
         } else if self.is_isthmus_active(timestamp) {
