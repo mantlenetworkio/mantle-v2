@@ -44,7 +44,7 @@ func (o *Orchestrator) hydrateL2(net *descriptors.L2Chain, system stack.Extensib
 		},
 		ID:           l2ID,
 		RollupConfig: net.RollupConfig,
-		Deployment:   newL2AddressBook(net.Addresses),
+		Deployment:   newL2AddressBook(net.Addresses, o.getFirstL1ELRPC(), t.Logger()),
 		Keys:         o.defineSystemKeys(t, net),
 		Superchain:   system.Superchain(stack.SuperchainID(env.Env.Name)),
 		L1:           l1,
@@ -73,14 +73,21 @@ func (o *Orchestrator) hydrateL2(net *descriptors.L2Chain, system stack.Extensib
 	o.hydrateChallengerMaybe(net, l2)
 	o.hydrateL2ProxydMaybe(net, l2)
 
-	if faucet, ok := net.Services["faucet"]; ok {
+	if o.hasDirectFaucetKey(net) {
+		t.Logger().Info("Faucet wallet key found, using direct faucet")
+		o.hydrateDirectFaucet(t, net, l2, commonConfig, opts)
+	} else if faucet, ok := net.Services["faucet"]; ok {
+		t.Logger().Info("Found faucet service in descriptor", "count", len(faucet))
 		for _, instance := range faucet {
+			t.Logger().Info("Adding external faucet", "name", instance.Name)
 			l2.AddFaucet(shim.NewFaucet(shim.FaucetConfig{
 				CommonConfig: commonConfig,
 				Client:       o.rpcClient(t, instance, RPCProtocol, fmt.Sprintf("/chain/%s", l2.ChainID().String()), opts...),
 				ID:           stack.NewFaucetID(instance.Name, l2.ChainID()),
 			}))
 		}
+	} else {
+		t.Logger().Warn("No faucet service and no l2Faucet wallet key, skipping faucet setup")
 	}
 
 	system.AddL2Network(l2)

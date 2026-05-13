@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -149,9 +150,24 @@ func (f *Faucet) RequestETH(ctx context.Context, request *ftypes.FaucetRequest) 
 		GasLimit: 0,   // estimate gas dynamically
 		Value:    request.Amount.ToBig(),
 	}
-	rec, err := f.txMgr.Send(ctx, candidate)
-	if err != nil {
+	// Retry on nonce-too-low errors, which occur when multiple faucet instances
+	// share the same wallet key under concurrent test execution.
+	var rec *types.Receipt
+	const maxNonceRetries = 10
+	for attempt := 0; attempt < maxNonceRetries; attempt++ {
+		rec, err = f.txMgr.Send(ctx, candidate)
+		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "nonce too low") {
+			logger.Info("Nonce conflict, retrying immediately", "attempt", attempt+1, "err", err)
+			continue
+		}
 		logger.Error("failed to send funds", "err", err)
+		return fmt.Errorf("failed to send funds: %w", err)
+	}
+	if err != nil {
+		logger.Error("failed to send funds after retries", "err", err)
 		return fmt.Errorf("failed to send funds: %w", err)
 	}
 	if rec.Status == types.ReceiptStatusFailed {

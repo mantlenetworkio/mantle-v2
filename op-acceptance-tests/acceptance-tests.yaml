@@ -145,6 +145,9 @@ gates:
         timeout: 5m
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/chain
         timeout: 5m
+      # Deposit (L1→L2)
+      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
+        timeout: 10m
       # Arsia — deploy contracts, send txs, read state, bridge
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/arsia
         name: TestCalldataCost
@@ -192,11 +195,8 @@ gates:
   # so they must run with --serial to avoid interference from concurrent txs.
 
   - id: mantle-public-serial
-    description: "Mantle tests requiring --serial — shared faucet nonce or vault balance diff calculations."
+    description: "Mantle tests requiring --serial — vault balance diff calculations need isolation from concurrent txs."
     tests:
-      # Deposit (L1→L2) — shares l1MNTFaucet key, nonce conflicts if parallel
-      - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base/deposit
-        timeout: 10m
       # Transfer — validates fee distribution to vaults via balance diffs
       - package: github.com/ethereum-optimism/optimism/op-acceptance-tests/mantle-tests/base
         name: TestTransfer

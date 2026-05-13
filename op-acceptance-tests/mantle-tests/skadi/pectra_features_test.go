@@ -58,7 +58,7 @@ func TestPectra(gt *testing.T) {
 	sys := newSystem(t)
 	sys.L2EL.WaitForOnline()
 	sys.L2EL.WaitForBlockNumber(10)
-	alice := sys.FunderL2.NewFundedEOA(eth.HundredEther)
+	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
 
 	cases := []struct {
 		name       string

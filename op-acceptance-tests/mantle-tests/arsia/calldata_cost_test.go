@@ -16,7 +16,7 @@ func TestCalldataCost(gt *testing.T) {
 	sys := presets.NewMantleMinimal(t)
 	require := t.Require()
 
-	alice := sys.FunderL2.NewFundedEOA(eth.HundredEther)
+	alice := sys.FunderL2.NewFundedEOA(eth.OneTenthEther)
 
 	dat := make([]byte, 2048)
 	_, err := rand.Read(dat)
