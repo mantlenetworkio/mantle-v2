@@ -421,7 +421,6 @@ mod tests {
     use alloy_primitives::{U256, b256};
     use kona_mpt::NoopTrieHinter;
     use revm::database::{AccountStatus, BundleAccount};
-    
 
     fn new_test_db() -> TrieDB<NoopTrieDBProvider, NoopTrieHinter> {
         TrieDB::new(Header::default().seal_slow(), NoopTrieDBProvider, NoopTrieHinter)
@@ -480,13 +479,13 @@ mod tests {
     }
 
     fn bundle_with_account(address: Address, account: BundleAccount) -> BundleState {
-        let mut state = HashMap::default();
+        let mut state = revm::primitives::HashMap::default();
         state.insert(address, account);
         BundleState { state, ..Default::default() }
     }
 
-    /// Pre-populate the trie with a live account so subsequent destroy bundles have a real leaf
-    /// to delete (covers the non–`KeyNotFound` delete path).
+    // Pre-populate the trie with a live account so that subsequent destroy bundles have
+    // something to delete (TrieNode::delete errors on a missing key).
     fn insert_account(db: &mut TrieDB<NoopTrieDBProvider, NoopTrieHinter>, address: Address) {
         let account = BundleAccount::new(
             None,
@@ -497,6 +496,7 @@ mod tests {
         db.state_root(&bundle_with_account(address, account)).unwrap();
     }
 
+    // A plain Destroyed account (info = None) must be absent from the state root.
     #[test]
     fn test_destroyed_account_absent() {
         let mut db = new_test_db();
@@ -517,6 +517,8 @@ mod tests {
         assert_eq!(root, EMPTY_ROOT_HASH, "Destroyed account should not appear in trie");
     }
 
+    // A DestroyedChanged account (destroyed then given a new balance) must appear in the state
+    // root with its new state.
     #[test]
     fn test_destroyed_changed_account_reinserted() {
         let mut db = new_test_db();
@@ -539,17 +541,21 @@ mod tests {
         assert_ne!(root, EMPTY_ROOT_HASH, "DestroyedChanged account must be re-inserted into trie");
     }
 
-    /// Exercises `storage_roots` rebuild (`or_insert_with(EMPTY_ROOT_HASH)`) after a destroy wipe;
-    /// asserts the trie is non-empty (slot-level wipe vs. survive is not checked without proofs).
+    // A DestroyedChanged account with new storage slots must have those slots present in the
+    // trie — this exercises the or_insert_with(EMPTY_ROOT_HASH) + storage loop path and
+    // confirms the old storage is wiped and only new slots survive.
     #[test]
     fn test_destroyed_changed_account_storage_wiped_and_reinserted() {
+        use revm::database::states::StorageSlot as RvmStorageSlot;
+
         let mut db = new_test_db();
         let address = Address::repeat_byte(0x04);
         insert_account(&mut db, address);
 
-        let mut storage = HashMap::default();
+        // Re-create the account with one new storage slot.
+        let mut storage = revm::primitives::HashMap::default();
         let slot_key = U256::from(1u64);
-        storage.insert(slot_key, StorageSlot::new_changed(U256::ZERO, U256::from(42u64)));
+        storage.insert(slot_key, RvmStorageSlot::new_changed(U256::ZERO, U256::from(42u64)));
         let new_info =
             AccountInfo { balance: U256::from(1_000_000_000_000_000_000u64), ..Default::default() };
         let root = db
@@ -565,14 +571,17 @@ mod tests {
             .unwrap();
         assert_ne!(
             root, EMPTY_ROOT_HASH,
-            "DestroyedChanged account with storage must appear in trie",
+            "DestroyedChanged account with storage must appear in trie"
         );
     }
 
+    // A DestroyedChanged account that was never in the parent trie (e.g. CREATE+SELFDESTRUCT+
+    // re-CREATE in a single block) must not fail when the delete is a no-op.
     #[test]
     fn test_destroyed_changed_new_account_never_in_trie() {
         let mut db = new_test_db();
         let address = Address::repeat_byte(0x05);
+        // No insert_account — this address has never existed in the parent trie.
 
         let new_info =
             AccountInfo { balance: U256::from(1_000_000_000_000_000_000u64), ..Default::default() };
@@ -589,10 +598,12 @@ mod tests {
             .unwrap();
         assert_ne!(
             root, EMPTY_ROOT_HASH,
-            "DestroyedChanged account never in parent trie must be re-inserted",
+            "DestroyedChanged account never in parent trie must be re-inserted"
         );
     }
 
+    // A DestroyedAgain account (destroyed, recreated, destroyed again; info = None) must be
+    // absent from the state root.
     #[test]
     fn test_destroyed_again_account_absent() {
         let mut db = new_test_db();
