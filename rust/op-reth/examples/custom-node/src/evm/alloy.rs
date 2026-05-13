@@ -1,7 +1,7 @@
 use crate::evm::{CustomTxEnv, PaymentTxEnv};
 use alloy_evm::{Database, Evm, EvmEnv, EvmFactory, precompiles::PrecompilesMap};
 use alloy_op_evm::{OpEvm, OpEvmContext, OpEvmFactory, OpTx, OpTxError};
-use alloy_primitives::{Address, Bytes};
+use alloy_primitives::{Address, Bytes, U256};
 use op_revm::{L1BlockInfo, OpHaltReason, OpSpecId, OpTransaction, precompiles::OpPrecompiles};
 use revm::{
     Context, Inspector, Journal,
@@ -110,6 +110,10 @@ where
 
     fn components_mut(&mut self) -> (&mut Self::DB, &mut Self::Inspector, &mut Self::Precompiles) {
         self.inner.components_mut()
+    }
+
+    fn token_ratio(&self) -> U256 {
+        self.inner.token_ratio()
     }
 }
 
