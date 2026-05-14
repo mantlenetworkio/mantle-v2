@@ -117,13 +117,27 @@ impl L1Config {
                 .mainnet_activation_timestamp(),
             cancun_time: alloy_hardforks::EthereumHardfork::Cancun.mainnet_activation_timestamp(),
             prague_time: alloy_hardforks::EthereumHardfork::Prague.mainnet_activation_timestamp(),
-            osaka_time: alloy_hardforks::EthereumHardfork::Osaka.mainnet_activation_timestamp(),
+            // [MANTLE] Force Osaka and BPO1–BPO5 to `None` on Ethereum L1
+            // mainnet so the post-Prague blob-fee schedules do not auto-
+            // activate when alloy_hardforks bumps their mainnet activation
+            // timestamps. Mantle pins blob fee parameters to Prague behaviour
+            // until a coordinated upgrade — see `mantle-xyz/kona@72a20ab9`
+            // ("Blob fee parameters #26", 2026-04-24). The original lines
+            // are preserved below as commented reference so the next
+            // upstream subtree sync surfaces this divergence in the merge.
+            osaka_time: None,
             amsterdam_time: None,
-            bpo1_time: alloy_hardforks::EthereumHardfork::Bpo1.mainnet_activation_timestamp(),
-            bpo2_time: alloy_hardforks::EthereumHardfork::Bpo2.mainnet_activation_timestamp(),
-            bpo3_time: alloy_hardforks::EthereumHardfork::Bpo3.mainnet_activation_timestamp(),
-            bpo4_time: alloy_hardforks::EthereumHardfork::Bpo4.mainnet_activation_timestamp(),
-            bpo5_time: alloy_hardforks::EthereumHardfork::Bpo5.mainnet_activation_timestamp(),
+            bpo1_time: None,
+            bpo2_time: None,
+            bpo3_time: None,
+            bpo4_time: None,
+            bpo5_time: None,
+            // osaka_time: alloy_hardforks::EthereumHardfork::Osaka.mainnet_activation_timestamp(),
+            // bpo1_time: alloy_hardforks::EthereumHardfork::Bpo1.mainnet_activation_timestamp(),
+            // bpo2_time: alloy_hardforks::EthereumHardfork::Bpo2.mainnet_activation_timestamp(),
+            // bpo3_time: alloy_hardforks::EthereumHardfork::Bpo3.mainnet_activation_timestamp(),
+            // bpo4_time: alloy_hardforks::EthereumHardfork::Bpo4.mainnet_activation_timestamp(),
+            // bpo5_time: alloy_hardforks::EthereumHardfork::Bpo5.mainnet_activation_timestamp(),
 
             ethash: Some(EthashConfig {}),
 
