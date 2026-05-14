@@ -16,9 +16,13 @@
 //! The chains of embedding are:
 //!
 //! 1. `L1BlockInfoBedrockBase` < `L1BlockInfoEcotoneBase` < `L1BlockInfoIsthmus` <
-//!    `L1BlockInfoJovian`
+//!    `L1BlockInfoJovian` < `L1BlockInfoArsia`
 //! 2. `L1BlockInfoBedrockBase` < `L1BlockInfoBedrock`
 //! 3. `L1BlockInfoEcotoneBase` < `L1BlockInfoEcotone`
+//!
+//! [MANTLE] `L1BlockInfoArsia` is the Mantle Arsia variant. Its calldata
+//! layout is byte-for-byte identical to Jovian; only the selector differs
+//! (`0x49e72383` vs Jovian's `0x3db6be2b`). See `arsia.rs` for details.
 
 mod variant;
 pub use variant::L1BlockInfoTx;
@@ -40,6 +44,9 @@ pub use isthmus::{L1BlockInfoIsthmus, L1BlockInfoIsthmusBaseFields, L1BlockInfoI
 
 mod jovian;
 pub use jovian::{L1BlockInfoJovian, L1BlockInfoJovianBaseFields, L1BlockInfoJovianFields};
+
+mod arsia;
+pub use arsia::{L1BlockInfoArsia, L1BlockInfoArsiaBaseFields, L1BlockInfoArsiaFields};
 
 mod errors;
 pub use errors::{BlockInfoError, DecodeError};

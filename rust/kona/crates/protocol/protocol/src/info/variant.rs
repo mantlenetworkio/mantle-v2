@@ -11,9 +11,9 @@ use crate::{
     BlockInfoError, DecodeError, L1BlockInfoBedrock, L1BlockInfoEcotone, L1BlockInfoIsthmus,
     Predeploys,
     info::{
-        L1BlockInfoBedrockBaseFields, L1BlockInfoEcotoneBaseFields as _, L1BlockInfoJovian,
-        bedrock::L1BlockInfoBedrockOnlyFields as _, ecotone::L1BlockInfoEcotoneOnlyFields as _,
-        isthmus::L1BlockInfoIsthmusBaseFields as _,
+        L1BlockInfoArsia, L1BlockInfoBedrockBaseFields, L1BlockInfoEcotoneBaseFields as _,
+        L1BlockInfoJovian, bedrock::L1BlockInfoBedrockOnlyFields as _,
+        ecotone::L1BlockInfoEcotoneOnlyFields as _, isthmus::L1BlockInfoIsthmusBaseFields as _,
     },
 };
 
@@ -40,6 +40,9 @@ pub enum L1BlockInfoTx {
     Isthmus(L1BlockInfoIsthmus),
     /// A Jovian L1 info transaction
     Jovian(L1BlockInfoJovian),
+    /// [MANTLE] An Arsia L1 info transaction (Mantle hardfork; same payload
+    /// layout as Jovian, distinct `setL1BlockValuesArsia()` selector).
+    Arsia(L1BlockInfoArsia),
 }
 
 impl L1BlockInfoTx {
@@ -117,6 +120,39 @@ impl L1BlockInfoTx {
         let blob_base_fee = l1_header.blob_fee(blob_fee_config).unwrap_or(1);
         let block_hash = l1_header.hash_slow();
         let base_fee = l1_header.base_fee_per_gas.unwrap_or(0);
+
+        // [MANTLE] Arsia is checked before Jovian so that on Mantle chains
+        // post-Arsia we emit the `setL1BlockValuesArsia()` selector instead of
+        // the Jovian one. `is_mantle_arsia_active` returns false on non-Mantle
+        // chains, leaving the OP path (Jovian → Isthmus → Ecotone) untouched.
+        if rollup_config.is_mantle_arsia_active(l2_block_time) &&
+            !rollup_config.is_first_mantle_arsia_block(l2_block_time)
+        {
+            let operator_fee_scalar = system_config.operator_fee_scalar.unwrap_or_default();
+            let operator_fee_constant = system_config.operator_fee_constant.unwrap_or_default();
+            let mut da_footprint_gas_scalar = system_config
+                .da_footprint_gas_scalar
+                .unwrap_or(L1BlockInfoJovian::DEFAULT_DA_FOOTPRINT_GAS_SCALAR);
+
+            if da_footprint_gas_scalar == 0 {
+                da_footprint_gas_scalar = L1BlockInfoJovian::DEFAULT_DA_FOOTPRINT_GAS_SCALAR;
+            }
+
+            return Ok(Self::Arsia(L1BlockInfoArsia::new(
+                l1_header.number,
+                l1_header.timestamp,
+                base_fee,
+                block_hash,
+                sequence_number,
+                system_config.batcher_address,
+                blob_base_fee,
+                blob_base_fee_scalar,
+                base_fee_scalar,
+                operator_fee_scalar,
+                operator_fee_constant,
+                da_footprint_gas_scalar,
+            )));
+        }
 
         if rollup_config.is_jovian_active(l2_block_time) &&
             !rollup_config.is_first_jovian_block(l2_block_time)
@@ -251,6 +287,9 @@ impl L1BlockInfoTx {
             L1BlockInfoJovian::L1_INFO_TX_SELECTOR => {
                 L1BlockInfoJovian::decode_calldata(r).map(Self::Jovian)
             }
+            L1BlockInfoArsia::L1_INFO_TX_SELECTOR => {
+                L1BlockInfoArsia::decode_calldata(r).map(Self::Arsia)
+            }
             _ => Err(DecodeError::InvalidSelector),
         }
     }
@@ -258,7 +297,7 @@ impl L1BlockInfoTx {
     /// Returns whether the scalars are empty.
     pub fn empty_scalars(&self) -> bool {
         match self {
-            Self::Bedrock(_) | Self::Isthmus(..) | Self::Jovian(_) => false,
+            Self::Bedrock(_) | Self::Isthmus(..) | Self::Jovian(_) | Self::Arsia(_) => false,
             Self::Ecotone(info) => info.empty_scalars(),
         }
     }
@@ -270,6 +309,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(tx) => tx.block_hash(),
             Self::Isthmus(tx) => tx.block_hash(),
             Self::Jovian(tx) => tx.block_hash(),
+            Self::Arsia(tx) => tx.block_hash(),
         }
     }
 
@@ -280,6 +320,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(ecotone_tx) => ecotone_tx.encode_calldata(),
             Self::Isthmus(isthmus_tx) => isthmus_tx.encode_calldata(),
             Self::Jovian(jovian_tx) => jovian_tx.encode_calldata(),
+            Self::Arsia(arsia_tx) => arsia_tx.encode_calldata(),
         }
     }
 
@@ -290,6 +331,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(tx) => BlockNumHash { number: tx.number(), hash: tx.block_hash() },
             Self::Isthmus(tx) => BlockNumHash { number: tx.number(), hash: tx.block_hash() },
             Self::Jovian(tx) => BlockNumHash { number: tx.number(), hash: tx.block_hash() },
+            Self::Arsia(tx) => BlockNumHash { number: tx.number(), hash: tx.block_hash() },
         }
     }
 
@@ -298,6 +340,7 @@ impl L1BlockInfoTx {
         match self {
             Self::Jovian(block_info) => block_info.operator_fee_scalar(),
             Self::Isthmus(block_info) => block_info.operator_fee_scalar(),
+            Self::Arsia(block_info) => block_info.operator_fee_scalar(),
             _ => 0,
         }
     }
@@ -307,6 +350,7 @@ impl L1BlockInfoTx {
         match self {
             Self::Jovian(block_info) => block_info.operator_fee_constant(),
             Self::Isthmus(block_info) => block_info.operator_fee_constant(),
+            Self::Arsia(block_info) => block_info.operator_fee_constant(),
             _ => 0,
         }
     }
@@ -315,6 +359,9 @@ impl L1BlockInfoTx {
     pub const fn da_footprint(&self) -> Option<u16> {
         match self {
             Self::Jovian(L1BlockInfoJovian { da_footprint_gas_scalar, .. }) => {
+                Some(*da_footprint_gas_scalar)
+            }
+            Self::Arsia(L1BlockInfoArsia { base: L1BlockInfoJovian { da_footprint_gas_scalar, .. } }) => {
                 Some(*da_footprint_gas_scalar)
             }
             _ => None,
@@ -328,6 +375,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block_info) => U256::from(block_info.base_fee()),
             Self::Isthmus(block_info) => U256::from(block_info.base_fee()),
             Self::Jovian(block_info) => U256::from(block_info.base_fee()),
+            Self::Arsia(block_info) => U256::from(block_info.base_fee()),
         }
     }
 
@@ -338,6 +386,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block) => U256::from(block.base_fee_scalar()),
             Self::Isthmus(block) => U256::from(block.base_fee_scalar()),
             Self::Jovian(block) => U256::from(block.base_fee_scalar()),
+            Self::Arsia(block) => U256::from(block.base_fee_scalar()),
         }
     }
 
@@ -348,6 +397,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block) => U256::from(block.blob_base_fee()),
             Self::Isthmus(block) => U256::from(block.blob_base_fee()),
             Self::Jovian(block) => U256::from(block.blob_base_fee()),
+            Self::Arsia(block) => U256::from(block.blob_base_fee()),
         }
     }
 
@@ -358,6 +408,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block_info) => U256::from(block_info.blob_base_fee_scalar()),
             Self::Isthmus(block_info) => U256::from(block_info.blob_base_fee_scalar()),
             Self::Jovian(block_info) => U256::from(block_info.blob_base_fee_scalar()),
+            Self::Arsia(block_info) => U256::from(block_info.blob_base_fee_scalar()),
         }
     }
 
@@ -366,7 +417,7 @@ impl L1BlockInfoTx {
         match self {
             Self::Bedrock(block_info) => block_info.l1_fee_overhead(),
             Self::Ecotone(block_info) => block_info.l1_fee_overhead(),
-            Self::Isthmus(_) | Self::Jovian(_) => U256::ZERO,
+            Self::Isthmus(_) | Self::Jovian(_) | Self::Arsia(_) => U256::ZERO,
         }
     }
 
@@ -377,6 +428,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block) => block.batcher_address(),
             Self::Isthmus(block) => block.batcher_address(),
             Self::Jovian(block) => block.batcher_address(),
+            Self::Arsia(block) => block.batcher_address(),
         }
     }
 
@@ -387,6 +439,7 @@ impl L1BlockInfoTx {
             Self::Ecotone(block) => block.sequence_number(),
             Self::Isthmus(block) => block.sequence_number(),
             Self::Jovian(block) => block.sequence_number(),
+            Self::Arsia(block) => block.sequence_number(),
         }
     }
 }
@@ -1015,6 +1068,90 @@ mod test {
                 system_config.operator_fee_constant.unwrap_or_default(),
             ))
         );
+    }
+
+    #[test]
+    fn test_arsia_dispatcher_routes_through_l1_block_info_tx() {
+        // [MANTLE] Calldata starting with the Arsia selector must dispatch to
+        // L1BlockInfoTx::Arsia via L1BlockInfoTx::decode_calldata. This is the
+        // exact path that was panicking on Mantle mainnet block 95264176
+        // before this variant was added.
+        let info = L1BlockInfoArsia::new(
+            19655712,
+            1713121139,
+            10445852825,
+            b256!("1c4c84c50740386c7dc081efddd644405f04cde73e30a2e381737acce9f5add3"),
+            5,
+            address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
+            1,
+            810949,
+            1368,
+            0xabcd,
+            0xdcba,
+            0x0190,
+        );
+
+        let calldata = info.encode_calldata();
+        assert_eq!(&calldata[..4], &L1BlockInfoArsia::L1_INFO_TX_SELECTOR);
+
+        let L1BlockInfoTx::Arsia(decoded) =
+            L1BlockInfoTx::decode_calldata(calldata.as_ref()).unwrap()
+        else {
+            panic!("Wrong fork");
+        };
+        assert_eq!(info, decoded);
+        assert_eq!(L1BlockInfoTx::Arsia(decoded).encode_calldata().as_ref(), calldata.as_ref());
+    }
+
+    #[test]
+    fn test_try_new_mantle_arsia() {
+        // [MANTLE] On a Mantle chain past Arsia activation, try_new must
+        // construct L1BlockInfoTx::Arsia (not Jovian/Isthmus/Ecotone). This
+        // guards the constructor-side gap that would otherwise have produced
+        // Jovian-format attributes for Arsia-active L2 blocks.
+        let rollup_config = RollupConfig {
+            block_time: 2,
+            hardforks: HardForkConfig { ecotone_time: Some(0), ..Default::default() },
+            mantle_hardforks: kona_genesis::MantleHardForkConfig {
+                mantle_arsia_time: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let l1_config = L1Config::sepolia();
+        let system_config = SystemConfig {
+            batcher_address: address!("6887246668a3b87f54deb3b94ba47a6f63f32985"),
+            operator_fee_scalar: Some(0xabcd),
+            operator_fee_constant: Some(0xdcba),
+            da_footprint_gas_scalar: Some(0x0190),
+            ..Default::default()
+        };
+        let sequence_number = 5;
+        let l1_header = Header {
+            number: 19655712,
+            timestamp: 1713121139,
+            base_fee_per_gas: Some(10445852825),
+            ..Default::default()
+        };
+        // l2_block_time well past block_time so neither is_first_*_block returns true.
+        let l2_block_time = 0xFF;
+
+        let l1_info = L1BlockInfoTx::try_new(
+            &rollup_config,
+            &l1_config,
+            &system_config,
+            sequence_number,
+            &l1_header,
+            l2_block_time,
+        )
+        .unwrap();
+
+        assert!(matches!(l1_info, L1BlockInfoTx::Arsia(_)),
+            "expected L1BlockInfoTx::Arsia, got {:?}", l1_info);
+
+        // Selector on encoded output must be Arsia's, not Jovian's.
+        let calldata = l1_info.encode_calldata();
+        assert_eq!(&calldata[..4], &L1BlockInfoArsia::L1_INFO_TX_SELECTOR);
     }
 
     #[test]

@@ -61,7 +61,8 @@ pub use deposits::{
 
 mod info;
 pub use info::{
-    BlockInfoError, DecodeError, L1BlockInfoBedrock, L1BlockInfoBedrockBaseFields,
+    BlockInfoError, DecodeError, L1BlockInfoArsia, L1BlockInfoArsiaBaseFields,
+    L1BlockInfoArsiaFields, L1BlockInfoBedrock, L1BlockInfoBedrockBaseFields,
     L1BlockInfoBedrockFields, L1BlockInfoBedrockOnlyFields, L1BlockInfoEcotone,
     L1BlockInfoEcotoneBaseFields, L1BlockInfoEcotoneFields, L1BlockInfoEcotoneOnlyFields,
     L1BlockInfoIsthmus, L1BlockInfoIsthmusBaseFields, L1BlockInfoIsthmusFields, L1BlockInfoJovian,

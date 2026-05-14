@@ -49,6 +49,9 @@ pub fn to_system_config(
         L1BlockInfoTx::Jovian(block_info) => {
             encode_scalar(block_info.blob_base_fee_scalar(), block_info.base_fee_scalar())
         }
+        L1BlockInfoTx::Arsia(block_info) => {
+            encode_scalar(block_info.blob_base_fee_scalar(), block_info.base_fee_scalar())
+        }
     };
 
     let mut cfg = SystemConfig {
@@ -281,6 +284,8 @@ mod tests {
             operator_fee_constant: None,
             min_base_fee: None,
             da_footprint_gas_scalar: None,
+            // [MANTLE] Mantle base_fee field — None for these test fixtures.
+            base_fee: None,
         };
         assert_eq!(config, expected);
     }
@@ -330,6 +335,8 @@ mod tests {
             operator_fee_constant: None,
             min_base_fee: None,
             da_footprint_gas_scalar: None,
+            // [MANTLE] Mantle base_fee field — None for these test fixtures.
+            base_fee: None,
         };
         assert_eq!(config, expected);
     }
@@ -383,6 +390,8 @@ mod tests {
             operator_fee_constant: Some(0xdcba),
             min_base_fee: None,
             da_footprint_gas_scalar: None,
+            // [MANTLE] Mantle base_fee field — None for these test fixtures.
+            base_fee: None,
         };
         assert_eq!(config, expected);
     }

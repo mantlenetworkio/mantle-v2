@@ -136,8 +136,50 @@ The largest sub-phase. Adds Mantle predicates, hardfork timestamps, and BaseFee 
 | File | Change |
 |---|---|
 | `kona/crates/protocol/derive/src/attributes/stateful.rs` | On Mantle chains (`is_mantle()`), the upgrade-tx emission path emits only `MantleHardforks::ARSIA` at its activation; OP hardfork bundles are skipped. Non-Mantle chains keep the full upstream OP path (ECOTONE/FJORD/ISTHMUS/JOVIAN/KARST/INTEROP+CrossL2Inbox). |
-| `kona/crates/protocol/protocol/src/info/variant.rs` | L1Info deposit literal fills `eth_value: 0, eth_tx_value: None`. |
+| `kona/crates/protocol/protocol/src/info/variant.rs` | L1Info deposit literal fills `eth_value: 0, eth_tx_value: None`. **Adds `L1BlockInfoTx::Arsia` variant** (2026-05; closed the Arsia decoder gap that triggered the cost-estimator panic on mainnet block 95264176). `try_new` post-Ecotone picker adds `is_mantle_arsia_active && !is_first_mantle_arsia_block` branch before Jovian. All `match L1BlockInfoTx` expressions in the crate were patched to be exhaustive. |
+| `kona/crates/protocol/protocol/src/info/arsia.rs` | **New file (2026-05)**. `L1BlockInfoArsia` is a thin nested wrapper around `L1BlockInfoJovian` with selector `setL1BlockValuesArsia()` = `0x49e72383`. Payload layout is byte-identical to Jovian; only the selector differs (verified by reverse-engineering `arsia_l1_block.hex` dispatcher in `kona-hardforks`). Round-trip + dispatcher + picker tests inline. |
+| `kona/crates/protocol/protocol/src/info/{mod.rs, errors.rs}` | `mod arsia;` + `pub use` re-export; inheritance chain comment updated to `... < L1BlockInfoJovian < L1BlockInfoArsia`. `DecodeError::InvalidArsiaLength` added. (`DecodeError::InvalidInteropLength` is a pre-existing legacy variant that has no corresponding decoder — see note below.) |
+| `kona/crates/protocol/protocol/src/utils.rs` | `to_system_config`'s `match L1BlockInfoTx` extended for `Arsia` variant. |
+| `kona/crates/protocol/protocol/src/info/jovian.rs` | `L1BlockInfoJovianBaseFields` decorated with `#[delegatable_trait]` so `L1BlockInfoArsia` can `ambassador::Delegate` the trait into its embedded Jovian base. |
 | `kona/crates/protocol/hardforks/src/{ecotone,fjord,interop,isthmus,jovian}.rs` | 31 OP hardfork upgrade-tx literals filled `eth_value: 0, eth_tx_value: None` via the script in §6. |
+| `kona/crates/protocol/protocol/src/{batch/single.rs, utils.rs}` test fixtures | Added Mantle `eth_value: 0, eth_tx_value: None` to one `TxDeposit { ... }` literal and `base_fee: None` to three `SystemConfig { ... }` literals (2026-05; previously the kona-protocol lib test target did not compile against the Mantle field additions). |
+
+**Per-hardfork decoder migration checklist** — every Mantle hardfork that
+changes `L1Block` calldata format (new selector or new fields) MUST be
+accompanied by:
+
+1. A new `kona-protocol::info::<fork>.rs` module with `L1BlockInfo<Fork>`
+   struct, `L1_INFO_TX_SELECTOR` const, `L1_INFO_TX_LEN` const,
+   `decode_calldata`, `encode_calldata`.
+2. A new variant in `kona-protocol::info::variant.rs::L1BlockInfoTx`.
+3. A new arm in `variant.rs::decode_calldata`.
+4. A new branch in `variant.rs::try_new` post-Ecotone picker (gated on
+   `is_mantle_<fork>_active && !is_first_mantle_<fork>_block`).
+5. Arms in every `match L1BlockInfoTx` expression in the crate (and in
+   `protocol/src/utils.rs`).
+6. A round-trip test in the new module plus dispatcher + picker tests in
+   `variant.rs` (the picker test must construct a `RollupConfig` with the
+   new fork's timestamp active and assert `try_new` returns the new
+   variant).
+
+Omission of any of (1)–(6) will cause `cost-estimator` / derivation
+pipeline to panic on the first L2 block produced after the hardfork
+activates, exactly as happened with Arsia on Mantle mainnet block 95264176
+in 2026-05.
+
+**Audit-methodology note (2026-05):** when verifying "what does upstream
+kona have that local doesn't", the canonical upstream for mantle-v2/rust
+is the optimism monorepo's `rust/kona/` subtree (`ethereum-optimism/optimism`)
+at the §1 sync tag. **Do NOT** treat `mantle-xyz/kona` (a separate Mantle
+fork) or `op-rs/kona` (a separate standalone repo) as the upstream — both
+contain experimental code (e.g. `info/interop.rs`, `info/common.rs`) that
+never landed in optimism upstream. An earlier audit pass in this fix
+proposed vendoring an `L1BlockInfoInterop` variant based on
+`mantle-xyz/kona@main`, but the real upstream
+(`ethereum-optimism/optimism rust/kona/.../info/` @ `kona-client/v1.5.1`)
+has no `interop.rs` and no `L1BlockInfoInterop` type, so the proposal was
+reverted. The `DecodeError::InvalidInteropLength` enum variant remains as
+pre-existing legacy and is currently dead code.
 
 ### 3.6 kona-proof — executor uses Mantle-aware revm spec
 
@@ -264,6 +306,7 @@ git push -u origin rust/sync-$(date +%Y%m)
 | `alloy-op-evm/src/block/mod.rs` | The block executor is a high-churn area upstream. | Re-verify `deposit_receipt_version = None`, the commented-out `ensure_create2_deployer`, and the 2-arg `operator_fee_charge` call sites. |
 | `kona/crates/protocol/genesis/src/rollup.rs` | RollupConfig and its predicates evolve with every hardfork. | Verify `mantle_hardforks` field + all `is_mantle_*` predicates survive; `Default::default` still routes `chain_op_config` to `MANTLE_BASE_FEE_CONFIG`. |
 | `kona/crates/protocol/derive/src/attributes/stateful.rs` | Upgrade-tx emission gains new hardfork branches over time. | Re-check that the `if is_mantle() { ARSIA } else { OP path }` split is preserved. |
+| `kona/crates/protocol/protocol/src/info/variant.rs` (`L1BlockInfoTx` enum + `try_new` picker + match arms) | Every new fork adds an enum variant and a picker branch; all matches must stay exhaustive. | If a new Mantle hardfork lands (Skadi / Limb / …), follow the per-hardfork checklist in §3.5 — missing any step reproduces the 2026-05 Arsia panic. Run `cargo check --workspace` after editing variant.rs to surface any non-exhaustive match site (e.g. `protocol/src/utils.rs`). |
 | `kona/bin/client/src/fpvm_evm/precompiles/provider.rs` (the `OpSpecId` match arms) | Any new upstream hardfork variant breaks exhaustiveness. | If `cargo check` flags non-exhaustive matches, add the new variant to the appropriate arm. |
 | `kona/crates/protocol/hardforks/src/*.rs` (TxDeposit literals) | Each new hardfork adds new upgrade-tx literals missing BVM_ETH fields. | Run the script in §6 on the newly added files. |
 | `kona/crates/protocol/genesis/src/system/kind.rs` | Upstream may add new `SystemConfigUpdateKind` variants. | Variants must not collide with Mantle's `BaseFee = 4`; new ones go after `DaFootprintGasScalar = 8`. |

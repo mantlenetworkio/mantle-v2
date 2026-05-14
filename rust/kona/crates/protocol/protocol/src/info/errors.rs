@@ -48,6 +48,10 @@ pub enum DecodeError {
     /// Arguments are the expected length and the actual length.
     #[error("Invalid jovian data length. Expected {0}, got {1}")]
     InvalidJovianLength(usize, usize),
+    /// Invalid length for the L1 info arsia transaction.
+    /// Arguments are the expected length and the actual length.
+    #[error("Invalid arsia data length. Expected {0}, got {1}")]
+    InvalidArsiaLength(usize, usize),
     /// Invalid length for the L1 info interop transaction.
     /// Arguments are the expected length and the actual length.
     #[error("Invalid interop data length. Expected {0}, got {1}")]

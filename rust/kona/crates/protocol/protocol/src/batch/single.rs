@@ -568,7 +568,10 @@ mod tests {
             value: U256::from(7_u64),
             gas_limit: 5,
             is_system_transaction: false,
+            // [MANTLE] BVM_ETH fields (no BVM_ETH semantics in this test fixture).
+            eth_value: 0,
             input: Default::default(),
+            eth_tx_value: None,
         };
         let envelope = OpTxEnvelope::Deposit(Sealed::new(tx));
         let encoded = envelope.encoded_2718();

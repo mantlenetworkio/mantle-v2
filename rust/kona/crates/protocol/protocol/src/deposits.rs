@@ -415,8 +415,11 @@ mod test {
             ),
         };
         let tx = decode_deposit(B256::default(), 0, &log).unwrap();
+        // [MANTLE] Hex includes one extra `80` byte (eth_value=0) before the
+        // input field, and the outer list length is f888 (1 byte longer than
+        // upstream OP's f887). Trailing `eth_tx_value: None` is omitted.
         let raw_hex = hex!(
-            "7ef887a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a14594ffffffffffffffffffffffffffffffffffffffff94bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb80808080b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            "7ef888a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a14594ffffffffffffffffffffffffffffffffffffffff94bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8080808080b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         );
         let expected = Bytes::from(raw_hex);
         assert_eq!(tx, expected);
@@ -624,8 +627,11 @@ mod test {
             ),
         };
         let tx = decode_deposit(B256::default(), 0, &log).unwrap();
+        // [MANTLE] Hex includes one extra `80` byte (eth_value=0) before the
+        // input field, and the outer list length is f876 (1 byte longer than
+        // upstream OP's f875). Trailing `eth_tx_value: None` is omitted.
         let raw_hex = hex!(
-            "7ef875a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a145941111111111111111111111111111111111111111800a648203e880b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            "7ef876a0ed428e1c45e1d9561b62834e1a2d3015a0caae3bfdc16b4da059ac885b01a145941111111111111111111111111111111111111111800a648203e88080b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         );
         let expected = Bytes::from(raw_hex);
         assert_eq!(tx, expected);

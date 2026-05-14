@@ -11,7 +11,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::{Address, B256, Bytes};
-use ambassador::{self, Delegate};
+use ambassador::{self, Delegate, delegatable_trait};
 
 /// Represents the fields within an Jovian L1 block info transaction.
 ///
@@ -47,6 +47,7 @@ pub struct L1BlockInfoJovian {
     pub da_footprint_gas_scalar: u16,
 }
 /// Accessors to fields available in Jovian and later.
+#[delegatable_trait]
 pub trait L1BlockInfoJovianBaseFields: L1BlockInfoIsthmusBaseFields {
     /// The DA footprint gas scalar
     fn da_footprint_gas_scalar(&self) -> u16;
