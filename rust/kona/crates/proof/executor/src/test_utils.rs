@@ -19,7 +19,10 @@ use kona_registry::ROLLUP_CONFIGS;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use rocksdb::{DB, Options};
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::{fs, runtime::Handle, sync::Mutex};
 
 /// A loaded executor test fixture and its backing temporary fixture directory.
@@ -113,6 +116,8 @@ pub struct ExecutorTestFixtureCreator {
     pub provider: RootProvider,
     /// The block number to create the test fixture for.
     pub block_number: u64,
+    /// The rollup config used to drive the executor for this fixture.
+    pub rollup_config: RollupConfig,
     /// The key value store for the test fixture.
     pub kv_store: Arc<Mutex<rocksdb::DB>>,
     /// The data directory for the test fixture.
@@ -124,20 +129,41 @@ pub struct ExecutorTestFixtureCreator {
 }
 
 impl ExecutorTestFixtureCreator {
-    /// Creates a new [`ExecutorTestFixtureCreator`] with the given parameters.
+    /// Creates a new [`ExecutorTestFixtureCreator`] with the hardcoded
+    /// [`mock_rollup_config`]. Prefer [`Self::new_with_options_and_config`]
+    /// when the caller can supply a real `RollupConfig`.
     pub fn new(provider_url: &str, block_number: u64, base_fixture_directory: PathBuf) -> Self {
         Self::new_with_options(provider_url, block_number, base_fixture_directory, false)
     }
 
-    /// Creates a new [`ExecutorTestFixtureCreator`] with skip_save option.
-    ///
-    /// If `skip_save` is true, data will be stored in a temporary directory
-    /// and automatically cleaned up after execution.
+    /// Creates a new [`ExecutorTestFixtureCreator`] with skip_save option,
+    /// using the hardcoded [`mock_rollup_config`].
     pub fn new_with_options(
         provider_url: &str,
         block_number: u64,
         base_fixture_directory: PathBuf,
         skip_save: bool,
+    ) -> Self {
+        Self::new_with_options_and_config(
+            provider_url,
+            block_number,
+            base_fixture_directory,
+            skip_save,
+            mock_rollup_config(),
+        )
+    }
+
+    /// Creates a new [`ExecutorTestFixtureCreator`] with an explicit
+    /// [`RollupConfig`].
+    ///
+    /// If `skip_save` is true, data will be stored in a temporary directory
+    /// and automatically cleaned up after execution.
+    pub fn new_with_options_and_config(
+        provider_url: &str,
+        block_number: u64,
+        base_fixture_directory: PathBuf,
+        skip_save: bool,
+        rollup_config: RollupConfig,
     ) -> Self {
         let url: Url = provider_url.parse().expect("Invalid provider URL");
         // Use reqwest::Client for HTTPS support
@@ -166,6 +192,7 @@ impl ExecutorTestFixtureCreator {
         Self {
             provider,
             block_number,
+            rollup_config,
             kv_store: Arc::new(Mutex::new(db)),
             data_dir,
             skip_save,
@@ -174,6 +201,10 @@ impl ExecutorTestFixtureCreator {
     }
 }
 
+// [MANTLE] Hardcoded fallback used by the back-compat constructors and the
+// in-crate executor unit tests. Real entry points should load a `RollupConfig`
+// from a JSON file via [`load_rollup_config_from_file`] and pass it through
+// [`ExecutorTestFixtureCreator::new_with_options_and_config`].
 fn mock_rollup_config() -> RollupConfig {
     let mut rollup_config =
         RollupConfig { l2_chain_id: Chain::from_id(1115511107), ..Default::default() };
@@ -185,11 +216,33 @@ fn mock_rollup_config() -> RollupConfig {
     rollup_config
 }
 
+/// Errors returned by [`load_rollup_config_from_file`].
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigLoadError {
+    /// Filesystem I/O failure while reading the rollup config file.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    /// JSON decode failure.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+}
+
+/// Loads a [`RollupConfig`] from a JSON file produced by op-node's
+/// `optimism_rollupConfig` (or any compatible serialization — both
+/// `hardforks` and `mantle_hardforks` are `#[serde(flatten)]` so the on-wire
+/// shape is flat).
+pub fn load_rollup_config_from_file(path: &Path) -> Result<RollupConfig, ConfigLoadError> {
+    let bytes = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
 impl ExecutorTestFixtureCreator {
     /// Create a static test fixture with the configuration provided.
     pub async fn create_static_fixture(self) -> Result<bool, TestTrieNodeProviderError> {
-        // let chain_id = self.provider.get_chain_id().await.expect("Failed to get chain ID");
-        let rollup_config = mock_rollup_config();
+        // [MANTLE] Was `let rollup_config = mock_rollup_config();` — use the
+        // RollupConfig threaded in through `new_with_options_and_config` so
+        // the caller can supply real per-chain timestamps via JSON.
+        let rollup_config = self.rollup_config.clone();
 
         let executing_block =
             match self.provider.get_block_by_number(self.block_number.into()).await {

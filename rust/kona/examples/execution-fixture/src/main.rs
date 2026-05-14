@@ -15,11 +15,13 @@
 //! - `-b` or `--block-number`: L2 block number to execute for the fixture.
 //! - `-o` or `--output-dir`: (Optional) The output directory for the fixture. If not provided,
 //!   defaults to `kona-executor`'s `testdata` directory.
+//! - `-c` or `--rollup-config-path` (`ROLLUP_CONFIG_PATH`): (Optional) JSON file with the
+//!   `RollupConfig` to use. Falls back to a hardcoded testnet mock if absent.
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use kona_cli::{LogArgs, LogConfig};
-use kona_executor::test_utils::ExecutorTestFixtureCreator;
+use kona_executor::test_utils::{ExecutorTestFixtureCreator, load_rollup_config_from_file};
 use std::path::PathBuf;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -46,6 +48,9 @@ pub struct ExecutionFixtureCommand {
     /// Skip saving data to disk (use temporary directory)
     #[arg(long, default_value = "false")]
     pub skip_save: bool,
+    /// Path to a rollup config JSON file. Falls back to the hardcoded mock if absent.
+    #[arg(long, short = 'c', env = "ROLLUP_CONFIG_PATH")]
+    pub rollup_config_path: Option<PathBuf>,
 }
 
 /// Execution statistics tracker
@@ -139,6 +144,23 @@ async fn main() -> Result<()> {
             .join("crates/proof/executor/testdata")
     };
 
+    let rollup_config = match cli.rollup_config_path.as_deref() {
+        Some(path) => {
+            info!(path = %path.display(), "Loading rollup config from --rollup-config-path");
+            Some(load_rollup_config_from_file(path).with_context(|| {
+                format!("Failed to load rollup config from {}", path.display())
+            })?)
+        }
+        None => {
+            warn!(
+                "No --rollup-config-path / ROLLUP_CONFIG_PATH supplied — falling back to the \
+                hardcoded mock_rollup_config (testnet chain 1115511107). Real runs should pass \
+                a real config."
+            );
+            None
+        }
+    };
+
     let mut stats = BlockExecutionStats::new();
 
     info!(
@@ -148,12 +170,21 @@ async fn main() -> Result<()> {
 
     for i in 0..cli.block_count {
         let current_block = cli.block_number + i;
-        let fixture_creator = ExecutorTestFixtureCreator::new_with_options(
-            cli.l2_rpc.as_str(),
-            current_block,
-            output_dir.clone(),
-            cli.skip_save,
-        );
+        let fixture_creator = match rollup_config.clone() {
+            Some(cfg) => ExecutorTestFixtureCreator::new_with_options_and_config(
+                cli.l2_rpc.as_str(),
+                current_block,
+                output_dir.clone(),
+                cli.skip_save,
+                cfg,
+            ),
+            None => ExecutorTestFixtureCreator::new_with_options(
+                cli.l2_rpc.as_str(),
+                current_block,
+                output_dir.clone(),
+                cli.skip_save,
+            ),
+        };
 
         info!(block_number = current_block, "Processing block");
 
