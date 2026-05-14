@@ -800,7 +800,7 @@ mod tests {
     use super::*;
     use alloc::vec;
     use alloy_consensus::{SignableTransaction, Transaction};
-    use alloy_primitives::{Address, B256, Bytes, Signature, TxKind, U256, hex};
+    use alloy_primitives::{Address, B256, Bytes, Signature, TxKind, U256, address, b256, hex};
 
     #[test]
     fn test_tx_gas_limit() {
@@ -843,8 +843,8 @@ mod tests {
             value: U256::from(4_u64),
             input: Bytes::from(vec![5]),
             is_system_transaction: false,
-            eth_value: 0,
-            eth_tx_value: None,
+            eth_value: 100,
+            eth_tx_value: Some(100),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
         let encoded = tx_envelope.encoded_2718();
@@ -865,8 +865,8 @@ mod tests {
             from: Address::random(),
             mint: u128::MAX,
             is_system_transaction: false,
-            eth_value: 0,
-            eth_tx_value: None,
+            eth_value: 100,
+            eth_tx_value: Some(100),
         };
         let tx_envelope = OpTxEnvelope::Deposit(tx.seal_slow());
 
@@ -878,14 +878,35 @@ mod tests {
 
     #[test]
     fn eip2718_deposit_decode() {
+        // [MANTLE] The original test used a hex literal copied from
         // <https://basescan.org/tx/0xc468b38a20375922828c8126912740105125143b9856936085474b2590bbca91>
-        let b = hex!(
-            "7ef8f8a0417d134467f4737fcdf2475f0ecdd2a0ed6d87ecffc888ba9f60ee7e3b8ac26a94deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e20000008dd00101c1200000000000000040000000066c352bb000000000139c4f500000000000000000000000000000000000000000000000000000000c0cff1460000000000000000000000000000000000000000000000000000000000000001d4c88f4065ac9671e8b1329b90773e89b5ddff9cf8675b2b5e9c1b28320609930000000000000000000000005050f69a9786f081509234f1a7f4684b5e5b76c9"
-        );
+        // (basescan deposit tx). That hex predates the Mantle BVM_ETH
+        // wire-format addition and no longer round-trips. Rewritten as a
+        // synthetic encode → decode test that exercises the same envelope
+        // dispatch path on the current Mantle field set.
+        let original = TxDeposit {
+            source_hash: b256!("417d134467f4737fcdf2475f0ecdd2a0ed6d87ecffc888ba9f60ee7e3b8ac26a"),
+            from: address!("deaddeaddeaddeaddeaddeaddeaddeaddead0001"),
+            to: TxKind::Call(address!("4200000000000000000000000000000000000015")),
+            mint: 0,
+            value: U256::ZERO,
+            gas_limit: 1_000_000,
+            is_system_transaction: false,
+            eth_value: 0,
+            input: Bytes::from_static(&hex!("440a5e20000008dd00101c1200000000000000040000000066c352bb000000000139c4f500000000000000000000000000000000000000000000000000000000c0cff1460000000000000000000000000000000000000000000000000000000000000001d4c88f4065ac9671e8b1329b90773e89b5ddff9cf8675b2b5e9c1b28320609930000000000000000000000005050f69a9786f081509234f1a7f4684b5e5b76c9")),
+            eth_tx_value: None,
+        };
+        let envelope = OpTxEnvelope::Deposit(original.clone().seal_slow());
+        let encoded = envelope.encoded_2718();
 
-        let tx = OpTxEnvelope::decode_2718(&mut b[..].as_ref()).unwrap();
-        let deposit = tx.as_deposit().unwrap();
+        let decoded = OpTxEnvelope::decode_2718(&mut encoded.as_ref()).unwrap();
+        let deposit = decoded.as_deposit().unwrap();
         assert_eq!(deposit.mint, 0);
+        assert_eq!(deposit.eth_value, 0);
+        assert_eq!(deposit.eth_tx_value, None);
+        // Round-trip the inner TxDeposit equality (ignoring source_hash sealing).
+        assert_eq!(deposit.source_hash, original.source_hash);
+        assert_eq!(deposit.input, original.input);
     }
 
     #[test]

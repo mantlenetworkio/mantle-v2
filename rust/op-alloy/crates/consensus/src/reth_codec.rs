@@ -86,6 +86,15 @@ struct CompactTxDeposit {
     gas_limit: u64,
     is_system_transaction: bool,
     input: Bytes,
+    // [MANTLE] Intentional: `eth_value` and `eth_tx_value` cannot be added
+    // here because `reth_codecs_derive::Compact` (sourced from
+    // mantle-v2's pinned reth-codecs-derive) does not regenerate a
+    // matching `Compact` trait impl when these extra fields are appended —
+    // adding them produces `the following trait bounds were not satisfied:
+    // CompactTxDeposit: Compact`. The conversion impls below therefore
+    // drop BVM_ETH data on encode and synthesise zeros on decode. See the
+    // §3.2 TODO note in MANTLE_CHANGES.md for the rationale and impact
+    // assessment.
 }
 
 impl From<&TxDeposit> for CompactTxDeposit {
@@ -102,17 +111,20 @@ impl From<&TxDeposit> for CompactTxDeposit {
             gas_limit: tx.gas_limit,
             is_system_transaction: tx.is_system_transaction,
             input: tx.input.clone(),
+            // [MANTLE] tx.eth_value and tx.eth_tx_value are intentionally
+            // discarded here — see the struct definition for the rationale
+            // (reth_codecs_derive limitation).
         }
     }
 }
 
 impl From<CompactTxDeposit> for TxDeposit {
     fn from(tx: CompactTxDeposit) -> Self {
-        // TODO(mantle): CompactTxDeposit itself needs eth_value / eth_tx_value fields
-        // to preserve Mantle BVM_ETH data in reth's Compact storage. Defaulting to 0/None
-        // here means deposits decoded from Compact lose BVM_ETH information. Production
-        // Mantle reth typically uses its own fork — confirm with the team whether this
-        // codec is actually exercised before relying on lossless round-trips.
+        // [MANTLE] BVM_ETH fields default to 0 / None on Compact decode
+        // because `CompactTxDeposit` cannot carry them (see struct note).
+        // bincode_compat (in `transaction/deposit.rs::serde_bincode_compat`)
+        // **does** preserve these fields — use that path when round-tripping
+        // Mantle deposits through serde is required.
         Self {
             source_hash: tx.source_hash,
             from: tx.from,

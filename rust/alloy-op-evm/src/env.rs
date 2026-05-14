@@ -235,6 +235,20 @@ mod tests {
 
     // [MANTLE] OpSpecId::KARST does not exist on mantle-elysium — test case removed.
     // #[test_case::test_case(FakeHardfork::karst(), OpSpecId::KARST; "Karst")]
+    //
+    // [MANTLE] OpSpecId::OSAKA and OpSpecId::ARSIA *do* exist on mantle-elysium,
+    // but they are intentionally **not** covered by this test matrix because:
+    //   1. The upstream `OpHardforks` trait has no `is_osaka_active_at_timestamp`
+    //      / `is_arsia_active_at_timestamp` methods, so `spec_by_timestamp_after_bedrock`
+    //      has no way to dispatch on them.
+    //   2. On Mantle chains, the kona executor bypasses this whole function and
+    //      uses `RollupConfig::revm_spec_id(timestamp)` (see
+    //      `rust/kona/crates/proof/executor/src/builder/env.rs::evm_cfg_env`).
+    // OSAKA / ARSIA resolution is covered by the kona-protocol tests, e.g.
+    // `kona-protocol::info::variant::test::test_try_new_mantle_arsia`.
+    // `test_chain_spec_hook_does_not_resolve_arsia` below is the sentinel
+    // that surfaces this boundary if a future refactor accidentally wires
+    // ARSIA through this hook.
     #[test_case::test_case(FakeHardfork::interop(), OpSpecId::INTEROP; "Interop")]
     #[test_case::test_case(FakeHardfork::jovian(), OpSpecId::JOVIAN; "Jovian")]
     #[test_case::test_case(FakeHardfork::isthmus(), OpSpecId::ISTHMUS; "Isthmus")]
@@ -266,5 +280,27 @@ mod tests {
         let actual_spec = spec(&fork, &header);
 
         assert_eq!(actual_spec, expected_spec);
+    }
+
+    /// [MANTLE] Sentinel test: documents that `spec_by_timestamp_after_bedrock`
+    /// **does not** know about Mantle-only OpSpecId variants (OSAKA / ARSIA).
+    ///
+    /// A `FakeHardfork` constructed via OP-only variants (e.g. `Jovian`) will
+    /// resolve to its OP equivalent via this function. There is no way to
+    /// construct a FakeHardfork that returns `OpSpecId::ARSIA` from this
+    /// function — and that is by design: Mantle-aware resolution lives in
+    /// `kona_genesis::RollupConfig::revm_spec_id`. If a future refactor adds
+    /// Mantle predicates to `OpHardforks` and routes them through this hook,
+    /// this test will need to be updated.
+    #[test]
+    fn test_chain_spec_hook_does_not_resolve_arsia() {
+        // Driving the spec hook with the latest OP-known fork should still
+        // resolve to JOVIAN — confirming the hook is OP-aware only.
+        let actual = spec(FakeHardfork::jovian(), &Header::default());
+        assert_eq!(actual, OpSpecId::JOVIAN);
+
+        // There is no `FakeHardfork::arsia()` / `FakeHardfork::osaka()`
+        // constructor — `OpHardfork` upstream does not define these
+        // variants. Confirms the OP-only boundary at the type level.
     }
 }

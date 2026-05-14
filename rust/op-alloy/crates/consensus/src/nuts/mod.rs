@@ -113,6 +113,7 @@ pub enum NutBundleError {
 mod tests {
     use super::*;
     use alloc::string::ToString;
+    use alloy_eips::eip2718::Decodable2718;
     use alloy_primitives::{address, b256, hex};
 
     fn test_bundle() -> NutBundle {
@@ -191,18 +192,44 @@ mod tests {
 
     #[test]
     fn test_to_encoded_transactions() {
+        // [MANTLE] Original test compared against upstream-OP-format hex
+        // literals which don't include the BVM_ETH fields. Rewritten to
+        // decode each encoded transaction and assert per-field equality —
+        // covers the same property (deterministic encoding of test_bundle)
+        // while staying robust to wire-format additions.
         let bundle = test_bundle();
         let encoded = bundle.to_encoded_transactions().unwrap();
 
         assert_eq!(encoded.len(), 2);
+
+        let tx0 = TxDeposit::decode_2718(&mut encoded[0].as_ref()).unwrap();
+        assert_eq!(tx0.from, Address::ZERO);
         assert_eq!(
-            encoded[0].as_ref(),
-            hex!("7ef856a0c3ecdc70c81521aae81240518d3547f601bb33ec07b909e83544b2fe093c78bd94000000000000000000000000000000000000000094f39fd6e51aad88f6f4ce6ab8827279cfffb922668080830f42408083abcdef").as_slice()
+            tx0.to,
+            TxKind::Call(address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
         );
+        assert_eq!(tx0.gas_limit, 1_000_000);
+        assert_eq!(tx0.input.as_ref(), hex!("abcdef").as_slice());
+        assert_eq!(tx0.mint, 0);
+        assert_eq!(tx0.value, U256::ZERO);
+        assert!(!tx0.is_system_transaction);
+        // [MANTLE] Network upgrade txs do not carry BVM_ETH semantics.
+        assert_eq!(tx0.eth_value, 0);
+        assert_eq!(tx0.eth_tx_value, None);
+
+        let tx1 = TxDeposit::decode_2718(&mut encoded[1].as_ref()).unwrap();
+        assert_eq!(tx1.from, address!("000000000000000000000000000000000000abba"));
         assert_eq!(
-            encoded[1].as_ref(),
-            hex!("7ef857a0ac61fbb5e3d61e626f66c413c564d376e3b363b94a37aab323b860a2293b7c6c94000000000000000000000000000000000000abba9442000000000000000000000000000000000000158080834c4b408084feedface").as_slice()
+            tx1.to,
+            TxKind::Call(address!("4200000000000000000000000000000000000015"))
         );
+        assert_eq!(tx1.gas_limit, 5_000_000);
+        assert_eq!(tx1.input.as_ref(), hex!("feedface").as_slice());
+        assert_eq!(tx1.eth_value, 0);
+        assert_eq!(tx1.eth_tx_value, None);
+
+        // Source hashes must be unique and stable across encoding boundaries.
+        assert_ne!(tx0.source_hash, tx1.source_hash);
     }
 
     #[test]
