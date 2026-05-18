@@ -83,22 +83,32 @@ grep -rn "\[MANTLE\]" rust/ --include="*.rs" --include="*.toml"
 | `Cargo.toml` | `[patch.crates-io]` redirects all 13 revm-family crates to `mantle-xyz/revm@mantle-elysium`. |
 | `Cargo.toml` | Workspace `members` drops `"op-revm/"`; `exclude = ["op-revm"]` keeps the orphan subtree out of the build. |
 
-### 3.2 op-alloy — TxDeposit gains BVM_ETH fields
+### 3.2 op-alloy — TxDeposit gains BVM_ETH fields + L1BlockInfo gains token_ratio
 
-Corresponds to mantle-xyz/op-alloy commits `5f0b879`, `5330f5a`, `79d78a4`, `da4e219`, `6637567`.
+Corresponds to mantle-xyz/op-alloy commits `5f0b879`, `5330f5a`, **`57b9c10`**, `da4e219`,
+`6637567`, `79d78a4`, plus the V230 trio: **`3dc9696`** + **`4873ed6`** + **`498abec`**
+(2026-05 audit additions). Earlier the registry only listed five commits and attributed
+the deposit strict-boundary decode to `6637567`; in fact `6637567` is the *block* RLP
+decoder fix, and the deposit strict payload-boundary form actually originates in
+`4873ed6`. The L1BlockInfo `token_ratio` field (`57b9c10`), the BVM_ETH boundary +
+EIP-2718 round-trip tests (`3dc9696`), and the malformed-input tests (`498abec`) were
+missed by the original audit and added in the 2026-05 pass.
 
 | File | Change |
 |---|---|
 | `op-alloy/crates/consensus/src/transaction/deposit.rs` | Add `eth_value: u128` and `eth_tx_value: Option<u128>` fields with their serde attrs. |
 | same | Update `rlp_decode_fields` / `rlp_encode_fields` / `rlp_encoded_fields_length` / `size()` to include the new fields. |
-| same | Switch `rlp_decode` to a `split_at(header.payload_length)` strict-boundary form (port of commit 6637567). |
-| same | Add the `decode_optional_u128_from_rlp` helper for the trailing optional u128. |
+| same | Switch `rlp_decode` to a `split_at(header.payload_length)` strict-boundary form (port of commit `4873ed6` from V230 — not `6637567`, which is the *block* decoder fix). |
+| same | Add the `decode_optional_u128_from_rlp` helper for the trailing optional u128. Strict form per `498abec`: returns `Err` on present-but-malformed input rather than swallowing decode errors as `None`. |
 | same (tests) | Add 0/None for both fields in 8 in-file `TxDeposit { ... }` literals; add `_` ignores in 1 alloy-compat destructure. |
+| same (tests) | Add `test_eth_value_zero`, `test_eth_value_and_eth_tx_value_both_zero`, `test_eth_value_max`, `test_eip2718_encode_decode_with_new_fields`, `test_eip2718_encode_decode_with_eth_tx_value_none`, `test_decode_optional_u128_boundary_values` (port of `3dc9696`). The companion implementation changes in `3dc9696` (lenient `decode_optional_u128_from_rlp` mid-form + `size()` switch from `Option<u128>` to `u128` for `eth_value`) are already present locally — the decode helper was later strictened by `498abec`. |
+| same (tests) | Add `test_rlp_decode_fields_rejects_malformed_present_eth_tx_value` and `test_decode_2718_rejects_malformed_present_eth_tx_value` (port of `498abec`'s two new test functions). |
 | `op-alloy/crates/consensus/src/transaction/envelope.rs` | Add 0/None in 2 test `TxDeposit` literals. |
 | `op-alloy/crates/consensus/src/reth_codec.rs` | `From<CompactTxDeposit>` fills 0/None for the new fields. **TODO**: `CompactTxDeposit` itself does not carry the new fields, so reth Compact round-trips drop BVM_ETH data. |
 | `op-alloy/crates/consensus/src/transaction/deposit.rs` (`bincode_compat`) | Same situation as `reth_codec`. **TODO**. |
 | `op-alloy/crates/consensus/src/nuts/mod.rs` | NutBundle upgrade-tx literal fills 0/None. |
 | `op-alloy/crates/rpc-types/src/transaction/request.rs` | OpTransactionRequest destructure adds `_` ignores for the new fields. |
+| `op-alloy/crates/rpc-types/src/receipt.rs` | `L1BlockInfo` gains `pub token_ratio: Option<u128>` at the Jovian-class hardfork section (port of `57b9c10`). `parse_rpc_receipt` test JSON extended with `"tokenRatio": "0x1"` for round-trip coverage. Without this field, RPC clients would not see Mantle's eth/MNT ratio in receipts. |
 
 ### 3.3 kona-hardforks — Arsia + MantleHardforks
 

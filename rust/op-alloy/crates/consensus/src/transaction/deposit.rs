@@ -724,6 +724,216 @@ mod tests {
             assert_eq!(&decoded_fields, original, "rlp_encode/rlp_decode not symmetric");
         }
     }
+
+    // [MANTLE] Coverage tests for the BVM_ETH `eth_value` / `eth_tx_value` fields.
+    // Port of mantle-xyz/op-alloy@3dc9696 ("test: update test case"). Exercises
+    // zero / max boundary values and EIP-2718 round-trips through the new wire
+    // format.
+    #[test]
+    fn test_eth_value_zero() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 0, // Test zero value
+            eth_tx_value: Some(100),
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 0);
+    }
+
+    #[test]
+    fn test_eth_value_and_eth_tx_value_both_zero() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 0,
+            eth_tx_value: Some(0), // Test zero value
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 0);
+        assert_eq!(decoded.eth_tx_value, Some(0));
+    }
+
+    #[test]
+    fn test_eth_value_max() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: u128::MAX, // Test maximum value
+            eth_tx_value: Some(u128::MAX),
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        let decoded = TxDeposit::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, u128::MAX);
+        assert_eq!(decoded.eth_tx_value, Some(u128::MAX));
+    }
+
+    #[test]
+    fn test_eip2718_encode_decode_with_new_fields() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: Some(300),
+        };
+
+        // Test EIP-2718 encoding
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+
+        // Test EIP-2718 decoding
+        let mut encoded_slice = encoded.as_ref();
+        let decoded = TxDeposit::decode_2718(&mut encoded_slice).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 200);
+        assert_eq!(decoded.eth_tx_value, Some(300));
+    }
+
+    #[test]
+    fn test_eip2718_encode_decode_with_eth_tx_value_none() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            eth_tx_value: None, // Test None value
+        };
+
+        // Test EIP-2718 encoding
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+
+        // Test EIP-2718 decoding
+        let mut encoded_slice = encoded.as_ref();
+        let decoded = TxDeposit::decode_2718(&mut encoded_slice).expect("Failed to decode");
+
+        assert_eq!(tx_deposit, decoded);
+        assert_eq!(decoded.eth_value, 200);
+        assert_eq!(decoded.eth_tx_value, None);
+    }
+
+    #[test]
+    fn test_decode_optional_u128_boundary_values() {
+        // Values that encode to short-string headers (0x82 0xXX 0xXX). All valid u128
+        // encodings start below 0xc0, so the strict decoder accepts them and yields
+        // `Ok(Some(value))`. Sanity-checks that the decoder consumes the buffer exactly.
+        let test_values = [
+            0x8000u128, // Encodes to 0x82 0x80 0x00
+            0xffffu128, // Encodes to 0x82 0xff 0xff
+        ];
+
+        for value in test_values {
+            let mut encoded = BytesMut::new();
+            value.encode(&mut encoded);
+            let first_byte = encoded[0];
+
+            // Only test if the encoding is valid for u128 (first byte < 0xc0)
+            if first_byte < 0xc0 {
+                let mut buf = encoded.as_ref();
+                let result = TxDeposit::decode_optional_u128_from_rlp(&mut buf);
+                assert_eq!(result.unwrap(), Some(value), "Failed to decode value: {}", value);
+                assert!(buf.is_empty(), "Buffer should be consumed after decoding");
+            }
+        }
+    }
+
+    // [MANTLE] Malformed-input tests for the optional `eth_tx_value` BVM_ETH field.
+    // Port of mantle-xyz/op-alloy@498abec: "fix(consensus): make optional ethTxValue
+    // RLP decode strict and add malformed-input tests". The companion implementation
+    // change (return error rather than silently None on decode failure) is already
+    // in place in `decode_optional_u128_from_rlp`.
+    #[test]
+    fn test_rlp_decode_fields_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::default(),
+            from: Address::default(),
+            to: TxKind::default(),
+            mint: 100,
+            value: U256::default(),
+            gas_limit: 50000,
+            is_system_transaction: true,
+            input: Bytes::default(),
+            eth_value: 100,
+            eth_tx_value: None,
+        };
+
+        let mut buffer = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer);
+        // Simulate an explicitly present but malformed eth_tx_value field (list instead of integer).
+        buffer.extend_from_slice(&[0xc0]);
+
+        let result = TxDeposit::rlp_decode_fields(&mut &buffer[..]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_2718_rejects_malformed_present_eth_tx_value() {
+        let tx_deposit = TxDeposit {
+            source_hash: B256::with_last_byte(42),
+            from: Address::with_last_byte(1),
+            to: TxKind::Call(Address::with_last_byte(2)),
+            mint: 1000,
+            value: U256::from(5000),
+            gas_limit: 100000,
+            is_system_transaction: false,
+            input: Bytes::from_static(&[1, 2, 3, 4]),
+            eth_value: 200,
+            // Use a one-byte integer so we can mutate it in-place without changing length fields.
+            eth_tx_value: Some(1),
+        };
+
+        let mut encoded = BytesMut::new();
+        tx_deposit.encode_2718(&mut encoded);
+        *encoded.last_mut().expect("encoded tx should not be empty") = 0xc0;
+
+        let mut encoded_slice = encoded.as_ref();
+        let result = TxDeposit::decode_2718(&mut encoded_slice);
+        assert!(result.is_err());
+    }
 }
 
 /// Bincode-compatible [`TxDeposit`] serde implementation.
