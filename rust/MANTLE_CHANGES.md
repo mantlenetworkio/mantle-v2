@@ -60,7 +60,42 @@ via `[patch.crates-io]`, so the actual EVM execution path is 100% on mantle-elys
 | op-revm major version | v20 | v19 ⚠️ | Adapt Mantle consumers to v19 API |
 | `OpSpecId` variants | Includes `KARST` | No `KARST`; includes `OSAKA` + `ARSIA` | Replace KARST references with OSAKA/JOVIAN/ARSIA fallbacks or comment them out |
 
-### 2.3 Mantle data sources use the upstream `EthereumDataSource`
+### 2.3 alloy-evm sourced from mantle-xyz/evm @ mantle-v0.34.0
+
+`Cargo.toml` redirects `alloy-evm` to the `mantle-v0.34.0` **branch** (not tag) of
+`mantle-xyz/evm`. That branch contains **two commits**:
+
+- `6022e02e` "chore: release 0.34.0" — upstream alloy-rs/evm v0.34.0 baseline.
+- `b91d0077` "feat(evm): port Mantle token_ratio trait method onto v0.34.0" — adds
+  `fn token_ratio(&self) -> U256` to the `Evm` trait (with `U256::ZERO` default on
+  `EthEvm` and a delegating impl on `Either<L, R>`).
+
+This is **structurally divergent from `mantle-xyz/evm@main`**. `main` is still on an
+alloy-rs/evm v0.22.x lineage and carries Mantle op-side patches in
+`crates/evm/src/op/tx.rs` (BVM_ETH `eth_value` / `eth_tx_value` propagation through
+`TxEnv` / `OpTransaction`). **v0.34.0 deleted both `crates/op-evm/` and
+`crates/evm/src/op/`** — so those Mantle patches have no landing zone on
+`mantle-v0.34.0` and are not ported. This is the explicit decision documented in the
+`b91d0077` commit message.
+
+The Mantle op-side functionality is instead provided by:
+
+- `op-revm` from `mantle-xyz/revm@mantle-elysium` (BVM_ETH execution, token_ratio
+  computation, ARSIA / JOVIAN protocol changes).
+- The locally-vendored `alloy-op-evm/` (this repo) per §3.7 — hand-ported Mantle
+  protocol changes that target the v0.32-era alloy-rs/evm `OpTxTr` / `OpBlockExecutor`
+  API.
+
+**Audit note (2026-05):** an audit comparing local against `mantle-xyz/evm@main`
+crates/evm/ surfaced no real gaps. Every Mantle change on main's `crates/evm/`
+falls into one of two buckets:
+
+1. `token_ratio` trait method (evm.rs / eth/mod.rs / either.rs) — already ported by
+   `b91d0077`.
+2. Edits to `crates/evm/src/op/tx.rs` (BVM_ETH plumbing) — target a path that
+   v0.34.0 deleted; covered locally by `alloy-op-evm/src/tx.rs` per §3.7.
+
+### 2.4 Mantle data sources use the upstream `EthereumDataSource`
 
 Post Mantle Arsia, all blob submission uses the standard blob format. The Mantle fork
 shipped `MantleBlobSource` and `MantleEthereumDataSource` files but **never wired them
@@ -203,7 +238,17 @@ pre-existing legacy and is currently dead code.
 
 ### 3.7 alloy-op-evm — Mantle protocol changes
 
-Corresponds to mantle-xyz/evm commits `5f383c5`, `9fe2c85`, `760129f`.
+Corresponds to mantle-xyz/evm commits `707922af`, `5f383c5`, `9fe2c85`, `760129f` (chronological).
+
+**Source-commit notes** (2026-05 audit clarification):
+
+- `707922af` ("feat: mantle feature", PinelliaC, 2025-10-22, fusaka branch → merged via PR #3 "mantle limb") is the original source for:
+  - The `ensure_create2_deployer(...)` call commented out + its `use canyon::ensure_create2_deployer;` import removed.
+  - `#[allow(dead_code)]` added to `crates/op-evm/src/block/canyon.rs`.
+  - A transient *disabling* of the Jovian DA-footprint enforcement (deleted `get_jovian_da_footprint_scalar` / `jovian_da_footprint_estimation`). **Note**: this disable was later reverted upstream by `9fe2c85` "feat: support arsia" (mantle-arsia branch), which re-enabled Jovian DA-footprint as part of Arsia. Local code therefore keeps the enforcement **enabled** (matches final main-branch state).
+- `5f383c5` ("feat: support mantle", RealiCZ, 2026-01-15, mantle-arsia branch) re-applied the create2-deployer / dead_code allow on top of the v0.25.2 baseline.
+- `9fe2c85` ("feat: support arsia", ivan, 2025-12-31) added Arsia support and re-enabled Jovian DA-footprint enforcement.
+- `760129f` ("fix: set deposit_receipt_version to None for Mantle support", RealiCZ, 2026-01-15) set `deposit_receipt_version = None`.
 
 | File | Change |
 |---|---|
@@ -212,9 +257,10 @@ Corresponds to mantle-xyz/evm commits `5f383c5`, `9fe2c85`, `760129f`.
 | `alloy-op-evm/src/env.rs` | Comments out the `is_karst_active_at_timestamp => KARST` hook (no KARST on mantle-elysium). |
 | same (tests) | Comments out the `OpSpecId::KARST` `test_case`. |
 | `alloy-op-evm/src/block/mod.rs` | `deposit_receipt_version = None` (corresponds to commit 760129f). |
-| same | Comments out the `ensure_create2_deployer(...)` call and its `use canyon::ensure_create2_deployer;` import. |
+| same | Comments out the `ensure_create2_deployer(...)` call and its `use canyon::ensure_create2_deployer;` import (origin: 707922af; re-applied in 5f383c5 against v0.25.2 baseline). |
 | same | Drops the `spec_id` argument from `operator_fee_charge` in two call sites to match mantle-elysium's older 2-arg signature. |
-| `alloy-op-evm/src/block/canyon.rs` | Adds `#![allow(dead_code)]` because the function is now unreachable. |
+| `alloy-op-evm/src/block/canyon.rs` | Adds `#![allow(dead_code)]` because the function is now unreachable (origin: 707922af). |
+| same (Jovian DA-footprint enforcement) | Kept **active** locally (`block/mod.rs` `jovian_da_footprint_estimation` + the pre-execute check + post-execute accumulation). This matches the post-`9fe2c85` Mantle stance; `707922af`'s transient disable is therefore not ported. |
 
 ### 3.8 kona-client fpvm — adapts to mantle-elysium op-revm v19
 
