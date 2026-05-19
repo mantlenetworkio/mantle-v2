@@ -74,8 +74,13 @@ def main():
             'forge', 'script', 'scripts/deploy/Deploy.s.sol',
             '--rpc-url', rpc_url,
             '--private-key', private_key,
-            '--gas-estimate-multiplier', '250',
-            '--broadcast'
+            '--broadcast',
+            '--legacy',
+            '--gas-price', '2000000000',
+            '--gas-estimate-multiplier', '300',
+            '--slow',
+            '--timeout', '300',
+            '--retries', '10'
           ],
           env={'DEPLOY_CONFIG_PATH': testnet_cfg_orig},
           cwd=contracts_bedrock_dir
