@@ -216,7 +216,7 @@ func NewHost(
 		ShanghaiTime:            new(uint64),
 		CancunTime:              new(uint64),
 		PragueTime:              nil,
-		VerkleTime:              nil,
+		UBTTime:                 nil,
 		// Select default Ethereum prod blob schedules
 		BlobScheduleConfig: params.DefaultBlobSchedule,
 		// OP-Stack forks are disabled, since we use this for L1.
@@ -236,7 +236,7 @@ func NewHost(
 	rawDB := rawdb.NewMemoryDatabase()
 	stateDB := state.NewDatabase(triedb.NewDatabase(rawDB, &triedb.Config{
 		Preimages: true, // To be able to iterate the state we need the Preimages
-		IsVerkle:  false,
+		IsUBT:     false,
 		HashDB:    hashdb.Defaults,
 		PathDB:    nil,
 	}), nil)
@@ -370,7 +370,7 @@ func (h *Host) Call(from common.Address, to common.Address, input []byte, gas ui
 		h.evmRevertErr = nil
 	}()
 
-	returnData, leftOverGas, err = h.env.Call(from, to, input, gas, value)
+	returnData, leftOverBudget, err := h.env.Call(from, to, input, vm.NewGasBudget(gas), value)
 
 	// replace the returned error with the inner EVM error (if one exists)
 	// h.evmRevertErr will contain expected reverts (e.g. those from proxies)
@@ -379,7 +379,7 @@ func (h *Host) Call(from common.Address, to common.Address, input []byte, gas ui
 		err = h.evmRevertErr
 	}
 
-	return returnData, leftOverGas, err
+	return returnData, leftOverBudget.RegularGas, err
 }
 
 // LoadContract loads the bytecode of a contract, and deploys it with regular CREATE.
@@ -420,7 +420,7 @@ func (h *Host) RememberArtifact(addr common.Address, artifact *foundry.Artifact,
 func (h *Host) Create(from common.Address, initCode []byte) (common.Address, error) {
 	h.prelude(from, nil)
 	ret, addr, _, err := h.env.Create(from,
-		initCode, DefaultFoundryGasLimit, uint256.NewInt(0))
+		initCode, vm.NewGasBudget(DefaultFoundryGasLimit), uint256.NewInt(0))
 	if err != nil {
 		retStr := fmt.Sprintf("%x", ret)
 		if len(retStr) > 20 {
@@ -694,7 +694,10 @@ func (h *Host) onOpcode(pc uint64, op byte, gas, cost uint64, scope tracing.OpCo
 	cf.LastOp = vm.OpCode(op)
 	cf.LastPC = pc
 	if cf.LastOp == vm.CREATE2 {
-		cf.LastCreate2Salt = scopeCtx.Stack.Back(3).Bytes32()
+		//cf.LastCreate2Salt = scopeCtx.Stack.Back(3).Bytes32()
+		data := scopeCtx.Stack.Data()
+		cf.LastCreate2Salt = data[len(data)-4].Bytes32()
+
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/types/bal"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 )
@@ -58,6 +59,8 @@ func NewForkableState(base VMStateDB) *ForkableState {
 		idCounter: 0,
 	}
 }
+
+func (fst *ForkableState) Touch(address common.Address) {}
 
 // ExportDiff exports a state diff. Warning: diffs are like flushed states.
 // So we flush the state, making all the contents cold, losing transient storage, etc.
@@ -237,8 +240,8 @@ func (fst *ForkableState) stateFor(addr common.Address) VMStateDB {
 //
 // The changes will be flushed to the underlying DB.
 // A *ForkDB if the state is currently forked.
-func (fst *ForkableState) Finalise(deleteEmptyObjects bool) {
-	fst.selected.Finalise(deleteEmptyObjects)
+func (fst *ForkableState) Finalise(deleteEmptyObjects bool) *bal.StateAccessList {
+	return fst.selected.Finalise(deleteEmptyObjects)
 }
 
 func (fst *ForkableState) CreateAccount(address common.Address) {
@@ -390,6 +393,6 @@ func (fst *ForkableState) IsNewContract(addr common.Address) bool {
 	return fst.selected.IsNewContract(addr)
 }
 
-func (fst *ForkableState) EmitLogsForBurnAccounts() {
-	fst.selected.EmitLogsForBurnAccounts()
+func (fst *ForkableState) LogsForBurnAccounts() []*types.Log {
+	return fst.selected.LogsForBurnAccounts()
 }

@@ -16,15 +16,16 @@ import (
 // ForkDB is a virtual state database: it wraps a forked accounts trie,
 // and can maintain a state diff, so we can mutate the forked state,
 // and even finalize state changes (so we can accurately measure things like cold storage gas cost).
-//
-// It embeds a *state.CachingDB to satisfy the state.Database interface
-// (specifically the Commit method which takes an unexported *stateUpdate type).
-// The embedded CachingDB's Commit is never called in fork usage — fork state
-// is ephemeral. All read/write operations are overridden to route through the
-// ForkedAccountsTrie.
 type ForkDB struct {
-	*state.CachingDB // provides Commit() to satisfy state.Database interface
-	active           *ForkedAccountsTrie
+	active *ForkedAccountsTrie
+}
+
+func (f *ForkDB) Type() state.DatabaseType {
+	return state.TypeMPT
+}
+
+func (f *ForkDB) Iteratee(root common.Hash) (state.Iteratee, error) {
+	panic("unimplemented")
 }
 
 // Reader for read-only access to a known state. All cold reads go through this.
@@ -45,18 +46,18 @@ func (f *ForkDB) Snapshot() *snapshot.Tree {
 	return nil
 }
 
+func (f *ForkDB) Commit(*state.StateUpdate) error {
+	panic("unimplemented")
+}
+
 var _ state.Database = (*ForkDB)(nil)
 
-// NewForkDB creates a virtual state database backed by the given fork source.
 func NewForkDB(source ForkSource) *ForkDB {
-	return &ForkDB{
-		CachingDB: state.NewDatabaseForTesting(),
-		active: &ForkedAccountsTrie{
-			stateRoot: source.StateRoot(),
-			src:       source,
-			diff:      NewExportDiff(),
-		},
-	}
+	return &ForkDB{active: &ForkedAccountsTrie{
+		stateRoot: source.StateRoot(),
+		src:       source,
+		diff:      NewExportDiff(),
+	}}
 }
 
 // fakeRoot is just a marker; every account we load into the fork-db has this storage-root.
@@ -92,7 +93,7 @@ func (f *ForkDB) TrieDB() *triedb.Database {
 	diskDB := rawdb.NewMemoryDatabase()
 	tdb := triedb.NewDatabase(diskDB, &triedb.Config{
 		Preimages: false,
-		IsVerkle:  false,
+		IsUBT:     false,
 		HashDB:    nil,
 		PathDB:    pathdb.ReadOnly,
 	})
