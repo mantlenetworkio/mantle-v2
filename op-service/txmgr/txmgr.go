@@ -267,12 +267,16 @@ func (m *SimpleTxManager) Send(ctx context.Context, candidate TxCandidate) (*typ
 
 	tx, err := m.prepare(ctx, candidate)
 	if err != nil {
-		m.resetNonce()
+		if shouldResetNonce(err) {
+			m.resetNonce()
+		}
 		return nil, err
 	}
 	receipt, err := m.sendTx(ctx, tx)
 	if err != nil {
-		m.resetNonce()
+		if shouldResetNonce(err) {
+			m.resetNonce()
+		}
 		return nil, err
 	}
 	return receipt, err
@@ -301,7 +305,9 @@ func (m *SimpleTxManager) SendAsync(ctx context.Context, candidate TxCandidate, 
 
 	tx, err := m.prepare(ctx, candidate)
 	if err != nil {
-		m.resetNonce()
+		if shouldResetNonce(err) {
+			m.resetNonce()
+		}
 		cancel()
 		ch <- SendResponse{
 			Receipt: nil,
@@ -316,7 +322,7 @@ func (m *SimpleTxManager) SendAsync(ctx context.Context, candidate TxCandidate, 
 		defer func() { m.metr.RecordPendingTx(m.pending.Add(-1)) }()
 		defer cancel()
 		receipt, err := m.sendTx(ctx, tx)
-		if err != nil {
+		if err != nil && shouldResetNonce(err) {
 			m.resetNonce()
 		}
 		ch <- SendResponse{
@@ -558,10 +564,13 @@ func (m *SimpleTxManager) signWithNextNonce(ctx context.Context, txMessage types
 	defer m.nonceLock.Unlock()
 
 	if m.nonce == nil {
-		// Fetch the sender's nonce from the latest known block (nil `blockNumber`)
+		// Fetch the sender's pending nonce so re-reads after a reset include any
+		// transactions still sitting in the mempool. Using NonceAt(latest) here
+		// would only reflect mined txs and could hand out an already-pending
+		// nonce, producing "nonce too low" errors.
 		childCtx, cancel := context.WithTimeout(ctx, m.cfg.NetworkTimeout)
 		defer cancel()
-		nonce, err := m.backend.NonceAt(childCtx, m.cfg.From, nil)
+		nonce, err := m.backend.PendingNonceAt(childCtx, m.cfg.From)
 		if err != nil {
 			m.metr.RPCError()
 			return nil, fmt.Errorf("failed to get nonce: %w", err)
@@ -598,6 +607,18 @@ func (m *SimpleTxManager) resetNonce() {
 	m.nonceLock.Lock()
 	defer m.nonceLock.Unlock()
 	m.nonce = nil
+}
+
+// shouldResetNonce reports whether a Send error indicates the cached nonce is
+// stale and must be re-read from the chain. We only reset for nonce-mismatch
+// errors; transient failures (network, gas, mempool deadline, context cancel)
+// leave the local cache valid and resetting would force a re-read that can
+// race with txs still sitting in the mempool.
+func shouldResetNonce(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errStringMatch(err, core.ErrNonceTooLow) || errStringMatch(err, core.ErrNonceTooHigh)
 }
 
 // send submits the same transaction several times with increasing gas prices as necessary.
