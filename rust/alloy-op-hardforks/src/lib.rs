@@ -21,6 +21,9 @@ pub use optimism::{mainnet as op_mainnet, mainnet::*, sepolia as op_sepolia, sep
 pub mod base;
 pub use base::{mainnet as base_mainnet, mainnet::*, sepolia as base_sepolia, sepolia::*};
 
+pub mod mantle;
+pub use mantle::{mainnet as mantle_mainnet, mainnet::*, sepolia as mantle_sepolia, sepolia::*};
+
 hardfork!(
     /// The name of an optimism hardfork.
     ///
@@ -172,6 +175,76 @@ impl OpHardfork {
     }
 }
 
+hardfork!(
+    /// Mantle-specific hardforks extending the OP Stack.
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    #[derive(Default)]
+    MantleHardfork {
+        /// Skadi: Mantle's Prague-equivalent upgrade.
+        #[default]
+        Skadi,
+        /// Limb: Mantle's Osaka-equivalent upgrade.
+        Limb,
+        /// Arsia: Activates Canyon through Holocene + Jovian + operator fee.
+        Arsia,
+    }
+);
+
+impl MantleHardfork {
+    /// Reverse lookup to find the Mantle hardfork given a chain ID and block timestamp.
+    /// Returns the active Mantle hardfork at the given timestamp for the specified Mantle chain.
+    pub fn from_chain_and_timestamp(chain: Chain, timestamp: u64) -> Option<Self> {
+        let named = chain.named()?;
+
+        match named {
+            NamedChain::Mantle => Some(match timestamp {
+                _i if timestamp < MANTLE_MAINNET_SKADI_TIMESTAMP => return None,
+                _i if timestamp < MANTLE_MAINNET_LIMB_TIMESTAMP => Self::Skadi,
+                _i if timestamp < MANTLE_MAINNET_ARSIA_TIMESTAMP => Self::Limb,
+                _ => Self::Arsia,
+            }),
+            NamedChain::MantleSepolia => Some(match timestamp {
+                _i if timestamp < MANTLE_SEPOLIA_SKADI_TIMESTAMP => return None,
+                _i if timestamp < MANTLE_SEPOLIA_LIMB_TIMESTAMP => Self::Skadi,
+                _i if timestamp < MANTLE_SEPOLIA_ARSIA_TIMESTAMP => Self::Limb,
+                _ => Self::Arsia,
+            }),
+            _ => None,
+        }
+    }
+
+    /// Mantle mainnet list of hardforks.
+    pub const fn mantle_mainnet() -> [(Self, ForkCondition); 3] {
+        [
+            (Self::Skadi, ForkCondition::Timestamp(MANTLE_MAINNET_SKADI_TIMESTAMP)),
+            (Self::Limb, ForkCondition::Timestamp(MANTLE_MAINNET_LIMB_TIMESTAMP)),
+            (Self::Arsia, ForkCondition::Timestamp(MANTLE_MAINNET_ARSIA_TIMESTAMP)),
+        ]
+    }
+
+    /// Mantle Sepolia list of hardforks.
+    pub const fn mantle_sepolia() -> [(Self, ForkCondition); 3] {
+        [
+            (Self::Skadi, ForkCondition::Timestamp(MANTLE_SEPOLIA_SKADI_TIMESTAMP)),
+            (Self::Limb, ForkCondition::Timestamp(MANTLE_SEPOLIA_LIMB_TIMESTAMP)),
+            (Self::Arsia, ForkCondition::Timestamp(MANTLE_SEPOLIA_ARSIA_TIMESTAMP)),
+        ]
+    }
+}
+
+/// 32-byte prefix that identifies a Mantle MetaTx (permanently disabled since MantleEverest).
+pub const MANTLE_META_TX_PREFIX: [u8; 32] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4D,
+    0x61, 0x6E, 0x74, 0x6C, 0x65, 0x4D, 0x65, 0x74, 0x61, 0x54, 0x78, 0x50, 0x72, 0x65, 0x66,
+    0x69, 0x78,
+];
+
+/// Returns `true` if `input` is a Mantle MetaTx (starts with [`MANTLE_META_TX_PREFIX`]).
+#[inline]
+pub fn is_mantle_meta_tx(input: &[u8]) -> bool {
+    input.len() > 32 && input[..32] == MANTLE_META_TX_PREFIX
+}
+
 /// Extends [`EthereumHardforks`] with optimism helper methods.
 #[auto_impl::auto_impl(&, Arc)]
 pub trait OpHardforks: EthereumHardforks {
@@ -239,6 +312,30 @@ pub trait OpHardforks: EthereumHardforks {
     /// timestamp.
     fn is_interop_active_at_timestamp(&self, timestamp: u64) -> bool {
         self.op_fork_activation(OpHardfork::Interop).active_at_timestamp(timestamp)
+    }
+
+    // ===== Mantle =====
+
+    /// Returns `true` if this chain uses Mantle semantics.
+    /// Mantle chains have `MantleHardfork::Skadi` in their hardfork set.
+    /// Default returns `false` for standard OP Stack chains.
+    fn is_mantle(&self) -> bool {
+        false
+    }
+
+    /// Returns `true` if Mantle Skadi is active at the given timestamp.
+    fn is_mantle_skadi_active_at_timestamp(&self, _timestamp: u64) -> bool {
+        false
+    }
+
+    /// Returns `true` if Mantle Limb is active at the given timestamp.
+    fn is_mantle_limb_active_at_timestamp(&self, _timestamp: u64) -> bool {
+        false
+    }
+
+    /// Returns `true` if Mantle Arsia is active at the given timestamp.
+    fn is_mantle_arsia_active_at_timestamp(&self, _timestamp: u64) -> bool {
+        false
     }
 }
 
@@ -663,5 +760,119 @@ mod tests {
         for op_hardfork in OpHardfork::VARIANTS {
             let _ = op_mainnet_forks.op_fork_activation(*op_hardfork);
         }
+    }
+
+    #[test]
+    fn check_mantle_hardfork_from_str() {
+        let hardfork_str = ["sKaDi", "lImB", "aRsIa"];
+        let expected_hardforks =
+            [MantleHardfork::Skadi, MantleHardfork::Limb, MantleHardfork::Arsia];
+
+        let hardforks: alloc::vec::Vec<MantleHardfork> =
+            hardfork_str.iter().map(|h| MantleHardfork::from_str(h).unwrap()).collect();
+
+        assert_eq!(hardforks, expected_hardforks);
+    }
+
+    #[test]
+    fn check_mantle_nonexistent_hardfork_from_str() {
+        assert!(MantleHardfork::from_str("not a hardfork").is_err());
+    }
+
+    #[test]
+    fn mantle_timestamp_constants() {
+        // Mainnet ordering: Skadi < Limb < Arsia
+        assert!(MANTLE_MAINNET_SKADI_TIMESTAMP < MANTLE_MAINNET_LIMB_TIMESTAMP);
+        assert!(MANTLE_MAINNET_LIMB_TIMESTAMP < MANTLE_MAINNET_ARSIA_TIMESTAMP);
+        // Sepolia ordering: Skadi < Limb < Arsia
+        assert!(MANTLE_SEPOLIA_SKADI_TIMESTAMP < MANTLE_SEPOLIA_LIMB_TIMESTAMP);
+        assert!(MANTLE_SEPOLIA_LIMB_TIMESTAMP < MANTLE_SEPOLIA_ARSIA_TIMESTAMP);
+        // Mainnet always later than Sepolia
+        assert!(MANTLE_MAINNET_SKADI_TIMESTAMP > MANTLE_SEPOLIA_SKADI_TIMESTAMP);
+        assert!(MANTLE_MAINNET_LIMB_TIMESTAMP > MANTLE_SEPOLIA_LIMB_TIMESTAMP);
+        assert!(MANTLE_MAINNET_ARSIA_TIMESTAMP > MANTLE_SEPOLIA_ARSIA_TIMESTAMP);
+    }
+
+    #[test]
+    fn test_mantle_hardfork_from_chain_and_timestamp() {
+        // Mantle mainnet
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_MAINNET_CHAIN_ID),
+                MANTLE_MAINNET_SKADI_TIMESTAMP
+            ),
+            Some(MantleHardfork::Skadi)
+        );
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_MAINNET_CHAIN_ID),
+                MANTLE_MAINNET_LIMB_TIMESTAMP
+            ),
+            Some(MantleHardfork::Limb)
+        );
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_MAINNET_CHAIN_ID),
+                MANTLE_MAINNET_ARSIA_TIMESTAMP
+            ),
+            Some(MantleHardfork::Arsia)
+        );
+        // Before Skadi: returns None
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_MAINNET_CHAIN_ID),
+                MANTLE_MAINNET_SKADI_TIMESTAMP - 1
+            ),
+            None
+        );
+
+        // Mantle Sepolia
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_SEPOLIA_CHAIN_ID),
+                MANTLE_SEPOLIA_SKADI_TIMESTAMP
+            ),
+            Some(MantleHardfork::Skadi)
+        );
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(
+                Chain::from_id(MANTLE_SEPOLIA_CHAIN_ID),
+                MANTLE_SEPOLIA_ARSIA_TIMESTAMP
+            ),
+            Some(MantleHardfork::Arsia)
+        );
+
+        // Unknown chain: returns None
+        assert_eq!(
+            MantleHardfork::from_chain_and_timestamp(Chain::from_id(9999999), 1_000_000_000),
+            None
+        );
+    }
+
+    #[test]
+    fn test_is_mantle_meta_tx() {
+        let mut prefix_payload = [0u8; 64];
+        prefix_payload[..32].copy_from_slice(&MANTLE_META_TX_PREFIX);
+        assert!(is_mantle_meta_tx(&prefix_payload));
+
+        // Exactly 32 bytes: not long enough (needs > 32)
+        assert!(!is_mantle_meta_tx(&MANTLE_META_TX_PREFIX));
+
+        // Wrong prefix
+        let wrong: [u8; 64] = [0xAB; 64];
+        assert!(!is_mantle_meta_tx(&wrong));
+
+        // Empty input
+        assert!(!is_mantle_meta_tx(&[]));
+    }
+
+    #[test]
+    fn test_default_op_hardforks_mantle_methods_return_false() {
+        // OpChainHardforks (standard OP Stack) must return false for all Mantle methods
+        let op_mainnet = OpChainHardforks::op_mainnet();
+        assert!(!op_mainnet.is_mantle());
+        assert!(!op_mainnet.is_mantle_skadi_active_at_timestamp(u64::MAX));
+        assert!(!op_mainnet.is_mantle_limb_active_at_timestamp(u64::MAX));
+        assert!(!op_mainnet.is_mantle_arsia_active_at_timestamp(u64::MAX));
     }
 }
