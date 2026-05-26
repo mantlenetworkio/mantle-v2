@@ -25,6 +25,25 @@ pub fn spec(chain_spec: impl OpHardforks, header: impl BlockHeader) -> OpSpecId 
 /// This is only intended to be used after the Bedrock, when hardforks are activated by
 /// timestamp.
 pub fn spec_by_timestamp_after_bedrock(chain_spec: impl OpHardforks, timestamp: u64) -> OpSpecId {
+    // [MANTLE] Mantle chains have a non-standard hardfork order (Skadi/Limb/Arsia)
+    // that maps to different OpSpecId variants than the standard OP progression.
+    // Check Mantle-specific forks first so all callers (evm_env_for_op_block,
+    // block executor, RPC handlers) get the correct spec automatically.
+    if chain_spec.is_mantle() {
+        if chain_spec.is_mantle_arsia_active_at_timestamp(timestamp) {
+            return OpSpecId::ARSIA;
+        }
+        if chain_spec.is_mantle_limb_active_at_timestamp(timestamp) {
+            return OpSpecId::OSAKA;
+        }
+        // Fallback to ISTHMUS for all Mantle chains (including pre-Skadi).
+        // This matches kona's `mantle_spec_id` which unconditionally returns
+        // ISTHMUS when neither Arsia nor Limb is active. Mantle chains never
+        // run at a spec below ISTHMUS — Skadi activated Shanghai + Cancun +
+        // Prague + Ecotone + Isthmus simultaneously at genesis.
+        return OpSpecId::ISTHMUS;
+    }
+
     macro_rules! check_forks {
         ($($check:ident => $spec:ident),+ $(,)?) => {
             $(
@@ -37,7 +56,7 @@ pub fn spec_by_timestamp_after_bedrock(chain_spec: impl OpHardforks, timestamp: 
     check_forks! {
         // mantle-elysium's OpSpecId has no KARST variant (KARST was introduced in op-revm
         // v20; mantle-elysium is still on v19). Mantle uses OSAKA/ARSIA, neither of which
-        // is driven through this chain_spec hook — comment the line out.
+        // is driven through the OP fork check below.
         // is_karst_active_at_timestamp => KARST,
         is_interop_active_at_timestamp => INTEROP,
         is_jovian_active_at_timestamp => JOVIAN,
@@ -235,20 +254,6 @@ mod tests {
 
     // [MANTLE] OpSpecId::KARST does not exist on mantle-elysium — test case removed.
     // #[test_case::test_case(FakeHardfork::karst(), OpSpecId::KARST; "Karst")]
-    //
-    // [MANTLE] OpSpecId::OSAKA and OpSpecId::ARSIA *do* exist on mantle-elysium,
-    // but they are intentionally **not** covered by this test matrix because:
-    //   1. The upstream `OpHardforks` trait has no `is_osaka_active_at_timestamp`
-    //      / `is_arsia_active_at_timestamp` methods, so `spec_by_timestamp_after_bedrock`
-    //      has no way to dispatch on them.
-    //   2. On Mantle chains, the kona executor bypasses this whole function and
-    //      uses `RollupConfig::revm_spec_id(timestamp)` (see
-    //      `rust/kona/crates/proof/executor/src/builder/env.rs::evm_cfg_env`).
-    // OSAKA / ARSIA resolution is covered by the kona-protocol tests, e.g.
-    // `kona-protocol::info::variant::test::test_try_new_mantle_arsia`.
-    // `test_chain_spec_hook_does_not_resolve_arsia` below is the sentinel
-    // that surfaces this boundary if a future refactor accidentally wires
-    // ARSIA through this hook.
     #[test_case::test_case(FakeHardfork::interop(), OpSpecId::INTEROP; "Interop")]
     #[test_case::test_case(FakeHardfork::jovian(), OpSpecId::JOVIAN; "Jovian")]
     #[test_case::test_case(FakeHardfork::isthmus(), OpSpecId::ISTHMUS; "Isthmus")]
@@ -282,25 +287,95 @@ mod tests {
         assert_eq!(actual_spec, expected_spec);
     }
 
-    /// [MANTLE] Sentinel test: documents that `spec_by_timestamp_after_bedrock`
-    /// **does not** know about Mantle-only OpSpecId variants (OSAKA / ARSIA).
-    ///
-    /// A `FakeHardfork` constructed via OP-only variants (e.g. `Jovian`) will
-    /// resolve to its OP equivalent via this function. There is no way to
-    /// construct a FakeHardfork that returns `OpSpecId::ARSIA` from this
-    /// function — and that is by design: Mantle-aware resolution lives in
-    /// `kona_genesis::RollupConfig::revm_spec_id`. If a future refactor adds
-    /// Mantle predicates to `OpHardforks` and routes them through this hook,
-    /// this test will need to be updated.
+    /// [MANTLE] Tests that `spec_by_timestamp_after_bedrock` correctly resolves
+    /// Mantle-specific OpSpecId variants (ARSIA, OSAKA, ISTHMUS) when `is_mantle()` is true.
     #[test]
-    fn test_chain_spec_hook_does_not_resolve_arsia() {
-        // Driving the spec hook with the latest OP-known fork should still
-        // resolve to JOVIAN — confirming the hook is OP-aware only.
-        let actual = spec(FakeHardfork::jovian(), &Header::default());
-        assert_eq!(actual, OpSpecId::JOVIAN);
+    fn test_mantle_spec_routing_arsia() {
+        /// Helper: build a fake Mantle chain spec with configurable fork activation.
+        struct FakeMantle {
+            arsia: bool,
+            limb: bool,
+        }
+        impl EthereumHardforks for FakeMantle {
+            fn ethereum_fork_activation(&self, _: EthereumHardfork) -> ForkCondition {
+                ForkCondition::Timestamp(0)
+            }
+        }
+        impl OpHardforks for FakeMantle {
+            fn op_fork_activation(&self, _: OpHardfork) -> ForkCondition {
+                ForkCondition::Timestamp(0)
+            }
+            fn is_mantle(&self) -> bool {
+                true
+            }
+            fn is_mantle_skadi_active_at_timestamp(&self, _: u64) -> bool {
+                true
+            }
+            fn is_mantle_limb_active_at_timestamp(&self, _: u64) -> bool {
+                self.limb
+            }
+            fn is_mantle_arsia_active_at_timestamp(&self, _: u64) -> bool {
+                self.arsia
+            }
+        }
 
-        // There is no `FakeHardfork::arsia()` / `FakeHardfork::osaka()`
-        // constructor — `OpHardfork` upstream does not define these
-        // variants. Confirms the OP-only boundary at the type level.
+        // All active → ARSIA
+        assert_eq!(
+            spec_by_timestamp_after_bedrock(FakeMantle { arsia: true, limb: true }, 1000),
+            OpSpecId::ARSIA,
+        );
+        // Limb only → OSAKA
+        assert_eq!(
+            spec_by_timestamp_after_bedrock(FakeMantle { arsia: false, limb: true }, 1000),
+            OpSpecId::OSAKA,
+        );
+        // Skadi only → ISTHMUS
+        assert_eq!(
+            spec_by_timestamp_after_bedrock(FakeMantle { arsia: false, limb: false }, 1000),
+            OpSpecId::ISTHMUS,
+        );
+
+        // Pre-Skadi: is_mantle()=true but ALL Mantle forks inactive → ISTHMUS fallback.
+        // Consistent with kona's mantle_spec_id which unconditionally returns ISTHMUS
+        // when neither Arsia nor Limb is active.
+        struct FakeMantlePreSkadi;
+        impl EthereumHardforks for FakeMantlePreSkadi {
+            fn ethereum_fork_activation(&self, _: EthereumHardfork) -> ForkCondition {
+                ForkCondition::Never
+            }
+        }
+        impl OpHardforks for FakeMantlePreSkadi {
+            fn op_fork_activation(&self, _: OpHardfork) -> ForkCondition {
+                ForkCondition::Never
+            }
+            fn is_mantle(&self) -> bool {
+                true
+            }
+            fn is_mantle_skadi_active_at_timestamp(&self, _: u64) -> bool {
+                false
+            }
+            fn is_mantle_limb_active_at_timestamp(&self, _: u64) -> bool {
+                false
+            }
+            fn is_mantle_arsia_active_at_timestamp(&self, _: u64) -> bool {
+                false
+            }
+        }
+        assert_eq!(
+            spec_by_timestamp_after_bedrock(FakeMantlePreSkadi, 1000),
+            OpSpecId::ISTHMUS,
+            "pre-Skadi Mantle should fallback to ISTHMUS (kona parity)"
+        );
+    }
+
+    /// Non-Mantle chain (is_mantle() = false) should use standard OP fork routing.
+    #[test]
+    fn test_non_mantle_chain_uses_standard_routing() {
+        let result = spec(FakeHardfork::jovian(), &Header::default());
+        assert_eq!(
+            result,
+            OpSpecId::JOVIAN,
+            "Non-Mantle chain should resolve to JOVIAN, not ARSIA"
+        );
     }
 }
