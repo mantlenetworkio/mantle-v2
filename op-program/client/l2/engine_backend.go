@@ -201,8 +201,8 @@ func (o *OracleBackedL2Chain) Engine() consensus.Engine {
 	return o.engine
 }
 
-func (o *OracleBackedL2Chain) StateAt(root common.Hash) (*state.StateDB, error) {
-	stateDB, err := state.New(root, state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(o.db), nil), nil))
+func (o *OracleBackedL2Chain) StateAt(header *types.Header) (*state.StateDB, error) {
+	stateDB, err := state.New(header.Root, state.NewDatabase(triedb.NewDatabase(rawdb.NewDatabase(o.db), nil), nil))
 	if err != nil {
 		return nil, err
 	}

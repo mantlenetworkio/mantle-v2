@@ -38,7 +38,7 @@ type EngineBackend interface {
 	// Engine retrieves the chain's consensus engine.
 	Engine() consensus.Engine
 
-	StateAt(root common.Hash) (*state.StateDB, error)
+	StateAt(header *types.Header) (*state.StateDB, error)
 
 	InsertBlockWithoutSetHead(ctx context.Context, block *types.Block, makeWitness bool) (*stateless.Witness, error)
 	SetCanonical(head *types.Block) (common.Hash, error)

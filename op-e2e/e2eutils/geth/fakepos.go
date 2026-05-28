@@ -56,8 +56,8 @@ type Backend interface {
 }
 
 type EngineAPI interface {
-	ForkchoiceUpdatedV3(engine.ForkchoiceStateV1, *engine.PayloadAttributes) (engine.ForkChoiceResponse, error)
-	ForkchoiceUpdatedV2(engine.ForkchoiceStateV1, *engine.PayloadAttributes) (engine.ForkChoiceResponse, error)
+	ForkchoiceUpdatedV3(context.Context, engine.ForkchoiceStateV1, *engine.PayloadAttributes) (engine.ForkChoiceResponse, error)
+	ForkchoiceUpdatedV2(context.Context, engine.ForkchoiceStateV1, *engine.PayloadAttributes) (engine.ForkChoiceResponse, error)
 
 	GetPayloadV5(engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error)
 	GetPayloadV4(engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error)
@@ -172,9 +172,9 @@ func (f *FakePoS) Start() error {
 				}
 				var res engine.ForkChoiceResponse
 				if isCancun {
-					res, err = f.engineAPI.ForkchoiceUpdatedV3(fcState, attrs)
+					res, err = f.engineAPI.ForkchoiceUpdatedV3(context.Background(), fcState, attrs)
 				} else {
-					res, err = f.engineAPI.ForkchoiceUpdatedV2(fcState, attrs)
+					res, err = f.engineAPI.ForkchoiceUpdatedV2(context.Background(), fcState, attrs)
 				}
 				if err != nil {
 					f.log.Error("failed to start building L1 block", "err", err)
@@ -247,7 +247,7 @@ func (f *FakePoS) Start() error {
 						continue
 					}
 				}
-				if _, err := f.engineAPI.ForkchoiceUpdatedV3(engine.ForkchoiceStateV1{
+				if _, err := f.engineAPI.ForkchoiceUpdatedV3(context.Background(), engine.ForkchoiceStateV1{
 					HeadBlockHash:      envelope.ExecutionPayload.BlockHash,
 					SafeBlockHash:      safe.Hash(),
 					FinalizedBlockHash: finalized.Hash(),

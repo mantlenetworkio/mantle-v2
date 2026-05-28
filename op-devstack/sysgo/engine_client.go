@@ -36,11 +36,11 @@ func (e *engineClient) forkchoiceUpdated(fs engine.ForkchoiceStateV1, pa *engine
 	return x, nil
 }
 
-func (e *engineClient) ForkchoiceUpdatedV2(fs engine.ForkchoiceStateV1, pa *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
+func (e *engineClient) ForkchoiceUpdatedV2(_ context.Context, fs engine.ForkchoiceStateV1, pa *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	return e.forkchoiceUpdated(fs, pa, "engine_forkchoiceUpdatedV2")
 }
 
-func (e *engineClient) ForkchoiceUpdatedV3(fs engine.ForkchoiceStateV1, pa *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
+func (e *engineClient) ForkchoiceUpdatedV3(_ context.Context, fs engine.ForkchoiceStateV1, pa *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	return e.forkchoiceUpdated(fs, pa, "engine_forkchoiceUpdatedV3")
 }
 
