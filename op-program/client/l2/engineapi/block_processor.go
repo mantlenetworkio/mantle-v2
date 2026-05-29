@@ -165,6 +165,9 @@ func (b *BlockProcessor) Assemble() (*types.Block, types.Receipts, error) {
 	}
 
 	cfg := b.evm.ChainConfig()
+	if cfg.IsShanghai(b.header.Number, b.header.Time) && body.Withdrawals == nil {
+		body.Withdrawals = make([]*types.Withdrawal, 0)
+	}
 	// Processing for EIP-7685 requests would happen here, but is skipped on OP.
 	// Kept here to minimize diff.
 	if cfg.IsPrague(b.header.Number, b.header.Time) && !cfg.IsIsthmus(b.header.Time) {

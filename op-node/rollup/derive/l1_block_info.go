@@ -510,9 +510,11 @@ func L1InfoDeposit(rollupCfg *rollup.Config, l1ChainConfig *params.ChainConfig, 
 	// 1. Set all fields according to active forks
 	if isEcotoneActivated {
 		if isMantleArsiaActivated && !isMantleElysiumActivated {
-			if arsiaL1ChainConfig := eth.MantleArsiaL1ChainConfigByChainID(eth.ChainIDFromBig(rollupCfg.L1ChainID)); arsiaL1ChainConfig != nil {
-				l1BlockInfo.BlobBaseFee = block.BlobBaseFee(arsiaL1ChainConfig)
+			arsiaL1ChainConfig := eth.MantleArsiaL1ChainConfigByChainID(eth.ChainIDFromBig(rollupCfg.L1ChainID))
+			if arsiaL1ChainConfig == nil {
+				arsiaL1ChainConfig = l1ChainConfig
 			}
+			l1BlockInfo.BlobBaseFee = block.BlobBaseFee(arsiaL1ChainConfig)
 		} else {
 			l1BlockInfo.BlobBaseFee = block.BlobBaseFee(l1ChainConfig)
 		}
