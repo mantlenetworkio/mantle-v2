@@ -376,6 +376,10 @@ reth-trie = { git = "https://github.com/op-rs/reth", rev = "aef8d3ef92117f91455e
 reth-trie-common = { git = "https://github.com/op-rs/reth", rev = "aef8d3ef92117f91455e16969f0adf5bf7c6e9e1", default-features = false }
 reth-trie-db = { git = "https://github.com/op-rs/reth", rev = "aef8d3ef92117f91455e16969f0adf5bf7c6e9e1" }
 
+# [MANTLE] REVM41-PIN: revm / alloy-evm / revm-inspectors / alloy-dyn-abi / alloy-sol-* / alloy-*
+# stay below kona-client/v1.8.0's pins (revm 42.0.1, alloy-evm 0.38, revm-inspectors 0.42, alloy 2.3),
+# because mantle-xyz/reth consumes this tree's op-revm / alloy-op-evm / op-alloy and is anchored at
+# op-reth v2.4.2 (revm 41). See MANTLE_CHANGES.md §2.5 for the way back to upstream versions.
 # ==================== REVM (redirected to mantle-xyz/revm @ branch dev/mantle-v1.6.3 via [patch.crates-io]; declared versions track upstream to satisfy transitive constraints) ====================
 revm = { version = "41.0.0", default-features = false }
 revm-bytecode = { version = "41.0.0", default-features = false }
@@ -490,7 +494,12 @@ kzg-rs = { version = "0.2.6", features = ["rkyv", "serde"] }
 sha2 = { version = "0.10.9", default-features = false }
 secp256k1 = { version = "0.31.1", default-features = false }
 ark-ff = { version = "0.5.0", default-features = false }
-ark-bls12-381 = { version = "0.5.0", default-features = false }
+# `scalar_field` gates `Fr`, which kona-proof uses for blob point evaluation. Declare it
+# explicitly: it used to arrive via feature unification with revm-precompile, which has since
+# moved to ark-bls12-381 0.6.
+ark-bls12-381 = { version = "0.5.0", default-features = false, features = [
+  "scalar_field",
+] }
 
 # ==================== SERIALIZATION ====================
 bincode = { version = "2.0.1", features = ["serde"] }

@@ -355,6 +355,8 @@ dependencies = [
  "alloy-op-hardforks",
  "alloy-primitives",
  "auto_impl",
+ "metrics",
+ "metrics-util",
  "op-alloy",
  "op-revm",
  "revm",
@@ -4541,6 +4543,7 @@ dependencies = [
  "op-alloy-rpc-types-engine",
  "spin 0.10.0",
  "thiserror 2.0.18",
+ "tokio",
  "tracing",
 ]
 
@@ -6392,6 +6395,7 @@ dependencies = [
  "reth-codecs",
  "reth-codecs-derive",
  "reth-zstd-compressors",
+ "rstest",
  "serde",
  "serde_json",
  "serde_with",
