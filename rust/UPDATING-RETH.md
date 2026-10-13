@@ -1,5 +1,19 @@
 # Updating the reth dependency
 
+> **[MANTLE]** This is upstream's guide, kept verbatim for future syncs. In mantle-v2 it does
+> not describe the current setup:
+>
+> - The EL node lives in `mantle-xyz/reth`, not in this workspace (`op-reth/` is filtered out of
+>   the bridge, MANTLE_CHANGES.md §3.9 / §3.11). That repo consumes this tree's `op-revm`,
+>   `alloy-op-evm` and `op-alloy`, which is why revm is pinned at 41 here (§2.5).
+> - `just check-upstream-mirrors` is **not** part of `just lint` in this tree — see the
+>   REVM41-PIN note in `rust/justfile`.
+> - The `docs/ai/*.md` files referenced below (`reth-update-review.md`, `reth-upstream-mirrors.md`,
+>   `rust-dev.md`) do not exist in mantle-v2; read them in the optimism repository at the
+>   matching `kona-client/*` tag.
+>
+> For a revm / reth bump in mantle-v2, follow MANTLE_CHANGES.md §2.5 ("The way back").
+
 The Rust workspace pins ~70 `reth-*` crates to a single git ref, from upstream
 `paradigmxyz/reth` or from an OP-maintained fork of it, in [`rust/Cargo.toml`](Cargo.toml) — `tag = "vX.Y.Z"` when tracking a
 release (the normal case; self-documenting), or `rev = "<sha>"` when pinning a

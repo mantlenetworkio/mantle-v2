@@ -224,3 +224,68 @@ async fn validation_error_from_database_must_not_invalidate_channel() {
     assert_eq!(driver.pipeline.flushes, 0);
     assert_eq!(driver.executor.calls.len(), 1);
 }
+
+// [MANTLE] The tests above only use OP's `holocene_time`. On a Mantle chain `is_holocene_active`
+// ignores it and follows `mantle_arsia_time` (`RollupConfig::mantle_op_fork_active`), so the
+// deposit-only fallback must switch on at Arsia, not at `holocene_time`. Every Mantle case below
+// sets `holocene_time = Some(0)` on purpose: if the Mantle mapping were lost and the OP schedule
+// applied, the pre-Arsia case would fall back to deposit-only and fail.
+
+const MANTLE_ARSIA_TIME: u64 = 1_000;
+
+fn mantle_driver_with_error(
+    first_error: ExecutorError,
+    payload_timestamp: u64,
+) -> (Driver<TestExecutor, TestPipeline, TestPipeline>, RollupConfig) {
+    let (mut driver, mut config) = driver_with_error(first_error);
+    config.mantle_hardforks.mantle_arsia_time = Some(MANTLE_ARSIA_TIME);
+    assert!(config.is_mantle());
+    assert_eq!(config.hardforks.holocene_time, Some(0));
+    driver.pipeline.config = config.clone();
+    driver
+        .pipeline
+        .attributes
+        .as_mut()
+        .expect("attributes are set")
+        .attributes
+        .payload_attributes
+        .timestamp = payload_timestamp;
+    (driver, config)
+}
+
+#[tokio::test]
+async fn mantle_pre_arsia_invalid_payload_is_discarded_not_deposit_only() {
+    let (mut driver, config) =
+        mantle_driver_with_error(ExecutorError::BlockGasLimitExceeded, MANTLE_ARSIA_TIME - 1);
+    assert!(!config.is_holocene_active(MANTLE_ARSIA_TIME - 1));
+    let _ = driver.advance_to_target(&config, Some(1)).await;
+
+    // Pre-Holocene semantics: the block is dropped, there is no deposit-only retry and the channel
+    // is not flushed.
+    assert_eq!(driver.pipeline.flushes, 0);
+    assert_eq!(driver.executor.calls.len(), 1);
+}
+
+#[tokio::test]
+async fn mantle_post_arsia_invalid_payload_triggers_deposit_only_fallback() {
+    let (mut driver, config) =
+        mantle_driver_with_error(ExecutorError::BlockGasLimitExceeded, MANTLE_ARSIA_TIME);
+    assert!(config.is_holocene_active(MANTLE_ARSIA_TIME));
+    let result = driver.advance_to_target(&config, Some(1)).await;
+
+    assert!(matches!(result, Err(DriverError::Executor(ExecutorError::MissingExecutor))));
+    assert_eq!(driver.pipeline.flushes, 1);
+    assert_eq!(driver.executor.calls.len(), 2);
+    assert_eq!(driver.executor.calls[1], vec![Bytes::from_static(&[0x7e])]);
+}
+
+#[tokio::test]
+async fn mantle_post_arsia_provider_error_must_not_invalidate_channel() {
+    let error = ExecutorError::TrieDBError(TrieDBError::Provider("missing witness".into()));
+    let (mut driver, config) = mantle_driver_with_error(error, MANTLE_ARSIA_TIME);
+    let result = driver.advance_to_target(&config, Some(1)).await;
+
+    assert!(matches!(result, Err(DriverError::Executor(ExecutorError::TrieDBError(_)))));
+    assert_eq!(driver.pipeline.flushes, 0);
+    assert_eq!(driver.executor.calls.len(), 1);
+}

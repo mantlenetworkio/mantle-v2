@@ -127,6 +127,13 @@ where
         }
     }
 
+    /// UPSTREAM-MIRROR(override): revm-handler@41.0.0
+    /// `revm_handler::Handler::validate_initial_tx_gas`
+    ///
+    /// `[MANTLE]` Calls upstream's default first, then (before Arsia) scales the result by the
+    /// token ratio. Re-check whenever upstream's `validate_initial_tx_gas` or the
+    /// `InitialAndFloorGas` shape changes.
+    ///
     /**
      * Validates and calculates the initial gas requirements for a transaction.
      *
@@ -446,6 +453,13 @@ where
         reimburse_caller(evm.ctx(), frame_result.gas(), additional_refund).map_err(From::from)
     }
 
+    /// UPSTREAM-MIRROR(override): revm-handler@41.0.0 `revm_handler::Handler::execution`
+    ///
+    /// `[MANTLE]` From Arsia on this delegates to upstream. Before Arsia it copies upstream's body
+    /// (`first_frame_input` → `run_exec_loop` → `last_frame_result`, reservoir 0 because EIP-8037
+    /// state gas is not enabled on Mantle) and first deducts the L1 cost, converted to gas through
+    /// the token ratio, from the gas limit. Re-check against upstream's `execution` whenever the
+    /// frame API changes.
     fn execution(
         &mut self,
         evm: &mut Self::Evm,

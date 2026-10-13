@@ -102,9 +102,11 @@ test-docs:
 # Run all lints for the workspace.
 lint: fmt-check lint-clippy lint-docs
 
-# [MANTLE] REVM41-PIN: `check-upstream-mirrors` is not wired into `lint` yet: Mantle pins revm 41 / alloy-evm
-# 0.37 while upstream's mirror tags were verified against revm 42, so the "ahead of pin" check
-# needs to be evaluated first (kona v1.8.0 sync).
+# [MANTLE] REVM41-PIN: `check-upstream-mirrors` is not wired into `lint`: `scripts/upstream-mirrors.py`
+# resolves crates from crates.io only, and Mantle's revm comes from the git `[patch.crates-io]`
+# source, so every `revm-*@41.0.0` tag reports `unknown-crate` (26 in the kona v1.8.0 sync). The
+# tags themselves match the pinned versions. Wire it in once the script accepts `[patch]` sources
+# (MANTLE_CHANGES.md §2.5).
 # List the UPSTREAM-MIRROR tags — OP code that reproduces upstream reth/revm/alloy logic —
 # with each one's last-verified version against what the workspace resolves to today.
 # `just mirrors stale` is the worklist for a pin bump.

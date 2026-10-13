@@ -380,7 +380,7 @@ mod tests {
     };
 
     // `[MANTLE]` The fixture carries `"ethValue":"0x0"` because `TxDeposit::eth_value` is a plain
-    // `u128` with no `skip_serializing_if` (see op-alloy-consensus), so Mantle's RPC emits
+    // `U256` with no `skip_serializing_if` (see op-alloy-consensus), so Mantle's RPC emits
     // `ethValue` on *every* deposit, including when it is zero. Adding it here keeps the
     // round-trip assertion honest without changing the wire format that is already shipped.
     // Whether that shape matches op-geth is a `rpc_compat` question, not a serde one.
