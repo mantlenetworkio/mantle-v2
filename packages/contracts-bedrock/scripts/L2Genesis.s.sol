@@ -440,8 +440,12 @@ contract L2Genesis is Script {
     function setLegacyERC20MNT(Input memory _input) internal {
         // LegacyERC20MNT has immutables (BRIDGE, REMOTE_TOKEN). Deploy a real instance so the
         // constructor patches them into the runtime code; name()/symbol() are constant overrides.
-        address mnt =
-            DeployUtils.create1({ _name: "LegacyERC20MNT.sol:LegacyERC20MNT", _args: abi.encode(_input.l1MNTAddress) });
+        address mnt = DeployUtils.create1({
+            _name: "LegacyERC20MNT.sol:LegacyERC20MNT",
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeWithSignature("__constructor__(address)", _input.l1MNTAddress)
+            )
+        });
         vm.etch(Predeploys.LEGACY_ERC20_MNT, address(mnt).code);
         vm.etch(mnt, "");
         vm.resetNonce(mnt);
@@ -462,7 +466,9 @@ contract L2Genesis is Script {
     function setBaseFeeVault(Input memory _input) internal {
         address vault = DeployUtils.create1({
             _name: "BaseFeeVault",
-            _args: DeployUtils.encodeConstructor(abi.encodeCall(IFeeVault.__constructor__, (_input.baseFeeVaultRecipient)))
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(IFeeVault.__constructor__, (_input.baseFeeVaultRecipient))
+            )
         });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.BASE_FEE_VAULT);
@@ -477,7 +483,9 @@ contract L2Genesis is Script {
     function setL1FeeVault(Input memory _input) internal {
         address vault = DeployUtils.create1({
             _name: "L1FeeVault",
-            _args: DeployUtils.encodeConstructor(abi.encodeCall(IFeeVault.__constructor__, (_input.l1FeeVaultRecipient)))
+            _args: DeployUtils.encodeConstructor(
+                abi.encodeCall(IFeeVault.__constructor__, (_input.l1FeeVaultRecipient))
+            )
         });
 
         address impl = Predeploys.predeployToCodeNamespace(Predeploys.L1_FEE_VAULT);
@@ -539,7 +547,10 @@ contract L2Genesis is Script {
     ///         code namespace address and removes the temporary deployment from the state dump.
     function _setConstructedImplementationCode(address _addr) internal returns (address) {
         string memory cname = Predeploys.getName(_addr);
-        address deployed = DeployUtils.create1({ _name: string.concat(cname, ".sol:", cname), _args: "" });
+        address deployed = DeployUtils.create1({
+            _name: string.concat(cname, ".sol:", cname),
+            _args: DeployUtils.encodeConstructor(abi.encodeWithSignature("__constructor__()"))
+        });
         address impl = Predeploys.predeployToCodeNamespace(_addr);
         vm.etch(impl, deployed.code);
         vm.etch(deployed, "");

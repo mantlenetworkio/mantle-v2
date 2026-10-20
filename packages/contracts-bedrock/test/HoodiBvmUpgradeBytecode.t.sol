@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { Test } from "forge-std/Test.sol";
 import { BVM_ETH } from "src/L2/BVM_ETH.sol";
 import { LegacyERC20MNT } from "src/legacy/LegacyERC20MNT.sol";
+import { Config } from "scripts/libraries/Config.sol";
 
 /// @notice Pins the runtime code that the Mantle Hoodi `HoodiBvmUpgrade` hardfork writes. The
 ///         execution clients embed this code as constants (alloy-op-evm `block/hoodi_bvm_upgrade.rs`,
@@ -17,11 +18,20 @@ contract HoodiBvmUpgradeBytecode_Test is Test {
     bytes32 internal constant LEGACY_ERC20_MNT_CODEHASH =
         0xf165e4b851dc8d4e18dcf1d2bc59817d0129a39365c191e76bfd596b60513b45;
 
-    function test_bvmEthCodehash_matchesClients() external {
+    /// @notice The pinned code hashes come from an optimized build. Profiles that disable the
+    ///         optimizer (`lite`, used by `just test-dev`, and `cicoverage`) compile different
+    ///         runtime code, so skip the hash comparison there.
+    modifier onlyOptimizedBuild() {
+        bytes32 profile = keccak256(bytes(Config.foundryProfile()));
+        vm.skip(profile == keccak256("lite") || profile == keccak256("cicoverage"));
+        _;
+    }
+
+    function test_bvmEthCodehash_matchesClients() external onlyOptimizedBuild {
         assertEq(address(new BVM_ETH()).codehash, BVM_ETH_CODEHASH);
     }
 
-    function test_legacyErc20MntCodehash_matchesClients() external {
+    function test_legacyErc20MntCodehash_matchesClients() external onlyOptimizedBuild {
         assertEq(address(new LegacyERC20MNT(HOODI_L1_MNT)).codehash, LEGACY_ERC20_MNT_CODEHASH);
     }
 
