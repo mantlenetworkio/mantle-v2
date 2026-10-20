@@ -23,8 +23,16 @@ RUN GITCOMMIT="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || true)}" && \
       just GITCOMMIT="$GITCOMMIT" GITDATE="$GITDATE" GOOS=$TARGETOS GOARCH=$TARGETARCH op-proposer; \
     fi
 
-# gcr.io/distroless/static-debian12:nonroot
-FROM gcr.io/distroless/static-debian12@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
+# Opt-in runtime: docker build --target alpine ...
+FROM alpine:3.22 AS alpine
+
+COPY --from=builder /app/op-proposer/bin/op-proposer /usr/local/bin
+
+CMD ["op-proposer"]
+
+# Default runtime: must stay the last stage, builds without --target use it.
+# cgr.dev/chainguard/static:latest
+FROM cgr.dev/chainguard/static@sha256:fe55470f22d3259488d9d3739168d8f04da67755f0b69382bc26eda4a7d3d327 AS chainguard
 
 COPY --from=builder /app/op-proposer/bin/op-proposer /usr/local/bin/
 
