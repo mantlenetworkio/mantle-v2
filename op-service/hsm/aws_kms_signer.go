@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -230,9 +231,11 @@ func credentialSourceWarning(source string) string {
 //   - the region is pinned to the key ARN region;
 //   - the retry mode is pinned to "standard" with a bounded number of attempts, so
 //     AWS_RETRY_MODE / retry_mode cannot switch it to client side rate limiting;
-//   - the KMS endpoint is always the official regional HTTPS endpoint. Endpoint overrides
-//     from AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_KMS or a shared config endpoint_url are
-//     ignored (and reported), so a leftover setting cannot redirect signing requests;
+//   - the KMS endpoint is either the official regional HTTPS endpoint or a configured
+//     endpoint override (AWS_ENDPOINT_URL_KMS, AWS_ENDPOINT_URL or a shared config
+//     endpoint_url) that passes checkAWSKMSEndpoint: an HTTPS interface VPC endpoint of
+//     KMS in the key region, or the official regional endpoint itself. Any other override
+//     fails startup, so a leftover or tampered setting cannot redirect signing requests;
 //   - the STS client used for IRSA (web identity) credentials ignores endpoint overrides
 //     too, so the pod's identity token is only ever sent to the official regional STS
 //     endpoint. A leaked token could otherwise be exchanged for the role and used to sign.
@@ -251,14 +254,60 @@ func newAWSKMSClient(ctx context.Context, region string, lgr log.Logger) (*awskm
 	if ep := sts.NewFromConfig(awsCfg).Options().BaseEndpoint; ep != nil {
 		lgr.Warn("ignoring configured aws sts endpoint override for web identity credentials, using the official regional endpoint", "endpoint", *ep)
 	}
+	var kmsEndpoint *string
 	if ep := awskms.NewFromConfig(awsCfg).Options().BaseEndpoint; ep != nil {
-		lgr.Warn("ignoring configured aws kms endpoint override, using the official regional endpoint", "endpoint", *ep)
+		normalized, err := checkAWSKMSEndpoint(*ep, region)
+		if err != nil {
+			return nil, err
+		}
+		kmsEndpoint = &normalized
+		lgr.Info("using configured aws kms endpoint", "endpoint", normalized)
 	}
-	// Service option functions run after the SDK resolved configured endpoints,
-	// so clearing BaseEndpoint here restores the default endpoint resolution.
+	// Service option functions run after the SDK resolved configured endpoints, so this
+	// replaces whatever the SDK picked up with the validated value (nil means the
+	// default regional endpoint resolution).
 	return awskms.NewFromConfig(awsCfg, func(o *awskms.Options) {
-		o.BaseEndpoint = nil
+		o.BaseEndpoint = kmsEndpoint
 	}), nil
+}
+
+// checkAWSKMSEndpoint validates a configured KMS endpoint override and returns it in
+// the canonical form https://<host>. Accepted hosts, all in the key region:
+//   - interface VPC endpoints: vpce-<id>[-<suffix>].kms.<region>.vpce.amazonaws.com
+//   - the official regional endpoint: kms.<region>.amazonaws.com
+//
+// Only plain HTTPS on the default port is allowed, with no user info, path, query or
+// fragment, so the signing traffic cannot be sent anywhere else.
+func checkAWSKMSEndpoint(raw, region string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid aws kms endpoint %q: %w", raw, err)
+	}
+	if u.Scheme != "https" || u.User != nil || u.Opaque != "" || u.RawQuery != "" || u.Fragment != "" ||
+		(u.Path != "" && u.Path != "/") || (u.Port() != "" && u.Port() != "443") {
+		return "", fmt.Errorf("invalid aws kms endpoint %q: must be https://<host> without user info, path, query or custom port", raw)
+	}
+	host := strings.ToLower(u.Hostname())
+	if host != "kms."+region+".amazonaws.com" && !isAWSKMSVPCEndpointHost(host, region) {
+		return "", fmt.Errorf("invalid aws kms endpoint %q: host must be a kms vpc endpoint (vpce-<id>.kms.%s.vpce.amazonaws.com) or kms.%s.amazonaws.com", raw, region, region)
+	}
+	return "https://" + host, nil
+}
+
+// isAWSKMSVPCEndpointHost reports whether host is a KMS interface VPC endpoint DNS
+// name in region, e.g. vpce-0123abcd.kms.ap-southeast-1.vpce.amazonaws.com or the
+// zonal form vpce-0123abcd-wxyz-ap-southeast-1a.kms.ap-southeast-1.vpce.amazonaws.com.
+func isAWSKMSVPCEndpointHost(host, region string) bool {
+	label, ok := strings.CutSuffix(host, ".kms."+region+".vpce.amazonaws.com")
+	if !ok || !strings.HasPrefix(label, "vpce-") || len(label) == len("vpce-") || len(label) > 63 {
+		return false
+	}
+	for _, c := range label {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
+			return false
+		}
+	}
+	return !strings.HasSuffix(label, "-")
 }
 
 // newWebIdentitySTSClient returns the STS client used to exchange the IRSA web identity

@@ -700,41 +700,135 @@ func TestWebIdentitySTSClientUsesOfficialEndpoint(t *testing.T) {
 	require.Equal(t, "sts.ap-southeast-1.amazonaws.com", ep.URI.Host)
 }
 
-func TestNewAWSKMSClientIgnoresEndpointOverride(t *testing.T) {
-	isolateAWSConfig(t)
-	t.Setenv("AWS_ENDPOINT_URL", "http://127.0.0.1:1")
-	t.Setenv("AWS_ENDPOINT_URL_KMS", "http://127.0.0.1:2")
+const testKMSVPCEndpoint = "https://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com"
 
-	var buf bytes.Buffer
-	client, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.NewLogger(log.NewTerminalHandler(&buf, false)))
-	require.NoError(t, err)
-	// The SDK did pick up the override (reported), but it is not used.
-	require.Contains(t, buf.String(), "ignoring configured aws kms endpoint override")
-	require.Contains(t, buf.String(), "http://127.0.0.1:2")
+func resolveKMSEndpoint(t *testing.T, client *awskms.Client) string {
+	t.Helper()
 	opts := client.Options()
-	require.Nil(t, opts.BaseEndpoint)
-	require.Equal(t, "ap-southeast-1", opts.Region)
-
 	ep, err := opts.EndpointResolverV2.ResolveEndpoint(context.Background(), awskms.EndpointParameters{
 		Region:   aws.String(opts.Region),
 		Endpoint: opts.BaseEndpoint,
 	})
 	require.NoError(t, err)
-	require.Equal(t, "https", ep.URI.Scheme)
-	require.Equal(t, "kms.ap-southeast-1.amazonaws.com", ep.URI.Host)
+	return ep.URI.String()
 }
 
-func TestNewAWSKMSClientIgnoresSharedConfigEndpoint(t *testing.T) {
+func TestNewAWSKMSClientDefaultEndpoint(t *testing.T) {
+	isolateAWSConfig(t)
+
+	client, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.New())
+	require.NoError(t, err)
+	require.Nil(t, client.Options().BaseEndpoint)
+	require.Equal(t, "ap-southeast-1", client.Options().Region)
+	require.Equal(t, "https://kms.ap-southeast-1.amazonaws.com", resolveKMSEndpoint(t, client))
+}
+
+func TestNewAWSKMSClientUsesVPCEndpoint(t *testing.T) {
+	isolateAWSConfig(t)
+	// Upper case and a trailing slash are normalized away.
+	t.Setenv("AWS_ENDPOINT_URL_KMS", strings.ToUpper(testKMSVPCEndpoint[:8])+testKMSVPCEndpoint[8:]+"/")
+
+	var buf bytes.Buffer
+	client, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.NewLogger(log.NewTerminalHandler(&buf, false)))
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "using configured aws kms endpoint")
+	require.Equal(t, testKMSVPCEndpoint, aws.ToString(client.Options().BaseEndpoint))
+	require.Equal(t, testKMSVPCEndpoint, resolveKMSEndpoint(t, client))
+}
+
+func TestNewAWSKMSClientVPCEndpointKeepsSTSPinned(t *testing.T) {
+	isolateAWSConfig(t)
+	t.Setenv("AWS_ENDPOINT_URL_KMS", testKMSVPCEndpoint)
+	t.Setenv("AWS_ENDPOINT_URL_STS", "http://127.0.0.1:2")
+
+	var buf bytes.Buffer
+	client, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.NewLogger(log.NewTerminalHandler(&buf, false)))
+	require.NoError(t, err)
+	require.Equal(t, testKMSVPCEndpoint, resolveKMSEndpoint(t, client))
+	require.Contains(t, buf.String(), "ignoring configured aws sts endpoint override")
+}
+
+func TestNewAWSKMSClientRejectsInvalidEndpoint(t *testing.T) {
+	cases := map[string]map[string]string{
+		"kms http":              {"AWS_ENDPOINT_URL_KMS": "http://127.0.0.1:2"},
+		"kms foreign host":      {"AWS_ENDPOINT_URL_KMS": "https://kms.example.com"},
+		"kms other region vpce": {"AWS_ENDPOINT_URL_KMS": "https://vpce-0123456789abcdef0.kms.us-east-1.vpce.amazonaws.com"},
+		"global endpoint":       {"AWS_ENDPOINT_URL": "http://127.0.0.1:1"},
+		"kms overrides global":  {"AWS_ENDPOINT_URL": testKMSVPCEndpoint, "AWS_ENDPOINT_URL_KMS": "https://127.0.0.1"},
+	}
+	for name, env := range cases {
+		t.Run(name, func(t *testing.T) {
+			isolateAWSConfig(t)
+			for k, v := range env {
+				t.Setenv(k, v)
+			}
+			_, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.New())
+			require.ErrorContains(t, err, "invalid aws kms endpoint")
+		})
+	}
+}
+
+func TestNewAWSKMSClientRejectsSharedConfigEndpoint(t *testing.T) {
 	isolateAWSConfig(t)
 	cfgFile := t.TempDir() + "/config"
 	require.NoError(t, os.WriteFile(cfgFile, []byte("[default]\nendpoint_url = http://127.0.0.1:3\n"), 0o600))
 	t.Setenv("AWS_CONFIG_FILE", cfgFile)
 
+	_, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.New())
+	require.ErrorContains(t, err, "invalid aws kms endpoint")
+	require.ErrorContains(t, err, "http://127.0.0.1:3")
+}
+
+func TestNewAWSKMSSignerRejectsInvalidEndpoint(t *testing.T) {
+	isolateAWSConfig(t)
+	t.Setenv("AWS_ENDPOINT_URL_KMS", "https://kms.example.com")
+
 	var buf bytes.Buffer
-	client, err := newAWSKMSClient(context.Background(), "ap-southeast-1", log.NewLogger(log.NewTerminalHandler(&buf, false)))
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), "http://127.0.0.1:3")
-	require.Nil(t, client.Options().BaseEndpoint)
+	_, err := NewAWSKMSSigner(context.Background(), AWSKMSConfig{
+		KeyARN:          testKeyARN,
+		ExpectedAddress: "0x1111111111111111111111111111111111111111",
+		Logger:          log.NewLogger(log.NewTerminalHandler(&buf, false)),
+	})
+	require.ErrorContains(t, err, "invalid aws kms endpoint")
+	require.Contains(t, buf.String(), logAWSKMSInitFailed)
+}
+
+func TestCheckAWSKMSEndpoint(t *testing.T) {
+	const region = "ap-southeast-1"
+	valid := map[string]string{
+		testKMSVPCEndpoint:       testKMSVPCEndpoint,
+		testKMSVPCEndpoint + "/": testKMSVPCEndpoint,
+		"https://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com:443":                      testKMSVPCEndpoint,
+		"https://vpce-0123456789abcdef0-abcd1234-ap-southeast-1a.kms.ap-southeast-1.vpce.amazonaws.com": "https://vpce-0123456789abcdef0-abcd1234-ap-southeast-1a.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://kms.ap-southeast-1.amazonaws.com":                                                      "https://kms.ap-southeast-1.amazonaws.com",
+	}
+	for in, want := range valid {
+		got, err := checkAWSKMSEndpoint(in, region)
+		require.NoError(t, err, in)
+		require.Equal(t, want, got, in)
+	}
+	invalid := []string{
+		"",
+		"vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com",
+		"http://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com:8443",
+		"https://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com/path",
+		"https://vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com?x=1",
+		"https://user@vpce-0123456789abcdef0.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://vpce-0123456789abcdef0.kms.us-east-1.vpce.amazonaws.com",
+		"https://vpce-0123456789abcdef0.sts.ap-southeast-1.vpce.amazonaws.com",
+		"https://vpce-.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://vpce-abc-.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://evil.vpce-0123.kms.ap-southeast-1.vpce.amazonaws.com",
+		"https://vpce-0123.kms.ap-southeast-1.vpce.amazonaws.com.evil.com",
+		"https://kms.us-east-1.amazonaws.com",
+		"https://kms-fips.ap-southeast-1.amazonaws.com",
+		"https://127.0.0.1",
+	}
+	for _, in := range invalid {
+		_, err := checkAWSKMSEndpoint(in, region)
+		require.Error(t, err, in)
+	}
 }
 
 func TestNewAWSKMSClientPinsStandardRetryMode(t *testing.T) {
