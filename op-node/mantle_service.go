@@ -24,6 +24,7 @@ func applyMantleOverrides(ctx cliiface.Context, rollupConfig *rollup.Config) {
 		rollupConfig.MantleArsiaTime = hardCodedConfig.MantleArsiaTime
 		rollupConfig.MantleElysiumTime = hardCodedConfig.MantleElysiumTime
 	}
+	rollupConfig.ApplyMantleHoodiBVMUpgradeTime()
 
 	for _, fork := range opflags.OverridableMantleForks {
 		flagName := opflags.MantleOverrideName(fork)
