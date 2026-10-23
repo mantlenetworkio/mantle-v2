@@ -6,7 +6,7 @@ use crate::{
 };
 use alloy_chains::Chain;
 use alloy_hardforks::{EthereumHardfork, EthereumHardforks, ForkCondition};
-use alloy_op_hardforks::{OpHardfork, OpHardforks, mantle_hoodi_bvm_upgrade_time};
+use alloy_op_hardforks::{OpHardfork, OpHardforks};
 use alloy_primitives::Address;
 
 /// The max rlp bytes per channel for the Bedrock hardfork.
@@ -488,15 +488,8 @@ impl RollupConfig {
     }
 
     /// Returns true if the Mantle Hoodi BVM upgrade is active at the given timestamp.
-    ///
-    /// On Mantle Hoodi a scheduled bundled activation time takes precedence over
-    /// `mantle_hoodi_bvm_upgrade_time`.
     pub fn is_mantle_hoodi_bvm_upgrade_active(&self, timestamp: u64) -> bool {
-        mantle_hoodi_bvm_upgrade_time(
-            self.l2_chain_id.id(),
-            self.mantle_hardforks.mantle_hoodi_bvm_upgrade_time,
-        )
-        .is_some_and(|t| timestamp >= t)
+        self.mantle_hardforks.mantle_hoodi_bvm_upgrade_time.is_some_and(|t| timestamp >= t)
     }
 
     /// Returns true if the timestamp marks the first Mantle Arsia block.
@@ -678,28 +671,13 @@ mod tests {
 
     #[test]
     fn test_mantle_hoodi_bvm_upgrade_activation() {
-        use alloy_op_hardforks::{MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP, MANTLE_HOODI_CHAIN_ID};
-
-        let mut config = RollupConfig {
-            l2_chain_id: Chain::from_id(MANTLE_HOODI_CHAIN_ID),
-            ..Default::default()
-        };
-        // Unconfigured Mantle Hoodi follows the bundled activation time.
-        assert_eq!(
-            config.is_mantle_hoodi_bvm_upgrade_active(u64::MAX),
-            MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP.is_some()
-        );
-
-        // A configured time applies unless a bundled one is scheduled.
-        config.mantle_hardforks.mantle_hoodi_bvm_upgrade_time = Some(10);
-        let effective = MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP.unwrap_or(10);
-        assert!(!config.is_mantle_hoodi_bvm_upgrade_active(effective - 1));
-        assert!(config.is_mantle_hoodi_bvm_upgrade_active(effective));
-        assert!(config.is_mantle_hoodi_bvm_upgrade_active_at_timestamp(effective));
-
-        // Other chains are only scheduled through configuration.
-        let config = RollupConfig { l2_chain_id: Chain::from_id(5003), ..Default::default() };
+        let mut config = RollupConfig::default();
         assert!(!config.is_mantle_hoodi_bvm_upgrade_active(u64::MAX));
+
+        config.mantle_hardforks.mantle_hoodi_bvm_upgrade_time = Some(10);
+        assert!(!config.is_mantle_hoodi_bvm_upgrade_active(9));
+        assert!(config.is_mantle_hoodi_bvm_upgrade_active(10));
+        assert!(config.is_mantle_hoodi_bvm_upgrade_active_at_timestamp(10));
     }
 
     #[test]
@@ -881,7 +859,8 @@ mod tests {
             ..Default::default()
         };
 
-        // Before mantle_skadi: ecotone active via ecotone_time, isthmus inactive (isthmus_time=60 > 25)
+        // Before mantle_skadi: ecotone active via ecotone_time, isthmus inactive (isthmus_time=60 >
+        // 25)
         assert!(!config_with_skadi.is_ecotone_active(25)); // ecotone_time is 30, so not active at 25
         assert!(!config_with_skadi.is_isthmus_active(25));
 

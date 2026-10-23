@@ -48,26 +48,6 @@ func (c *Config) IsMantleHoodiBVMUpgrade(timestamp uint64) bool {
 	return c.MantleHoodiBVMUpgradeTime != nil && timestamp >= *c.MantleHoodiBVMUpgradeTime
 }
 
-// MantleHoodiChainID is the L2 chain ID of Mantle Hoodi.
-const MantleHoodiChainID = 50002
-
-// BundledMantleHoodiBVMUpgradeTime is the bundled Hoodi BVM upgrade activation time of Mantle Hoodi,
-// nil until scheduled. Must equal op-geth's params.BundledMantleHoodiBvmUpgradeTime and
-// alloy-op-hardforks' MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP.
-var BundledMantleHoodiBVMUpgradeTime *uint64
-
-// ApplyMantleHoodiBVMUpgradeTime sets the Hoodi BVM upgrade activation time on Mantle Hoodi to the
-// bundled one once it is scheduled, taking precedence over rollup.json as the bundled Mantle mainnet
-// and Sepolia fork times do. Without a bundled time the rollup.json value is kept.
-func (c *Config) ApplyMantleHoodiBVMUpgradeTime() {
-	if BundledMantleHoodiBVMUpgradeTime == nil || c.L2ChainID == nil || !c.L2ChainID.IsUint64() ||
-		c.L2ChainID.Uint64() != MantleHoodiChainID {
-		return
-	}
-	t := *BundledMantleHoodiBVMUpgradeTime
-	c.MantleHoodiBVMUpgradeTime = &t
-}
-
 // IsMantleBaseFeeActivationBlock returns whether the specified block is the first block subject to the
 // MantleBaseFee upgrade.
 func (c *Config) IsMantleBaseFeeActivationBlock(l2BlockTime uint64) bool {

@@ -16,40 +16,7 @@ pub const MANTLE_HOODI_BLOCK_TIME: u64 = 2;
 
 /// `HoodiBvmUpgrade` activation timestamp for Mantle Hoodi. `None` until scheduled.
 ///
-/// Must equal op-geth's `params.BundledMantleHoodiBvmUpgradeTime` and op-node's
+/// Bundled into op-reth's built-in `mantle-hoodi` chain spec. Must equal op-geth's
+/// `MantleHoodiUpgradeConfig.MantleHoodiBvmUpgradeTime` and op-node's
 /// `rollup.BundledMantleHoodiBVMUpgradeTime`.
 pub const MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP: Option<u64> = None;
-
-/// Returns the `HoodiBvmUpgrade` activation timestamp of a chain.
-///
-/// On Mantle Hoodi a scheduled [`MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP`] takes precedence over
-/// the chain's configuration, as bundled Mantle mainnet and Sepolia fork times do; otherwise the
-/// configured timestamp is used.
-pub const fn mantle_hoodi_bvm_upgrade_time(chain_id: u64, configured: Option<u64>) -> Option<u64> {
-    match MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP {
-        Some(timestamp) if chain_id == MANTLE_HOODI_CHAIN_ID => Some(timestamp),
-        _ => configured,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hoodi_bvm_upgrade_time_on_hoodi() {
-        let expected = |configured| MANTLE_HOODI_BVM_UPGRADE_TIMESTAMP.or(configured);
-        assert_eq!(
-            mantle_hoodi_bvm_upgrade_time(MANTLE_HOODI_CHAIN_ID, Some(7)),
-            expected(Some(7))
-        );
-        assert_eq!(mantle_hoodi_bvm_upgrade_time(MANTLE_HOODI_CHAIN_ID, None), expected(None));
-    }
-
-    #[test]
-    fn hoodi_bvm_upgrade_time_on_other_chains_is_configured() {
-        assert_eq!(mantle_hoodi_bvm_upgrade_time(5003, Some(7)), Some(7));
-        assert_eq!(mantle_hoodi_bvm_upgrade_time(5000, None), None);
-        assert_eq!(mantle_hoodi_bvm_upgrade_time(5003, None), None);
-    }
-}
