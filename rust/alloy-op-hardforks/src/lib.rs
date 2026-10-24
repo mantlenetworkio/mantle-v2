@@ -23,7 +23,7 @@ pub use base::{mainnet as base_mainnet, mainnet::*, sepolia as base_sepolia, sep
 
 pub mod mantle;
 pub use mantle::{
-    hoodi as mantle_hoodi, hoodi::*, mainnet as mantle_mainnet, mainnet::*,
+    MANTLE_BLOCK_TIME, hoodi as mantle_hoodi, hoodi::*, mainnet as mantle_mainnet, mainnet::*,
     sepolia as mantle_sepolia, sepolia::*,
 };
 

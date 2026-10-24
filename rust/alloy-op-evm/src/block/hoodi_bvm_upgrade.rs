@@ -7,7 +7,7 @@
 //! runtime code before any transaction of a block executes, like Canyon's create2 deployer.
 //!
 //! The write happens once, in the activation block: the first block that is active while the
-//! block one [`MANTLE_HOODI_BLOCK_TIME`] earlier is not, as Canyon's `ensure_create2_deployer`
+//! block one [`MANTLE_BLOCK_TIME`] earlier is not, as Canyon's `ensure_create2_deployer`
 //! does. op-geth (`core/hoodi_bvm_upgrade.go`) uses the same condition, so both clients
 //! write in the same block whether or not the activation timestamp equals a block timestamp.
 //! Storage, balance and nonce are left untouched, so `BVM_ETH` balances and total supply are
@@ -19,7 +19,7 @@
 //! contracts and checks them against the code hashes below.
 
 use alloy_evm::Database;
-use alloy_op_hardforks::{MANTLE_HOODI_BLOCK_TIME, MANTLE_HOODI_CHAIN_ID, OpHardforks};
+use alloy_op_hardforks::{MANTLE_BLOCK_TIME, MANTLE_HOODI_CHAIN_ID, OpHardforks};
 use alloy_primitives::{Address, B256, Bytes, address, b256, hex};
 use revm::{DatabaseCommit, primitives::HashMap, state::Bytecode};
 
@@ -61,7 +61,7 @@ where
     if chain_id != MANTLE_HOODI_CHAIN_ID ||
         !chain_spec.is_mantle_hoodi_bvm_upgrade_active_at_timestamp(timestamp) ||
         chain_spec.is_mantle_hoodi_bvm_upgrade_active_at_timestamp(
-            timestamp.saturating_sub(MANTLE_HOODI_BLOCK_TIME),
+            timestamp.saturating_sub(MANTLE_BLOCK_TIME),
         )
     {
         return Ok(());
@@ -176,7 +176,7 @@ mod tests {
         ensure_bvm_predeploys(
             UpgradeSpec(Some(UPGRADE_TIME + 1)),
             MANTLE_HOODI_CHAIN_ID,
-            UPGRADE_TIME + MANTLE_HOODI_BLOCK_TIME,
+            UPGRADE_TIME + MANTLE_BLOCK_TIME,
             &mut db,
         )
         .unwrap();
@@ -220,7 +220,7 @@ mod tests {
         ensure_bvm_predeploys(
             UpgradeSpec(Some(UPGRADE_TIME)),
             MANTLE_HOODI_CHAIN_ID,
-            UPGRADE_TIME + MANTLE_HOODI_BLOCK_TIME,
+            UPGRADE_TIME + MANTLE_BLOCK_TIME,
             &mut db,
         )
         .unwrap();
@@ -298,9 +298,8 @@ mod tests {
     fn writes_only_in_activation_block() {
         let mut db = CountingDb { inner: hoodi_db(), commits: 0 };
         let spec = UpgradeSpec(Some(UPGRADE_TIME));
-        for timestamp in (UPGRADE_TIME - MANTLE_HOODI_BLOCK_TIME..=
-            UPGRADE_TIME + 3 * MANTLE_HOODI_BLOCK_TIME)
-            .step_by(MANTLE_HOODI_BLOCK_TIME as usize)
+        for timestamp in (UPGRADE_TIME - MANTLE_BLOCK_TIME..=UPGRADE_TIME + 3 * MANTLE_BLOCK_TIME)
+            .step_by(MANTLE_BLOCK_TIME as usize)
         {
             ensure_bvm_predeploys(spec, MANTLE_HOODI_CHAIN_ID, timestamp, &mut db).unwrap();
         }
